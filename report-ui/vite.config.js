@@ -1,9 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { defineConfig, type Plugin } from "vite";
-import solid from "vite-plugin-solid";
+import { defineConfig } from "vite";
 
-function reportDataPlugin(): Plugin {
+function reportDataPlugin() {
   const modelPath = fileURLToPath(new URL("../results/normalized/report-model.json", import.meta.url));
 
   return {
@@ -37,7 +36,7 @@ function reportDataPlugin(): Plugin {
 
 export default defineConfig({
   base: "./",
-  plugins: [reportDataPlugin(), solid()],
+  plugins: [reportDataPlugin()],
   build: {
     target: "es2022",
     sourcemap: true,

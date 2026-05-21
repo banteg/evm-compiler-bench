@@ -59,10 +59,7 @@ zip-design out="":
     cp "$root/report-ui/index.html" "$tmp/$kit/report-ui/"
     cp "$root/report-ui/package.json" "$tmp/$kit/report-ui/"
     cp "$root/report-ui/package-lock.json" "$tmp/$kit/report-ui/"
-    cp "$root/report-ui/postcss.config.cjs" "$tmp/$kit/report-ui/"
-    cp "$root/report-ui/tailwind.config.cjs" "$tmp/$kit/report-ui/"
-    cp "$root/report-ui/tsconfig.json" "$tmp/$kit/report-ui/"
-    cp "$root/report-ui/vite.config.ts" "$tmp/$kit/report-ui/"
+    cp "$root/report-ui/vite.config.js" "$tmp/$kit/report-ui/"
     cp -R "$root/report-ui/src" "$tmp/$kit/report-ui/"
     node "$root/report-ui/scripts/make-design-model.mjs" \
       "$root/results/normalized/report-model.json" \
