@@ -44,6 +44,7 @@ function compactBytecode(bytecode) {
 function compactCompile(compile) {
   if (!compile) return null;
   return {
+    error: compile.error,
     peak_rss_kib: compile.peak_rss_kib,
     status: compile.status,
     wall_ms_samples: compile.wall_ms_samples,
@@ -68,6 +69,7 @@ function compactCorrectness(correctness) {
 function compactProfile(profile) {
   return {
     attempted_artifacts: profile.attempted_artifacts,
+    compiler_name: profile.compiler_name,
     compiler_version: profile.compiler_version,
     experimental_codegen: profile.experimental_codegen,
     failed_artifacts: profile.failed_artifacts,

@@ -29,6 +29,7 @@ function buildHeadlines() {
   return {
     solVsVyperGas:   v('solc-latest-viair-runs200', 'vyper-latest-gas', M),
     solVsVyperSize:  v('solc-latest-viair-runs200', 'vyper-latest-gas', S),
+    solVsVyperVenomGas: v('solc-latest-viair-runs200', 'vyper-latest-gas-venom', M),
     venomGas:        v('vyper-latest-gas', 'vyper-latest-gas-venom', M),
     venomSize:       v('vyper-latest-gas', 'vyper-latest-gas-venom', S),
     viaIRGas:        v('solc-latest-legacy-runs200', 'solc-latest-viair-runs200', M),
@@ -167,7 +168,7 @@ function FindingsGrid() {
     },
     {
       tag: 'Finding 04',
-      span: 6,
+      span: 4,
       headline: 'Don\'t ship without an optimizer.',
       body: 'Comparing solc with --no-optimizer to latest viaIR is a worst-vs-best snapshot: a quarter of the gas, and contracts shrink to less than half the runtime size. The optimizer is doing the work.',
       stat: HEADLINES.nooptGas.geomean,
@@ -178,7 +179,7 @@ function FindingsGrid() {
     },
     {
       tag: 'Finding 05',
-      span: 6,
+      span: 4,
       headline: 'Solidity vs Vyper at their best: a real tradeoff, not a winner.',
       body: 'Latest solc viaIR vs latest Vyper gas: Vyper runs cheaper on the median scenario but produces measurably larger bytecode. Picking is a deployment-cost vs. runtime-cost question.',
       stat: HEADLINES.solVsVyperGas.geomean,
@@ -188,13 +189,22 @@ function FindingsGrid() {
       altInvert: false,
       count: HEADLINES.solVsVyperGas.count,
     },
+    {
+      tag: 'Finding 06',
+      span: 4,
+      headline: 'Vyper Venom is a stronger harness-gas challenger to solc viaIR.',
+      body: 'Comparing latest solc viaIR to latest Vyper gas with Venom enabled gives the clean cross-compiler headline for runtime gas. Missing Venom compile rows are excluded, not counted as wins.',
+      stat: HEADLINES.solVsVyperVenomGas.geomean,
+      statLabel: 'harness gas (Vyper Venom vs solc viaIR)',
+      count: HEADLINES.solVsVyperVenomGas.count,
+    },
   ];
 
   return React.createElement('section', { id: 'findings', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 01 · The answer at a glance'),
-        React.createElement('div', { className: 'section-title' }, 'Five findings from the run.'),
+        React.createElement('div', { className: 'section-title' }, 'Six findings from the run.'),
         React.createElement('div', { className: 'section-sub' }, 'Each headline is a geomean delta across the entire comparable scenario surface. Hover any number for the underlying sample size.')
       ),
       React.createElement('div', { className: 'section-meta' }, 'Metric · Harness call gas + runtime bytes')
@@ -338,6 +348,32 @@ function ScaleStrip({ metric }) {
 // ============================================================
 // Interactive Comparator
 // ============================================================
+function SegmentedControl({ name, value, options, onChange }) {
+  return React.createElement('fieldset', { className: 'segmented' },
+    React.createElement('legend', { className: 'sr-only' }, name),
+    options.map(option => {
+      const id = `${name}-${option.value}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+      return React.createElement('label', {
+        key: option.value,
+        className: `${value === option.value ? 'on' : ''}${option.disabled ? ' disabled' : ''}`,
+        title: option.title || '',
+        htmlFor: id,
+      },
+        React.createElement('input', {
+          checked: value === option.value,
+          disabled: !!option.disabled,
+          id,
+          name,
+          onChange: () => onChange(option.value),
+          type: 'radio',
+          value: option.value,
+        }),
+        option.label
+      );
+    })
+  );
+}
+
 function ProfilePicker({ title, selected, onChange }) {
   const p = Bench.profileById(selected) || Bench.D.profiles[0];
   const knobs = Bench.profileKnobs(p);
@@ -372,26 +408,28 @@ function ProfilePicker({ title, selected, onChange }) {
           facets.versionLabels.get(v) || v))
       ),
       React.createElement('div', { className: 'knob-l' }, knobs.language === 'solidity' ? 'Codegen' : 'Optimize'),
-      React.createElement('select', {
-        className: 'knob', value: knobs.optimizer,
-        onChange: e => choose({ optimizer: e.target.value }),
-      },
-        facets.optimizers.map(o => React.createElement('option', { key: o, value: o }, o))
-      ),
+      React.createElement(SegmentedControl, {
+        name: `${title}-optimizer`,
+        value: knobs.optimizer,
+        options: facets.optimizers.map(o => ({ value: o, label: o })),
+        onChange: optimizer => choose({ optimizer }),
+      }),
       knobs.language === 'vyper' ? React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'knob-l' }, 'Venom'),
-        React.createElement('div', { className: 'toggle' },
-          React.createElement('button', {
-            className: !knobs.experimental ? 'on' : '',
-            onClick: () => choose({ experimental: false }),
-          }, 'off'),
-          React.createElement('button', {
-            className: knobs.experimental ? 'on' : '',
-            disabled: !venomAvailable && !knobs.experimental,
-            onClick: () => choose({ experimental: true }),
-            title: venomAvailable ? '' : 'No Venom build for this version/config',
-          }, 'on'),
-        ),
+        React.createElement(SegmentedControl, {
+          name: `${title}-venom`,
+          value: knobs.experimental ? 'on' : 'off',
+          options: [
+            { value: 'off', label: 'off' },
+            {
+              value: 'on',
+              label: 'on',
+              disabled: !venomAvailable && !knobs.experimental,
+              title: venomAvailable ? '' : 'No Venom build for this version/config',
+            },
+          ],
+          onChange: experimental => choose({ experimental: experimental === 'on' }),
+        }),
       ) : null,
     ),
     React.createElement('div', { style: { marginTop: '12px', fontFamily: 'var(--mono)', fontSize: '10.5px', color: 'var(--fg-4)' } },
@@ -597,32 +635,93 @@ function MoversCard({ rows }) {
 // ============================================================
 // Reliability
 // ============================================================
+function InlineList({ items, max = 6, formatter = x => x }) {
+  const shown = items.slice(0, max);
+  const rest = items.length - shown.length;
+  return React.createElement(React.Fragment, null,
+    shown.map(item => React.createElement('span', { key: item, className: 'chip' }, formatter(item))),
+    rest > 0 ? React.createElement('span', { className: 'chip muted' }, `+${rest} more`) : null
+  );
+}
+
 function ReliabilityPanel() {
-  // Sort profiles by failed_artifacts desc
-  const ps = [...Bench.D.profiles].sort((a,b) => b.failed_artifacts - a.failed_artifacts);
-  return React.createElement('div', { className: 'card' },
-    React.createElement('div', { className: 'card-head' },
-      React.createElement('div', null,
-        React.createElement('div', { className: 'card-title' }, 'Compile reliability per profile'),
-        React.createElement('div', { className: 'card-sub' }, 'Failed artifacts stay first-class data: nothing is silently dropped.')
+  const groups = Bench.failureGroups();
+  const compilerGroups = Bench.failureCompilerGroups();
+  const cleanProfiles = Bench.D.profiles
+    .filter(p => p.failed_artifacts === 0)
+    .sort((a,b) => a.label.localeCompare(b.label));
+  return React.createElement('div', { className: 'reliability-grid' },
+    React.createElement('div', { className: 'card' },
+      React.createElement('div', { className: 'card-head' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'card-title' }, 'Compile failure groups'),
+          React.createElement('div', { className: 'card-sub' }, 'Grouped by compiler and shared failure reason; rows list the affected benchmarks.')
+        ),
+        React.createElement('div', { style: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg-3)' } },
+          `${Bench.D.summary.failed_artifacts}/${Bench.D.summary.attempted_artifacts} failed`)
       ),
-      React.createElement('div', { style: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg-3)' } },
-        `${Bench.D.summary.successful_artifacts}/${Bench.D.summary.attempted_artifacts} total`)
+      React.createElement('div', { className: 'failure-groups' },
+        groups.map(group => React.createElement('div', { key: `${group.compiler}-${group.reason}`, className: 'failure-group' },
+          React.createElement('div', { className: 'failure-main' },
+            React.createElement('div', { className: 'failure-reason' }, group.reason),
+            React.createElement('div', { className: 'failure-meta' },
+              `${group.compiler} · ${group.count} artifact${group.count === 1 ? '' : 's'} · ${group.suites.join(', ')}`
+            )
+          ),
+          React.createElement('div', { className: 'failure-detail' },
+            React.createElement('div', { className: 'failure-label' }, 'Failed benchmarks'),
+            React.createElement('div', { className: 'chip-row' },
+              React.createElement(InlineList, { items: group.tests, max: 6 })
+            )
+          ),
+          group.values.length ? React.createElement('div', { className: 'failure-detail' },
+            React.createElement('div', { className: 'failure-label' }, 'N values'),
+            React.createElement('div', { className: 'chip-row' },
+              React.createElement(InlineList, { items: group.values, max: 8 })
+            )
+          ) : null,
+          React.createElement('div', { className: 'failure-detail' },
+            React.createElement('div', { className: 'failure-label' }, 'Profiles'),
+            React.createElement('div', { className: 'chip-row' },
+              React.createElement(InlineList, {
+                items: group.profiles,
+                max: 8,
+                formatter: Bench.profileCompactLabel,
+              })
+            )
+          )
+        ))
+      )
     ),
-    React.createElement('div', null,
-      ps.map(p => {
-        const pct = (p.successful_artifacts / Math.max(1, p.attempted_artifacts)) * 100;
-        return React.createElement('div', { key: p.id, className: 'rel-row' },
-          React.createElement('div', { className: 'rel-name' }, p.label),
-          React.createElement('div', { className: 'rel-bar' },
-            React.createElement('div', { style: { width: pct + '%', background: p.failed_artifacts === 0 ? 'var(--accent)' : pct > 90 ? 'var(--warn)' : 'var(--bad)' } })
+    React.createElement('div', { className: 'card' },
+      React.createElement('div', { className: 'card-head' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'card-title' }, 'By compiler'),
+          React.createElement('div', { className: 'card-sub' }, `${cleanProfiles.length} profiles compile all artifacts.`)
+        )
+      ),
+      React.createElement('div', { className: 'compiler-failures' },
+        compilerGroups.map(group => React.createElement('div', { key: group.compiler, className: 'compiler-failure' },
+          React.createElement('div', { className: 'compiler-failure-top' },
+            React.createElement('div', { className: 'compiler-name' }, group.compiler),
+            React.createElement('div', { className: 'compiler-count' }, `${group.count} fail${group.count === 1 ? '' : 's'}`)
           ),
-          React.createElement('div', { className: 'rel-pct' },
-            p.successful_artifacts + '/' + p.attempted_artifacts +
-            (p.failed_artifacts ? `  · ${p.failed_artifacts} fail` : '')
+          React.createElement('div', { className: 'failure-label' }, 'Reasons'),
+          React.createElement('div', { className: 'chip-row' },
+            React.createElement(InlineList, { items: group.reasons, max: 4 })
           ),
-        );
-      })
+          React.createElement('div', { className: 'failure-label' }, 'Benchmarks'),
+          React.createElement('div', { className: 'chip-row' },
+            React.createElement(InlineList, { items: group.tests, max: 5 })
+          )
+        )),
+        React.createElement('div', { className: 'clean-summary' },
+          React.createElement('div', { className: 'failure-label' }, 'Clean profiles'),
+          React.createElement('div', { className: 'chip-row' },
+            React.createElement(InlineList, { items: cleanProfiles.map(p => p.id), max: 10, formatter: Bench.profileCompactLabel })
+          )
+        )
+      )
     )
   );
 }

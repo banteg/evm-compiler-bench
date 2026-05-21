@@ -265,6 +265,100 @@
     return i === -1 ? 99 : i;
   }
 
+  function failureReason(error){
+    const e = String(error || '');
+    if (e.includes('YulException') && e.includes('too deep in the stack')) {
+      return 'Yul stack depth while lowering viaIR';
+    }
+    if (e.includes('Stack too deep')) {
+      return 'Stack too deep';
+    }
+    if (e.includes('Unsupported dup depth')) {
+      const m = e.match(/Unsupported dup depth\s+\d+/);
+      return m ? m[0] : 'Unsupported dup depth';
+    }
+    if (e.includes('reserved keyword')) {
+      const m = e.match(/'[^']+' is a reserved keyword/);
+      return m ? m[0] : 'Reserved keyword syntax gap';
+    }
+    if (e.includes('UnknownType') && e.includes('DynArray')) {
+      return 'DynArray unsupported in this Vyper version';
+    }
+    if (e.includes('CompilerPanic')) {
+      const m = e.match(/CompilerPanic:\s*([^\n]+)/);
+      return m ? `CompilerPanic: ${m[1]}` : 'Compiler panic';
+    }
+    const first = e.split('\n').map(s => s.trim()).find(Boolean);
+    return first ? first.slice(0, 96) : 'Compiler error';
+  }
+
+  function profileCompactLabel(id){
+    const p = profileById(id);
+    if (!p) return id;
+    const version = profileVersionKey(p) === 'latest' ? 'latest' : p.compiler_version;
+    const opt = profileOptimizer(p);
+    const venom = p.experimental_codegen ? ' venom' : '';
+    return `${version} ${opt}${venom}`;
+  }
+
+  function failureGroups(){
+    const groups = new Map();
+    for (const row of D.rows){
+      if (row.status === 'ok') continue;
+      const profile = profileById(row.profile_id);
+      const reason = failureReason(row.compile?.error);
+      const compiler = profile?.compiler_name || row.compiler?.name || row.language;
+      const key = `${compiler}|${reason}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          compiler,
+          language: row.language,
+          reason,
+          count: 0,
+          profiles: new Set(),
+          tests: new Set(),
+          suites: new Set(),
+          values: new Set(),
+        });
+      }
+      const g = groups.get(key);
+      g.count++;
+      g.profiles.add(row.profile_id);
+      g.tests.add(row.benchmark_id);
+      g.suites.add(row.suite);
+      if (row.parameter_value != null) g.values.add(String(row.parameter_value));
+    }
+    return [...groups.values()].map(g => ({
+      ...g,
+      profiles: [...g.profiles].sort((a,b) => profileCompactLabel(a).localeCompare(profileCompactLabel(b))),
+      tests: [...g.tests].sort(),
+      suites: [...g.suites].sort(),
+      values: [...g.values].sort((a,b) => Number(a) - Number(b)),
+    })).sort((a,b) => b.count - a.count || a.compiler.localeCompare(b.compiler) || a.reason.localeCompare(b.reason));
+  }
+
+  function failureCompilerGroups(){
+    const groups = new Map();
+    for (const g of failureGroups()){
+      const key = g.compiler;
+      if (!groups.has(key)) {
+        groups.set(key, { compiler: key, count: 0, reasons: new Set(), tests: new Set(), profiles: new Set() });
+      }
+      const out = groups.get(key);
+      out.count += g.count;
+      out.reasons.add(g.reason);
+      g.tests.forEach(t => out.tests.add(t));
+      g.profiles.forEach(p => out.profiles.add(p));
+    }
+    return [...groups.values()].map(g => ({
+      compiler: g.compiler,
+      count: g.count,
+      reasons: [...g.reasons].sort(),
+      tests: [...g.tests].sort(),
+      profiles: [...g.profiles].sort((a,b) => profileCompactLabel(a).localeCompare(profileCompactLabel(b))),
+    })).sort((a,b) => b.count - a.count);
+  }
+
   window.Bench = {
     D,
     METRICS, SUITES,
@@ -274,6 +368,7 @@
     profileOptimizer, resolveProfile, defaultProfileForLanguage,
     versionRank, optimizerRank, profileFacets, profilesByLang,
     versionAxisRows, latestBaselineProfile,
+    failureGroups, failureCompilerGroups, failureReason, profileCompactLabel,
     fmtDelta, fmtPct, fmtNum, deltaTone, pctTone, median,
   };
 })();
