@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, createUniqueId, For, Match, Show, Switch } from "solid-js";
 import { render } from "solid-js/web";
 import vegaEmbed from "vega-embed";
 import "./styles.css";
@@ -392,6 +392,38 @@ function VegaChart(props: { spec: Json }) {
   return <div ref={el} class="vega-chart" />;
 }
 
+function CheckboxPill(props: {
+  id: string;
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  title?: string;
+  class?: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      for={props.id}
+      title={props.title}
+      class={cn(
+        "inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
+        props.checked && "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        props.class,
+      )}
+    >
+      <input
+        id={props.id}
+        type="checkbox"
+        class="h-4 w-4 rounded border-input accent-primary"
+        checked={props.checked}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(event.currentTarget.checked)}
+      />
+      <span>{props.label}</span>
+    </label>
+  );
+}
+
 function deltaChartSpec(rows: ComparisonRow[]) {
   const values = rows.slice(0, 80).map((row) => ({
     label: row.label,
@@ -508,6 +540,8 @@ function App() {
 
 function Report(props: { model: ReportModel }) {
   const model = () => props.model;
+  const metricId = createUniqueId();
+  const suiteId = createUniqueId();
   const [profileA, setProfileA] = createSignal(model().defaults?.baseline_profile ?? "solc-latest-viair-runs200");
   const [profileB, setProfileB] = createSignal(model().defaults?.comparison_profile ?? "vyper-latest-gas");
   const [metric, setMetric] = createSignal<MetricId>(model().defaults?.primary_metric ?? "harness_call_gas");
@@ -524,11 +558,13 @@ function Report(props: { model: ReportModel }) {
     setProfileB(b);
   };
 
-  const toggleSuite = (suite: string) => {
+  const setSuiteChecked = (suite: string, checked: boolean) => {
     const next = new Set(suiteFilter());
-    if (next.has(suite)) next.delete(suite);
-    else next.add(suite);
-    if (next.size > 0) setSuiteFilter(next);
+    if (checked) next.add(suite);
+    else next.delete(suite);
+    if (next.size > 0) {
+      setSuiteFilter(next);
+    }
   };
 
   return (
@@ -560,32 +596,36 @@ function Report(props: { model: ReportModel }) {
           <ProfilePicker title="Baseline" profiles={model().profiles} selected={profileA()} onChange={setProfileA} />
           <ProfilePicker title="Compared" profiles={model().profiles} selected={profileB()} onChange={setProfileB} />
           <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">Metric</label>
-            <Select value={metric()} onInput={(event) => setMetric(event.currentTarget.value as MetricId)}>
+            <label for={metricId} class="text-sm font-medium leading-none">Metric</label>
+            <Select id={metricId} name="metric" value={metric()} onInput={(event) => setMetric(event.currentTarget.value as MetricId)}>
               <For each={metricOptions}>{(option) => <option value={option.id}>{option.label}</option>}</For>
             </Select>
           </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium leading-none">Suites</label>
+          <fieldset class="space-y-2">
+            <legend class="text-sm font-medium leading-none">Suites</legend>
             <div class="flex flex-wrap gap-2">
               <For each={Object.keys(suiteLabels)}>
                 {(suite) => (
-                  <Button variant={suiteFilter().has(suite) ? "secondary" : "outline"} size="sm" onClick={() => toggleSuite(suite)}>
-                    {suiteLabels[suite]}
-                  </Button>
+                  <CheckboxPill
+                    id={`${suiteId}-${suite}`}
+                    checked={suiteFilter().has(suite)}
+                    disabled={suiteFilter().size === 1 && suiteFilter().has(suite)}
+                    label={suiteLabels[suite]}
+                    onChange={(checked) => setSuiteChecked(suite, checked)}
+                  />
                 )}
               </For>
             </div>
-          </div>
+          </fieldset>
         </CardContent>
       </Card>
 
-      <section class="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-latest-gas")}>latest solc viaIR vs latest Vyper gas</Button>
-        <Button variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-latest-gas-venom")}>latest solc viaIR vs Vyper gas Venom</Button>
-        <Button variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-0.5.0a1-gas")}>latest solc viaIR vs Vyper 0.5 gas</Button>
-        <Button variant="outline" size="sm" onClick={() => setPreset("solc-latest-legacy-runs200", "solc-latest-viair-runs200")}>solc legacy vs viaIR</Button>
-      </section>
+      <nav class="flex flex-wrap gap-2" aria-label="Comparison presets">
+        <Button type="button" variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-latest-gas")}>latest solc viaIR vs latest Vyper gas</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-latest-gas-venom")}>latest solc viaIR vs Vyper gas Venom</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setPreset("solc-latest-viair-runs200", "vyper-0.5.0a1-gas")}>latest solc viaIR vs Vyper 0.5 gas</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setPreset("solc-latest-legacy-runs200", "solc-latest-viair-runs200")}>solc legacy vs viaIR</Button>
+      </nav>
 
       <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -690,6 +730,7 @@ function Report(props: { model: ReportModel }) {
 }
 
 function ProfilePicker(props: { title: string; profiles: Json[]; selected: string; onChange: (profileId: string) => void }) {
+  const pickerId = createUniqueId();
   const selectedProfile = createMemo(() => profileById(props.profiles, props.selected) ?? props.profiles[0]);
   const knobs = createMemo(() => profileKnobs(selectedProfile()));
   const languageProfiles = createMemo(() => props.profiles.filter((profile) => profile.language === knobs().language));
@@ -729,41 +770,58 @@ function ProfilePicker(props: { title: string; profiles: Json[]; selected: strin
   };
 
   return (
-    <div class="min-w-0 space-y-2">
-      <label class="text-sm font-medium leading-none">{props.title}</label>
+    <fieldset class="min-w-0 space-y-2">
+      <legend class="text-sm font-medium leading-none">{props.title}</legend>
       <div class="grid gap-2 md:grid-cols-[1.05fr_1fr_1fr_auto] md:items-end">
         <div class="space-y-1">
-          <span class="text-[10px] font-semibold uppercase text-muted-foreground">Compiler</span>
-          <Select value={knobs().language} onInput={(event) => chooseLanguage(event.currentTarget.value)}>
+          <label for={`${pickerId}-compiler`} class="text-[10px] font-semibold uppercase text-muted-foreground">Compiler</label>
+          <Select
+            id={`${pickerId}-compiler`}
+            name={`${props.title.toLowerCase()}-compiler`}
+            aria-describedby={`${pickerId}-selected`}
+            value={knobs().language}
+            onInput={(event) => chooseLanguage(event.currentTarget.value)}
+          >
             <For each={languages()}>{(language) => <option value={language}>{languageLabels[language] ?? language}</option>}</For>
           </Select>
         </div>
         <div class="space-y-1">
-          <span class="text-[10px] font-semibold uppercase text-muted-foreground">Version</span>
-          <Select value={knobs().versionKey} onInput={(event) => choose({ versionKey: event.currentTarget.value })}>
+          <label for={`${pickerId}-version`} class="text-[10px] font-semibold uppercase text-muted-foreground">Version</label>
+          <Select
+            id={`${pickerId}-version`}
+            name={`${props.title.toLowerCase()}-version`}
+            aria-describedby={`${pickerId}-selected`}
+            value={knobs().versionKey}
+            onInput={(event) => choose({ versionKey: event.currentTarget.value })}
+          >
             <For each={versions()}>{(version) => <option value={version}>{versionLabels().get(version) ?? version}</option>}</For>
           </Select>
         </div>
         <div class="space-y-1">
-          <span class="text-[10px] font-semibold uppercase text-muted-foreground">{knobs().language === "solidity" ? "Codegen" : "Optimize"}</span>
-          <Select value={knobs().optimizer} onInput={(event) => choose({ optimizer: event.currentTarget.value })}>
+          <label for={`${pickerId}-optimizer`} class="text-[10px] font-semibold uppercase text-muted-foreground">{knobs().language === "solidity" ? "Codegen" : "Optimize"}</label>
+          <Select
+            id={`${pickerId}-optimizer`}
+            name={`${props.title.toLowerCase()}-optimizer`}
+            aria-describedby={`${pickerId}-selected`}
+            value={knobs().optimizer}
+            onInput={(event) => choose({ optimizer: event.currentTarget.value })}
+          >
             <For each={optimizers()}>{(optimizer) => <option value={optimizer}>{optimizerLabels[optimizer] ?? optimizer}</option>}</For>
           </Select>
         </div>
         <Show when={knobs().language === "vyper"}>
-          <Button
-            variant={knobs().experimental ? "secondary" : "outline"}
-            size="default"
+          <CheckboxPill
+            id={`${pickerId}-venom`}
+            checked={knobs().experimental}
             disabled={!venomAvailable() && !knobs().experimental}
+            label="Venom"
             title={venomAvailable() ? "Use --experimental-codegen" : "Venom is not available for this version/config"}
-            onClick={() => choose({ experimental: !knobs().experimental })}
-          >
-            Venom
-          </Button>
+            onChange={(checked) => choose({ experimental: checked })}
+          />
         </Show>
       </div>
-      <div class="truncate text-xs text-muted-foreground"><code>{props.selected}</code></div>
-    </div>
+      <p id={`${pickerId}-selected`} class="truncate text-xs text-muted-foreground" aria-live="polite"><code>{props.selected}</code></p>
+    </fieldset>
   );
 }
 
