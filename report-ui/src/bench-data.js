@@ -147,8 +147,23 @@
       experimental: !!p.experimental_codegen,
     };
   }
+  function matchingProfiles(desired){
+    return D.profiles.filter(p => {
+      const k = profileKnobs(p);
+      return (!desired.language || k.language === desired.language)
+        && (!desired.versionKey || k.versionKey === desired.versionKey)
+        && (!desired.optimizer || k.optimizer === desired.optimizer)
+        && (desired.experimental == null || k.experimental === desired.experimental);
+    });
+  }
+  function preferredOptimizer(lang, optimizers){
+    const preferred = lang === 'solidity'
+      ? ['viaIR','legacy','noopt']
+      : ['gas','codesize','none','default'];
+    return preferred.find(o => optimizers.includes(o)) ?? optimizers[0];
+  }
   function resolveProfile(desired){
-    const cands = D.profiles.filter(p => p.language === desired.language);
+    const cands = matchingProfiles({ language: desired.language });
     const exact = cands.find(p => {
       const k = profileKnobs(p);
       return k.versionKey === desired.versionKey
@@ -248,16 +263,26 @@
     }, {});
   }
 
-  // List allowed versions / optimizers for a given language
-  function profileFacets(lang){
-    const ps = D.profiles.filter(p => p.language === lang);
+  // List allowed versions / optimizers for a selected language/version.
+  function profileFacets(lang, versionKey){
+    const ps = matchingProfiles({ language: lang });
+    const versionProfiles = versionKey ? ps.filter(p => profileVersionKey(p) === versionKey) : ps;
     const versions = [...new Set(ps.map(profileVersionKey))]
       .sort((a,b) => versionRank(b) - versionRank(a));
     const versionLabels = new Map();
     for (const p of ps) versionLabels.set(profileVersionKey(p), profileVersionLabel(p));
-    const optimizers = [...new Set(ps.map(profileOptimizer))]
+    const optimizers = [...new Set(versionProfiles.map(profileOptimizer))]
       .sort((a,b) => optimizerRank(a) - optimizerRank(b));
-    return { versions, versionLabels, optimizers };
+    const supportsExperimental = versionProfiles.some(p => p.experimental_codegen);
+    return { versions, versionLabels, optimizers, supportsExperimental };
+  }
+  function defaultOptimizerForVersion(lang, versionKey){
+    const optimizers = [...new Set(matchingProfiles({ language: lang, versionKey }).map(profileOptimizer))]
+      .sort((a,b) => optimizerRank(a) - optimizerRank(b));
+    return preferredOptimizer(lang, optimizers);
+  }
+  function profileOptionExists(desired){
+    return matchingProfiles(desired).length > 0;
   }
   function optimizerRank(o){
     const order = ['noopt','none','legacy','default','gas','codesize','viaIR'];
@@ -367,6 +392,7 @@
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage,
     versionRank, optimizerRank, profileFacets, profilesByLang,
+    defaultOptimizerForVersion, profileOptionExists,
     versionAxisRows, latestBaselineProfile,
     failureGroups, failureCompilerGroups, failureReason, profileCompactLabel,
     fmtDelta, fmtPct, fmtNum, deltaTone, pctTone, median,

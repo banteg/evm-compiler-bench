@@ -377,17 +377,21 @@ function SegmentedControl({ name, value, options, onChange }) {
 function ProfilePicker({ title, selected, onChange }) {
   const p = Bench.profileById(selected) || Bench.D.profiles[0];
   const knobs = Bench.profileKnobs(p);
-  const langProfiles = Bench.D.profiles.filter(x => x.language === knobs.language);
-  const facets = Bench.profileFacets(knobs.language);
-  const venomAvailable = langProfiles.some(x =>
-    Bench.profileKnobs(x).versionKey === knobs.versionKey &&
-    Bench.profileKnobs(x).optimizer === knobs.optimizer &&
-    x.experimental_codegen
-  );
+  const facets = Bench.profileFacets(knobs.language, knobs.versionKey);
+  const venomAvailable = Bench.profileOptionExists({
+    language: knobs.language,
+    versionKey: knobs.versionKey,
+    optimizer: knobs.optimizer,
+    experimental: true,
+  });
   const choose = (patch) => {
     onChange(Bench.resolveProfile({ ...knobs, ...patch }));
   };
   const chooseLang = (l) => onChange(Bench.defaultProfileForLanguage(l));
+  const chooseVersion = (versionKey) => {
+    const optimizer = Bench.defaultOptimizerForVersion(knobs.language, versionKey);
+    onChange(Bench.resolveProfile({ ...knobs, versionKey, optimizer, experimental: false }));
+  };
   return React.createElement('div', { className: 'compare-side' },
     React.createElement('div', { className: 'lbl' }, title),
     React.createElement('div', { className: 'knobs' },
@@ -402,7 +406,7 @@ function ProfilePicker({ title, selected, onChange }) {
       React.createElement('div', { className: 'knob-l' }, 'Version'),
       React.createElement('select', {
         className: 'knob', value: knobs.versionKey,
-        onChange: e => choose({ versionKey: e.target.value }),
+        onChange: e => chooseVersion(e.target.value),
       },
         facets.versions.map(v => React.createElement('option', { key: v, value: v },
           facets.versionLabels.get(v) || v))
@@ -414,7 +418,7 @@ function ProfilePicker({ title, selected, onChange }) {
         options: facets.optimizers.map(o => ({ value: o, label: o })),
         onChange: optimizer => choose({ optimizer }),
       }),
-      knobs.language === 'vyper' ? React.createElement(React.Fragment, null,
+      knobs.language === 'vyper' && facets.supportsExperimental ? React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'knob-l' }, 'Venom'),
         React.createElement(SegmentedControl, {
           name: `${title}-venom`,
