@@ -3,6 +3,9 @@
 /foundry/cache/
 /foundry/out/
 /foundry/test/GeneratedBench.t.sol
+/foundry/test/GeneratedBenchShard*.t.sol
+/report-ui/dist/
+/report-ui/node_modules/
 /results/raw/*
 !/results/raw/.gitkeep
 /results/normalized/*

@@ -147,7 +147,7 @@ contract CurveStableSwap2CoinReal {
         }
         uint256 d = sum;
         uint256 ann = A * N_COINS;
-        for (uint256 idx = 0; idx < 255; idx++) {
+        for (uint256 dIdx = 0; dIdx < 255; dIdx++) {
             uint256 dP = d * d / (x0 * N_COINS);
             dP = dP * d / (x1 * N_COINS);
             uint256 previousD = d;
@@ -178,7 +178,7 @@ contract CurveStableSwap2CoinReal {
         c = c * d * A_PRECISION / (ann * N_COINS);
         uint256 b = s + d * A_PRECISION / ann;
         uint256 y = d;
-        for (uint256 idx = 0; idx < 255; idx++) {
+        for (uint256 yIdx = 0; yIdx < 255; yIdx++) {
             uint256 previousY = y;
             y = (y * y + c) / (2 * y + b - d);
             if (y > previousY) {

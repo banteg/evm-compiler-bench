@@ -117,6 +117,7 @@ fn main() -> Result<()> {
                 "normalized results: {}",
                 report.normalized_results.display()
             );
+            println!("report model: {}", report.report_model.display());
             println!("run manifest: {}", report.run_manifest.display());
             println!("html report: {}", report.html_report.display());
             println!(

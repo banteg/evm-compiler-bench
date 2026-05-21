@@ -11,11 +11,11 @@ use anyhow::{Context, Result, bail};
 use serde_json::json;
 use std::{collections::BTreeMap, fs, path::Path, process::Command};
 
-const GAS_JSONL: &str = "../results/raw/foundry-gas.jsonl";
 const FAILURE_DIR: &str = "../results/raw/failures";
 const SOL_BASELINE: &str = "solc-latest-legacy-runs200";
 const VYPER_BASELINE: &str = "vyper-latest-gas";
 const GAS_CACHE_SCHEMA: &str = "gas-v1";
+const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 
 pub fn run_foundry(
     root: &Path,
@@ -67,44 +67,64 @@ pub fn run_foundry(
             expected_cache.len()
         );
     }
-    let test_path = root.join("foundry/test/GeneratedBench.t.sol");
+    clear_generated_shards(root)?;
+    let shards = gas_shards(&compiled.artifacts);
     eprintln!(
-        "foundry: generating gas test for {} artifacts and {} expected rows",
+        "foundry: generating {} gas test shards for {} artifacts and {} expected rows",
+        shards.len(),
         compiled.artifacts.len(),
         expected_cache.len()
     );
-    fs::write(&test_path, generate_test(compiled, scenarios)?)?;
-    eprintln!("foundry: running generated gas tests on EVM {evm_version}");
-    require_success(
-        run_measured(
-            Command::new("forge")
-                .arg("test")
-                .arg("--root")
-                .arg(root.join("foundry"))
-                .arg("--match-path")
-                .arg("test/GeneratedBench.t.sol")
-                .arg("--evm-version")
-                .arg(evm_version)
-                .arg("--via-ir")
-                .arg("--optimize")
-                .arg("-q"),
-            None,
-        )?,
-        "forge test",
-    )?;
-    let rows_path = root.join("results/raw/foundry-gas.jsonl");
-    let rows = fs::read_to_string(&rows_path)
-        .with_context(|| format!("reading {}", rows_path.display()))?;
     let mut records = Vec::new();
-    for (index, line) in rows.lines().enumerate() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        records.push(
-            serde_json::from_str(line)
-                .with_context(|| format!("parsing gas jsonl line {}", index + 1))?,
+    let mut progress = Progress::new("foundry", shards.len());
+    for (index, shard_artifacts) in shards.iter().enumerate() {
+        let shard_id = format!("{index:03}");
+        let contract_name = format!("GeneratedBenchShard{shard_id}");
+        let test_file = format!("{contract_name}.t.sol");
+        let match_path = format!("test/{test_file}");
+        let gas_jsonl = format!("../results/raw/foundry-gas-shard-{shard_id}.jsonl");
+        let test_path = root.join("foundry/test").join(&test_file);
+        fs::write(
+            &test_path,
+            generate_test(&contract_name, shard_artifacts, scenarios, &gas_jsonl)?,
+        )
+        .with_context(|| format!("writing {}", test_path.display()))?;
+        progress.update(
+            index,
+            format!(
+                "running shard {}/{} ({} artifacts)",
+                index + 1,
+                shards.len(),
+                shard_artifacts.len()
+            ),
+        );
+        require_success(
+            run_measured(
+                Command::new("forge")
+                    .arg("test")
+                    .arg("--root")
+                    .arg(root.join("foundry"))
+                    .arg("--match-path")
+                    .arg(&match_path)
+                    .arg("--evm-version")
+                    .arg(evm_version)
+                    .arg("--via-ir")
+                    .arg("--optimize")
+                    .arg("-q"),
+                None,
+            )?,
+            &format!("forge test {match_path}"),
+        )?;
+        let shard_rows = read_gas_records(
+            &root.join(format!("results/raw/foundry-gas-shard-{shard_id}.jsonl")),
+        )?;
+        records.extend(shard_rows);
+        progress.update(
+            index + 1,
+            format!("completed shard {}/{}", index + 1, shards.len()),
         );
     }
+    progress.finish(format!("recorded {} gas rows", records.len()));
     annotate_and_store_gas_records(root, &mut records, &expected_cache, use_cache)?;
     write_raw_gas_records(root, &records)?;
     eprintln!("foundry: recorded {} gas rows", records.len());
@@ -248,6 +268,49 @@ fn write_raw_gas_records(root: &Path, records: &[GasRecord]) -> Result<()> {
     Ok(())
 }
 
+fn read_gas_records(path: &Path) -> Result<Vec<GasRecord>> {
+    let rows = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    let mut records = Vec::new();
+    for (index, line) in rows.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        records.push(
+            serde_json::from_str(line)
+                .with_context(|| format!("parsing gas jsonl line {}", index + 1))?,
+        );
+    }
+    Ok(records)
+}
+
+fn gas_shards(artifacts: &[CompiledArtifact]) -> Vec<Vec<CompiledArtifact>> {
+    let mut groups: Vec<(String, Vec<CompiledArtifact>)> = Vec::new();
+    let mut positions = BTreeMap::new();
+    for artifact in artifacts {
+        let index = *positions
+            .entry(artifact.benchmark_id.clone())
+            .or_insert_with(|| {
+                groups.push((artifact.benchmark_id.clone(), Vec::new()));
+                groups.len() - 1
+            });
+        groups[index].1.push(artifact.clone());
+    }
+
+    let mut shards = Vec::new();
+    let mut current = Vec::new();
+    for (_, mut group) in groups {
+        if !current.is_empty() && current.len() + group.len() > MAX_ARTIFACTS_PER_GAS_SHARD {
+            shards.push(current);
+            current = Vec::new();
+        }
+        current.append(&mut group);
+    }
+    if !current.is_empty() {
+        shards.push(current);
+    }
+    shards
+}
+
 fn gas_record_key(
     benchmark_id: &str,
     implementation_id: &str,
@@ -271,8 +334,37 @@ fn clear_failure_dir(root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn generate_test(compiled: &CompileSet, scenarios: &ScenarioCatalog) -> Result<String> {
-    if compiled.artifacts.is_empty() {
+fn clear_generated_shards(root: &Path) -> Result<()> {
+    for entry in fs::read_dir(root.join("foundry/test"))? {
+        let path = entry?.path();
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if name.starts_with("GeneratedBenchShard") && name.ends_with(".t.sol") {
+            fs::remove_file(&path)
+                .with_context(|| format!("removing stale generated test {}", path.display()))?;
+        }
+    }
+    for entry in fs::read_dir(root.join("results/raw"))? {
+        let path = entry?.path();
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if name.starts_with("foundry-gas-shard-") && name.ends_with(".jsonl") {
+            fs::remove_file(&path)
+                .with_context(|| format!("removing stale gas shard {}", path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn generate_test(
+    contract_name: &str,
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+    gas_jsonl: &str,
+) -> Result<String> {
+    if artifacts.is_empty() {
         bail!("no compiled artifacts for Foundry runner");
     }
     let mut out = String::new();
@@ -286,10 +378,15 @@ fn generate_test(compiled: &CompileSet, scenarios: &ScenarioCatalog) -> Result<S
     out.push_str("    function prank(address sender) external;\n");
     out.push_str("    function deal(address account, uint256 newBalance) external;\n");
     out.push_str("}\n\n");
-    out.push_str("contract GeneratedBenchTest {\n");
+    out.push_str("contract ");
+    out.push_str(contract_name);
+    out.push_str(" {\n");
     out.push_str(
         "    Vm constant vm = Vm(address(uint160(uint256(keccak256(\"hevm cheat code\")))));\n",
     );
+    out.push_str("    string constant GAS_JSONL_PATH = \"");
+    out.push_str(gas_jsonl);
+    out.push_str("\";\n");
     out.push_str("    address constant BOB = address(0xB0B);\n");
     out.push_str("    address constant CAROL = address(0xCAFe);\n");
     out.push_str("    address constant IMPLEMENTATION = address(0x1000000000000000000000000000000000000001);\n");
@@ -299,9 +396,7 @@ fn generate_test(compiled: &CompileSet, scenarios: &ScenarioCatalog) -> Result<S
     out.push_str("    bytes32 constant ROOT = LEAF < SIBLING ? keccak256(abi.encodePacked(LEAF, SIBLING)) : keccak256(abi.encodePacked(SIBLING, LEAF));\n\n");
     out.push_str("    receive() external payable {}\n\n");
     out.push_str("    function setUp() public {\n");
-    out.push_str("        vm.writeFile(\"");
-    out.push_str(GAS_JSONL);
-    out.push_str("\", \"\");\n");
+    out.push_str("        vm.writeFile(GAS_JSONL_PATH, \"\");\n");
     out.push_str("        vm.createDir(\"");
     out.push_str(FAILURE_DIR);
     out.push_str("\", true);\n");
@@ -312,17 +407,17 @@ fn generate_test(compiled: &CompileSet, scenarios: &ScenarioCatalog) -> Result<S
     out.push_str(helper_functions());
     out.push_str(randomized_helper_functions());
 
-    for (index, artifact) in compiled.artifacts.iter().enumerate() {
+    for (index, artifact) in artifacts.iter().enumerate() {
         write_deploy_function(&mut out, index, artifact);
     }
 
-    for (index, artifact) in compiled.artifacts.iter().enumerate() {
+    for (index, artifact) in artifacts.iter().enumerate() {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
             write_gas_test(&mut out, index, artifact, scenario);
         }
     }
 
-    let baselines = baseline_pairs(&compiled.artifacts);
+    let baselines = baseline_pairs(artifacts);
     for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
         for scenario in &scenarios.get(benchmark_id)?.scenarios {
             write_diff_test(
@@ -330,12 +425,10 @@ fn generate_test(compiled: &CompileSet, scenarios: &ScenarioCatalog) -> Result<S
                 benchmark_id,
                 *solidity_idx,
                 *vyper_idx,
-                compiled
-                    .artifacts
+                artifacts
                     .get(*solidity_idx)
                     .context("missing solidity baseline")?,
-                compiled
-                    .artifacts
+                artifacts
                     .get(*vyper_idx)
                     .context("missing vyper baseline")?,
                 scenario,
@@ -453,7 +546,7 @@ fn helper_functions() -> &'static str {
         bool scenarioStatusOk
     ) internal {
         vm.writeLine(
-            "../results/raw/foundry-gas.jsonl",
+            GAS_JSONL_PATH,
             string.concat(
                 "{\"benchmark_id\":\"", benchmarkId,
                 "\",\"implementation_id\":\"", implementationId,

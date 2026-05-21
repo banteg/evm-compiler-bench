@@ -3,8 +3,8 @@ pragma solidity ^0.8.30;
 
 contract OwnablePausable {
     address public owner;
-    bool public paused;
     uint256 public counter;
+    bool public paused;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event Paused(address indexed account);

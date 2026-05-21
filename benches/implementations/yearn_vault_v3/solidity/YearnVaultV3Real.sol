@@ -170,20 +170,20 @@ contract YearnVaultV3Real {
         require(targetDebt <= s.maxDebt, "max");
         uint256 previousDebt = s.currentDebt;
         if (targetDebt > previousDebt) {
-            uint256 amount = targetDebt - previousDebt;
-            require(totalIdle >= amount, "idle");
-            totalIdle -= amount;
-            totalDebt += amount;
+            uint256 debtIncrease = targetDebt - previousDebt;
+            require(totalIdle >= debtIncrease, "idle");
+            totalIdle -= debtIncrease;
+            totalDebt += debtIncrease;
             s.currentDebt = targetDebt;
-            s.balance += amount;
+            s.balance += debtIncrease;
         } else {
-            uint256 amount = previousDebt - targetDebt;
-            uint256 withdrawn = _min(amount, s.balance);
-            uint256 loss = amount - withdrawn;
-            require(amount == 0 || loss * MAX_BPS <= amount * maxLoss, "loss");
+            uint256 debtReduction = previousDebt - targetDebt;
+            uint256 withdrawn = _min(debtReduction, s.balance);
+            uint256 loss = debtReduction - withdrawn;
+            require(debtReduction == 0 || loss * MAX_BPS <= debtReduction * maxLoss, "loss");
             s.balance -= withdrawn;
             s.currentDebt = targetDebt;
-            totalDebt = totalDebt + loss - amount;
+            totalDebt = totalDebt + loss - debtReduction;
             totalIdle += withdrawn;
         }
         emit DebtUpdated(strategy, previousDebt, s.currentDebt);

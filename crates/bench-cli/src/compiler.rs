@@ -646,11 +646,13 @@ fn transform_solidity_source(source: &str, variant: &str) -> Result<String> {
         "solidity-0.5" => {
             let source = rewrite_solidity_pragma(source, "pragma solidity >=0.5.0 <0.6.0;");
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_06_call_value(&source);
             add_constructor_visibility(&source)
         }
         "solidity-0.4" => {
             let source = rewrite_solidity_pragma(source, "pragma solidity >=0.4.26 <0.5.0;");
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_04_low_level_calls(&source);
             let source = add_constructor_visibility(&source);
             source.replace(" calldata", "")
         }
@@ -664,11 +666,29 @@ fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
 }
 
 fn rewrite_solidity_pre_08(source: &str) -> String {
+    let source = remove_numeric_separators(source);
     source
         .replace("10_000_000_000", "10000000000")
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")
         .replace("type(uint112).max", "uint112(-1)")
+}
+
+fn remove_numeric_separators(source: &str) -> String {
+    let chars: Vec<char> = source.chars().collect();
+    let mut output = String::with_capacity(source.len());
+    for (index, ch) in chars.iter().enumerate() {
+        if *ch == '_'
+            && index > 0
+            && index + 1 < chars.len()
+            && chars[index - 1].is_ascii_digit()
+            && chars[index + 1].is_ascii_digit()
+        {
+            continue;
+        }
+        output.push(*ch);
+    }
+    output
 }
 
 fn add_constructor_visibility(source: &str) -> String {
@@ -690,6 +710,25 @@ fn add_constructor_visibility(source: &str) -> String {
         .join("\n")
 }
 
+fn rewrite_solidity_pre_06_call_value(source: &str) -> String {
+    source.replace(
+        "(bool ok,) = msg.sender.call{value: amount}(\"\");",
+        "(bool ok,) = msg.sender.call.value(amount)(\"\");",
+    )
+}
+
+fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
+    rewrite_solidity_pre_06_call_value(source)
+        .replace(
+            "(bool ok,) = msg.sender.call.value(amount)(\"\");",
+            "bool ok = msg.sender.call.value(amount)();",
+        )
+        .replace(
+            "(bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));",
+            "bool ok = address(this).call(abi.encodeWithSignature(\"ping(uint256)\", i));",
+        )
+}
+
 fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
     let source = match variant {
         "vyper-0.4" => {
@@ -707,6 +746,9 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
             source = source.replace("@deploy", "@external");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
+            source = rewrite_vyper_03_strategy_maps(&source);
+            source = rewrite_vyper_03_struct_constructors(&source);
+            source = rewrite_vyper_03_pending_reports(&source);
             source = rewrite_typed_for_loops(&source);
             rewrite_vyper_event_logs(&source)
         }
@@ -716,6 +758,7 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
                 "# pragma version >=0.2.16,<0.3.0",
             );
             source = source.replace("@deploy", "@external");
+            source = source.replace("@pure", "@view");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
             source = source.replace("public(immutable(String[32]))", "public(String[32])");
@@ -724,8 +767,21 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
             source = source.replace("    name = ", "    self.name = ");
             source = source.replace("    symbol = ", "    self.symbol = ");
             source = source.replace("    decimals = ", "    self.decimals = ");
+            source = source.replace(
+                "max_value(uint256)",
+                "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+            );
+            source = rewrite_vyper_02_fixed_bytes(&source);
+            source = rewrite_vyper_03_strategy_maps(&source);
+            source = rewrite_vyper_03_struct_constructors(&source);
+            source = rewrite_vyper_03_pending_reports(&source);
+            source = rewrite_vyper_02_reserved_fields(&source);
+            source = rewrite_vyper_02_owner_checks(&source);
+            source = rewrite_vyper_02_manager_checks(&source);
+            source = rewrite_vyper_02_uniswap_integer_types(&source);
             source = rewrite_typed_for_loops(&source);
-            rewrite_vyper_event_logs(&source)
+            source = rewrite_vyper_event_logs(&source);
+            reorder_vyper_02_internal_functions(&source)
         }
         other => bail!("unknown Vyper source variant {other}"),
     };
@@ -766,6 +822,220 @@ fn rewrite_vyper_event_logs(source: &str) -> String {
         .map(rewrite_vyper_event_log_line)
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn rewrite_vyper_02_owner_checks(source: &str) -> String {
+    source
+        .replace(
+            "def _only_owner():\n    assert msg.sender == self.owner, \"owner\"",
+            "def _only_owner(sender: address):\n    assert sender == self.owner, \"owner\"",
+        )
+        .replace("self._only_owner()", "self._only_owner(msg.sender)")
+}
+
+fn rewrite_vyper_02_manager_checks(source: &str) -> String {
+    source
+        .replace(
+            "def _only_manager():\n    assert msg.sender == self.roleManager, \"permission\"",
+            "def _only_manager(sender: address):\n    assert sender == self.roleManager, \"permission\"",
+        )
+        .replace("self._only_manager()", "self._only_manager(msg.sender)")
+}
+
+fn rewrite_vyper_02_fixed_bytes(source: &str) -> String {
+    source.replace("bytes20", "bytes32")
+}
+
+fn rewrite_vyper_02_reserved_fields(source: &str) -> String {
+    if !source.contains("struct Strategy:") {
+        return source.to_string();
+    }
+    replace_token(
+        &source.replace("    balance: uint256", "    strategyBalance: uint256"),
+        ".balance",
+        ".strategyBalance",
+    )
+}
+
+fn replace_token(source: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(index) = rest.find(from) {
+        let after_index = index + from.len();
+        let after = rest[after_index..].chars().next();
+        if after.is_some_and(|ch| ch == '_' || ch.is_ascii_alphanumeric()) {
+            out.push_str(&rest[..after_index]);
+        } else {
+            out.push_str(&rest[..index]);
+            out.push_str(to);
+        }
+        rest = &rest[after_index..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn rewrite_vyper_03_struct_constructors(source: &str) -> String {
+    source
+        .replace(
+            "    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)",
+            "    self.pendingReports[strategy].gain = gain\n    self.pendingReports[strategy].loss = loss",
+        )
+        .replace(
+            "    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)",
+            "    self.pendingReports[strategy].gain = 0\n    self.pendingReports[strategy].loss = 0",
+        )
+}
+
+fn rewrite_vyper_03_pending_reports(source: &str) -> String {
+    source
+        .replace(
+            "pendingReports: HashMap[address, PendingReport]",
+            "pendingReportGain: HashMap[address, uint256]\npendingReportLoss: HashMap[address, uint256]",
+        )
+        .replace(
+            "self.pendingReports[strategy].gain",
+            "self.pendingReportGain[strategy]",
+        )
+        .replace(
+            "self.pendingReports[strategy].loss",
+            "self.pendingReportLoss[strategy]",
+        )
+}
+
+fn rewrite_vyper_03_strategy_maps(source: &str) -> String {
+    source
+        .replace(
+            "strategies: HashMap[address, Strategy]",
+            "strategyActivation: HashMap[address, uint256]\nstrategyCurrentDebt: HashMap[address, uint256]\nstrategyMaxDebt: HashMap[address, uint256]\nstrategyBalance: HashMap[address, uint256]",
+        )
+        .replace(
+            "self.strategies[strategy].activation",
+            "self.strategyActivation[strategy]",
+        )
+        .replace(
+            "self.strategies[strategy].currentDebt",
+            "self.strategyCurrentDebt[strategy]",
+        )
+        .replace(
+            "self.strategies[strategy].maxDebt",
+            "self.strategyMaxDebt[strategy]",
+        )
+        .replace(
+            "self.strategies[strategy].balance",
+            "self.strategyBalance[strategy]",
+        )
+}
+
+fn rewrite_vyper_02_uniswap_integer_types(source: &str) -> String {
+    source
+        .replace("def getReserves() -> (uint112, uint112, uint32):", "def getReserves() -> (uint256, uint256, uint256):")
+        .replace("return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)", "return self.reserve0, self.reserve1, self.blockTimestampLast")
+        .replace(
+            "convert(max_value(uint112), uint256)",
+            "5192296858534827628530496329220095",
+        )
+}
+
+#[derive(Debug)]
+struct VyperFunctionBlock {
+    text: String,
+    name: String,
+    is_internal: bool,
+    ordinal: usize,
+}
+
+fn reorder_vyper_02_internal_functions(source: &str) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    let Some(first_function_line) = lines
+        .iter()
+        .position(|line| line.starts_with('@') && is_vyper_function_decorator(line))
+    else {
+        return source.to_string();
+    };
+
+    let prefix = lines[..first_function_line].join("\n");
+    let mut blocks = Vec::new();
+    let mut start = first_function_line;
+    let mut ordinal = 0usize;
+    while start < lines.len() {
+        let mut end = start + 1;
+        while end < lines.len() {
+            if lines[end].starts_with('@') && is_vyper_function_decorator(lines[end]) {
+                break;
+            }
+            end += 1;
+        }
+        let text = lines[start..end].join("\n");
+        blocks.push(VyperFunctionBlock {
+            name: vyper_function_name(&text).unwrap_or_default(),
+            is_internal: text.lines().any(|line| line.trim() == "@internal"),
+            text,
+            ordinal,
+        });
+        ordinal += 1;
+        start = end;
+    }
+
+    let mut internal: Vec<_> = blocks.iter().filter(|block| block.is_internal).collect();
+    internal.sort_by_key(|block| (vyper_internal_order(&block.name), block.ordinal));
+    let external: Vec<_> = blocks.iter().filter(|block| !block.is_internal).collect();
+
+    let mut out = String::new();
+    out.push_str(&prefix);
+    if !out.ends_with("\n\n") {
+        out.push_str("\n\n");
+    }
+    for block in internal.into_iter().chain(external) {
+        out.push_str(block.text.trim());
+        out.push_str("\n\n");
+    }
+    out.trim_end().to_string()
+}
+
+fn is_vyper_function_decorator(line: &str) -> bool {
+    matches!(line.trim(), "@external" | "@internal" | "@deploy")
+}
+
+fn vyper_function_name(block: &str) -> Option<String> {
+    for line in block.lines() {
+        let trimmed = line.trim();
+        let Some(rest) = trimmed.strip_prefix("def ") else {
+            continue;
+        };
+        let Some((name, _)) = rest.split_once('(') else {
+            continue;
+        };
+        return Some(name.to_string());
+    }
+    None
+}
+
+fn vyper_internal_order(name: &str) -> usize {
+    match name {
+        "_min" => 0,
+        "_sqrt" => 1,
+        "_ready" => 2,
+        "_only_owner" => 3,
+        "_only_manager" => 4,
+        "_total_assets" => 5,
+        "_unlocked_shares" => 6,
+        "_effective_supply" => 7,
+        "_convert_to_shares" => 8,
+        "_convert_to_assets" => 9,
+        "_mint" => 10,
+        "_burn" => 11,
+        "_transfer" => 12,
+        "_ensure_idle" => 13,
+        "_redeem" => 14,
+        "_getD" => 15,
+        "_getY" => 16,
+        "_update" => 17,
+        "_mint_fee" => 18,
+        "_compute_address" => 19,
+        "_predict_clone" => 20,
+        _ => 100,
+    }
 }
 
 fn rewrite_vyper_event_log_line(line: &str) -> String {
@@ -1029,12 +1299,52 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        return type(uint256).max + type(uint112).max + proof.length;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
         let rewritten = transform_solidity_source(source, "solidity-0.4").unwrap();
         assert!(rewritten.contains("pragma solidity >=0.4.26 <0.5.0;"));
         assert!(rewritten.contains("10000000000"));
+        assert!(rewritten.contains("1000000"));
         assert!(rewritten.contains("constructor(uint256 initial) public {"));
         assert!(rewritten.contains("bytes32[] proof"));
+        assert!(rewritten.contains("bool ok = msg.sender.call.value(amount)();"));
+        assert!(rewritten.contains(
+            "bool ok = address(this).call(abi.encodeWithSignature(\"ping(uint256)\", i));"
+        ));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
+    }
+
+    #[test]
+    fn rewrites_vyper_02_compatibility_syntax() {
+        let source = "# pragma version >=0.4.3,<0.6.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
+        let rewritten = transform_vyper_source(source, "vyper-0.2").unwrap();
+        assert!(rewritten.contains("# pragma version >=0.2.16,<0.3.0"));
+        assert!(rewritten.contains("@view\ndef getReserves() -> (uint256, uint256, uint256):"));
+        assert!(rewritten.contains("    strategyBalance: uint256"));
+        assert!(rewritten.contains("amount0: uint256 = self.balance0"));
+        assert!(rewritten.contains("def _only_owner(sender: address):"));
+        assert!(rewritten.contains("assert sender == self.owner"));
+        assert!(rewritten.contains("self._only_owner(msg.sender)"));
+        assert!(rewritten.contains("return self.reserve0, self.reserve1, self.blockTimestampLast"));
+        assert!(rewritten.find("def _min").unwrap() < rewritten.find("def getReserves").unwrap());
+    }
+
+    #[test]
+    fn rewrites_vyper_03_struct_constructor_assignments() {
+        let source = "# pragma version >=0.4.3,<0.6.0\n\nstruct Strategy:\n    activation: uint256\n    currentDebt: uint256\n    maxDebt: uint256\n    balance: uint256\n\nstruct PendingReport:\n    gain: uint256\n    loss: uint256\n\nstrategies: HashMap[address, Strategy]\npendingReports: HashMap[address, PendingReport]\n\n@external\ndef f(strategy: address, gain: uint256, loss: uint256):\n    self.strategies[strategy].activation = 1\n    self.strategies[strategy].currentDebt += gain\n    self.strategies[strategy].maxDebt = loss\n    self.strategies[strategy].balance += gain\n    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)\n    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)\n";
+        let rewritten = transform_vyper_source(source, "vyper-0.3").unwrap();
+        assert!(rewritten.contains("strategyActivation: HashMap[address, uint256]"));
+        assert!(rewritten.contains("strategyCurrentDebt: HashMap[address, uint256]"));
+        assert!(rewritten.contains("strategyMaxDebt: HashMap[address, uint256]"));
+        assert!(rewritten.contains("strategyBalance: HashMap[address, uint256]"));
+        assert!(rewritten.contains("self.strategyActivation[strategy] = 1"));
+        assert!(rewritten.contains("self.strategyCurrentDebt[strategy] += gain"));
+        assert!(rewritten.contains("self.strategyMaxDebt[strategy] = loss"));
+        assert!(rewritten.contains("self.strategyBalance[strategy] += gain"));
+        assert!(rewritten.contains("pendingReportGain: HashMap[address, uint256]"));
+        assert!(rewritten.contains("pendingReportLoss: HashMap[address, uint256]"));
+        assert!(rewritten.contains("self.pendingReportGain[strategy] = gain"));
+        assert!(rewritten.contains("self.pendingReportLoss[strategy] = loss"));
+        assert!(rewritten.contains("self.pendingReportGain[strategy] = 0"));
+        assert!(rewritten.contains("self.pendingReportLoss[strategy] = 0"));
     }
 }

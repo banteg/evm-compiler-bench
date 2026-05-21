@@ -376,12 +376,8 @@ fn local_toolchain_if_version(
     env_path: Option<PathBuf>,
     latest: &str,
 ) -> Result<Option<Toolchain>> {
-    let binary_path = match env_path {
-        Some(path) => path,
-        None => match which::which(name) {
-            Ok(path) => path,
-            Err(_) => return Ok(None),
-        },
+    let Some(binary_path) = env_path else {
+        return Ok(None);
     };
     let version_output = command_stdout(Command::new(&binary_path).arg("--version"))?;
     let version = match name {
