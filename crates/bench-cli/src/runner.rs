@@ -404,7 +404,7 @@ fn generate_test(
     out.push_str("    bytes32 constant CURVE_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
     out.push_str("    uint256 constant YEARN_PERMIT_KEY = 0xA11CE;\n");
     out.push_str("    bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
-    out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; BenchUniswapFlashCallee flashCallee; }\n");
+    out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; BenchUniswapFlashCallee flashCallee; BenchUniswapReentrantCallee reentrantCallee; }\n");
     out.push_str(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
@@ -678,6 +678,21 @@ contract BenchUniswapFlashCallee {
     }
 }
 
+contract BenchUniswapReentrantCallee {
+    function uniswapV2Call(address, uint256, uint256, bytes calldata data) external {
+        (address token0, address token1, uint256 repay0, uint256 repay1) =
+            abi.decode(data, (address, address, uint256, uint256));
+        (bool ok,) = msg.sender.call(abi.encodeWithSignature("sync()"));
+        require(ok, "reentrant sync");
+        if (repay0 > 0) {
+            require(BenchERC20(token0).transfer(msg.sender, repay0), "repay0");
+        }
+        if (repay1 > 0) {
+            require(BenchERC20(token1).transfer(msg.sender, repay1), "repay1");
+        }
+    }
+}
+
 contract BenchYearnStrategy {
     BenchERC20 public immutable asset;
     uint256 public totalSupply;
@@ -903,7 +918,8 @@ fn helper_functions() -> &'static str {
         BenchERC20 token0 = new BenchERC20();
         BenchERC20 token1 = new BenchERC20();
         BenchUniswapFlashCallee flashCallee = new BenchUniswapFlashCallee();
-        pairDeps[target] = PairDeps(token0, token1, flashCallee);
+        BenchUniswapReentrantCallee reentrantCallee = new BenchUniswapReentrantCallee();
+        pairDeps[target] = PairDeps(token0, token1, flashCallee, reentrantCallee);
         feeTo = feeOn ? address(0xFEE) : address(0);
         (bool ok,) = target.call(
             abi.encodeWithSignature("initialize(address,address)", address(token0), address(token1))
@@ -934,6 +950,10 @@ fn helper_functions() -> &'static str {
 
     function benchUniswapFlashCallee(address target) public view returns (address) {
         return address(pairDeps[target].flashCallee);
+    }
+
+    function benchUniswapReentrantCallee(address target) public view returns (address) {
+        return address(pairDeps[target].reentrantCallee);
     }
 
     function benchUniswapSeed(address target, uint256 amount0, uint256 amount1) external returns (bool) {
@@ -971,6 +991,21 @@ fn helper_functions() -> &'static str {
         }
         if (amount1 > 0) {
             deps.token1.mint(address(deps.flashCallee), amount1);
+        }
+        return true;
+    }
+
+    function benchUniswapFundReentrantCallee(address target, uint256 amount0, uint256 amount1)
+        external
+        returns (bool)
+    {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.reentrantCallee) != address(0), "pair deps");
+        if (amount0 > 0) {
+            deps.token0.mint(address(deps.reentrantCallee), amount0);
+        }
+        if (amount1 > 0) {
+            deps.token1.mint(address(deps.reentrantCallee), amount1);
         }
         return true;
     }

@@ -50,6 +50,7 @@ real_derived:
     - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
     - output transfers to ERC20 tokens that return either bool or no data
     - non-empty flash-swap callback execution and repayment
+    - reentrancy lock rejection during flash-swap callbacks
     - constant-product fee check with 0.30% LP fee
     - fee-on protocol liquidity minting through kLast
     - cumulative price update behavior from elapsed block timestamp
@@ -60,14 +61,20 @@ real_derived:
     - mint_subsequent
     - swap_fee_invariant
     - flash_swap_callback
+    - flash_swap_reentrancy_reverts
     - burn
     - burn_no_return_tokens
+    - swap_no_return_tokens
     - sync
     - skim
+    - skim_no_return_tokens
     - fee_on_mint
     - fee_off_resets_k_last
     - uninitialized_mint_reverts
+    - reinitialize_by_factory
+    - non_factory_initialize_reverts
     - invalid_swap_reverts
+    - swap_to_token_reverts
     - permit_valid
     - permit_invalid_reverts
   mock_assumptions:
@@ -84,7 +91,9 @@ real_derived:
     - burn path with staged LP shares
     - constant-product swap fee invariant
     - non-empty flash-swap callback execution
+    - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
+    - no-return token swap, burn, and skim transfer-out paths
     - fee-on and fee-off kLast behavior
     - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
@@ -109,18 +118,27 @@ scenarios:
   - name: flash_swap_callback
     call: "swap(0, 100, flash callee, non-empty callback data)"
     expected: "optimistically transfers output, invokes the callback, accepts repayment, and updates reserves"
+  - name: flash_swap_reentrancy_reverts
+    call: "swap(0, 100, reentrant flash callee, non-empty callback data)"
+    expected: "rejects reentrant pair calls from the callback through the production lock"
   - name: burn
     call: "burn(address(this)) after LP shares are transferred to the pair"
     expected: "burns staged LP and transfers proportional token balances out"
   - name: burn_no_return_tokens
     call: "burn(address(this)) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data and burns staged LP"
+  - name: swap_no_return_tokens
+    call: "swap(0, 100, address(this), empty bytes) with ERC20 tokens that return no transfer data"
+    expected: "accepts empty transfer return data on the output token and updates reserves"
   - name: sync
     call: "sync() after token balance drift and time advance"
     expected: "updates reserves and cumulative prices from external token balances"
   - name: skim
     call: "skim(address(this)) after token balance drift"
     expected: "transfers token balances above reserves"
+  - name: skim_no_return_tokens
+    call: "skim(address(this)) after token balance drift with ERC20 tokens that return no transfer data"
+    expected: "accepts empty transfer return data while skimming balances above reserves"
   - name: fee_on_mint
     call: "feeTo set, mint, sync, mint"
     expected: "updates kLast and mints protocol liquidity when rootK grows"
@@ -130,8 +148,17 @@ scenarios:
   - name: uninitialized_mint_reverts
     call: "mint(address(this)) before initialize"
     expected: "reverts"
+  - name: reinitialize_by_factory
+    call: "initialize(token0, token1) from the factory after an initial initialize"
+    expected: "resets token addresses, matching the upstream pair's factory-only initialization gate"
+  - name: non_factory_initialize_reverts
+    call: "initialize(token0, token1) from a non-factory address"
+    expected: "reverts"
   - name: invalid_swap_reverts
     call: "swap with zero input"
+    expected: "reverts"
+  - name: swap_to_token_reverts
+    call: "swap output to token0 address"
     expected: "reverts"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"

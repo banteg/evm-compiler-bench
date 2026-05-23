@@ -95,7 +95,6 @@ def PERMIT_TYPEHASH() -> bytes32:
 @external
 def initialize(token0_: address, token1_: address):
     assert msg.sender == self.factory, "UniswapV2: FORBIDDEN"
-    assert self.token0 == empty(address) and self.token1 == empty(address), "UniswapV2: INITIALIZED"
     self.token0 = token0_
     self.token1 = token1_
 
