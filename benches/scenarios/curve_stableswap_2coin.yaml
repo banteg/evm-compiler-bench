@@ -15,6 +15,13 @@ scenarios:
       - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("A()")'
       - data: 'abi.encodeWithSignature("A_precise()")'
+      - data: 'abi.encodeWithSignature("initial_A()")'
+      - data: 'abi.encodeWithSignature("future_A()")'
+      - data: 'abi.encodeWithSignature("initial_A_time()")'
+      - data: 'abi.encodeWithSignature("future_A_time()")'
+      - data: 'abi.encodeWithSignature("fee()")'
+      - data: 'abi.encodeWithSignature("admin_fee()")'
+      - data: 'abi.encodeWithSignature("offpeg_fee_multiplier()")'
       - data: 'abi.encodeWithSignature("get_balances()")'
       - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
@@ -22,6 +29,13 @@ scenarios:
       - data: 'abi.encodeWithSignature("nonces(address)", benchCurvePermitOwner())'
       - data: 'abi.encodeWithSignature("allowance(address,address)", benchCurvePermitOwner(), BOB)'
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
+      - data: 'abi.encodeWithSignature("ma_exp_time()")'
+      - data: 'abi.encodeWithSignature("D_ma_time()")'
+      - data: 'abi.encodeWithSignature("ma_last_time()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("D_oracle()")'
   - name: add_imbalanced_liquidity
     state_access_profile: mixed
     setup:
