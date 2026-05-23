@@ -18,12 +18,35 @@ abi:
   - "accept_role_manager()"
   - "setName(string)"
   - "setSymbol(string)"
+  - "set_accountant(address)"
+  - "set_default_queue(address[])"
+  - "set_use_default_queue(bool)"
+  - "set_auto_allocate(bool)"
   - "set_deposit_limit(uint256,bool)"
+  - "set_deposit_limit_module(address,bool)"
+  - "set_withdraw_limit_module(address)"
+  - "set_minimum_total_idle(uint256)"
   - "setProfitMaxUnlockTime(uint256)"
+  - "buy_debt(address,uint256)"
+  - "revoke_strategy(address)"
+  - "force_revoke_strategy(address)"
   - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
   - "name() returns (string)"
   - "symbol() returns (string)"
   - "apiVersion() returns (string)"
+  - "FACTORY() returns (address)"
+  - "asset() returns (address)"
+  - "decimals() returns (uint8)"
+  - "accountant() returns (address)"
+  - "deposit_limit_module() returns (address)"
+  - "withdraw_limit_module() returns (address)"
+  - "deposit_limit() returns (uint256)"
+  - "minimum_total_idle() returns (uint256)"
+  - "use_default_queue() returns (bool)"
+  - "auto_allocate() returns (bool)"
+  - "default_queue(uint256) returns (address)"
+  - "get_default_queue() returns (address[])"
+  - "strategies(address) returns (uint256,uint256,uint256,uint256)"
   - "role_manager() returns (address)"
   - "future_role_manager() returns (address)"
   - "roles(address) returns (uint256)"
@@ -43,6 +66,11 @@ abi:
   - "maxRedeem(address,uint256) returns (uint256)"
   - "previewWithdraw(uint256) returns (uint256)"
   - "previewRedeem(uint256) returns (uint256)"
+  - "assess_share_of_unrealised_losses(address,uint256) returns (uint256)"
+  - "profitMaxUnlockTime() returns (uint256)"
+  - "fullProfitUnlockDate() returns (uint256)"
+  - "profitUnlockingRate() returns (uint256)"
+  - "lastProfitUpdate() returns (uint256)"
   - "balanceOf(address) returns (uint256)"
   - "allowance(address,address) returns (uint256)"
   - "totalSupply() returns (uint256)"
@@ -61,18 +89,22 @@ real_derived:
   upstream_license: GNU AGPLv3
   checked_at: "2026-05-23"
   production_equivalence: false
-  api_compatibility: "upstream Vyper source is exact and deployed through an EIP-1167 clone; Solidity is a scoped ERC4626/accounting port of the covered API"
+  api_compatibility: "upstream Vyper source is exact and deployed through an EIP-1167 clone; Solidity is an expanded idiomatic port of the upstream vault API but still under parity audit"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_asset_and_erc4626_strategy"
-  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port for the covered vault and strategy-accounting paths"
+  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port of the upstream vault behavior with management, module, queue, and strategy-accounting surfaces"
   equivalence_scope:
     - upstream Vyper blueprint plus minimal-proxy deployment model
     - ERC4626-style deposit, mint, withdraw, and redeem
     - role-gated strategy registry, max debt, and debt update paths
+    - strategy revoke, force revoke, minimum-idle, and bad-debt purchase management
     - bitmask role grants, delegated role execution, and role-manager handoff
     - mutable ERC20 metadata through role-manager setters
-    - process_report using a harnessed ERC4626-compatible strategy
+    - accountant, deposit-limit module, and withdraw-limit module configuration surfaces
+    - default and custom withdrawal queue configuration
+    - process_report using ERC4626-compatible strategy accounting plus accountant/protocol fee paths
     - locked-profit share accounting observable through pricePerShare
+    - optional-return ERC20 asset transfer, transferFrom, and approve compatibility
     - EIP-712 permit acceptance and invalid-permit reverts
     - shutdown, deposit-limit, and permission reverts
   scenario_coverage:
@@ -97,27 +129,29 @@ real_derived:
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys a standard ERC20 asset and an ERC4626-compatible strategy
-    - factory protocol fee config is provided by the harness and returns zero protocol fees
-    - accountant and custom deposit/withdraw limit modules are unset in the covered scenarios
-    - Solidity port is not a full line-for-line Yearn V3 rewrite and omits several accountant/module and queue surfaces
+    - factory protocol fee config is provided by the harness and currently returns zero protocol fees in covered scenarios
+    - accountant and custom deposit/withdraw limit modules are implemented but still need nonzero-path scenario coverage
+    - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
   included_features:
     - upstream Vyper vault source at the pinned commit
     - minimal-proxy deployment for the upstream Vyper blueprint
     - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
+    - strategy revoke, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
-    - profit/loss report accounting and locked-profit shares
+    - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
+    - profit/loss report accounting, refunds, fees, and locked-profit shares
+    - optional-return ERC20 asset handling
     - deposit-limit and permission reverts
     - valid EIP-712 permit acceptance and invalid permit revert paths
   excluded_features:
-    - accountant contract fee/refund hooks beyond zero-fee harness config
-    - custom deposit and withdraw limit module behavior
-    - multi-strategy custom withdrawal queue traversal in the Solidity port
+    - full nonzero accountant, protocol-fee, and custom module scenario coverage
+    - full multi-strategy queue differential coverage
     - exact storage layout compatibility in the Solidity port
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
-  - "The Solidity port is scoped to the covered ERC4626, debt, report, shutdown, and permission paths and is not a full production Yearn V3 rewrite."
+  - "The Solidity port is expanded toward full upstream behavior, but production equivalence remains false until all management/module/queue paths are differentially covered and audited."
 scenarios:
   - name: initialize
     call: "initialize(asset, name, symbol, roleManager, profitMaxUnlockTime)"
