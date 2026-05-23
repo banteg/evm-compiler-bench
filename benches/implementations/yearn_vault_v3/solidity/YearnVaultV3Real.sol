@@ -43,27 +43,27 @@ interface YearnBenchFactory {
 }
 
 contract YearnVaultV3Real {
-    uint256 public constant MAX_QUEUE = 10;
-    uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant MAX_BPS_EXTENDED = 1_000_000_000_000;
-    uint256 public constant ADD_STRATEGY_MANAGER = 1 << 0;
-    uint256 public constant REVOKE_STRATEGY_MANAGER = 1 << 1;
-    uint256 public constant FORCE_REVOKE_MANAGER = 1 << 2;
-    uint256 public constant ACCOUNTANT_MANAGER = 1 << 3;
-    uint256 public constant QUEUE_MANAGER = 1 << 4;
-    uint256 public constant REPORTING_MANAGER = 1 << 5;
-    uint256 public constant DEBT_MANAGER = 1 << 6;
-    uint256 public constant MAX_DEBT_MANAGER = 1 << 7;
-    uint256 public constant DEPOSIT_LIMIT_MANAGER = 1 << 8;
-    uint256 public constant WITHDRAW_LIMIT_MANAGER = 1 << 9;
-    uint256 public constant MINIMUM_IDLE_MANAGER = 1 << 10;
-    uint256 public constant PROFIT_UNLOCK_MANAGER = 1 << 11;
-    uint256 public constant DEBT_PURCHASER = 1 << 12;
-    uint256 public constant EMERGENCY_MANAGER = 1 << 13;
-    string public constant API_VERSION = "3.0.4";
-    bytes32 public constant DOMAIN_TYPE_HASH =
+    uint256 internal constant MAX_QUEUE = 10;
+    uint256 internal constant MAX_BPS = 10_000;
+    uint256 internal constant MAX_BPS_EXTENDED = 1_000_000_000_000;
+    uint256 internal constant ADD_STRATEGY_MANAGER = 1 << 0;
+    uint256 internal constant REVOKE_STRATEGY_MANAGER = 1 << 1;
+    uint256 internal constant FORCE_REVOKE_MANAGER = 1 << 2;
+    uint256 internal constant ACCOUNTANT_MANAGER = 1 << 3;
+    uint256 internal constant QUEUE_MANAGER = 1 << 4;
+    uint256 internal constant REPORTING_MANAGER = 1 << 5;
+    uint256 internal constant DEBT_MANAGER = 1 << 6;
+    uint256 internal constant MAX_DEBT_MANAGER = 1 << 7;
+    uint256 internal constant DEPOSIT_LIMIT_MANAGER = 1 << 8;
+    uint256 internal constant WITHDRAW_LIMIT_MANAGER = 1 << 9;
+    uint256 internal constant MINIMUM_IDLE_MANAGER = 1 << 10;
+    uint256 internal constant PROFIT_UNLOCK_MANAGER = 1 << 11;
+    uint256 internal constant DEBT_PURCHASER = 1 << 12;
+    uint256 internal constant EMERGENCY_MANAGER = 1 << 13;
+    string internal constant API_VERSION = "3.0.4";
+    bytes32 internal constant DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-    bytes32 public constant PERMIT_TYPE_HASH =
+    bytes32 internal constant PERMIT_TYPE_HASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     struct StrategyParams {
@@ -75,8 +75,8 @@ contract YearnVaultV3Real {
 
     address public asset;
     uint8 public decimals;
-    address public factory;
-    mapping(address => StrategyParams) public strategies;
+    address internal factory;
+    mapping(address => StrategyParams) internal _strategies;
     address[] public default_queue;
     bool public use_default_queue;
     bool public auto_allocate;
@@ -84,8 +84,8 @@ contract YearnVaultV3Real {
     mapping(address => uint256) internal _balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
     uint256 internal _totalSupply;
-    uint256 public total_debt;
-    uint256 public total_idle;
+    uint256 internal total_debt;
+    uint256 internal total_idle;
     uint256 public minimum_total_idle;
     uint256 public deposit_limit;
 
@@ -290,7 +290,7 @@ contract YearnVaultV3Real {
         require(newDefaultQueue.length <= MAX_QUEUE, "queue too long");
         delete default_queue;
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
-            require(strategies[newDefaultQueue[i]].activation != 0, "!inactive");
+            require(_strategies[newDefaultQueue[i]].activation != 0, "!inactive");
             default_queue.push(newDefaultQueue[i]);
         }
         emit UpdateDefaultQueue(newDefaultQueue);
@@ -308,7 +308,23 @@ contract YearnVaultV3Real {
         emit UpdateAutoAllocate(autoAllocate);
     }
 
+    function set_deposit_limit(uint256 newDepositLimit) external ready {
+        _setDepositLimit(newDepositLimit, false);
+    }
+
     function set_deposit_limit(uint256 newDepositLimit, bool overrideModule) external ready {
+        _setDepositLimit(newDepositLimit, overrideModule);
+    }
+
+    function set_deposit_limit_module(address depositLimitModule) external ready {
+        _setDepositLimitModule(depositLimitModule, false);
+    }
+
+    function set_deposit_limit_module(address depositLimitModule, bool overrideLimit) external ready {
+        _setDepositLimitModule(depositLimitModule, overrideLimit);
+    }
+
+    function _setDepositLimit(uint256 newDepositLimit, bool overrideModule) internal {
         require(!shutdown, "shutdown");
         _enforceRole(msg.sender, DEPOSIT_LIMIT_MANAGER);
         if (overrideModule) {
@@ -323,7 +339,7 @@ contract YearnVaultV3Real {
         emit UpdateDepositLimit(newDepositLimit);
     }
 
-    function set_deposit_limit_module(address depositLimitModule, bool overrideLimit) external ready {
+    function _setDepositLimitModule(address depositLimitModule, bool overrideLimit) internal {
         require(!shutdown, "shutdown");
         _enforceRole(msg.sender, DEPOSIT_LIMIT_MANAGER);
         if (overrideLimit) {
@@ -405,7 +421,7 @@ contract YearnVaultV3Real {
 
     function buy_debt(address strategy, uint256 amount) external ready {
         _enforceRole(msg.sender, DEBT_PURCHASER);
-        StrategyParams storage params = strategies[strategy];
+        StrategyParams storage params = _strategies[strategy];
         require(params.activation != 0, "not active");
         uint256 currentDebt = params.currentDebt;
         uint256 amount_ = amount;
@@ -429,6 +445,11 @@ contract YearnVaultV3Real {
         emit DebtPurchased(strategy, amount_);
     }
 
+    function add_strategy(address newStrategy) external ready {
+        _enforceRole(msg.sender, ADD_STRATEGY_MANAGER);
+        _addStrategy(newStrategy, true);
+    }
+
     function add_strategy(address newStrategy, bool addToQueue) external ready {
         _enforceRole(msg.sender, ADD_STRATEGY_MANAGER);
         _addStrategy(newStrategy, addToQueue);
@@ -446,9 +467,14 @@ contract YearnVaultV3Real {
 
     function update_max_debt_for_strategy(address strategy, uint256 newMaxDebt) external ready {
         _enforceRole(msg.sender, MAX_DEBT_MANAGER);
-        require(strategies[strategy].activation != 0, "inactive strategy");
-        strategies[strategy].maxDebt = newMaxDebt;
+        require(_strategies[strategy].activation != 0, "inactive strategy");
+        _strategies[strategy].maxDebt = newMaxDebt;
         emit UpdatedMaxDebtForStrategy(msg.sender, strategy, newMaxDebt);
+    }
+
+    function update_debt(address strategy, uint256 targetDebt) external ready returns (uint256) {
+        _enforceRole(msg.sender, DEBT_MANAGER);
+        return _updateDebt(strategy, targetDebt, MAX_BPS);
     }
 
     function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss) external ready returns (uint256) {
@@ -487,6 +513,10 @@ contract YearnVaultV3Real {
 
     function get_default_queue() external view returns (address[] memory) {
         return default_queue;
+    }
+
+    function strategies(address strategy) external view returns (StrategyParams memory) {
+        return _strategies[strategy];
     }
 
     function balanceOf(address account) public view returns (uint256) {
@@ -585,7 +615,7 @@ contract YearnVaultV3Real {
     }
 
     function assess_share_of_unrealised_losses(address strategy, uint256 assetsNeeded) external view returns (uint256) {
-        uint256 currentDebt = strategies[strategy].currentDebt;
+        uint256 currentDebt = _strategies[strategy].currentDebt;
         require(currentDebt >= assetsNeeded, "debt");
         return _assessShareOfUnrealisedLosses(strategy, currentDebt, assetsNeeded);
     }
@@ -606,7 +636,7 @@ contract YearnVaultV3Real {
         return last_profit_update;
     }
 
-    function domain_separator() public view returns (bytes32) {
+    function domain_separator() internal view returns (bytes32) {
         return keccak256(
             abi.encode(
                 DOMAIN_TYPE_HASH, keccak256("Yearn Vault"), keccak256(bytes(API_VERSION)), block.chainid, address(this)
@@ -616,30 +646,6 @@ contract YearnVaultV3Real {
 
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return domain_separator();
-    }
-
-    function permitDigest(address owner, address spender, uint256 value, uint256 deadline)
-        external
-        view
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encodePacked(
-                bytes1(0x19),
-                bytes1(0x01),
-                domain_separator(),
-                keccak256(abi.encode(PERMIT_TYPE_HASH, owner, spender, value, nonces[owner], deadline))
-            )
-        );
-    }
-
-    function strategyState(address strategy)
-        external
-        view
-        returns (uint256 activation, uint256 lastReport, uint256 currentDebt, uint256 maxDebt)
-    {
-        StrategyParams memory params = strategies[strategy];
-        return (params.activation, params.lastReport, params.currentDebt, params.maxDebt);
     }
 
     function _withdraw(
@@ -706,7 +712,7 @@ contract YearnVaultV3Real {
 
             for (uint256 i = 0; i < queue.length; i++) {
                 address strategy = queue[i];
-                StrategyParams storage params = strategies[strategy];
+                StrategyParams storage params = _strategies[strategy];
                 require(params.activation != 0, "inactive strategy");
 
                 uint256 currentDebt = params.currentDebt;
@@ -786,9 +792,9 @@ contract YearnVaultV3Real {
     function _addStrategy(address newStrategy, bool addToQueue) internal {
         require(newStrategy != address(this) && newStrategy != address(0), "strategy cannot be zero address");
         require(YearnBenchStrategy(newStrategy).asset() == asset, "invalid asset");
-        require(strategies[newStrategy].activation == 0, "strategy already active");
+        require(_strategies[newStrategy].activation == 0, "strategy already active");
 
-        strategies[newStrategy] =
+        _strategies[newStrategy] =
             StrategyParams({activation: block.timestamp, lastReport: block.timestamp, currentDebt: 0, maxDebt: 0});
 
         if (addToQueue && default_queue.length < MAX_QUEUE) {
@@ -799,7 +805,7 @@ contract YearnVaultV3Real {
     }
 
     function _revokeStrategy(address strategy, bool force) internal {
-        StrategyParams storage params = strategies[strategy];
+        StrategyParams storage params = _strategies[strategy];
         require(params.activation != 0, "strategy not active");
         if (params.currentDebt != 0) {
             require(force, "strategy has debt");
@@ -808,7 +814,7 @@ contract YearnVaultV3Real {
             emit StrategyReported(strategy, 0, loss, 0, 0, 0, 0);
         }
 
-        delete strategies[strategy];
+        delete _strategies[strategy];
         uint256 length = default_queue.length;
         for (uint256 i = 0; i < length; i++) {
             if (default_queue[i] == strategy) {
@@ -823,7 +829,7 @@ contract YearnVaultV3Real {
     }
 
     function _updateDebt(address strategy, uint256 targetDebt, uint256 maxLoss) internal returns (uint256) {
-        StrategyParams storage params = strategies[strategy];
+        StrategyParams storage params = _strategies[strategy];
         uint256 newDebt = shutdown ? 0 : targetDebt;
         uint256 currentDebt = params.currentDebt;
         require(newDebt != currentDebt, "new debt equals current debt");
@@ -918,7 +924,7 @@ contract YearnVaultV3Real {
         uint256 currentDebt;
 
         if (strategy != address(this)) {
-            StrategyParams storage params = strategies[strategy];
+            StrategyParams storage params = _strategies[strategy];
             require(params.activation != 0, "inactive strategy");
             uint256 strategyShares = YearnBenchStrategy(strategy).balanceOf(address(this));
             totalAssets_ = YearnBenchStrategy(strategy).convertToAssets(strategyShares);
@@ -1001,7 +1007,7 @@ contract YearnVaultV3Real {
         if (gain > 0) {
             currentDebt += gain;
             if (strategy != address(this)) {
-                strategies[strategy].currentDebt = currentDebt;
+                _strategies[strategy].currentDebt = currentDebt;
                 total_debt += gain;
             } else {
                 currentDebt += totalRefunds;
@@ -1010,7 +1016,7 @@ contract YearnVaultV3Real {
         } else if (loss > 0) {
             currentDebt -= loss;
             if (strategy != address(this)) {
-                strategies[strategy].currentDebt = currentDebt;
+                _strategies[strategy].currentDebt = currentDebt;
                 total_debt -= loss;
             } else {
                 currentDebt += totalRefunds;
@@ -1045,7 +1051,7 @@ contract YearnVaultV3Real {
             full_profit_unlock_date = 0;
         }
 
-        strategies[strategy].lastReport = block.timestamp;
+        _strategies[strategy].lastReport = block.timestamp;
         if (loss + totalFees > gain + totalRefunds || profitMaxUnlockTime_ == 0) {
             totalFees = _convertToAssets(totalFeesShares, false);
         }
@@ -1093,8 +1099,8 @@ contract YearnVaultV3Real {
             address[] memory queue = _queueFor(strategies_);
             for (uint256 i = 0; i < queue.length; i++) {
                 address strategy = queue[i];
-                require(strategies[strategy].activation != 0, "inactive strategy");
-                uint256 currentDebt = strategies[strategy].currentDebt;
+                require(_strategies[strategy].activation != 0, "inactive strategy");
+                uint256 currentDebt = _strategies[strategy].currentDebt;
                 uint256 toWithdraw = _min(maxAssets - have, currentDebt);
                 uint256 unrealisedLoss = _assessShareOfUnrealisedLosses(strategy, currentDebt, toWithdraw);
                 uint256 strategyLimit =

@@ -118,6 +118,18 @@ scenarios:
       data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(40_000), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: update_debt_default_max_loss
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+    measured:
+      data: 'abi.encodeWithSignature("update_debt(address,uint256)", benchYearnStrategy({target}), uint256(100_000))'
+    expect_success: true
+    observers: *yearn_observers
   - name: role_delegate_add_strategy
     state_access_profile: mixed
     setup:
@@ -127,6 +139,15 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
       sender: BOB
+    expect_success: true
+    observers: *yearn_observers
+  - name: add_strategy_default_queue
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("add_strategy(address)", benchYearnStrategy({target}))'
     expect_success: true
     observers: *yearn_observers
   - name: add_remove_role
@@ -292,6 +313,24 @@ scenarios:
       data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
       sender: BOB
     expect_success: false
+    observers: *yearn_observers
+  - name: set_deposit_limit_default
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("set_deposit_limit(uint256)", uint256(500_000))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: set_deposit_limit_module_default
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("set_deposit_limit_module(address)", benchYearnDepositLimitModule({target}))'
+    expect_success: true
     observers: *yearn_observers
   - name: deposit_limit_reverts
     state_access_profile: warm

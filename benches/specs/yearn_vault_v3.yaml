@@ -8,6 +8,7 @@ abi:
   - "redeem(uint256,address,address,uint256) returns (uint256)"
   - "add_strategy(address,bool)"
   - "update_max_debt_for_strategy(address,uint256)"
+  - "update_debt(address,uint256) returns (uint256)"
   - "update_debt(address,uint256,uint256) returns (uint256)"
   - "process_report(address) returns (uint256,uint256)"
   - "shutdown_vault()"
@@ -22,12 +23,15 @@ abi:
   - "set_default_queue(address[])"
   - "set_use_default_queue(bool)"
   - "set_auto_allocate(bool)"
+  - "set_deposit_limit(uint256)"
   - "set_deposit_limit(uint256,bool)"
+  - "set_deposit_limit_module(address)"
   - "set_deposit_limit_module(address,bool)"
   - "set_withdraw_limit_module(address)"
   - "set_minimum_total_idle(uint256)"
   - "setProfitMaxUnlockTime(uint256)"
   - "buy_debt(address,uint256)"
+  - "add_strategy(address)"
   - "revoke_strategy(address)"
   - "force_revoke_strategy(address)"
   - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
@@ -115,7 +119,9 @@ real_derived:
     - redeem_idle
     - update_debt_increase
     - update_debt_decrease
+    - update_debt_default_max_loss
     - role_delegate_add_strategy
+    - add_strategy_default_queue
     - add_remove_role
     - role_manager_transfer_accept
     - set_metadata
@@ -128,6 +134,8 @@ real_derived:
     - forced_default_queue_withdraw
     - shutdown_rejects_deposit
     - permission_revert
+    - set_deposit_limit_default
+    - set_deposit_limit_module_default
     - deposit_limit_reverts
     - deposit_limit_module
     - deposit_limit_module_reverts
@@ -144,6 +152,7 @@ real_derived:
     - minimal-proxy deployment for the upstream Vyper blueprint
     - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
+    - Vyper default-argument external overloads for strategy, debt, and deposit-limit management
     - strategy revoke, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
@@ -180,9 +189,15 @@ scenarios:
   - name: update_debt_decrease
     call: "update_debt(strategy, 40_000, 0) after a higher debt allocation"
     expected: "redeems strategy shares and returns assets to idle"
+  - name: update_debt_default_max_loss
+    call: "update_debt(strategy, 100_000) using the Vyper default max_loss overload"
+    expected: "allocates debt with the upstream default max-loss selector"
   - name: role_delegate_add_strategy
     call: "add_strategy(strategy, true) from an address granted ADD_STRATEGY_MANAGER"
     expected: "accepts delegated bitmask role execution"
+  - name: add_strategy_default_queue
+    call: "add_strategy(strategy) using the Vyper default add_to_queue overload"
+    expected: "adds the strategy and appends it to the default withdrawal queue"
   - name: add_remove_role
     call: "remove_role after set_role and add_role"
     expected: "updates the account role bitmask"
@@ -219,6 +234,12 @@ scenarios:
   - name: permission_revert
     call: "add_strategy from a non-manager sender"
     expected: "reverts"
+  - name: set_deposit_limit_default
+    call: "set_deposit_limit(limit) using the Vyper default override=false overload"
+    expected: "updates the direct deposit limit when no module is active"
+  - name: set_deposit_limit_module_default
+    call: "set_deposit_limit_module(module) using the Vyper default override=false overload"
+    expected: "sets the deposit limit module when the direct limit is already max uint256"
   - name: deposit_limit_reverts
     call: "deposit above the configured limit"
     expected: "reverts"
