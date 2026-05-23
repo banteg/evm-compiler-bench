@@ -11,6 +11,7 @@ const args = new Set(process.argv.slice(2));
 
 const bucket = valueArg("--bucket") || process.env.CF_R2_BUCKET || "evm-compilers";
 const prefix = stripSlashes(valueArg("--prefix") || process.env.CF_R2_PREFIX || "evm-compiler-bench");
+const channel = normalizeChannel(valueArg("--channel") || process.env.EVM_BENCH_CHANNEL || process.env.CF_R2_CHANNEL || "dev");
 const upload = args.has("--upload");
 const deploy = args.has("--deploy");
 const wrangler = process.env.WRANGLER_BIN || "wrangler";
@@ -41,6 +42,7 @@ const publishManifest = {
   project: "evm-compiler-bench",
   bucket,
   prefix,
+  channel,
   run_id: runId,
   commit: runManifest.environment?.git?.commit ?? null,
   dirty: runManifest.environment?.git?.dirty ?? null,
@@ -62,7 +64,7 @@ publishManifest.artifacts.publish_manifest = artifact(
 const latestPath = join(publishDir, "latest.json");
 writeFileSync(latestPath, JSON.stringify(publishManifest, null, 2) + "\n");
 
-console.log(`prepared ${Object.keys(publishManifest.artifacts).length} artifacts for run ${runId}`);
+console.log(`prepared ${Object.keys(publishManifest.artifacts).length} artifacts for ${channel} run ${runId}`);
 console.log(`publish manifest: ${publishManifestPath}`);
 for (const [name, item] of Object.entries(publishManifest.artifacts)) {
   console.log(`${name}: ${item.size_bytes} bytes -> ${item.encoded_size_bytes} bytes at r2://${bucket}/${item.key}`);
@@ -73,7 +75,7 @@ if (upload) {
     uploadObject(name, item, "public, max-age=31536000, immutable");
   }
   uploadObject("latest", {
-    key: `${prefix}/latest.json`,
+    key: `${prefix}/channels/${channel}/latest.json`,
     file: latestPath,
     content_type: "application/json; charset=utf-8",
     content_encoding: null,
@@ -81,7 +83,7 @@ if (upload) {
 }
 
 if (deploy) {
-  run(wrangler, ["deploy"]);
+  run(wrangler, channel === "prod" ? ["deploy", "--env="] : ["deploy", "--env", channel]);
 }
 
 function artifact(fileName, sourcePath, contentType, compress) {
@@ -148,6 +150,14 @@ function sha256(bytes) {
 
 function stripSlashes(value) {
   return value.replace(/^\/+|\/+$/g, "");
+}
+
+function normalizeChannel(value) {
+  const channel = String(value).trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel)) {
+    throw new Error(`invalid channel ${JSON.stringify(value)}; expected [a-z0-9][a-z0-9_-]{0,31}`);
+  }
+  return channel;
 }
 
 function valueArg(name) {

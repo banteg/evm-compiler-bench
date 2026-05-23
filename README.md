@@ -113,12 +113,13 @@ After a local benchmark run:
 ```sh
 cargo run --release -- run
 cargo run --release -- validate
-just publish-results
+just publish-dev-results
 ```
 
-`just publish-results` uploads the current `results/` artifacts to the
-`evm-compilers` R2 bucket and updates the latest-run manifest. See
-`docs/publishing.md` for the Cloudflare setup.
+`just publish-dev-results` uploads the current `results/` artifacts to the
+`evm-compilers` R2 bucket and updates only the dev latest-run pointer. Use
+`just publish-prod-results` from a clean `master` worktree when the public report
+is ready. See `docs/publishing.md` for the Cloudflare setup.
 
 ## Shareable archives
 

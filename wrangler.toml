@@ -2,11 +2,32 @@ name = "evm-compiler-bench"
 main = "worker/index.js"
 compatibility_date = "2026-05-21"
 
+[vars]
+BENCH_CHANNEL = "prod"
+R2_PREFIX = "evm-compiler-bench"
+
 [[r2_buckets]]
 binding = "RESULTS"
 bucket_name = "evm-compilers"
 
 [assets]
+directory = "report-ui/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[env.dev]
+name = "evm-compiler-bench-dev"
+
+[env.dev.vars]
+BENCH_CHANNEL = "dev"
+R2_PREFIX = "evm-compiler-bench"
+
+[[env.dev.r2_buckets]]
+binding = "RESULTS"
+bucket_name = "evm-compilers"
+
+[env.dev.assets]
 directory = "report-ui/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"

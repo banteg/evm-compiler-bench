@@ -4,16 +4,35 @@ build-report-ui:
     npm --prefix report-ui ci
     npm --prefix report-ui run build
 
-prepare-publish:
-    node scripts/publish-results.mjs
+prepare-publish channel="dev":
+    node scripts/publish-results.mjs --channel={{channel}}
 
-publish-results:
-    node scripts/publish-results.mjs --upload
+publish-results channel="dev":
+    node scripts/publish-results.mjs --upload --channel={{channel}}
+
+publish-dev-results:
+    node scripts/publish-results.mjs --upload --channel=dev
+
+publish-prod-results:
+    #!/usr/bin/env zsh
+    set -euo pipefail
+    if [[ "$(git branch --show-current)" != "master" ]]; then
+      echo "prod publish must run from master" >&2
+      exit 1
+    fi
+    git diff --quiet
+    git diff --cached --quiet
+    node scripts/publish-results.mjs --upload --channel=prod
 
 deploy-site:
     npm --prefix report-ui ci
     npm --prefix report-ui run build
-    wrangler deploy
+    wrangler deploy --env=""
+
+deploy-dev-site:
+    npm --prefix report-ui ci
+    npm --prefix report-ui run build
+    wrangler deploy --env dev
 
 # Create a shareable source + reports archive without local toolchain/build caches.
 zip out="":
