@@ -8,10 +8,15 @@ abi:
   - "remove_liquidity_one_coin(uint256,int128,uint256,address) returns (uint256)"
   - "remove_liquidity_imbalance(uint256[],uint256,address) returns (uint256)"
   - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
+  - "A() returns (uint256)"
+  - "A_precise() returns (uint256)"
   - "get_virtual_price() returns (uint256)"
   - "balances(uint256) returns (uint256)"
+  - "get_balances() returns (uint256[])"
   - "admin_balances(uint256) returns (uint256)"
+  - "stored_rates() returns (uint256[])"
   - "coins(uint256) returns (address)"
+  - "calc_withdraw_one_coin(uint256,int128) returns (uint256)"
   - "balanceOf(address) returns (uint256)"
   - "allowance(address,address) returns (uint256)"
   - "nonces(address) returns (uint256)"
@@ -45,6 +50,7 @@ real_derived:
     - LP token accounting
     - deterministic standard-token dynamic-fee and admin-fee accounting
     - virtual price and observable balances
+    - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
   scenario_coverage:
     - add_initial_liquidity
     - add_imbalanced_liquidity
@@ -59,6 +65,7 @@ real_derived:
     - remove_liquidity_imbalance
     - remove_liquidity_imbalance_slippage_reverts
     - remove_one_coin
+    - calc_withdraw_one_coin
     - remove_one_coin_slippage_reverts
     - invalid_coin_reverts
     - permit_valid
@@ -76,6 +83,7 @@ real_derived:
     - exchange_received optimistic-transfer flow
     - optional-return ERC20 transfer and transferFrom compatibility
     - proportional and one-coin withdrawal
+    - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
     - imbalanced withdrawal
     - dynamic/off-peg fee and admin-fee accounting
     - valid EIP-712 LP permit acceptance and invalid permit revert paths
@@ -126,6 +134,9 @@ scenarios:
   - name: remove_one_coin
     call: "remove_liquidity_one_coin(10_000, 1, 0, address(this))"
     expected: "burns LP shares for one coin with fee"
+  - name: calc_withdraw_one_coin
+    call: "calc_withdraw_one_coin(10_000, 1) after initial liquidity"
+    expected: "quotes one-coin withdrawal amount without mutating state"
   - name: remove_one_coin_slippage_reverts
     call: "remove_liquidity_one_coin(10_000, 1, 1_000_000, address(this))"
     expected: "reverts"

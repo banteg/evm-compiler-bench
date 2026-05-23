@@ -29,6 +29,7 @@ contract CurveStableSwap2CoinReal {
     uint256 public offpeg_fee_multiplier;
     bool public initialized;
 
+    uint256[2] public rate_multipliers;
     uint256[2] public balances;
     uint256[2] public admin_balances;
     uint256 public totalSupply;
@@ -87,6 +88,8 @@ contract CurveStableSwap2CoinReal {
         initialized = true;
         coins[0] = coins_[0];
         coins[1] = coins_[1];
+        rate_multipliers[0] = rateMultipliers.length > 0 ? rateMultipliers[0] : 1e18;
+        rate_multipliers[1] = rateMultipliers.length > 1 ? rateMultipliers[1] : 1e18;
         A = amp;
         fee = swapFee;
         admin_fee = 5_000_000_000;
@@ -308,6 +311,28 @@ contract CurveStableSwap2CoinReal {
             return 1e18;
         }
         return _getD(balances[0], balances[1]) * 1e18 / totalSupply;
+    }
+
+    function A_precise() external view returns (uint256) {
+        return A * A_PRECISION;
+    }
+
+    function get_balances() external view returns (uint256[] memory result) {
+        result = new uint256[](N_COINS);
+        result[0] = balances[0];
+        result[1] = balances[1];
+    }
+
+    function stored_rates() external view returns (uint256[] memory result) {
+        result = new uint256[](N_COINS);
+        result[0] = rate_multipliers[0];
+        result[1] = rate_multipliers[1];
+    }
+
+    function calc_withdraw_one_coin(uint256 burnAmount, int128 i) external view returns (uint256) {
+        require(i >= 0 && uint256(int256(i)) < N_COINS, "coin");
+        (uint256 dy,) = _calcWithdrawOneCoin(burnAmount, uint256(int256(i)));
+        return dy;
     }
 
     function DOMAIN_SEPARATOR() external view returns (bytes32) {

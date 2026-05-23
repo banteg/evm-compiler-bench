@@ -13,6 +13,10 @@ scenarios:
       - data: 'abi.encodeWithSignature("balances(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("A()")'
+      - data: 'abi.encodeWithSignature("A_precise()")'
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
       - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
       - data: 'abi.encodeWithSignature("nonces(address)", benchCurvePermitOwner())'
@@ -145,6 +149,16 @@ scenarios:
       - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
       data: 'abi.encodeWithSignature("remove_liquidity_one_coin(uint256,int128,uint256,address)", uint256(10_000), int128(1), uint256(0), address(this))'
+    expect_success: true
+    observers: *curve_observers
+  - name: calc_withdraw_one_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("calc_withdraw_one_coin(uint256,int128)", uint256(10_000), int128(1))'
     expect_success: true
     observers: *curve_observers
   - name: remove_one_coin_slippage_reverts
