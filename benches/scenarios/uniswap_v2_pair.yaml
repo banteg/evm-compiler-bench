@@ -80,6 +80,22 @@ scenarios:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapFlashCallee({target}), abi.encode(benchUniswapToken0({target}), benchUniswapToken1({target}), uint256(102), uint256(0)))'
     expect_success: true
     observers: *pair_observers
+  - name: flash_swap_large_callback_data
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapFundFlashCallee(address,uint256,uint256)", {target}, uint256(102), uint256(0))'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapFlashCallee({target}), benchUniswapFlashData({target}, uint256(102), uint256(0), uint256(1200)))'
+    expect_success: true
+    observers: *pair_observers
   - name: flash_swap_reentrancy_reverts
     state_access_profile: mixed
     setup:

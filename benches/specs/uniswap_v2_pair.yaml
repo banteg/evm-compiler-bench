@@ -62,6 +62,7 @@ real_derived:
     - mint_subsequent
     - swap_fee_invariant
     - flash_swap_callback
+    - flash_swap_large_callback_data
     - flash_swap_reentrancy_reverts
     - burn
     - burn_no_return_tokens
@@ -94,6 +95,7 @@ real_derived:
     - burn path with staged LP shares
     - constant-product swap fee invariant
     - non-empty flash-swap callback execution
+    - flash-swap callback data above the old 1024-byte Vyper port bound
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
@@ -103,7 +105,7 @@ real_derived:
   excluded_features:
     - CREATE2 pair factory deployment path
     - exact Solidity packed reserve storage layout in the Vyper port
-    - unbounded flash-swap callback calldata length in the Vyper port
+    - truly unbounded flash-swap callback calldata length in the Vyper port
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
@@ -123,6 +125,9 @@ scenarios:
   - name: flash_swap_callback
     call: "swap(0, 100, flash callee, non-empty callback data)"
     expected: "optimistically transfers output, invokes the callback, accepts repayment, and updates reserves"
+  - name: flash_swap_large_callback_data
+    call: "swap(0, 100, flash callee, callback data larger than 1024 bytes)"
+    expected: "accepts and forwards callback data above the previous Vyper port bound"
   - name: flash_swap_reentrancy_reverts
     call: "swap(0, 100, reentrant flash callee, non-empty callback data)"
     expected: "rejects reentrant pair calls from the callback through the production lock"

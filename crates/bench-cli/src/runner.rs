@@ -1229,6 +1229,21 @@ fn helper_functions() -> &'static str {
         return true;
     }
 
+    function benchUniswapFlashData(address target, uint256 repay0, uint256 repay1, uint256 paddingLength)
+        public
+        view
+        returns (bytes memory data)
+    {
+        bytes memory padding = new bytes(paddingLength);
+        for (uint256 i = 0; i < padding.length; i++) {
+            padding[i] = bytes1(uint8(uint256(keccak256(abi.encode(target, repay0, repay1, i)))));
+        }
+        return bytes.concat(
+            abi.encode(benchUniswapToken0(target), benchUniswapToken1(target), repay0, repay1),
+            padding
+        );
+    }
+
     function benchUniswapStageBurn(address target, uint256 liquidity) external returns (bool) {
         (bool ok,) = target.call(abi.encodeWithSignature("transfer(address,uint256)", target, liquidity));
         require(ok, "stage lp");
