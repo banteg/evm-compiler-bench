@@ -409,12 +409,14 @@ fn generate_test(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
     out.push_str("    struct CurveDeps { BenchERC20 coin0; BenchERC20 coin1; }\n");
-    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; }\n");
+    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnAccountant accountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
     out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
-    out.push_str("    address public feeTo;\n\n");
+    out.push_str("    address public feeTo;\n");
+    out.push_str("    uint16 public protocolFeeBps;\n");
+    out.push_str("    address public protocolFeeRecipient;\n\n");
     out.push_str("    receive() external payable {}\n\n");
     out.push_str("    function setUp() public {\n");
     out.push_str("        vm.writeFile(GAS_JSONL_PATH, \"\");\n");
@@ -704,6 +706,59 @@ contract BenchYearnStrategy {
     }
 }
 
+contract BenchYearnAccountant {
+    BenchERC20 public immutable asset;
+    uint256 public totalFees;
+    uint256 public totalRefunds;
+
+    constructor(BenchERC20 asset_) {
+        asset = asset_;
+    }
+
+    function setReport(address vault, uint256 fees, uint256 refunds) external returns (bool) {
+        totalFees = fees;
+        totalRefunds = refunds;
+        if (refunds > 0) {
+            asset.mint(address(this), refunds);
+            asset.approve(vault, refunds);
+        }
+        return true;
+    }
+
+    function report(address, uint256, uint256) external returns (uint256 fees, uint256 refunds) {
+        fees = totalFees;
+        refunds = totalRefunds;
+        totalFees = 0;
+        totalRefunds = 0;
+    }
+}
+
+contract BenchYearnDepositLimitModule {
+    uint256 public limit;
+
+    function setLimit(uint256 limit_) external returns (bool) {
+        limit = limit_;
+        return true;
+    }
+
+    function available_deposit_limit(address) external view returns (uint256) {
+        return limit;
+    }
+}
+
+contract BenchYearnWithdrawLimitModule {
+    uint256 public limit;
+
+    function setLimit(uint256 limit_) external returns (bool) {
+        limit = limit_;
+        return true;
+    }
+
+    function available_withdraw_limit(address, uint256, address[] calldata) external view returns (uint256) {
+        return limit;
+    }
+}
+
 "#
 }
 
@@ -758,8 +813,14 @@ fn helper_functions() -> &'static str {
         return address(this);
     }
 
-    function protocol_fee_config() external pure returns (uint16, address) {
-        return (0, address(0));
+    function protocol_fee_config() external view returns (uint16, address) {
+        return (protocolFeeBps, protocolFeeRecipient);
+    }
+
+    function benchYearnSetProtocolFee(uint16 feeBps, address recipient) external returns (bool) {
+        protocolFeeBps = feeBps;
+        protocolFeeRecipient = recipient;
+        return true;
     }
 
     function benchUniswapInit(address target, bool feeOn) external returns (bool) {
@@ -983,7 +1044,12 @@ fn helper_functions() -> &'static str {
         if (address(yearnDeps[target].asset) == address(0)) {
             BenchERC20 asset = new BenchERC20();
             BenchYearnStrategy strategy = new BenchYearnStrategy(asset);
-            yearnDeps[target] = YearnDeps(asset, strategy);
+            BenchYearnStrategy strategy2 = new BenchYearnStrategy(asset);
+            BenchYearnAccountant accountant = new BenchYearnAccountant(asset);
+            BenchYearnDepositLimitModule depositLimitModule = new BenchYearnDepositLimitModule();
+            BenchYearnWithdrawLimitModule withdrawLimitModule = new BenchYearnWithdrawLimitModule();
+            yearnDeps[target] =
+                YearnDeps(asset, strategy, strategy2, accountant, depositLimitModule, withdrawLimitModule);
         }
     }
 
@@ -993,6 +1059,22 @@ fn helper_functions() -> &'static str {
 
     function benchYearnStrategy(address target) public view returns (address) {
         return address(yearnDeps[target].strategy);
+    }
+
+    function benchYearnStrategy2(address target) public view returns (address) {
+        return address(yearnDeps[target].strategy2);
+    }
+
+    function benchYearnAccountant(address target) public view returns (address) {
+        return address(yearnDeps[target].accountant);
+    }
+
+    function benchYearnDepositLimitModule(address target) public view returns (address) {
+        return address(yearnDeps[target].depositLimitModule);
+    }
+
+    function benchYearnWithdrawLimitModule(address target) public view returns (address) {
+        return address(yearnDeps[target].withdrawLimitModule);
     }
 
     function benchYearnPermitOwner() public returns (address) {
@@ -1036,6 +1118,81 @@ fn helper_functions() -> &'static str {
         require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
         yearnDeps[target].strategy.setReport(gain, loss);
         return true;
+    }
+
+    function benchYearnSetReportFor(address target, address strategy, uint256 gain, uint256 loss)
+        external
+        returns (bool)
+    {
+        require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
+        require(
+            strategy == address(yearnDeps[target].strategy) || strategy == address(yearnDeps[target].strategy2),
+            "yearn strategy"
+        );
+        BenchYearnStrategy(strategy).setReport(gain, loss);
+        return true;
+    }
+
+    function benchYearnConfigureAccountant(address target, uint256 fees, uint256 refunds) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.accountant) != address(0), "yearn deps");
+        deps.accountant.setReport(target, fees, refunds);
+        (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.accountant)));
+        require(ok, "yearn accountant");
+        return true;
+    }
+
+    function benchYearnSetDepositLimitModule(address target, uint256 limit) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.depositLimitModule) != address(0), "yearn deps");
+        deps.depositLimitModule.setLimit(limit);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_deposit_limit_module(address,bool)", address(deps.depositLimitModule), true));
+        require(ok, "yearn deposit module");
+        return true;
+    }
+
+    function benchYearnSetWithdrawLimitModule(address target, uint256 limit) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
+        deps.withdrawLimitModule.setLimit(limit);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
+        require(ok, "yearn withdraw module");
+        return true;
+    }
+
+    function benchYearnSetDefaultQueueCalldata(address target, bool reverse) public view returns (bytes memory) {
+        address[] memory queue = new address[](2);
+        if (reverse) {
+            queue[0] = address(yearnDeps[target].strategy2);
+            queue[1] = address(yearnDeps[target].strategy);
+        } else {
+            queue[0] = address(yearnDeps[target].strategy);
+            queue[1] = address(yearnDeps[target].strategy2);
+        }
+        return abi.encodeWithSignature("set_default_queue(address[])", queue);
+    }
+
+    function benchYearnWithdrawQueueCalldata(
+        address target,
+        uint256 assets,
+        address receiver,
+        address owner,
+        uint256 maxLoss,
+        bool reverse
+    ) public view returns (bytes memory) {
+        address[] memory queue = new address[](2);
+        if (reverse) {
+            queue[0] = address(yearnDeps[target].strategy2);
+            queue[1] = address(yearnDeps[target].strategy);
+        } else {
+            queue[0] = address(yearnDeps[target].strategy);
+            queue[1] = address(yearnDeps[target].strategy2);
+        }
+        return abi.encodeWithSignature(
+            "withdraw(uint256,address,address,uint256,address[])", assets, receiver, owner, maxLoss, queue
+        );
     }
 
     function _deploy(bytes memory code) internal returns (address target) {

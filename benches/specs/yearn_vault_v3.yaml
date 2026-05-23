@@ -120,17 +120,24 @@ real_derived:
     - role_manager_transfer_accept
     - set_metadata
     - strategy_profit_report
+    - strategy_report_with_accountant
     - profit_unlock_after_time
     - strategy_loss_withdraw
+    - custom_queue_withdraw
+    - set_default_queue
+    - forced_default_queue_withdraw
     - shutdown_rejects_deposit
     - permission_revert
     - deposit_limit_reverts
+    - deposit_limit_module
+    - deposit_limit_module_reverts
+    - withdraw_limit_module_reverts
     - permit_valid
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys a standard ERC20 asset and an ERC4626-compatible strategy
-    - factory protocol fee config is provided by the harness and currently returns zero protocol fees in covered scenarios
-    - accountant and custom deposit/withdraw limit modules are implemented but still need nonzero-path scenario coverage
+    - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, an accountant, and limit modules
+    - factory protocol fee config is provided by the harness and covers zero-fee and nonzero protocol-fee scenarios
+    - accountant and custom deposit/withdraw limit module coverage uses deterministic harness mocks
     - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
   included_features:
     - upstream Vyper vault source at the pinned commit
@@ -146,8 +153,7 @@ real_derived:
     - deposit-limit and permission reverts
     - valid EIP-712 permit acceptance and invalid permit revert paths
   excluded_features:
-    - full nonzero accountant, protocol-fee, and custom module scenario coverage
-    - full multi-strategy queue differential coverage
+    - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage
     - exact storage layout compatibility in the Solidity port
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
@@ -189,12 +195,24 @@ scenarios:
   - name: strategy_profit_report
     call: "process_report after debt allocation and harnessed strategy profit"
     expected: "records gain, mints locked profit shares, and updates total assets"
+  - name: strategy_report_with_accountant
+    call: "process_report with accountant fees/refunds and nonzero protocol fee config"
+    expected: "accounts fees, refunds, protocol fee shares, and locked profit"
   - name: profit_unlock_after_time
     call: "pricePerShare after profit report and time advance"
     expected: "observes unlocked-profit share accounting"
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
+  - name: custom_queue_withdraw
+    call: "withdraw with an explicit two-strategy custom queue"
+    expected: "uses the supplied queue to free strategy debt"
+  - name: set_default_queue
+    call: "set_default_queue with the two strategies in reverse order"
+    expected: "updates the stored default withdrawal queue"
+  - name: forced_default_queue_withdraw
+    call: "withdraw with a custom queue while use_default_queue is enabled"
+    expected: "ignores the custom queue and uses the stored default queue"
   - name: shutdown_rejects_deposit
     call: "deposit after shutdown"
     expected: "reverts"
@@ -203,6 +221,15 @@ scenarios:
     expected: "reverts"
   - name: deposit_limit_reverts
     call: "deposit above the configured limit"
+    expected: "reverts"
+  - name: deposit_limit_module
+    call: "deposit through a custom deposit limit module"
+    expected: "uses the module-provided limit and accepts an in-limit deposit"
+  - name: deposit_limit_module_reverts
+    call: "deposit above a custom deposit limit module limit"
+    expected: "reverts"
+  - name: withdraw_limit_module_reverts
+    call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
