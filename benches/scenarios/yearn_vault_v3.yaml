@@ -440,6 +440,15 @@ scenarios:
       data: 'benchYearnPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
     observers: *yearn_observers
+  - name: permit_before_initialize_valid
+    state_access_profile: cold
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnPrepare(address)", {target})'
+    measured:
+      data: 'benchYearnPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers: *yearn_observers
   - name: permit_invalid_reverts
     state_access_profile: cold
     setup:

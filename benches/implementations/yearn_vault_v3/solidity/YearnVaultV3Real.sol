@@ -226,7 +226,6 @@ contract YearnVaultV3Real {
 
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
-        ready
         returns (bool)
     {
         require(owner != address(0), "invalid owner");

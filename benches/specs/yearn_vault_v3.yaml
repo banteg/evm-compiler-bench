@@ -146,6 +146,7 @@ real_derived:
     - deposit_limit_module_reverts
     - withdraw_limit_module_reverts
     - permit_valid
+    - permit_before_initialize_valid
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, an accountant, and limit modules
@@ -166,7 +167,7 @@ real_derived:
     - profit/loss report accounting, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, and shared nonreentrant lock rejection
     - optional-return ERC20 asset handling
     - deposit-limit and permission reverts
-    - valid EIP-712 permit acceptance and invalid permit revert paths
+    - valid EIP-712 permit acceptance before and after initialization plus invalid permit revert paths
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage
     - exact storage layout compatibility in the Solidity port
@@ -276,6 +277,9 @@ scenarios:
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
+  - name: permit_before_initialize_valid
+    call: "permit with a harness-signed EIP-712 digest before initialize"
+    expected: "sets allowance and increments the owner's nonce, matching upstream's ungated permit path"
   - name: permit_invalid_reverts
     call: "permit with a zero signature"
     expected: "reverts"
