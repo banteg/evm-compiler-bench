@@ -572,7 +572,7 @@ fn external_calls_family(n: u64) -> GeneratedSource {
     let mut sol = solidity_header(&contract_name);
     sol.push_str("    function ping(uint256) external pure {}\n\n");
     sol.push_str(&format!(
-        "    function callMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            (bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));\n            require(ok, \"ping\");\n            total += i;\n        }}\n    }}\n}}\n"
+        "    function callMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n            require(ok);\n            total += i;\n        }}\n    }}\n}}\n"
     ));
 
     let mut vy = vyper_header();
