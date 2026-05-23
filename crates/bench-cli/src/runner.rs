@@ -907,6 +907,22 @@ fn helper_functions() -> &'static str {
         amounts[1] = amount1;
     }
 
+    function curveAmounts3(uint256 amount0, uint256 amount1, uint256 amount2) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](3);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+    }
+
+    function curveAmounts9(uint256 amount0, uint256 amount1, uint256 amount2) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](9);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        for (uint256 i = 2; i < amounts.length; i++) {
+            amounts[i] = amount2;
+        }
+    }
+
     function benchWarp(uint256 secondsForward) external returns (bool) {
         vm.warp(block.timestamp + secondsForward);
         return true;
@@ -977,7 +993,7 @@ fn helper_functions() -> &'static str {
         view
         returns (uint256)
     {
-        require(amounts.length >= 2, "curve amounts");
+        require(amounts.length >= 2 && amounts.length <= 8, "curve amounts");
         (uint256[2] memory rates, uint256[2] memory oldBalances, uint256[2] memory xp) = benchCurveRatesBalancesXp(pool);
         uint256 amp = benchCurveUint(pool, "A()") * 100;
         uint256 d0 = benchCurveGetD(xp, amp);

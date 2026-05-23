@@ -23,6 +23,7 @@ interface CurveBenchFactory {
 
 contract CurveStableSwap2CoinReal {
     uint256 public constant N_COINS = 2;
+    uint256 internal constant MAX_COINS = 8;
     uint256 internal constant PRECISION = 1e18;
     uint256 internal constant A_PRECISION = 100;
     uint256 internal constant FEE_DENOMINATOR = 10_000_000_000;
@@ -200,7 +201,7 @@ contract CurveStableSwap2CoinReal {
         returns (uint256 minted)
     {
         require(receiver != address(0), "receiver");
-        require(amounts.length == N_COINS, "amount length");
+        _checkDynArrayAmountLength(amounts.length);
         require(amounts[0] > 0 || amounts[1] > 0, "amount");
         uint256[2] memory oldBalances = _balances();
         uint256[2] memory rates = _storedRates();
@@ -373,7 +374,7 @@ contract CurveStableSwap2CoinReal {
         internal
         returns (uint256 burnAmount)
     {
-        require(amounts.length == N_COINS, "amount length");
+        _checkDynArrayAmountLength(amounts.length);
         require(receiver != address(0), "receiver");
         uint256[2] memory oldBalances = _balances();
         uint256[2] memory rates = _storedRates();
@@ -458,7 +459,7 @@ contract CurveStableSwap2CoinReal {
     }
 
     function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256) {
-        require(amounts.length == N_COINS, "amount length");
+        _checkDynArrayAmountLength(amounts.length);
         uint256[2] memory rates = _storedRates();
         uint256[2] memory currentBalances = _balances();
         uint256[2] memory newBalances;
@@ -894,6 +895,10 @@ contract CurveStableSwap2CoinReal {
 
     function _baseFee() internal view returns (uint256) {
         return fee * N_COINS / (4 * (N_COINS - 1));
+    }
+
+    function _checkDynArrayAmountLength(uint256 length) internal pure {
+        require(length >= N_COINS && length <= MAX_COINS, "amount length");
     }
 
     function _dynamicFee(uint256 xpi, uint256 xpj, uint256 base) internal view returns (uint256) {
