@@ -40,8 +40,12 @@ contract CurveStableSwap2CoinReal {
     mapping(address => mapping(address => uint256)) public allowance;
     mapping(address => uint256) public nonces;
 
-    event AddLiquidity(address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 invariant, uint256 tokenSupply);
-    event TokenExchange(address indexed buyer, uint256 soldId, uint256 tokensSold, uint256 boughtId, uint256 tokensBought);
+    event AddLiquidity(
+        address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 invariant, uint256 tokenSupply
+    );
+    event TokenExchange(
+        address indexed buyer, uint256 soldId, uint256 tokensSold, uint256 boughtId, uint256 tokensBought
+    );
     event RemoveLiquidity(address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 tokenSupply);
     event RemoveLiquidityOne(address indexed provider, uint256 tokenAmount, uint256 coinIndex, uint256 coinAmount);
     event RemoveLiquidityImbalance(
@@ -67,8 +71,7 @@ contract CurveStableSwap2CoinReal {
         uint8[] memory assetTypes,
         bytes4[] memory methodIds,
         address[] memory oracles
-    )
-    {
+    ) {
         name_;
         symbol_;
         offpegFeeMultiplier;
@@ -311,15 +314,10 @@ contract CurveStableSwap2CoinReal {
         return _domainSeparator();
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (bool) {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+        returns (bool)
+    {
         require(owner != address(0), "owner");
         require(block.timestamp <= deadline, "deadline");
         uint256 nonce = nonces[owner];
@@ -349,11 +347,21 @@ contract CurveStableSwap2CoinReal {
     }
 
     function _safeTransfer(address coin, address to, uint256 value) internal {
-        require(CurveBenchERC20(coin).transfer(to, value), "transfer");
+        _optionalReturn(coin, abi.encodeWithSelector(CurveBenchERC20.transfer.selector, to, value), "transfer");
     }
 
     function _safeTransferFrom(address coin, address from, address to, uint256 value) internal {
-        require(CurveBenchERC20(coin).transferFrom(from, to, value), "transferFrom");
+        _optionalReturn(
+            coin, abi.encodeWithSelector(CurveBenchERC20.transferFrom.selector, from, to, value), "transferFrom"
+        );
+    }
+
+    function _optionalReturn(address coin, bytes memory data, string memory message) internal {
+        (bool ok, bytes memory returndata) = coin.call(data);
+        require(ok, message);
+        if (returndata.length > 0) {
+            require(abi.decode(returndata, (bool)), message);
+        }
     }
 
     function _domainSeparator() internal view returns (bytes32) {
@@ -497,11 +505,7 @@ contract CurveStableSwap2CoinReal {
         return y;
     }
 
-    function _calcWithdrawOneCoin(uint256 lpAmount, uint256 i)
-        internal
-        view
-        returns (uint256 dy, uint256 feeAmount)
-    {
+    function _calcWithdrawOneCoin(uint256 lpAmount, uint256 i) internal view returns (uint256 dy, uint256 feeAmount) {
         uint256[2] memory xp = balances;
         uint256 d0 = _getD(xp[0], xp[1]);
         uint256 d1 = d0 - lpAmount * d0 / totalSupply;

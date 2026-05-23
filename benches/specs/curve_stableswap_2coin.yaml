@@ -39,6 +39,7 @@ real_derived:
     - dynamic-array add_liquidity and remove_liquidity calls
     - exchange and one-coin withdrawal signatures with receiver argument
     - exchange_received optimistic-transfer swaps for standard tokens
+    - ERC20 tokens that return either bool or no data from transfer and transferFrom
     - imbalanced liquidity removal
     - EIP-712 LP-token permit for EOA signatures
     - LP token accounting
@@ -48,11 +49,13 @@ real_derived:
     - add_initial_liquidity
     - add_imbalanced_liquidity
     - add_liquidity_slippage_reverts
+    - add_liquidity_no_return_tokens
     - exchange_0_to_1
     - exchange_1_to_0
     - exchange_slippage_reverts
     - exchange_received_0_to_1
     - remove_liquidity
+    - remove_liquidity_no_return_tokens
     - remove_liquidity_imbalance
     - remove_liquidity_imbalance_slippage_reverts
     - remove_one_coin
@@ -61,7 +64,7 @@ real_derived:
     - permit_valid
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys two standard 18-decimal ERC20 test coins
+    - benchmark harness deploys two standard 18-decimal ERC20 test coins with switchable optional return data
     - factory/admin/fee receiver hooks are provided by the generated harness
     - oracle, rebasing, ERC4626, and external rate paths are intentionally out of scope
     - Solidity port keeps the benchmarked standard-token behavior but is not a full line-for-line NG translation
@@ -71,6 +74,7 @@ real_derived:
     - balanced and imbalanced add liquidity
     - both exchange directions
     - exchange_received optimistic-transfer flow
+    - optional-return ERC20 transfer and transferFrom compatibility
     - proportional and one-coin withdrawal
     - imbalanced withdrawal
     - dynamic/off-peg fee and admin-fee accounting
@@ -92,6 +96,9 @@ scenarios:
   - name: add_liquidity_slippage_reverts
     call: "add_liquidity([1, 1], 10_000_000, address(this)) after initial liquidity"
     expected: "reverts"
+  - name: add_liquidity_no_return_tokens
+    call: "add_liquidity([100_000, 100_000], 0, address(this)) with ERC20 tokens that return no transfer data"
+    expected: "accepts empty transferFrom return data and mints LP shares"
   - name: exchange_0_to_1
     call: "exchange(0, 1, 25_000, 0, address(this))"
     expected: "moves along the invariant and charges fee"
@@ -107,6 +114,9 @@ scenarios:
   - name: remove_liquidity
     call: "remove_liquidity(10_000, [0, 0], address(this))"
     expected: "burns LP shares for proportional coin balances"
+  - name: remove_liquidity_no_return_tokens
+    call: "remove_liquidity(10_000, [0, 0], address(this)) with ERC20 tokens that return no transfer data"
+    expected: "accepts empty transfer return data and burns LP shares"
   - name: remove_liquidity_imbalance
     call: "remove_liquidity_imbalance([40_000, 10_000], 100_000, address(this))"
     expected: "burns the required LP amount and withdraws imbalanced coin amounts with fees"

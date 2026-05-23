@@ -408,7 +408,7 @@ fn generate_test(
     out.push_str(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
-    out.push_str("    struct CurveDeps { BenchERC20 coin0; BenchERC20 coin1; }\n");
+    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; }\n");
     out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnAccountant accountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
@@ -579,6 +579,82 @@ contract BenchERC20NoReturn {
             allowance[from][msg.sender] = allowed - value;
         }
         _transfer(from, to, value);
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(balanceOf[from] >= value, "balance");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        emit Transfer(from, to, value);
+    }
+}
+
+contract BenchERC20OptionalReturn {
+    string public constant name = "Optional Return Bench Token";
+    string public constant symbol = "OPTRET";
+    uint8 public constant decimals = 18;
+
+    bool public returnData = true;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function setReturnData(bool enabled) external {
+        returnData = enabled;
+    }
+
+    function mint(address to, uint256 value) external returns (bool) {
+        totalSupply += value;
+        balanceOf[to] += value;
+        emit Transfer(address(0), to, value);
+        return true;
+    }
+
+    function burn(address from, uint256 value) external returns (bool) {
+        require(balanceOf[from] >= value, "burn balance");
+        balanceOf[from] -= value;
+        totalSupply -= value;
+        emit Transfer(from, address(0), value);
+        return true;
+    }
+
+    function approve(address spender, uint256 value) external returns (bool) {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        if (!returnData) {
+            assembly {
+                return(0, 0)
+            }
+        }
+        return true;
+    }
+
+    function transfer(address to, uint256 value) external returns (bool) {
+        _transfer(msg.sender, to, value);
+        if (!returnData) {
+            assembly {
+                return(0, 0)
+            }
+        }
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool) {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) {
+            require(allowed >= value, "allowance");
+            allowance[from][msg.sender] = allowed - value;
+        }
+        _transfer(from, to, value);
+        if (!returnData) {
+            assembly {
+                return(0, 0)
+            }
+        }
+        return true;
     }
 
     function _transfer(address from, address to, uint256 value) internal {
@@ -968,6 +1044,14 @@ fn helper_functions() -> &'static str {
         } else {
             revert("curve coin");
         }
+        return true;
+    }
+
+    function benchCurveSetReturnData(address target, bool enabled) external returns (bool) {
+        CurveDeps storage deps = curveDeps[target];
+        require(address(deps.coin0) != address(0), "curve deps");
+        deps.coin0.setReturnData(enabled);
+        deps.coin1.setReturnData(enabled);
         return true;
     }
 
@@ -1857,8 +1941,8 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     out.push_str(artifact.creation_bytecode.trim_start_matches("0x"));
     out.push_str("\";\n");
     if artifact.benchmark_id == "curve_stableswap_2coin" {
-        out.push_str("        BenchERC20 coin0 = new BenchERC20();\n");
-        out.push_str("        BenchERC20 coin1 = new BenchERC20();\n");
+        out.push_str("        BenchERC20OptionalReturn coin0 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        BenchERC20OptionalReturn coin1 = new BenchERC20OptionalReturn();\n");
         out.push_str("        address[] memory coins = new address[](2);\n");
         out.push_str("        coins[0] = address(coin0);\n");
         out.push_str("        coins[1] = address(coin1);\n");
