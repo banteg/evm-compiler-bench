@@ -1362,6 +1362,66 @@ fn helper_functions() -> &'static str {
         );
     }
 
+    function benchYearnWithdrawLongQueueCalldata(
+        address target,
+        uint256 assets,
+        address receiver,
+        address owner,
+        uint256 maxLoss
+    ) public view returns (bytes memory) {
+        return abi.encodeWithSignature(
+            "withdraw(uint256,address,address,uint256,address[])",
+            assets,
+            receiver,
+            owner,
+            maxLoss,
+            benchYearnLongQueue(target)
+        );
+    }
+
+    function benchYearnRedeemLongQueueCalldata(
+        address target,
+        uint256 shares,
+        address receiver,
+        address owner,
+        uint256 maxLoss
+    ) public view returns (bytes memory) {
+        return abi.encodeWithSignature(
+            "redeem(uint256,address,address,uint256,address[])",
+            shares,
+            receiver,
+            owner,
+            maxLoss,
+            benchYearnLongQueue(target)
+        );
+    }
+
+    function benchYearnMaxWithdrawLongQueueCalldata(address target, address owner, uint256 maxLoss)
+        public
+        view
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("maxWithdraw(address,uint256,address[])", owner, maxLoss, benchYearnLongQueue(target));
+    }
+
+    function benchYearnMaxRedeemLongQueueCalldata(address target, address owner, uint256 maxLoss)
+        public
+        view
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("maxRedeem(address,uint256,address[])", owner, maxLoss, benchYearnLongQueue(target));
+    }
+
+    function benchYearnLongQueue(address target) public view returns (address[] memory queue) {
+        queue = new address[](11);
+        queue[0] = address(yearnDeps[target].strategy);
+        queue[1] = address(yearnDeps[target].strategy2);
+        queue[2] = address(yearnDeps[target].strategy3);
+        for (uint256 i = 3; i < queue.length; i++) {
+            queue[i] = address(yearnDeps[target].strategy);
+        }
+    }
+
     function _deploy(bytes memory code) internal returns (address target) {
         assembly {
             target := create(0, add(code, 0x20), mload(code))

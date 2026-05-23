@@ -288,6 +288,7 @@ contract YearnVaultV3Real {
         nonReentrant
         returns (uint256 shares)
     {
+        require(strategies_.length <= MAX_QUEUE, "queue too long");
         shares = _withdraw(msg.sender, assets, receiver, owner, maxLoss, strategies_);
     }
 
@@ -317,6 +318,7 @@ contract YearnVaultV3Real {
         nonReentrant
         returns (uint256 assets)
     {
+        require(strategies_.length <= MAX_QUEUE, "queue too long");
         assets = _redeem(msg.sender, receiver, owner, _convertToAssets(shares, false), shares, maxLoss, strategies_);
     }
 
@@ -642,6 +644,7 @@ contract YearnVaultV3Real {
         view
         returns (uint256)
     {
+        require(strategies_.length <= MAX_QUEUE, "queue too long");
         return _maxWithdraw(owner, maxLoss, strategies_);
     }
 
@@ -656,6 +659,7 @@ contract YearnVaultV3Real {
     }
 
     function maxRedeem(address owner, uint256 maxLoss, address[] calldata strategies_) external view returns (uint256) {
+        require(strategies_.length <= MAX_QUEUE, "queue too long");
         return _maxRedeem(owner, maxLoss, strategies_);
     }
 
@@ -1278,6 +1282,7 @@ contract YearnVaultV3Real {
     }
 
     function _queueFor(address[] memory strategies_) internal view returns (address[] memory queue) {
+        require(strategies_.length <= MAX_QUEUE, "queue too long");
         if (strategies_.length != 0 && !use_default_queue) {
             return strategies_;
         }

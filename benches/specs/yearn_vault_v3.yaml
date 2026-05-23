@@ -105,7 +105,7 @@ real_derived:
     - bitmask role grants, delegated role execution, and role-manager handoff
     - mutable ERC20 metadata through role-manager setters
     - accountant, deposit-limit module, and withdraw-limit module configuration surfaces
-    - default and custom withdrawal queue configuration
+    - default and custom withdrawal queue configuration including Vyper MAX_QUEUE bounds
     - process_report using ERC4626-compatible strategy accounting plus accountant/protocol fee paths and upstream nonreentrant guard behavior
     - locked-profit share accounting observable through pricePerShare
     - optional-return ERC20 asset transfer, transferFrom, and approve compatibility
@@ -140,6 +140,10 @@ real_derived:
     - custom_queue_withdraw
     - set_default_queue
     - forced_default_queue_withdraw
+    - withdraw_long_queue_reverts
+    - redeem_long_queue_reverts
+    - max_withdraw_long_queue_reverts
+    - max_redeem_long_queue_reverts
     - shutdown_rejects_deposit
     - permission_revert
     - set_deposit_limit_default
@@ -161,7 +165,7 @@ real_derived:
     - minimal-proxy deployment for the upstream Vyper blueprint
     - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
-    - Vyper default-argument external overloads for strategy, debt, and deposit-limit management
+    - Vyper default-argument external overloads for strategy, debt, deposit-limit, and queue-bound management
     - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
@@ -262,6 +266,18 @@ scenarios:
   - name: forced_default_queue_withdraw
     call: "withdraw with a custom queue while use_default_queue is enabled"
     expected: "ignores the custom queue and uses the stored default queue"
+  - name: withdraw_long_queue_reverts
+    call: "withdraw with an 11-entry custom queue"
+    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
+  - name: redeem_long_queue_reverts
+    call: "redeem with an 11-entry custom queue"
+    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
+  - name: max_withdraw_long_queue_reverts
+    call: "maxWithdraw with an 11-entry custom queue"
+    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
+  - name: max_redeem_long_queue_reverts
+    call: "maxRedeem with an 11-entry custom queue"
+    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
   - name: shutdown_rejects_deposit
     call: "deposit after shutdown"
     expected: "reverts"
