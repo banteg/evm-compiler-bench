@@ -10,7 +10,7 @@ interface Factory:
 interface UniswapV2Callee:
     def uniswapV2Call(sender: address, amount0: uint256, amount1: uint256, data: Bytes[1024]): nonpayable
 
-MINIMUM_LIQUIDITY: constant(uint256) = 1000
+MINIMUM_LIQUIDITY: public(constant(uint256)) = 1000
 Q112: constant(uint256) = 5192296858534827628530496329220096
 DOMAIN_TYPEHASH: constant(bytes32) = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
 NAME_HASH: constant(bytes32) = keccak256("Uniswap V2")

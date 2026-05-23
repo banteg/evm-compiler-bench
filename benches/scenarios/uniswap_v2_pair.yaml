@@ -13,6 +13,7 @@ scenarios:
       - data: 'abi.encodeWithSignature("totalSupply()")'
       - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
       - data: 'abi.encodeWithSignature("PERMIT_TYPEHASH()")'
+      - data: 'abi.encodeWithSignature("MINIMUM_LIQUIDITY()")'
       - data: 'abi.encodeWithSignature("nonces(address)", benchUniswapPermitOwner())'
       - data: 'abi.encodeWithSignature("allowance(address,address)", benchUniswapPermitOwner(), BOB)'
       - data: 'abi.encodeWithSignature("price0CumulativeLast()")'

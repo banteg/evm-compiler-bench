@@ -23,6 +23,7 @@ abi:
   - "nonces(address) returns (uint256)"
   - "DOMAIN_SEPARATOR() returns (bytes32)"
   - "PERMIT_TYPEHASH() returns (bytes32)"
+  - "MINIMUM_LIQUIDITY() returns (uint256)"
   - "totalSupply() returns (uint256)"
   - "price0CumulativeLast() returns (uint256)"
   - "price1CumulativeLast() returns (uint256)"
@@ -85,6 +86,7 @@ real_derived:
     - Vyper preserves behavior for covered paths but does not claim full contract behavior or Solidity packed-slot storage layout compatibility
   included_features:
     - upstream Solidity pair source at the pinned commit
+    - full upstream pair ABI surface including the MINIMUM_LIQUIDITY constant getter
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths
