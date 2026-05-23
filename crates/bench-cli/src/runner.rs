@@ -409,7 +409,7 @@ fn generate_test(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
     out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; }\n");
-    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnAccountant accountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
+    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
@@ -1164,11 +1164,12 @@ fn helper_functions() -> &'static str {
             BenchERC20 asset = new BenchERC20();
             BenchYearnStrategy strategy = new BenchYearnStrategy(asset);
             BenchYearnStrategy strategy2 = new BenchYearnStrategy(asset);
+            BenchYearnStrategy strategy3 = new BenchYearnStrategy(asset);
             BenchYearnAccountant accountant = new BenchYearnAccountant(asset);
             BenchYearnDepositLimitModule depositLimitModule = new BenchYearnDepositLimitModule();
             BenchYearnWithdrawLimitModule withdrawLimitModule = new BenchYearnWithdrawLimitModule();
             yearnDeps[target] =
-                YearnDeps(asset, strategy, strategy2, accountant, depositLimitModule, withdrawLimitModule);
+                YearnDeps(asset, strategy, strategy2, strategy3, accountant, depositLimitModule, withdrawLimitModule);
         }
     }
 
@@ -1182,6 +1183,10 @@ fn helper_functions() -> &'static str {
 
     function benchYearnStrategy2(address target) public view returns (address) {
         return address(yearnDeps[target].strategy2);
+    }
+
+    function benchYearnStrategy3(address target) public view returns (address) {
+        return address(yearnDeps[target].strategy3);
     }
 
     function benchYearnAccountant(address target) public view returns (address) {

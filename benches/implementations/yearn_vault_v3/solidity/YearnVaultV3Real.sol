@@ -859,14 +859,19 @@ contract YearnVaultV3Real {
         }
 
         delete _strategies[strategy];
+        uint256 writeIndex = 0;
         uint256 length = default_queue.length;
         for (uint256 i = 0; i < length; i++) {
-            if (default_queue[i] == strategy) {
-                default_queue[i] = default_queue[default_queue.length - 1];
-                default_queue.pop();
-                length--;
-                i--;
+            address queuedStrategy = default_queue[i];
+            if (queuedStrategy != strategy) {
+                if (writeIndex != i) {
+                    default_queue[writeIndex] = queuedStrategy;
+                }
+                writeIndex++;
             }
+        }
+        while (default_queue.length > writeIndex) {
+            default_queue.pop();
         }
 
         emit StrategyChanged(strategy, 1);

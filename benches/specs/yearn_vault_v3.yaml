@@ -91,7 +91,7 @@ real_derived:
   source_contract: VaultV3
   source_blob: "97f4a60dd2485c6400f994e46b442d0424716eed"
   upstream_license: GNU AGPLv3
-  checked_at: "2026-05-23"
+  checked_at: "2026-05-24"
   production_equivalence: false
   api_compatibility: "upstream Vyper source is exact and deployed through an EIP-1167 clone; Solidity is an expanded idiomatic port of the upstream vault API but still under parity audit"
   storage_layout_compatibility: false
@@ -122,6 +122,7 @@ real_derived:
     - update_debt_default_max_loss
     - role_delegate_add_strategy
     - add_strategy_default_queue
+    - revoke_strategy_preserves_queue_order
     - add_remove_role
     - role_manager_transfer_accept
     - set_metadata
@@ -153,7 +154,7 @@ real_derived:
     - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
     - Vyper default-argument external overloads for strategy, debt, and deposit-limit management
-    - strategy revoke, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
+    - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
@@ -198,6 +199,9 @@ scenarios:
   - name: add_strategy_default_queue
     call: "add_strategy(strategy) using the Vyper default add_to_queue overload"
     expected: "adds the strategy and appends it to the default withdrawal queue"
+  - name: revoke_strategy_preserves_queue_order
+    call: "revoke_strategy(strategy) after three queued strategies"
+    expected: "removes the revoked strategy without reordering surviving default queue entries"
   - name: add_remove_role
     call: "remove_role after set_role and add_role"
     expected: "updates the account role bitmask"

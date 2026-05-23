@@ -150,6 +150,18 @@ scenarios:
       data: 'abi.encodeWithSignature("add_strategy(address)", benchYearnStrategy({target}))'
     expect_success: true
     observers: *yearn_observers
+  - name: revoke_strategy_preserves_queue_order
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy2({target}), true)'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy3({target}), true)'
+    measured:
+      data: 'abi.encodeWithSignature("revoke_strategy(address)", benchYearnStrategy({target}))'
+    expect_success: true
+    observers: *yearn_observers
   - name: add_remove_role
     state_access_profile: warm
     setup:
