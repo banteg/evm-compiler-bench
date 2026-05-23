@@ -18,7 +18,9 @@ Published report: https://evm.banteg.xyz/
   surfaces such as dispatch, ABI arguments, events, loops, storage slots, and
   external calls.
 - Real-derived contracts: upstream source-language originals where available,
-  plus counterpart-language ports with equivalence scope recorded in specs.
+  plus counterpart-language ports with provenance recorded in specs. A
+  counterpart port is production-equivalent only when it is a full idiomatic
+  port of the upstream contract's behavior, not a scenario-scoped subset.
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
 
@@ -148,8 +150,9 @@ just zip-design
 - Assembly-heavy or mechanically matched variants should be treated as
   diagnostic comparators, not as the primary report lane.
 - Real-derived specs record provenance and equivalence scope per benchmark.
-  Upstream source-language originals may be exact, while counterpart-language
-  ports can be scoped. Do not read scoped ports as production gas claims for the
-  upstream protocols.
+  The `production_equivalence` flag is reserved for full idiomatic ports of the
+  upstream contract's behavior. Scoped or partial counterpart-language ports are
+  diagnostic comparators only and must not be read as production gas or deploy
+  size claims for the upstream protocols.
 - Vyper Venom rows use `--experimental-codegen`.
 - Vyper 0.5.0a1 is pre-release.

@@ -28,11 +28,11 @@ real_derived:
   source_blob: "f87a1db262fba132862eae377d8cdaef74c79f97"
   upstream_license: GPL-3.0-or-later
   checked_at: "2026-05-23"
-  production_equivalence: true
-  api_compatibility: "source-language implementation is upstream Uniswap V2 Pair; Vyper is an idiomatic port of the covered pair API"
+  production_equivalence: false
+  api_compatibility: "source-language implementation is upstream Uniswap V2 Pair; Vyper is an idiomatic port of the covered pair API, not a full production-equivalent port"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_tokens_and_factory"
-  source_derivation: "Solidity implementation is vendored upstream source; Vyper implementation is a direct production-style port for the covered pair paths"
+  source_derivation: "Solidity implementation is vendored upstream source; Vyper implementation is an idiomatic port for the covered pair paths"
   equivalence_scope:
     - external token0/token1/factory initialization
     - reserve and getReserves accounting
@@ -57,7 +57,7 @@ real_derived:
     - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback behavior is not exercised because scenarios pass empty callback data
-    - Vyper preserves behavior for covered paths but does not claim Solidity packed-slot storage layout compatibility
+    - Vyper preserves behavior for covered paths but does not claim full contract behavior or Solidity packed-slot storage layout compatibility
   included_features:
     - upstream Solidity pair source at the pinned commit
     - external ERC20 balance and transfer integration
@@ -71,7 +71,7 @@ real_derived:
     - CREATE2 pair factory deployment path
     - exact Solidity packed reserve storage layout in the Vyper port
 semantics:
-  - "Benchmarks upstream Uniswap V2 Pair Solidity and a Vyper port against the same external-token harness."
+  - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
 scenarios:
   - name: initialize

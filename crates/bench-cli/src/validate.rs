@@ -541,7 +541,22 @@ fn validate_real_derived_spec(
     require_sequence(real, "scenario_coverage", path)?;
     require_sequence(real, "mock_assumptions", path)?;
     require_sequence(real, "included_features", path)?;
-    require_sequence(real, "excluded_features", path)?;
+    let excluded_features = real
+        .get("excluded_features")
+        .and_then(|value| value.as_sequence())
+        .with_context(|| format!("{} missing excluded_features", path.display()))?;
+    if !provenance.production_equivalence && excluded_features.is_empty() {
+        bail!(
+            "{} non-production-equivalent real-derived benchmark must explain excluded_features",
+            path.display()
+        );
+    }
+    if provenance.production_equivalence && !excluded_features.is_empty() {
+        bail!(
+            "{} production-equivalent real-derived benchmark must not list excluded_features",
+            path.display()
+        );
+    }
     Ok(())
 }
 
