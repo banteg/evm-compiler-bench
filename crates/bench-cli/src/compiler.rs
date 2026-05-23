@@ -724,8 +724,8 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
             "bool ok = msg.sender.call.value(amount)();",
         )
         .replace(
-            "(bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));",
-            "bool ok = address(this).call(abi.encodeWithSignature(\"ping(uint256)\", i));",
+            "(bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));",
+            "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));",
         )
 }
 
@@ -1299,7 +1299,7 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
         let rewritten = transform_solidity_source(source, "solidity-0.4").unwrap();
         assert!(rewritten.contains("pragma solidity >=0.4.26 <0.5.0;"));
         assert!(rewritten.contains("10000000000"));
@@ -1308,7 +1308,7 @@ mod tests {
         assert!(rewritten.contains("bytes32[] proof"));
         assert!(rewritten.contains("bool ok = msg.sender.call.value(amount)();"));
         assert!(rewritten.contains(
-            "bool ok = address(this).call(abi.encodeWithSignature(\"ping(uint256)\", i));"
+            "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));"
         ));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
     }

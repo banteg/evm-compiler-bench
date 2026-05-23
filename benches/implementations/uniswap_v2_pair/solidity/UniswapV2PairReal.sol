@@ -99,12 +99,12 @@ contract UniswapV2PairReal {
         return true;
     }
 
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
+    function getReserves() public view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
         return (reserve0_, reserve1_, blockTimestampLast_);
     }
 
     function mint(address to) external ready returns (uint256 liquidity) {
-        (uint112 reserve0, uint112 reserve1,) = this.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = getReserves();
         uint256 amount0 = balance0 - reserve0;
         uint256 amount1 = balance1 - reserve1;
         bool feeOn = _mintFee(reserve0, reserve1);
@@ -130,7 +130,7 @@ contract UniswapV2PairReal {
     }
 
     function burn(address to) external ready returns (uint256 amount0, uint256 amount1) {
-        (uint112 reserve0, uint112 reserve1,) = this.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = getReserves();
         bool feeOn = _mintFee(reserve0, reserve1);
         uint256 liquidity = balanceOf[address(this)];
         uint256 supply = totalSupply;
@@ -155,7 +155,7 @@ contract UniswapV2PairReal {
         address to
     ) external ready returns (bool) {
         require(amount0Out > 0 || amount1Out > 0, "output");
-        (uint112 reserve0, uint112 reserve1,) = this.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = getReserves();
         require(amount0Out < reserve0 && amount1Out < reserve1, "liquidity");
         require(amount0In > 0 || amount1In > 0, "input");
 
