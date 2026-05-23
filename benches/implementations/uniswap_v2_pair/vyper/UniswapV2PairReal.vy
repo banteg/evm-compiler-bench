@@ -255,7 +255,12 @@ def _balance(token: address) -> uint256:
 
 @internal
 def _safe_transfer(token: address, receiver: address, amount: uint256):
-    assert extcall ERC20(token).transfer(receiver, amount), "UniswapV2: TRANSFER_FAILED"
+    response: Bytes[32] = raw_call(
+        token,
+        concat(method_id("transfer(address,uint256)"), abi_encode(receiver, amount)),
+        max_outsize=32,
+    )
+    assert len(response) == 0 or convert(response, uint256) != 0, "UniswapV2: TRANSFER_FAILED"
 
 @internal
 def _lock():

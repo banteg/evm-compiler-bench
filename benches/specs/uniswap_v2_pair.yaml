@@ -48,6 +48,7 @@ real_derived:
     - external token0/token1/factory initialization
     - reserve and getReserves accounting
     - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
+    - output transfers to ERC20 tokens that return either bool or no data
     - non-empty flash-swap callback execution and repayment
     - constant-product fee check with 0.30% LP fee
     - fee-on protocol liquidity minting through kLast
@@ -60,6 +61,7 @@ real_derived:
     - swap_fee_invariant
     - flash_swap_callback
     - burn
+    - burn_no_return_tokens
     - sync
     - skim
     - fee_on_mint
@@ -70,12 +72,14 @@ real_derived:
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
+    - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
     - Vyper preserves behavior for covered paths but does not claim full contract behavior or Solidity packed-slot storage layout compatibility
   included_features:
     - upstream Solidity pair source at the pinned commit
     - external ERC20 balance and transfer integration
+    - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths
     - burn path with staged LP shares
     - constant-product swap fee invariant
@@ -108,6 +112,9 @@ scenarios:
   - name: burn
     call: "burn(address(this)) after LP shares are transferred to the pair"
     expected: "burns staged LP and transfers proportional token balances out"
+  - name: burn_no_return_tokens
+    call: "burn(address(this)) with ERC20 tokens that return no transfer data"
+    expected: "accepts empty transfer return data and burns staged LP"
   - name: sync
     call: "sync() after token balance drift and time advance"
     expected: "updates reserves and cumulative prices from external token balances"

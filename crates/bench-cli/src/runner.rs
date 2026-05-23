@@ -405,9 +405,13 @@ fn generate_test(
     out.push_str("    uint256 constant YEARN_PERMIT_KEY = 0xA11CE;\n");
     out.push_str("    bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
     out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; BenchUniswapFlashCallee flashCallee; }\n");
+    out.push_str(
+        "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
+    );
     out.push_str("    struct CurveDeps { BenchERC20 coin0; BenchERC20 coin1; }\n");
     out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
+    out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
     out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
     out.push_str("    address public feeTo;\n\n");
@@ -529,6 +533,50 @@ contract BenchERC20 {
         }
         _transfer(from, to, value);
         return true;
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(balanceOf[from] >= value, "balance");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        emit Transfer(from, to, value);
+    }
+}
+
+contract BenchERC20NoReturn {
+    string public constant name = "No Return Bench Token";
+    string public constant symbol = "NORET";
+    uint8 public constant decimals = 18;
+
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function mint(address to, uint256 value) external {
+        totalSupply += value;
+        balanceOf[to] += value;
+        emit Transfer(address(0), to, value);
+    }
+
+    function approve(address spender, uint256 value) external {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+    }
+
+    function transfer(address to, uint256 value) external {
+        _transfer(msg.sender, to, value);
+    }
+
+    function transferFrom(address from, address to, uint256 value) external {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) {
+            require(allowed >= value, "allowance");
+            allowance[from][msg.sender] = allowed - value;
+        }
+        _transfer(from, to, value);
     }
 
     function _transfer(address from, address to, uint256 value) internal {
@@ -727,6 +775,18 @@ fn helper_functions() -> &'static str {
         return true;
     }
 
+    function benchUniswapInitNoReturn(address target, bool feeOn) external returns (bool) {
+        BenchERC20NoReturn token0 = new BenchERC20NoReturn();
+        BenchERC20NoReturn token1 = new BenchERC20NoReturn();
+        noReturnPairDeps[target] = NoReturnPairDeps(token0, token1);
+        feeTo = feeOn ? address(0xFEE) : address(0);
+        (bool ok,) = target.call(
+            abi.encodeWithSignature("initialize(address,address)", address(token0), address(token1))
+        );
+        require(ok, "pair init");
+        return true;
+    }
+
     function benchUniswapToken0(address target) public view returns (address) {
         return address(pairDeps[target].token0);
     }
@@ -741,6 +801,18 @@ fn helper_functions() -> &'static str {
 
     function benchUniswapSeed(address target, uint256 amount0, uint256 amount1) external returns (bool) {
         PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        if (amount0 > 0) {
+            deps.token0.mint(target, amount0);
+        }
+        if (amount1 > 0) {
+            deps.token1.mint(target, amount1);
+        }
+        return true;
+    }
+
+    function benchUniswapSeedNoReturn(address target, uint256 amount0, uint256 amount1) external returns (bool) {
+        NoReturnPairDeps storage deps = noReturnPairDeps[target];
         require(address(deps.token0) != address(0), "pair deps");
         if (amount0 > 0) {
             deps.token0.mint(target, amount0);
