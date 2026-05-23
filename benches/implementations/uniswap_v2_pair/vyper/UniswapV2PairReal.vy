@@ -289,10 +289,23 @@ def _burn(owner: address, amount: uint256):
 def _update(balance0_: uint256, balance1_: uint256, old_reserve0: uint112, old_reserve1: uint112):
     assert balance0_ <= convert(max_value(uint112), uint256) and balance1_ <= convert(max_value(uint112), uint256), "UniswapV2: OVERFLOW"
     block_timestamp: uint32 = convert(block.timestamp % 2**32, uint32)
-    time_elapsed: uint32 = block_timestamp - self.blockTimestampLast
+    last_timestamp: uint32 = self.blockTimestampLast
+    time_elapsed: uint32 = 0
+    if block_timestamp >= last_timestamp:
+        time_elapsed = block_timestamp - last_timestamp
+    else:
+        time_elapsed = max_value(uint32) - last_timestamp + block_timestamp + 1
     if time_elapsed > 0 and old_reserve0 != 0 and old_reserve1 != 0:
-        self.price0CumulativeLast += (convert(old_reserve1, uint256) * Q112 // convert(old_reserve0, uint256)) * convert(time_elapsed, uint256)
-        self.price1CumulativeLast += (convert(old_reserve0, uint256) * Q112 // convert(old_reserve1, uint256)) * convert(time_elapsed, uint256)
+        price0_increment: uint256 = unsafe_mul(
+            convert(old_reserve1, uint256) * Q112 // convert(old_reserve0, uint256),
+            convert(time_elapsed, uint256),
+        )
+        price1_increment: uint256 = unsafe_mul(
+            convert(old_reserve0, uint256) * Q112 // convert(old_reserve1, uint256),
+            convert(time_elapsed, uint256),
+        )
+        self.price0CumulativeLast = unsafe_add(self.price0CumulativeLast, price0_increment)
+        self.price1CumulativeLast = unsafe_add(self.price1CumulativeLast, price1_increment)
     self.reserve0 = convert(balance0_, uint112)
     self.reserve1 = convert(balance1_, uint112)
     self.blockTimestampLast = block_timestamp

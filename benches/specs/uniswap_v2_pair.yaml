@@ -39,7 +39,7 @@ real_derived:
   source_contract: UniswapV2Pair
   source_blob: "f87a1db262fba132862eae377d8cdaef74c79f97"
   upstream_license: GPL-3.0-or-later
-  checked_at: "2026-05-23"
+  checked_at: "2026-05-24"
   production_equivalence: false
   api_compatibility: "source-language implementation is upstream Uniswap V2 Pair; Vyper is an idiomatic port of the covered pair API, not a full production-equivalent port"
   storage_layout_compatibility: false
@@ -67,6 +67,7 @@ real_derived:
     - burn_no_return_tokens
     - swap_no_return_tokens
     - sync
+    - sync_timestamp_wrap
     - skim
     - skim_no_return_tokens
     - fee_on_mint
@@ -95,12 +96,14 @@ real_derived:
     - non-empty flash-swap callback execution
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
+    - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - no-return token swap, burn, and skim transfer-out paths
     - fee-on and fee-off kLast behavior
     - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
     - CREATE2 pair factory deployment path
     - exact Solidity packed reserve storage layout in the Vyper port
+    - unbounded flash-swap callback calldata length in the Vyper port
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
@@ -135,6 +138,9 @@ scenarios:
   - name: sync
     call: "sync() after token balance drift and time advance"
     expected: "updates reserves and cumulative prices from external token balances"
+  - name: sync_timestamp_wrap
+    call: "sync() after block.timestamp crosses the uint32 reserve timestamp boundary"
+    expected: "updates reserves and cumulative prices using Uniswap's intended uint32 wraparound elapsed time"
   - name: skim
     call: "skim(address(this)) after token balance drift"
     expected: "transfers token balances above reserves"

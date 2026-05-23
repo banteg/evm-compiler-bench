@@ -156,6 +156,22 @@ scenarios:
       data: 'abi.encodeWithSignature("sync()")'
     expect_success: true
     observers: *pair_observers
+  - name: sync_timestamp_wrap
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(4_294_967_295))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
+    measured:
+      data: 'abi.encodeWithSignature("sync()")'
+    expect_success: true
+    observers: *pair_observers
   - name: skim
     state_access_profile: mixed
     setup:
