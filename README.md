@@ -137,10 +137,16 @@ just zip-design
 
 ## Scope notes
 
+- Headline comparisons use idiomatic high-level source for each language, not
+  hand-written assembly or mechanically de-optimized ports. Language-native
+  advantages such as Solidity storage packing and Vyper dispatch codegen are
+  part of the comparison.
 - Stripped runtime bytecode is used for bytecode comparisons so appended
   compiler metadata does not dominate code-size deltas.
 - Missing compile rows are excluded from pairwise ratios; they are still shown
   as compile failures.
+- Assembly-heavy or mechanically matched variants should be treated as
+  diagnostic comparators, not as the primary report lane.
 - Real-derived contracts are benchmark models with
   `production_equivalence=false`; they are not production gas claims for the
   upstream protocols.

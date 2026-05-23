@@ -846,21 +846,26 @@ function Methodology() {
     },
     {
       tag: 'C',
+      title: 'Idiomatic source comparison',
+      body: 'Headline results compare idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes.'
+    },
+    {
+      tag: 'D',
       title: 'Geomean over comparable scenarios',
       body: 'Each summary is a geometric mean of ratios B/A over scenarios where both profiles compiled. Missing scenarios are excluded from the comparison.'
     },
     {
-      tag: 'D',
+      tag: 'E',
       title: 'Metric-specific bands',
       body: 'Gas and bytecode use a ±0.5% materiality band for W/T/L counts. Compile time uses a ±2% noise band.'
     },
     {
-      tag: 'E',
+      tag: 'F',
       title: 'Real-derived ≠ production',
       body: 'Curve, Uniswap V2, and Yearn V3 ports are clean-room behavior models with production_equivalence=false. They exercise realistic shapes, not real ERC20 transfer paths.'
     },
     {
-      tag: 'F',
+      tag: 'G',
       title: 'Vyper Venom and 0.5.0a1',
       body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
     },
