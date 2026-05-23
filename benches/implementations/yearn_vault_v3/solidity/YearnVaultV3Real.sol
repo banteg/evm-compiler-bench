@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 interface YearnBenchERC20 {
+    function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 value) external returns (bool);
     function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
@@ -15,18 +16,26 @@ interface YearnBenchStrategy {
 contract YearnVaultV3Real {
     uint256 public constant MAX_BPS = 10_000;
     uint256 public constant WAD = 1e18;
+    uint256 public constant ADD_STRATEGY_MANAGER = 1 << 0;
+    uint256 public constant REPORTING_MANAGER = 1 << 5;
+    uint256 public constant DEBT_MANAGER = 1 << 6;
+    uint256 public constant MAX_DEBT_MANAGER = 1 << 7;
+    uint256 public constant DEPOSIT_LIMIT_MANAGER = 1 << 8;
+    uint256 public constant PROFIT_UNLOCK_MANAGER = 1 << 11;
+    uint256 public constant EMERGENCY_MANAGER = 1 << 13;
     bytes32 public constant DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant PERMIT_TYPE_HASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    string public constant name = "Yearn V3 Vault";
-    string public constant symbol = "yvV3";
+    string public name = "Yearn V3 Vault";
+    string public symbol = "yvV3";
     string public constant API_VERSION = "3.0.4";
     uint8 public constant decimals = 18;
 
     address public asset;
     address public roleManager;
+    address public futureRoleManager;
     bool public initialized;
     bool public shutdown;
     uint256 public depositLimit;
@@ -60,12 +69,10 @@ contract YearnVaultV3Real {
     event StrategyChanged(address indexed strategy, uint256 activation);
     event DebtUpdated(address indexed strategy, uint256 currentDebt, uint256 newDebt);
     event StrategyReported(address indexed strategy, uint256 gain, uint256 loss, uint256 totalDebt, uint256 totalIdle);
+    event RoleSet(address indexed account, uint256 indexed role);
+    event UpdateFutureRoleManager(address indexed futureRoleManager);
+    event UpdateRoleManager(address indexed roleManager);
     event Shutdown();
-
-    modifier onlyManager() {
-        require(msg.sender == roleManager, "permission");
-        _;
-    }
 
     modifier ready() {
         require(initialized, "not initialized");
@@ -86,10 +93,10 @@ contract YearnVaultV3Real {
         require(!initialized, "initialized");
         require(asset_ != address(0), "asset");
         require(roleManager_ != address(0), "role manager");
-        name_;
-        symbol_;
         initialized = true;
         asset = asset_;
+        name = name_;
+        symbol = symbol_;
         roleManager = roleManager_;
         profitMaxUnlockTime = profitMaxUnlockTime_;
         lastProfitUpdate = block.timestamp;
@@ -102,6 +109,7 @@ contract YearnVaultV3Real {
     }
 
     function transfer(address to, uint256 value) external returns (bool) {
+        require(to != address(0) && to != address(this), "receiver");
         _transfer(msg.sender, to, value);
         return true;
     }
@@ -111,25 +119,33 @@ contract YearnVaultV3Real {
         if (allowed != type(uint256).max) {
             require(allowed >= value, "allowance");
             allowance[from][msg.sender] = allowed - value;
+            emit Approval(from, msg.sender, allowed - value);
         }
+        require(to != address(0) && to != address(this), "receiver");
         _transfer(from, to, value);
         return true;
     }
 
     function deposit(uint256 assets, address receiver) external ready returns (uint256 shares) {
         require(!shutdown, "shutdown");
-        require(assets > 0, "assets");
-        require(totalAssets() + assets <= depositLimit, "limit");
-        shares = _convertToShares(assets, false);
+        uint256 amount = assets;
+        if (amount == type(uint256).max) {
+            amount = YearnBenchERC20(asset).balanceOf(msg.sender);
+        }
+        require(receiver != address(0) && receiver != address(this), "receiver");
+        require(amount > 0, "assets");
+        require(totalAssets() + amount <= depositLimit, "limit");
+        shares = _convertToShares(amount, false);
         require(shares > 0, "shares");
-        _safeTransferFrom(msg.sender, address(this), assets);
-        totalIdle += assets;
+        _safeTransferFrom(msg.sender, address(this), amount);
+        totalIdle += amount;
         _mint(receiver, shares);
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(msg.sender, receiver, amount, shares);
     }
 
     function mint(uint256 shares, address receiver) external ready returns (uint256 assets) {
         require(!shutdown, "shutdown");
+        require(receiver != address(0) && receiver != address(this), "receiver");
         require(shares > 0, "shares");
         assets = _convertToAssets(shares, true);
         require(totalAssets() + assets <= depositLimit, "limit");
@@ -162,7 +178,8 @@ contract YearnVaultV3Real {
         return actualAssets;
     }
 
-    function add_strategy(address strategy, bool addToQueue) external ready onlyManager {
+    function add_strategy(address strategy, bool addToQueue) external ready {
+        _enforceRole(msg.sender, ADD_STRATEGY_MANAGER);
         require(strategy != address(0), "strategy");
         require(strategies[strategy].activation == 0, "active");
         strategies[strategy].activation = block.timestamp;
@@ -172,15 +189,57 @@ contract YearnVaultV3Real {
         emit StrategyChanged(strategy, block.timestamp);
     }
 
-    function set_role(address account, uint256 role) external ready onlyManager {
+    function set_role(address account, uint256 role) external ready {
+        require(msg.sender == roleManager, "permission");
         roles[account] = role;
+        emit RoleSet(account, role);
     }
 
-    function set_deposit_limit(uint256 limit, bool) external ready onlyManager {
+    function add_role(address account, uint256 role) external ready {
+        require(msg.sender == roleManager, "permission");
+        uint256 newRoles = roles[account] | role;
+        roles[account] = newRoles;
+        emit RoleSet(account, newRoles);
+    }
+
+    function remove_role(address account, uint256 role) external ready {
+        require(msg.sender == roleManager, "permission");
+        uint256 newRoles = roles[account] & ~role;
+        roles[account] = newRoles;
+        emit RoleSet(account, newRoles);
+    }
+
+    function transfer_role_manager(address newRoleManager) external ready {
+        require(msg.sender == roleManager, "permission");
+        futureRoleManager = newRoleManager;
+        emit UpdateFutureRoleManager(newRoleManager);
+    }
+
+    function accept_role_manager() external ready {
+        require(msg.sender == futureRoleManager, "permission");
+        roleManager = msg.sender;
+        futureRoleManager = address(0);
+        emit UpdateRoleManager(msg.sender);
+    }
+
+    function setName(string calldata newName) external ready {
+        require(msg.sender == roleManager, "permission");
+        name = newName;
+    }
+
+    function setSymbol(string calldata newSymbol) external ready {
+        require(msg.sender == roleManager, "permission");
+        symbol = newSymbol;
+    }
+
+    function set_deposit_limit(uint256 limit, bool) external ready {
+        require(!shutdown, "shutdown");
+        _enforceRole(msg.sender, DEPOSIT_LIMIT_MANAGER);
         depositLimit = limit;
     }
 
-    function update_max_debt_for_strategy(address strategy, uint256 maxDebt) external ready onlyManager {
+    function update_max_debt_for_strategy(address strategy, uint256 maxDebt) external ready {
+        _enforceRole(msg.sender, MAX_DEBT_MANAGER);
         require(strategies[strategy].activation != 0, "inactive");
         strategies[strategy].maxDebt = maxDebt;
     }
@@ -188,9 +247,9 @@ contract YearnVaultV3Real {
     function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss)
         external
         ready
-        onlyManager
         returns (uint256)
     {
+        _enforceRole(msg.sender, DEBT_MANAGER);
         Strategy storage s = strategies[strategy];
         require(s.activation != 0, "inactive");
         require(targetDebt <= s.maxDebt, "max");
@@ -219,7 +278,8 @@ contract YearnVaultV3Real {
         return s.currentDebt;
     }
 
-    function process_report(address strategy) external ready onlyManager returns (uint256 gain, uint256 loss) {
+    function process_report(address strategy) external ready returns (uint256 gain, uint256 loss) {
+        _enforceRole(msg.sender, REPORTING_MANAGER);
         Strategy storage s = strategies[strategy];
         require(s.activation != 0, "inactive");
         (gain, loss) = YearnBenchStrategy(strategy).report();
@@ -255,10 +315,29 @@ contract YearnVaultV3Real {
         emit StrategyReported(strategy, gain, loss, totalDebt, totalIdle);
     }
 
-    function shutdown_vault() external ready onlyManager {
+    function shutdown_vault() external ready {
+        _enforceRole(msg.sender, EMERGENCY_MANAGER);
+        require(!shutdown, "shutdown");
         shutdown = true;
         depositLimit = 0;
+        uint256 newRoles = roles[msg.sender] | DEBT_MANAGER;
+        roles[msg.sender] = newRoles;
+        emit RoleSet(msg.sender, newRoles);
         emit Shutdown();
+    }
+
+    function setProfitMaxUnlockTime(uint256 newProfitMaxUnlockTime) external ready {
+        _enforceRole(msg.sender, PROFIT_UNLOCK_MANAGER);
+        require(newProfitMaxUnlockTime <= 31_556_952, "profit unlock time too long");
+        if (newProfitMaxUnlockTime == 0) {
+            uint256 lockedShares = balanceOf[address(this)];
+            if (lockedShares > 0) {
+                _burn(address(this), lockedShares);
+            }
+            profitUnlockingRate = 0;
+            fullProfitUnlockDate = 0;
+        }
+        profitMaxUnlockTime = newProfitMaxUnlockTime;
     }
 
     function permitDigest(address owner, address spender, uint256 value, uint256 deadline)
@@ -271,6 +350,14 @@ contract YearnVaultV3Real {
 
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparator();
+    }
+
+    function role_manager() external view returns (address) {
+        return roleManager;
+    }
+
+    function future_role_manager() external view returns (address) {
+        return futureRoleManager;
     }
 
     function permit(
@@ -297,6 +384,14 @@ contract YearnVaultV3Real {
         return totalIdle + totalDebt;
     }
 
+    function isShutdown() external view returns (bool) {
+        return shutdown;
+    }
+
+    function unlockedShares() external view returns (uint256) {
+        return _unlockedShares();
+    }
+
     function pricePerShare() external view returns (uint256) {
         uint256 supply = _effectiveSupply();
         if (supply == 0) {
@@ -305,15 +400,55 @@ contract YearnVaultV3Real {
         return totalAssets() * WAD / supply;
     }
 
-    function maxDeposit(address) external view returns (uint256) {
-        if (shutdown || totalAssets() >= depositLimit) {
+    function convertToShares(uint256 assets) external view returns (uint256) {
+        return _convertToShares(assets, false);
+    }
+
+    function previewDeposit(uint256 assets) external view returns (uint256) {
+        return _convertToShares(assets, false);
+    }
+
+    function previewMint(uint256 shares) external view returns (uint256) {
+        return _convertToAssets(shares, true);
+    }
+
+    function convertToAssets(uint256 shares) external view returns (uint256) {
+        return _convertToAssets(shares, false);
+    }
+
+    function maxDeposit(address receiver) external view returns (uint256) {
+        if (shutdown || receiver == address(0) || receiver == address(this) || totalAssets() >= depositLimit) {
             return 0;
         }
         return depositLimit - totalAssets();
     }
 
+    function maxMint(address receiver) external view returns (uint256) {
+        if (shutdown || receiver == address(0) || receiver == address(this) || totalAssets() >= depositLimit) {
+            return 0;
+        }
+        return _convertToShares(depositLimit - totalAssets(), false);
+    }
+
     function maxWithdraw(address owner, uint256) external view returns (uint256) {
         return _convertToAssets(balanceOf[owner], false);
+    }
+
+    function maxRedeem(address owner, uint256) external view returns (uint256) {
+        uint256 shares = _convertToShares(_convertToAssets(balanceOf[owner], false), false);
+        return _min(shares, balanceOf[owner]);
+    }
+
+    function previewWithdraw(uint256 assets) external view returns (uint256) {
+        return _convertToShares(assets, true);
+    }
+
+    function previewRedeem(uint256 shares) external view returns (uint256) {
+        return _convertToAssets(shares, false);
+    }
+
+    function apiVersion() external pure returns (string memory) {
+        return API_VERSION;
     }
 
     function strategyState(address strategy)
@@ -345,6 +480,7 @@ contract YearnVaultV3Real {
         if (allowed != type(uint256).max) {
             require(allowed >= shares, "allowance");
             allowance[owner][msg.sender] = allowed - shares;
+            emit Approval(owner, msg.sender, allowed - shares);
         }
     }
 
@@ -413,6 +549,10 @@ contract YearnVaultV3Real {
 
     function _safeTransferFrom(address from, address to, uint256 value) internal {
         require(YearnBenchERC20(asset).transferFrom(from, to, value), "transferFrom");
+    }
+
+    function _enforceRole(address account, uint256 role) internal view {
+        require(roles[account] & role != 0, "not allowed");
     }
 
     function _domainSeparator() internal view returns (bytes32) {

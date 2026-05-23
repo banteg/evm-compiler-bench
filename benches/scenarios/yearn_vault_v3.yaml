@@ -9,13 +9,32 @@ scenarios:
       data: 'abi.encodeWithSignature("initialize(address,string,string,address,uint256)", benchYearnAsset({target}), "Yearn V3 Vault", "yvV3", address(this), uint256(86400))'
     expect_success: true
     observers: &yearn_observers
+      - data: 'abi.encodeWithSignature("name()")'
+      - data: 'abi.encodeWithSignature("symbol()")'
+      - data: 'abi.encodeWithSignature("apiVersion()")'
+      - data: 'abi.encodeWithSignature("role_manager()")'
+      - data: 'abi.encodeWithSignature("future_role_manager()")'
+      - data: 'abi.encodeWithSignature("roles(address)", address(this))'
+      - data: 'abi.encodeWithSignature("roles(address)", BOB)'
+      - data: 'abi.encodeWithSignature("isShutdown()")'
+      - data: 'abi.encodeWithSignature("unlockedShares()")'
       - data: 'abi.encodeWithSignature("totalAssets()")'
+      - data: 'abi.encodeWithSignature("totalIdle()")'
+      - data: 'abi.encodeWithSignature("totalDebt()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
       - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
       - data: 'abi.encodeWithSignature("balanceOf(address)", BOB)'
       - data: 'abi.encodeWithSignature("pricePerShare()")'
+      - data: 'abi.encodeWithSignature("convertToShares(uint256)", uint256(1_000))'
+      - data: 'abi.encodeWithSignature("previewDeposit(uint256)", uint256(1_000))'
+      - data: 'abi.encodeWithSignature("previewMint(uint256)", uint256(1_000))'
+      - data: 'abi.encodeWithSignature("convertToAssets(uint256)", uint256(1_000))'
       - data: 'abi.encodeWithSignature("maxDeposit(address)", address(this))'
+      - data: 'abi.encodeWithSignature("maxMint(address)", address(this))'
       - data: 'abi.encodeWithSignature("maxWithdraw(address,uint256)", address(this), uint256(10_000))'
+      - data: 'abi.encodeWithSignature("maxRedeem(address,uint256)", address(this), uint256(10_000))'
+      - data: 'abi.encodeWithSignature("previewWithdraw(uint256)", uint256(1_000))'
+      - data: 'abi.encodeWithSignature("previewRedeem(uint256)", uint256(1_000))'
       - data: 'abi.encodeWithSignature("nonces(address)", address(this))'
       - data: 'abi.encodeWithSignature("nonces(address)", benchYearnPermitOwner())'
       - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'
@@ -80,6 +99,49 @@ scenarios:
       - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
     measured:
       data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(40_000), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: role_delegate_add_strategy
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("set_role(address,uint256)", BOB, uint256(1))'
+    measured:
+      data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      sender: BOB
+    expect_success: true
+    observers: *yearn_observers
+  - name: add_remove_role
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("set_role(address,uint256)", BOB, uint256(1))'
+      - data: 'abi.encodeWithSignature("add_role(address,uint256)", BOB, uint256(64))'
+    measured:
+      data: 'abi.encodeWithSignature("remove_role(address,uint256)", BOB, uint256(1))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: role_manager_transfer_accept
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("transfer_role_manager(address)", BOB)'
+    measured:
+      data: 'abi.encodeWithSignature("accept_role_manager()")'
+      sender: BOB
+    expect_success: true
+    observers: *yearn_observers
+  - name: set_metadata
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("setName(string)", "Yearn V3 Renamed")'
+    measured:
+      data: 'abi.encodeWithSignature("setSymbol(string)", "yvV3R")'
     expect_success: true
     observers: *yearn_observers
   - name: strategy_profit_report
