@@ -1,8 +1,8 @@
 use crate::{
     cache::{self, CacheLookup},
     models::{
-        CacheInfo, CallSpec, CompileSet, CompiledArtifact, GasRecord, PropertySpec, RandomizedSpec,
-        Scenario,
+        CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, GasRecord,
+        PropertySpec, RandomizedSpec, Scenario,
     },
     scenarios::ScenarioCatalog,
     util::{Progress, ensure_dir, require_success, run_measured, sha256_bytes},
@@ -370,6 +370,7 @@ fn generate_test(
     let mut out = String::new();
     out.push_str("// SPDX-License-Identifier: MIT\n");
     out.push_str("pragma solidity ^0.8.20;\n\n");
+    out.push_str(support_contracts());
     out.push_str("interface Vm {\n");
     out.push_str("    function createDir(string calldata path, bool recursive) external;\n");
     out.push_str("    function writeFile(string calldata path, string calldata data) external;\n");
@@ -377,6 +378,9 @@ fn generate_test(
     out.push_str("    function toString(uint256 value) external pure returns (string memory);\n");
     out.push_str("    function prank(address sender) external;\n");
     out.push_str("    function deal(address account, uint256 newBalance) external;\n");
+    out.push_str("    function warp(uint256 newTimestamp) external;\n");
+    out.push_str("    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\n");
+    out.push_str("    function addr(uint256 privateKey) external returns (address);\n");
     out.push_str("}\n\n");
     out.push_str("contract ");
     out.push_str(contract_name);
@@ -394,6 +398,15 @@ fn generate_test(
     out.push_str("    bytes32 constant LEAF = keccak256(\"leaf\");\n");
     out.push_str("    bytes32 constant SIBLING = keccak256(\"sibling\");\n");
     out.push_str("    bytes32 constant ROOT = LEAF < SIBLING ? keccak256(abi.encodePacked(LEAF, SIBLING)) : keccak256(abi.encodePacked(SIBLING, LEAF));\n\n");
+    out.push_str("    uint256 constant YEARN_PERMIT_KEY = 0xA11CE;\n");
+    out.push_str("    bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
+    out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; }\n");
+    out.push_str("    struct CurveDeps { BenchERC20 coin0; BenchERC20 coin1; }\n");
+    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; }\n");
+    out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
+    out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
+    out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
+    out.push_str("    address public feeTo;\n\n");
     out.push_str("    receive() external payable {}\n\n");
     out.push_str("    function setUp() public {\n");
     out.push_str("        vm.writeFile(GAS_JSONL_PATH, \"\");\n");
@@ -403,6 +416,7 @@ fn generate_test(
     out.push_str("        vm.deal(address(this), 1000000 ether);\n");
     out.push_str("        vm.deal(BOB, 1000000 ether);\n");
     out.push_str("        vm.deal(CAROL, 1000000 ether);\n");
+    out.push_str("        vm.warp(1);\n");
     out.push_str("    }\n\n");
     out.push_str(helper_functions());
     out.push_str(randomized_helper_functions());
@@ -463,6 +477,171 @@ fn generate_test(
     Ok(out)
 }
 
+fn support_contracts() -> &'static str {
+    r#"
+contract BenchERC20 {
+    string public constant name = "Bench Token";
+    string public constant symbol = "BENCH";
+    uint8 public constant decimals = 18;
+
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function mint(address to, uint256 value) external returns (bool) {
+        totalSupply += value;
+        balanceOf[to] += value;
+        emit Transfer(address(0), to, value);
+        return true;
+    }
+
+    function burn(address from, uint256 value) external returns (bool) {
+        require(balanceOf[from] >= value, "burn balance");
+        balanceOf[from] -= value;
+        totalSupply -= value;
+        emit Transfer(from, address(0), value);
+        return true;
+    }
+
+    function approve(address spender, uint256 value) external returns (bool) {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        return true;
+    }
+
+    function transfer(address to, uint256 value) external returns (bool) {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool) {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) {
+            require(allowed >= value, "allowance");
+            allowance[from][msg.sender] = allowed - value;
+        }
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(balanceOf[from] >= value, "balance");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        emit Transfer(from, to, value);
+    }
+}
+
+contract BenchYearnStrategy {
+    BenchERC20 public immutable asset;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    uint256 public pendingGain;
+    uint256 public pendingLoss;
+
+    constructor(BenchERC20 asset_) {
+        asset = asset_;
+    }
+
+    function maxDeposit(address) external pure returns (uint256) {
+        return type(uint256).max;
+    }
+
+    function maxRedeem(address owner) external view returns (uint256) {
+        return balanceOf[owner];
+    }
+
+    function convertToAssets(uint256 shares) public view returns (uint256) {
+        if (totalSupply == 0) {
+            return shares;
+        }
+        return shares * asset.balanceOf(address(this)) / totalSupply;
+    }
+
+    function convertToShares(uint256 assets) external view returns (uint256) {
+        uint256 totalAssets = asset.balanceOf(address(this));
+        if (totalSupply == 0 || totalAssets == 0) {
+            return assets;
+        }
+        return assets * totalSupply / totalAssets;
+    }
+
+    function previewWithdraw(uint256 assets) external view returns (uint256) {
+        uint256 totalAssets = asset.balanceOf(address(this));
+        if (totalSupply == 0 || totalAssets == 0) {
+            return assets;
+        }
+        uint256 shares = assets * totalSupply / totalAssets;
+        if (shares * totalAssets < assets * totalSupply) {
+            shares += 1;
+        }
+        return shares;
+    }
+
+    function deposit(uint256 assets, address receiver) external returns (uint256 shares) {
+        require(asset.transferFrom(msg.sender, address(this), assets), "transferFrom");
+        shares = assets;
+        totalSupply += shares;
+        balanceOf[receiver] += shares;
+    }
+
+    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets) {
+        require(msg.sender == owner, "owner");
+        require(balanceOf[owner] >= shares, "shares");
+        assets = convertToAssets(shares);
+        balanceOf[owner] -= shares;
+        totalSupply -= shares;
+        require(asset.transfer(receiver, assets), "transfer");
+    }
+
+    function increaseDebt(uint256 amount) external returns (bool) {
+        amount;
+        return true;
+    }
+
+    function setReport(uint256 gain, uint256 loss) external returns (bool) {
+        pendingGain = gain;
+        pendingLoss = loss;
+        if (gain > 0) {
+            asset.mint(address(this), gain);
+        }
+        if (loss > 0) {
+            uint256 burnAmount = loss > asset.balanceOf(address(this)) ? asset.balanceOf(address(this)) : loss;
+            if (burnAmount > 0) {
+                asset.burn(address(this), burnAmount);
+            }
+        }
+        return true;
+    }
+
+    function report() external returns (uint256 gain, uint256 loss) {
+        gain = pendingGain;
+        loss = pendingLoss;
+        pendingGain = 0;
+        pendingLoss = 0;
+    }
+
+    function withdrawTo(address receiver, uint256 amount, uint256 maxLoss)
+        external
+        returns (uint256 withdrawn, uint256 loss)
+    {
+        uint256 available = asset.balanceOf(address(this));
+        uint256 target = amount > available ? available : amount;
+        withdrawn = target > available ? available : target;
+        loss = target - withdrawn;
+        require(target == 0 || loss * 10000 <= target * maxLoss, "loss");
+        if (withdrawn > 0) {
+            require(asset.transfer(receiver, withdrawn), "transfer");
+        }
+    }
+}
+
+"#
+}
+
 fn helper_functions() -> &'static str {
     r#"
     function proofOne() internal pure returns (bytes32[] memory proof) {
@@ -491,11 +670,187 @@ fn helper_functions() -> &'static str {
         }
     }
 
+    function curveAmounts(uint256 amount0, uint256 amount1) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](2);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+    }
+
+    function benchWarp(uint256 secondsForward) external returns (bool) {
+        vm.warp(block.timestamp + secondsForward);
+        return true;
+    }
+
+    function fee_receiver() external pure returns (address) {
+        return address(0);
+    }
+
+    function admin() external view returns (address) {
+        return address(this);
+    }
+
+    function views_implementation() external view returns (address) {
+        return address(this);
+    }
+
+    function protocol_fee_config() external pure returns (uint16, address) {
+        return (0, address(0));
+    }
+
+    function benchUniswapInit(address target, bool feeOn) external returns (bool) {
+        BenchERC20 token0 = new BenchERC20();
+        BenchERC20 token1 = new BenchERC20();
+        pairDeps[target] = PairDeps(token0, token1);
+        feeTo = feeOn ? address(0xFEE) : address(0);
+        (bool ok,) = target.call(
+            abi.encodeWithSignature("initialize(address,address)", address(token0), address(token1))
+        );
+        require(ok, "pair init");
+        return true;
+    }
+
+    function benchUniswapSeed(address target, uint256 amount0, uint256 amount1) external returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        if (amount0 > 0) {
+            deps.token0.mint(target, amount0);
+        }
+        if (amount1 > 0) {
+            deps.token1.mint(target, amount1);
+        }
+        return true;
+    }
+
+    function benchUniswapStageBurn(address target, uint256 liquidity) external returns (bool) {
+        (bool ok,) = target.call(abi.encodeWithSignature("transfer(address,uint256)", target, liquidity));
+        require(ok, "stage lp");
+        return true;
+    }
+
+    function benchUniswapSetFeeTo(address newFeeTo) external returns (bool) {
+        feeTo = newFeeTo;
+        return true;
+    }
+
+    function benchCurveInit(address target, uint256 amp, uint256 swapFee, uint256 adminFee)
+        external
+        returns (bool)
+    {
+        amp;
+        swapFee;
+        adminFee;
+        require(address(curveDeps[target].coin0) != address(0), "curve deps");
+        return true;
+    }
+
+    function benchYearnInit(address target, uint256 limit, uint256 unlockTime, uint256 feeBps)
+        external
+        returns (bool)
+    {
+        _benchYearnPrepare(target);
+        BenchERC20 asset = yearnDeps[target].asset;
+        (bool ok,) = target.call(
+            abi.encodeWithSignature(
+                "initialize(address,string,string,address,uint256)",
+                address(asset),
+                "Yearn V3 Vault",
+                "yvV3",
+                address(this),
+                unlockTime
+            )
+        );
+        require(ok, "yearn init");
+        (ok,) = target.call(abi.encodeWithSignature("set_role(address,uint256)", address(this), uint256(16_383)));
+        require(ok, "yearn roles");
+        (ok,) = target.call(abi.encodeWithSignature("set_deposit_limit(uint256,bool)", limit, true));
+        require(ok, "yearn limit");
+        feeBps;
+        asset.mint(address(this), 1e30);
+        asset.approve(target, type(uint256).max);
+        return true;
+    }
+
+    function benchYearnPrepare(address target) external returns (bool) {
+        _benchYearnPrepare(target);
+        return true;
+    }
+
+    function _benchYearnPrepare(address target) internal {
+        if (address(yearnDeps[target].asset) == address(0)) {
+            BenchERC20 asset = new BenchERC20();
+            BenchYearnStrategy strategy = new BenchYearnStrategy(asset);
+            yearnDeps[target] = YearnDeps(asset, strategy);
+        }
+    }
+
+    function benchYearnAsset(address target) public view returns (address) {
+        return address(yearnDeps[target].asset);
+    }
+
+    function benchYearnStrategy(address target) public view returns (address) {
+        return address(yearnDeps[target].strategy);
+    }
+
+    function benchYearnPermitOwner() public returns (address) {
+        return vm.addr(YEARN_PERMIT_KEY);
+    }
+
+    function benchYearnPermitCalldata(address target, address spender, uint256 value, uint256 deadline)
+        public
+        returns (bytes memory)
+    {
+        address owner = benchYearnPermitOwner();
+        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
+        require(ok, "yearn domain");
+        bytes32 domainSeparator = abi.decode(rawDomain, (bytes32));
+        bytes memory rawNonce;
+        (ok, rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
+        require(ok, "yearn nonce");
+        uint256 nonce = abi.decode(rawNonce, (uint256));
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                domainSeparator,
+                keccak256(abi.encode(YEARN_PERMIT_TYPE_HASH, owner, spender, value, nonce, deadline))
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(YEARN_PERMIT_KEY, digest);
+        return abi.encodeWithSignature(
+            "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+            owner,
+            spender,
+            value,
+            deadline,
+            v,
+            r,
+            s
+        );
+    }
+
+    function benchYearnSetReport(address target, uint256 gain, uint256 loss) external returns (bool) {
+        require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
+        yearnDeps[target].strategy.setReport(gain, loss);
+        return true;
+    }
+
     function _deploy(bytes memory code) internal returns (address target) {
         assembly {
             target := create(0, add(code, 0x20), mload(code))
         }
         require(target != address(0), "deploy failed");
+    }
+
+    function _deployMinimalProxy(address implementation) internal returns (address target) {
+        bytes memory code = abi.encodePacked(
+            hex"3d602d80600a3d3981f3363d3d373d3d3d363d73",
+            implementation,
+            hex"5af43d82803e903d91602b57fd5bf3"
+        );
+        assembly {
+            target := create(0, add(code, 0x20), mload(code))
+        }
+        require(target != address(0) && target.code.length != 0, "proxy deploy failed");
     }
 
     function _run(address target, bytes memory data, uint256 value, address sender)
@@ -1140,14 +1495,40 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     out.push_str("        bytes memory code = hex\"");
     out.push_str(artifact.creation_bytecode.trim_start_matches("0x"));
     out.push_str("\";\n");
+    if artifact.benchmark_id == "curve_stableswap_2coin" {
+        out.push_str("        BenchERC20 coin0 = new BenchERC20();\n");
+        out.push_str("        BenchERC20 coin1 = new BenchERC20();\n");
+        out.push_str("        address[] memory coins = new address[](2);\n");
+        out.push_str("        coins[0] = address(coin0);\n");
+        out.push_str("        coins[1] = address(coin1);\n");
+        out.push_str("        uint256[] memory rates = new uint256[](2);\n");
+        out.push_str("        rates[0] = 1e18;\n");
+        out.push_str("        rates[1] = 1e18;\n");
+        out.push_str("        uint8[] memory assetTypes = new uint8[](2);\n");
+        out.push_str("        bytes4[] memory methodIds = new bytes4[](2);\n");
+        out.push_str("        address[] memory oracles = new address[](2);\n");
+        out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
+    }
     if let Some(args) = constructor_args(&artifact.benchmark_id) {
         out.push_str("        code = abi.encodePacked(code, ");
         out.push_str(args);
         out.push_str(");\n");
     }
     out.push_str("        uint256 startGas = gasleft();\n");
-    out.push_str("        target = _deploy(code);\n");
+    if artifact.benchmark_id == "yearn_vault_v3" {
+        out.push_str("        address implementation = _deploy(code);\n");
+        out.push_str("        target = _deployMinimalProxy(implementation);\n");
+    } else {
+        out.push_str("        target = _deploy(code);\n");
+    }
     out.push_str("        deployGas = startGas - gasleft();\n");
+    if artifact.benchmark_id == "curve_stableswap_2coin" {
+        out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1);\n");
+        out.push_str("        coin0.mint(address(this), 1e30);\n");
+        out.push_str("        coin1.mint(address(this), 1e30);\n");
+        out.push_str("        coin0.approve(target, type(uint256).max);\n");
+        out.push_str("        coin1.approve(target, type(uint256).max);\n");
+    }
     out.push_str("    }\n\n");
 }
 
@@ -1168,10 +1549,12 @@ fn write_gas_test(
     write_setup(out, "target", &scenario.setup, "setup");
     write_setup(out, "target", &scenario.warmup, "warmup");
     out.push_str("        uint256 calldataGas = _calldataGas(");
-    out.push_str(&scenario.measured.data);
+    out.push_str(&call_data(&scenario.measured, "target"));
     out.push_str(");\n");
-    out.push_str("        (bool ok,, uint256 executionGas) = _run(target, ");
-    write_call_args(out, &scenario.measured);
+    out.push_str("        (bool ok,, uint256 executionGas) = _run(");
+    out.push_str(call_destination(&scenario.measured, "target"));
+    out.push_str(", ");
+    write_call_args(out, &scenario.measured, "target");
     out.push_str(");\n");
     out.push_str("        bool scenarioStatusOk = ok == ");
     out.push_str(if scenario.expect_success {
@@ -1229,11 +1612,15 @@ fn write_diff_test(
     write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "solTarget", &scenario.warmup, "warmup");
     write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
-    out.push_str("        (bool solOk, bytes32 solHash,) = _run(solTarget, ");
-    write_call_args(out, &scenario.measured);
+    out.push_str("        (bool solOk, bytes32 solHash,) = _run(");
+    out.push_str(call_destination(&scenario.measured, "solTarget"));
+    out.push_str(", ");
+    write_call_args(out, &scenario.measured, "solTarget");
     out.push_str(");\n");
-    out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(vyperTarget, ");
-    write_call_args(out, &scenario.measured);
+    out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(");
+    out.push_str(call_destination(&scenario.measured, "vyperTarget"));
+    out.push_str(", ");
+    write_call_args(out, &scenario.measured, "vyperTarget");
     out.push_str(");\n");
     out.push_str("        require(solOk == vyperOk, \"differential status mismatch\");\n");
     out.push_str("        require(solOk == ");
@@ -1376,9 +1763,9 @@ fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scen
 fn write_setup(out: &mut String, target: &str, setup: &[CallSpec], label: &str) {
     for call in setup {
         out.push_str("        { (bool setupOk,,) = _run(");
-        out.push_str(target);
+        out.push_str(call_destination(call, target));
         out.push_str(", ");
-        write_call_args(out, call);
+        write_call_args(out, call, target);
         out.push_str(");\n");
         out.push_str("        require(setupOk, \"");
         out.push_str(label);
@@ -1386,12 +1773,23 @@ fn write_setup(out: &mut String, target: &str, setup: &[CallSpec], label: &str) 
     }
 }
 
-fn write_call_args(out: &mut String, call: &CallSpec) {
-    out.push_str(&call.data);
+fn write_call_args(out: &mut String, call: &CallSpec, target: &str) {
+    out.push_str(&call_data(call, target));
     out.push_str(", ");
     out.push_str(&call.value);
     out.push_str(", ");
     out.push_str(call.sender.as_deref().unwrap_or("address(this)"));
+}
+
+fn call_destination<'a>(call: &CallSpec, target: &'a str) -> &'a str {
+    match call.destination {
+        CallDestination::Target => target,
+        CallDestination::Harness => "address(this)",
+    }
+}
+
+fn call_data(call: &CallSpec, target: &str) -> String {
+    call.data.replace("{target}", target)
 }
 
 fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize, usize)> {

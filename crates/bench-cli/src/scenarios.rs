@@ -170,7 +170,7 @@ fn yaml_files(dir: &Path) -> Result<Vec<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::validate_scenario_file;
-    use crate::models::{CallSpec, Scenario, ScenarioFile, StateAccessProfile};
+    use crate::models::{CallDestination, CallSpec, Scenario, ScenarioFile, StateAccessProfile};
     use std::path::Path;
 
     #[test]
@@ -197,6 +197,7 @@ mod tests {
                     data: "abi.encodeWithSignature(\"value()\")".to_string(),
                     sender: None,
                     value: "0".to_string(),
+                    destination: CallDestination::Target,
                 },
                 expect_success: true,
                 observers: vec![],

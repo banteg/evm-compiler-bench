@@ -861,8 +861,8 @@ function Methodology() {
     },
     {
       tag: 'F',
-      title: 'Real-derived ≠ production',
-      body: 'Curve, Uniswap V2, and Yearn V3 ports are clean-room behavior models with production_equivalence=false. They exercise realistic shapes, not real ERC20 transfer paths.'
+      title: 'Real-derived provenance',
+      body: 'Real-derived suites use upstream source-language originals where available, plus counterpart-language ports. Equivalence scope is documented per spec, and scoped ports are not upstream protocol gas claims.'
     },
     {
       tag: 'G',

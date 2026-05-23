@@ -1,0 +1,7 @@
+id = "vyper-0.3.7-none"
+language = "vyper"
+compiler = "vyper-0.3.7"
+optimizer = false
+optimizer_mode = "none"
+source_variant = "vyper-0.3"
+evm_version = "paris"

@@ -128,6 +128,18 @@ pub struct CallSpec {
     pub sender: Option<String>,
     #[serde(default = "default_call_value")]
     pub value: String,
+    #[serde(
+        default = "default_call_destination",
+        skip_serializing_if = "is_default_call_destination"
+    )]
+    pub destination: CallDestination,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CallDestination {
+    Target,
+    Harness,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
@@ -415,6 +427,14 @@ pub struct GasRecord {
 
 fn default_call_value() -> String {
     "0".to_string()
+}
+
+fn default_call_destination() -> CallDestination {
+    CallDestination::Target
+}
+
+fn is_default_call_destination(destination: &CallDestination) -> bool {
+    *destination == CallDestination::Target
 }
 
 fn default_state_access_profile() -> StateAccessProfile {

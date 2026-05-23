@@ -12,7 +12,7 @@
   const SUITES = {
     fixed:         { label: 'Fixed',        desc: 'Hand-written ports of common contract motifs' },
     scale:         { label: 'Scale',        desc: 'Parametric N=1..64 scaling families' },
-    real_derived:  { label: 'Real-derived', desc: 'Simplified models of production contracts' },
+    real_derived:  { label: 'Real-derived', desc: 'Upstream originals plus counterpart ports' },
   };
 
   function median(values){

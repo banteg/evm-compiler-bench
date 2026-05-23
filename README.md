@@ -17,8 +17,8 @@ Published report: https://evm.banteg.xyz/
 - Generated scale studies: deterministic N=1..64 families for compiler stress
   surfaces such as dispatch, ABI arguments, events, loops, storage slots, and
   external calls.
-- Real-derived models: clean-room benchmark models inspired by Uniswap V2 Pair,
-  Curve 2-coin stableswap, and Yearn V3 vault shapes.
+- Real-derived contracts: upstream source-language originals where available,
+  plus counterpart-language ports with equivalence scope recorded in specs.
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
 
@@ -77,8 +77,8 @@ Ignore result caches for a fresh run:
 cargo run --release -- run --no-cache
 ```
 
-The full current matrix is large: 44 compiler profiles across 62 benchmarks,
-which means 2,728 compile attempts before gas scenarios are measured.
+The full current matrix is large: 48 compiler profiles across 62 benchmarks,
+which means 2,976 compile attempts before gas scenarios are measured.
 
 ## Report UI
 
@@ -147,8 +147,9 @@ just zip-design
   as compile failures.
 - Assembly-heavy or mechanically matched variants should be treated as
   diagnostic comparators, not as the primary report lane.
-- Real-derived contracts are benchmark models with
-  `production_equivalence=false`; they are not production gas claims for the
+- Real-derived specs record provenance and equivalence scope per benchmark.
+  Upstream source-language originals may be exact, while counterpart-language
+  ports can be scoped. Do not read scoped ports as production gas claims for the
   upstream protocols.
 - Vyper Venom rows use `--experimental-codegen`.
 - Vyper 0.5.0a1 is pre-release.

@@ -3,7 +3,7 @@ scenarios:
   - name: initialize
     state_access_profile: cold
     measured:
-      data: 'abi.encodeWithSignature("initialize(bool)", false)'
+      data: 'abi.encodeWithSignature("initialize(address,address)", address(0x1000), address(0x1001))'
     expect_success: true
     observers: &pair_observers
       - data: 'abi.encodeWithSignature("getReserves()")'
@@ -15,8 +15,10 @@ scenarios:
   - name: mint_initial
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(4_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(4_000_000))'
     measured:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
@@ -24,11 +26,15 @@ scenarios:
   - name: mint_subsequent
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - data: 'abi.encodeWithSignature("advanceTime(uint256)", uint256(15))'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(250_000), uint256(250_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(15))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(250_000), uint256(250_000))'
     measured:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
@@ -36,23 +42,31 @@ scenarios:
   - name: swap_fee_invariant
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - data: 'abi.encodeWithSignature("advanceTime(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(200), uint256(0))'
     warmup:
       - data: 'abi.encodeWithSignature("getReserves()")'
     measured:
-      data: 'abi.encodeWithSignature("swap(uint256,uint256,uint256,uint256,address)", uint256(0), uint256(100), uint256(200), uint256(0), address(this))'
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), address(this), bytes(""))'
     expect_success: true
     observers: *pair_observers
   - name: burn
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - data: 'abi.encodeWithSignature("stageBurn(uint256)", uint256(10_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapStageBurn(address,uint256)", {target}, uint256(10_000))'
     measured:
       data: 'abi.encodeWithSignature("burn(address)", address(this))'
     expect_success: true
@@ -60,11 +74,15 @@ scenarios:
   - name: sync
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - data: 'abi.encodeWithSignature("advanceTime(uint256)", uint256(60))'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(50_000), uint256(25_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(60))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
     measured:
       data: 'abi.encodeWithSignature("sync()")'
     expect_success: true
@@ -72,10 +90,13 @@ scenarios:
   - name: skim
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(50_000), uint256(25_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
     measured:
       data: 'abi.encodeWithSignature("skim(address)", address(this))'
     expect_success: true
@@ -83,13 +104,17 @@ scenarios:
   - name: fee_on_mint
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", true)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, true)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
       - data: 'abi.encodeWithSignature("sync()")'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(500_000), uint256(500_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(500_000), uint256(500_000))'
       - data: 'abi.encodeWithSignature("sync()")'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(100_000), uint256(100_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(100_000), uint256(100_000))'
     measured:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
@@ -97,11 +122,17 @@ scenarios:
   - name: fee_off_resets_k_last
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", true)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, true)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSetFeeTo(address)", address(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(100_000), uint256(100_000))'
     measured:
-      data: 'abi.encodeWithSignature("setFeeTo(address)", address(0))'
+      data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
     observers: *pair_observers
   - name: uninitialized_mint_reverts
@@ -113,10 +144,12 @@ scenarios:
   - name: invalid_swap_reverts
     state_access_profile: warm
     setup:
-      - data: 'abi.encodeWithSignature("initialize(bool)", false)'
-      - data: 'abi.encodeWithSignature("seedBalances(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
     measured:
-      data: 'abi.encodeWithSignature("swap(uint256,uint256,uint256,uint256,address)", uint256(0), uint256(100), uint256(0), uint256(0), address(this))'
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), address(this), bytes(""))'
     expect_success: false
     observers: *pair_observers

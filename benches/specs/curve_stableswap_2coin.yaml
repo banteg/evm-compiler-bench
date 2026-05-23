@@ -1,15 +1,14 @@
 id: curve_stableswap_2coin
-title: Real-Derived Curve Stableswap 2-Coin Benchmark Model
+title: Real-Derived Curve Stableswap NG 2-Coin Benchmark
 abi:
-  - "initialize(uint256,uint256,uint256) returns (bool)"
-  - "add_liquidity(uint256,uint256,uint256) returns (uint256)"
-  - "exchange(uint256,uint256,uint256,uint256) returns (uint256)"
-  - "remove_liquidity(uint256,uint256,uint256) returns (uint256,uint256)"
-  - "remove_liquidity_one_coin(uint256,uint256,uint256) returns (uint256)"
-  - "get_D(uint256,uint256) returns (uint256)"
+  - "add_liquidity(uint256[],uint256,address) returns (uint256)"
+  - "exchange(int128,int128,uint256,uint256,address) returns (uint256)"
+  - "remove_liquidity(uint256,uint256[],address) returns (uint256[])"
+  - "remove_liquidity_one_coin(uint256,int128,uint256,address) returns (uint256)"
   - "get_virtual_price() returns (uint256)"
   - "balances(uint256) returns (uint256)"
   - "admin_balances(uint256) returns (uint256)"
+  - "coins(uint256) returns (address)"
   - "balanceOf(address) returns (uint256)"
   - "totalSupply() returns (uint256)"
 real_derived:
@@ -22,19 +21,20 @@ real_derived:
   source_language: vyper
   source_contract: CurveStableSwapNG
   source_blob: "f192932a22958735acad4ca24c977cc4e058f1aa"
-  upstream_license: "Curve copyright notice; benchmark port is hand-written source material only"
-  checked_at: "2026-05-19"
+  upstream_license: "Curve copyright notice; upstream file says all rights reserved"
+  checked_at: "2026-05-23"
   production_equivalence: false
-  api_compatibility: "partial: internal-balance pool API without ERC20 transfer, receiver, or oracle paths"
+  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped 2-coin standard-token port of the covered API"
   storage_layout_compatibility: false
-  external_token_semantics: "mocked_internal_balances"
-  source_derivation: "clean-room simplified benchmark model from public Curve Stableswap NG behavior"
+  external_token_semantics: "harnessed_external_erc20_tokens"
+  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port for the covered 2-coin standard-token paths"
   equivalence_scope:
-    - 2-coin invariant and get_D/get_y math
-    - simplified add_liquidity, remove_liquidity, remove_liquidity_one_coin, and exchange flows
+    - upstream Vyper constructor and external pool API for two standard ERC20 coins
+    - dynamic-array add_liquidity and remove_liquidity calls
+    - exchange and one-coin withdrawal signatures with receiver argument
     - LP token accounting
-    - deterministic fee and admin-fee balance accounting
-    - virtual price and rate-free standard-token path
+    - deterministic standard-token dynamic-fee and admin-fee accounting
+    - virtual price and observable balances
   scenario_coverage:
     - add_initial_liquidity
     - add_imbalanced_liquidity
@@ -47,57 +47,57 @@ real_derived:
     - remove_one_coin_slippage_reverts
     - invalid_coin_reverts
   mock_assumptions:
-    - coins are standard 1:1 precision assets with internal pool balances
-    - admin fee balances are tracked but no external token transfers are performed
+    - benchmark harness deploys two standard 18-decimal ERC20 test coins
+    - factory/admin/fee receiver hooks are provided by the generated harness
     - oracle, rebasing, ERC4626, and external rate paths are intentionally out of scope
+    - Solidity port keeps the benchmarked standard-token behavior but is not a full line-for-line NG translation
   included_features:
-    - 2-coin invariant iteration
+    - upstream Vyper pool source at the pinned commit
+    - constructor-initialized two-coin pool setup
     - balanced and imbalanced add liquidity
     - both exchange directions
     - proportional and one-coin withdrawal
-    - fee and admin-fee accounting in internal balances
+    - dynamic/off-peg fee and admin-fee accounting
     - slippage and invalid coin reverts
   excluded_features:
-    - ERC20 transfer and receiver handling
+    - full Curve NG oracle, rate, rebasing, and ERC4626 integrations in the Solidity port
     - exchange_received flow
-    - dynamic fee calculation
     - imbalanced removal path
-    - oracle, rate, rebasing, and ERC4626 integrations
-    - nonreentrant lock behavior
+    - exact storage layout compatibility in the Solidity port
 semantics:
-  - "Models selected 2-coin standard-token Curve Stableswap NG math and accounting paths with deterministic internal balances."
-  - "Amplification, swap fee, LP supply, admin-fee accounting, invariant, and virtual price are observable."
+  - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over the same two-standard-token harness."
+  - "The Solidity port is scoped to the covered 2-coin flows and should not be read as a full production Curve NG rewrite."
 scenarios:
   - name: add_initial_liquidity
-    call: "add_liquidity(1_000_000, 1_000_000, 0)"
+    call: "add_liquidity([1_000_000, 1_000_000], 0, address(this))"
     expected: "mints initial LP shares from D"
   - name: add_imbalanced_liquidity
-    call: "add_liquidity(100_000, 300_000, 0) after initial liquidity"
+    call: "add_liquidity([100_000, 300_000], 0, address(this)) after initial liquidity"
     expected: "mints proportional LP shares"
   - name: add_liquidity_slippage_reverts
-    call: "add_liquidity(1, 1, 10_000_000) after initial liquidity"
+    call: "add_liquidity([1, 1], 10_000_000, address(this)) after initial liquidity"
     expected: "reverts"
   - name: exchange_0_to_1
-    call: "exchange(0, 1, 25_000, 0)"
+    call: "exchange(0, 1, 25_000, 0, address(this))"
     expected: "moves along the invariant and charges fee"
   - name: exchange_1_to_0
-    call: "exchange(1, 0, 25_000, 0)"
+    call: "exchange(1, 0, 25_000, 0, address(this))"
     expected: "moves along the invariant and charges fee in the opposite direction"
   - name: exchange_slippage_reverts
-    call: "exchange(0, 1, 25_000, 1_000_000)"
+    call: "exchange(0, 1, 25_000, 1_000_000, address(this))"
     expected: "reverts"
   - name: remove_liquidity
-    call: "remove_liquidity(10_000, 0, 0)"
+    call: "remove_liquidity(10_000, [0, 0], address(this))"
     expected: "burns LP shares for proportional coin balances"
   - name: remove_one_coin
-    call: "remove_liquidity_one_coin(10_000, 1, 0)"
+    call: "remove_liquidity_one_coin(10_000, 1, 0, address(this))"
     expected: "burns LP shares for one coin with fee"
   - name: remove_one_coin_slippage_reverts
-    call: "remove_liquidity_one_coin(10_000, 1, 1_000_000)"
+    call: "remove_liquidity_one_coin(10_000, 1, 1_000_000, address(this))"
     expected: "reverts"
   - name: invalid_coin_reverts
-    call: "exchange(0, 2, 1, 0)"
+    call: "exchange(0, 2, 1, 0, address(this))"
     expected: "reverts"
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
-  vyper: "benches/implementations/curve_stableswap_2coin/vyper/CurveStableSwap2CoinReal.vy"
+  vyper: "benches/implementations/curve_stableswap_2coin/vyper/upstream/contracts/main/CurveStableSwapNG.vy"

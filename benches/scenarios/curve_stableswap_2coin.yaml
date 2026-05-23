@@ -3,9 +3,10 @@ scenarios:
   - name: add_initial_liquidity
     state_access_profile: cold
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
     measured:
-      data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     expect_success: true
     observers: &curve_observers
       - data: 'abi.encodeWithSignature("balances(uint256)", uint256(0))'
@@ -15,89 +16,97 @@ scenarios:
       - data: 'abi.encodeWithSignature("totalSupply()")'
       - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
-      - data: 'abi.encodeWithSignature("get_D(uint256,uint256)", uint256(1_000_000), uint256(1_000_000))'
   - name: add_imbalanced_liquidity
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(100_000), uint256(300_000), uint256(0))'
+      data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(100_000, 300_000), uint256(0), address(this))'
     expect_success: true
     observers: *curve_observers
   - name: add_liquidity_slippage_reverts
     state_access_profile: warm
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1), uint256(1), uint256(10_000_000))'
+      data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1, 1), uint256(10_000_000), address(this))'
     expect_success: false
     observers: *curve_observers
   - name: exchange_0_to_1
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     warmup:
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
     measured:
-      data: 'abi.encodeWithSignature("exchange(uint256,uint256,uint256,uint256)", uint256(0), uint256(1), uint256(25_000), uint256(0))'
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(0), address(this))'
     expect_success: true
     observers: *curve_observers
   - name: exchange_1_to_0
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     warmup:
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
     measured:
-      data: 'abi.encodeWithSignature("exchange(uint256,uint256,uint256,uint256)", uint256(1), uint256(0), uint256(25_000), uint256(0))'
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(1), int128(0), uint256(25_000), uint256(0), address(this))'
     expect_success: true
     observers: *curve_observers
   - name: exchange_slippage_reverts
     state_access_profile: warm
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("exchange(uint256,uint256,uint256,uint256)", uint256(0), uint256(1), uint256(25_000), uint256(1_000_000))'
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(1_000_000), address(this))'
     expect_success: false
     observers: *curve_observers
   - name: remove_liquidity
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("remove_liquidity(uint256,uint256,uint256)", uint256(10_000), uint256(0), uint256(0))'
+      data: 'abi.encodeWithSignature("remove_liquidity(uint256,uint256[],address)", uint256(10_000), curveAmounts(0, 0), address(this))'
     expect_success: true
     observers: *curve_observers
   - name: remove_one_coin
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("remove_liquidity_one_coin(uint256,uint256,uint256)", uint256(10_000), uint256(1), uint256(0))'
+      data: 'abi.encodeWithSignature("remove_liquidity_one_coin(uint256,int128,uint256,address)", uint256(10_000), int128(1), uint256(0), address(this))'
     expect_success: true
     observers: *curve_observers
   - name: remove_one_coin_slippage_reverts
     state_access_profile: warm
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("remove_liquidity_one_coin(uint256,uint256,uint256)", uint256(10_000), uint256(1), uint256(1_000_000))'
+      data: 'abi.encodeWithSignature("remove_liquidity_one_coin(uint256,int128,uint256,address)", uint256(10_000), int128(1), uint256(1_000_000), address(this))'
     expect_success: false
     observers: *curve_observers
   - name: invalid_coin_reverts
     state_access_profile: warm
     setup:
-      - data: 'abi.encodeWithSignature("initialize(uint256,uint256,uint256)", uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256,uint256,uint256)", uint256(1_000_000), uint256(1_000_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
     measured:
-      data: 'abi.encodeWithSignature("exchange(uint256,uint256,uint256,uint256)", uint256(0), uint256(2), uint256(1), uint256(0))'
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(2), uint256(1), uint256(0), address(this))'
     expect_success: false
     observers: *curve_observers

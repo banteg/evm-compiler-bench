@@ -11,6 +11,7 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
     process::Command,
@@ -335,17 +336,11 @@ fn compile_solidity(
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
     let source_path = source_path_for_profile(root, benchmark, profile)?;
-    let source = fs::read_to_string(&source_path)?;
-    let file_name = source_path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .context("solidity file name")?;
+    let (file_name, sources) = solidity_sources(&source_path)?;
     let metadata_settings = solidity_metadata_settings(profile.metadata_mode, solc);
     let mut input = json!({
         "language": "Solidity",
-        "sources": {
-            file_name: { "content": source }
-        },
+        "sources": sources,
         "settings": {
             "evmVersion": evm_version,
             "metadata": metadata_settings,
@@ -433,6 +428,38 @@ fn reject_solc_errors(output: &serde_json::Value) -> Result<()> {
         return Ok(());
     }
     bail!("{}", serde_json::to_string_pretty(&fatal)?);
+}
+
+fn solidity_sources(source_path: &Path) -> Result<(String, BTreeMap<String, serde_json::Value>)> {
+    let source_root = source_path.parent().context("solidity source parent")?;
+    let file_name = source_path
+        .strip_prefix(source_root)?
+        .to_string_lossy()
+        .replace('\\', "/");
+    let mut sources = BTreeMap::new();
+    for path in solidity_files(source_root)? {
+        let key = path
+            .strip_prefix(source_root)?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let source = fs::read_to_string(&path)?;
+        sources.insert(key, json!({ "content": source }));
+    }
+    Ok((file_name, sources))
+}
+
+fn solidity_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let path = entry?.path();
+        if path.is_dir() {
+            files.extend(solidity_files(&path)?);
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("sol") {
+            files.push(path);
+        }
+    }
+    files.sort();
+    Ok(files)
 }
 
 fn solidity_metadata_settings(metadata_mode: MetadataMode, solc: &Toolchain) -> serde_json::Value {
@@ -557,6 +584,13 @@ fn compile_vyper(
 }
 
 fn vyper_optimizer_args(vyper: &Toolchain, optimizer_mode: &str) -> Vec<String> {
+    if matches!(vyper_version_tuple(vyper), Some((0, 3, patch)) if patch < 10) {
+        return if optimizer_mode == "none" {
+            vec!["--no-optimize".to_string()]
+        } else {
+            Vec::new()
+        };
+    }
     if vyper_legacy_minor(vyper) < Some(3) {
         return Vec::new();
     }
@@ -564,6 +598,14 @@ fn vyper_optimizer_args(vyper: &Toolchain, optimizer_mode: &str) -> Vec<String> 
         return vec!["--optimize".to_string(), optimizer_mode.to_string()];
     }
     vec!["-O".to_string(), optimizer_mode.to_string()]
+}
+
+fn vyper_version_tuple(vyper: &Toolchain) -> Option<(u64, u64, u64)> {
+    let mut parts = vyper.version.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.parse().ok()?;
+    Some((major, minor, patch))
 }
 
 fn vyper_supports_metadata_arg(vyper: &Toolchain) -> bool {
@@ -597,6 +639,9 @@ fn source_path_for_profile(
                 return Ok(source_path);
             };
             let source = fs::read_to_string(&source_path)?;
+            if !source.contains("pragma solidity ^0.8.30;") {
+                return Ok(source_path);
+            }
             let transformed = transform_solidity_source(&source, variant)
                 .with_context(|| format!("applying source variant {variant}"))?;
             materialize_source_variant(root, variant, &benchmark.solidity_path, transformed)
@@ -607,6 +652,9 @@ fn source_path_for_profile(
                 return Ok(source_path);
             };
             let source = fs::read_to_string(&source_path)?;
+            if !source.contains("# pragma version >=0.4.3,<0.6.0") {
+                return Ok(source_path);
+            }
             let transformed = transform_vyper_source(&source, variant)
                 .with_context(|| format!("applying source variant {variant}"))?;
             materialize_source_variant(root, variant, &benchmark.vyper_path, transformed)
@@ -672,6 +720,7 @@ fn rewrite_solidity_pre_08(source: &str) -> String {
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")
         .replace("type(uint112).max", "uint112(-1)")
+        .replace("block.chainid", "uint256(1)")
 }
 
 fn remove_numeric_separators(source: &str) -> String {

@@ -690,6 +690,7 @@ fn call(data: impl Into<String>) -> CallSpec {
         data: data.into(),
         sender: None,
         value: "0".to_string(),
+        destination: crate::models::CallDestination::Target,
     }
 }
 

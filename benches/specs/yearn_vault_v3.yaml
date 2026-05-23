@@ -1,26 +1,28 @@
 id: yearn_vault_v3
-title: Real-Derived Yearn V3 Vault Benchmark Model
+title: Real-Derived Yearn V3 Vault Benchmark
 abi:
-  - "initialize(uint256,uint256,uint256) returns (bool)"
+  - "initialize(address,string,string,address,uint256)"
   - "deposit(uint256,address) returns (uint256)"
   - "mint(uint256,address) returns (uint256)"
   - "withdraw(uint256,address,address,uint256) returns (uint256)"
   - "redeem(uint256,address,address,uint256) returns (uint256)"
-  - "add_strategy(address,bool) returns (bool)"
-  - "update_max_debt_for_strategy(address,uint256) returns (bool)"
+  - "add_strategy(address,bool)"
+  - "update_max_debt_for_strategy(address,uint256)"
   - "update_debt(address,uint256,uint256) returns (uint256)"
-  - "mock_strategy_report(address,uint256,uint256) returns (bool)"
   - "process_report(address) returns (uint256,uint256)"
-  - "shutdown_vault() returns (bool)"
-  - "permitDigest(address,address,uint256,uint256) returns (bytes32)"
+  - "shutdown_vault()"
+  - "set_role(address,uint256)"
+  - "set_deposit_limit(uint256,bool)"
+  - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
   - "totalAssets() returns (uint256)"
   - "pricePerShare() returns (uint256)"
   - "maxDeposit(address) returns (uint256)"
   - "maxWithdraw(address,uint256) returns (uint256)"
-  - "strategyState(address) returns (uint256,uint256,uint256,uint256)"
   - "balanceOf(address) returns (uint256)"
+  - "allowance(address,address) returns (uint256)"
   - "totalSupply() returns (uint256)"
   - "nonces(address) returns (uint256)"
+  - "DOMAIN_SEPARATOR() returns (bytes32)"
 real_derived:
   suite: real_derived
   model_kind: real_derived_model
@@ -32,19 +34,20 @@ real_derived:
   source_contract: VaultV3
   source_blob: "97f4a60dd2485c6400f994e46b442d0424716eed"
   upstream_license: GNU AGPLv3
-  checked_at: "2026-05-19"
+  checked_at: "2026-05-23"
   production_equivalence: false
-  api_compatibility: "partial: ERC4626-style benchmark API with internal asset and strategy ledgers"
+  api_compatibility: "upstream Vyper source is exact and deployed through an EIP-1167 clone; Solidity is a scoped ERC4626/accounting port of the covered API"
   storage_layout_compatibility: false
-  external_token_semantics: "mocked_internal_asset_and_strategy_balances"
-  source_derivation: "clean-room simplified benchmark model from public Yearn V3 Vault behavior"
+  external_token_semantics: "harnessed_external_erc20_asset_and_erc4626_strategy"
+  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port for the covered vault and strategy-accounting paths"
   equivalence_scope:
+    - upstream Vyper blueprint plus minimal-proxy deployment model
     - ERC4626-style deposit, mint, withdraw, and redeem
-    - simplified share conversion and profit-unlocking accounting
-    - single-queue strategy registry, max debt, and debt update paths
-    - simplified profit/loss report processing with benchmark helper-configured reports
-    - shutdown and manager permission checks
-    - permit digest helper only; no permit state transition
+    - role-gated strategy registry, max debt, and debt update paths
+    - process_report using a harnessed ERC4626-compatible strategy
+    - locked-profit share accounting observable through pricePerShare
+    - EIP-712 permit acceptance and invalid-permit reverts
+    - shutdown, deposit-limit, and permission reverts
   scenario_coverage:
     - initialize
     - deposit
@@ -59,42 +62,43 @@ real_derived:
     - shutdown_rejects_deposit
     - permission_revert
     - deposit_limit_reverts
-    - permit_digest_only
+    - permit_valid
+    - permit_invalid_reverts
   mock_assumptions:
-    - asset and strategy balances are deterministic internal ledgers
-    - mock strategy profit/loss is configured through benchmark helper calls
-    - accountant behavior is represented by fee basis points and refund fields
+    - benchmark harness deploys a standard ERC20 asset and an ERC4626-compatible strategy
+    - factory protocol fee config is provided by the harness and returns zero protocol fees
+    - accountant and custom deposit/withdraw limit modules are unset in the covered scenarios
+    - Solidity port is not a full line-for-line Yearn V3 rewrite and omits several governance and queue surfaces
   included_features:
-    - ERC4626-style deposit and mint share conversion
-    - idle withdraw and redeem share burning
-    - manager-gated strategy add and debt update
-    - single default strategy queue withdrawal
-    - profit/loss report accounting and simplified locked-profit shares
-    - shutdown and deposit-limit reverts
-    - digest-only permit helper
+    - upstream Vyper vault source at the pinned commit
+    - minimal-proxy deployment for the upstream Vyper blueprint
+    - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
+    - role-gated strategy add, max debt, debt update, report, and shutdown paths
+    - profit/loss report accounting and locked-profit shares
+    - deposit-limit and permission reverts
+    - valid EIP-712 permit acceptance and invalid permit revert paths
   excluded_features:
-    - external ERC20 asset transfers
-    - real ERC4626 strategy contracts
-    - multi-strategy queue traversal
-    - accountant contract calls and refund hooks
-    - actual EIP-2612 permit signature verification, allowance update, and nonce increment
-    - full Yearn role lattice beyond role manager
+    - full Yearn role manager transfer flow in the Solidity port
+    - accountant contract fee/refund hooks beyond zero-fee harness config
+    - custom deposit and withdraw limit module behavior
+    - multi-strategy custom withdrawal queue traversal in the Solidity port
+    - exact storage layout compatibility in the Solidity port
 semantics:
-  - "Models selected current Yearn V3 vault accounting hot paths without external ERC20 or ERC4626 strategy contracts."
-  - "Reports, debt updates, profit locking, loss realization, shutdown, and permission checks are kept observable."
+  - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
+  - "The Solidity port is scoped to the covered ERC4626, debt, report, shutdown, and permission paths and is not a full production Yearn V3 rewrite."
 scenarios:
   - name: initialize
-    call: "initialize(1_000_000, 86400, 1000)"
-    expected: "sets role manager, deposit limit, profit unlock, and fee settings"
+    call: "initialize(asset, name, symbol, roleManager, profitMaxUnlockTime)"
+    expected: "sets asset, metadata, role manager, and profit unlock configuration"
   - name: deposit
     call: "deposit(100_000, address(this))"
-    expected: "mints shares and increases idle assets"
+    expected: "transfers assets in, mints shares, and increases idle assets"
   - name: mint
     call: "mint(50_000, address(this))"
-    expected: "mints requested shares and increases idle assets"
+    expected: "transfers required assets in and mints requested shares"
   - name: withdraw_idle
     call: "withdraw(20_000, address(this), address(this), 0)"
-    expected: "burns shares and decreases idle assets"
+    expected: "burns shares and transfers idle assets"
   - name: redeem_idle
     call: "redeem(20_000, address(this), address(this), 0)"
     expected: "burns shares and returns proportional idle assets"
@@ -103,9 +107,9 @@ scenarios:
     expected: "moves idle assets into strategy debt"
   - name: update_debt_decrease
     call: "update_debt(strategy, 40_000, 0) after a higher debt allocation"
-    expected: "returns strategy balance to idle assets"
+    expected: "redeems strategy shares and returns assets to idle"
   - name: strategy_profit_report
-    call: "process_report after debt allocation and configured profit"
+    call: "process_report after debt allocation and harnessed strategy profit"
     expected: "records gain, mints locked profit shares, and updates total assets"
   - name: profit_unlock_after_time
     call: "pricePerShare after profit report and time advance"
@@ -122,9 +126,12 @@ scenarios:
   - name: deposit_limit_reverts
     call: "deposit above the configured limit"
     expected: "reverts"
-  - name: permit_digest_only
-    call: "permitDigest(owner, spender, value, deadline)"
-    expected: "returns deterministic digest without allowance or nonce mutation"
+  - name: permit_valid
+    call: "permit with a harness-signed EIP-712 digest"
+    expected: "sets allowance and increments the owner's nonce"
+  - name: permit_invalid_reverts
+    call: "permit with a zero signature"
+    expected: "reverts"
 implementations:
   solidity: "benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol"
-  vyper: "benches/implementations/yearn_vault_v3/vyper/YearnVaultV3Real.vy"
+  vyper: "benches/implementations/yearn_vault_v3/vyper/upstream/contracts/VaultV3.vy"

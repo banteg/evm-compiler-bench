@@ -70,8 +70,8 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
     vec![
         Benchmark::real_derived(
             "uniswap_v2_pair",
-            "UniswapV2PairReal",
-            "benches/implementations/uniswap_v2_pair/solidity/UniswapV2PairReal.sol",
+            "UniswapV2Pair",
+            "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol",
             "benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy",
             provenance_from_spec(include_str!("../../../benches/specs/uniswap_v2_pair.yaml")),
         ),
@@ -79,7 +79,7 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
             "curve_stableswap_2coin",
             "CurveStableSwap2CoinReal",
             "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol",
-            "benches/implementations/curve_stableswap_2coin/vyper/CurveStableSwap2CoinReal.vy",
+            "benches/implementations/curve_stableswap_2coin/vyper/upstream/contracts/main/CurveStableSwapNG.vy",
             provenance_from_spec(include_str!(
                 "../../../benches/specs/curve_stableswap_2coin.yaml"
             )),
@@ -88,7 +88,7 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
             "yearn_vault_v3",
             "YearnVaultV3Real",
             "benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol",
-            "benches/implementations/yearn_vault_v3/vyper/YearnVaultV3Real.vy",
+            "benches/implementations/yearn_vault_v3/vyper/upstream/contracts/VaultV3.vy",
             provenance_from_spec(include_str!("../../../benches/specs/yearn_vault_v3.yaml")),
         ),
     ]

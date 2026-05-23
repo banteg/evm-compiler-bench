@@ -1,23 +1,31 @@
 # pragma version >=0.4.3,<0.6.0
 
+interface ERC20:
+    def balanceOf(owner: address) -> uint256: view
+    def transfer(receiver: address, amount: uint256) -> bool: nonpayable
+
+interface Factory:
+    def feeTo() -> address: view
+
+interface UniswapV2Callee:
+    def uniswapV2Call(sender: address, amount0: uint256, amount1: uint256, data: Bytes[1024]): nonpayable
+
 MINIMUM_LIQUIDITY: constant(uint256) = 1000
-FEE_TO: constant(address) = 0x0000000000000000000000000000000000000FEE
+Q112: constant(uint256) = 5192296858534827628530496329220096
 
 factory: public(address)
-feeTo: public(address)
-initialized: public(bool)
-reserve0: uint256
-reserve1: uint256
-blockTimestampLast: uint256
-currentTimestamp: uint256
+token0: public(address)
+token1: public(address)
+reserve0: uint112
+reserve1: uint112
+blockTimestampLast: uint32
 price0CumulativeLast: public(uint256)
 price1CumulativeLast: public(uint256)
 kLast: public(uint256)
-balance0: public(uint256)
-balance1: public(uint256)
 totalSupply: public(uint256)
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
+unlocked: bool
 
 event Approval:
     owner: indexed(address)
@@ -33,7 +41,6 @@ event Mint:
     sender: indexed(address)
     amount0: uint256
     amount1: uint256
-    liquidity: uint256
 
 event Burn:
     sender: indexed(address)
@@ -50,41 +57,20 @@ event Swap:
     receiver: indexed(address)
 
 event Sync:
-    reserve0: uint256
-    reserve1: uint256
+    reserve0: uint112
+    reserve1: uint112
 
-@external
-def initialize(fee_on: bool) -> bool:
-    assert not self.initialized, "initialized"
-    self.initialized = True
+@deploy
+def __init__():
     self.factory = msg.sender
-    self.currentTimestamp = 1
-    self.blockTimestampLast = 1
-    if fee_on:
-        self.feeTo = FEE_TO
-    return True
+    self.unlocked = True
 
 @external
-def seedBalances(amount0: uint256, amount1: uint256) -> bool:
-    self._ready()
-    self.balance0 += amount0
-    self.balance1 += amount1
-    return True
-
-@external
-def setFeeTo(new_fee_to: address) -> bool:
-    self._ready()
-    assert msg.sender == self.factory, "forbidden"
-    self.feeTo = new_fee_to
-    if new_fee_to == empty(address):
-        self.kLast = 0
-    return True
-
-@external
-def advanceTime(seconds_forward: uint256) -> uint256:
-    self._ready()
-    self.currentTimestamp += seconds_forward
-    return self.currentTimestamp
+def initialize(token0_: address, token1_: address):
+    assert msg.sender == self.factory, "UniswapV2: FORBIDDEN"
+    assert self.token0 == empty(address) and self.token1 == empty(address), "UniswapV2: INITIALIZED"
+    self.token0 = token0_
+    self.token1 = token1_
 
 @external
 def approve(spender: address, amount: uint256) -> bool:
@@ -101,7 +87,7 @@ def transfer(receiver: address, amount: uint256) -> bool:
 def transferFrom(owner: address, receiver: address, amount: uint256) -> bool:
     allowed: uint256 = self.allowance[owner][msg.sender]
     if allowed != max_value(uint256):
-        assert allowed >= amount, "allowance"
+        assert allowed >= amount, "UniswapV2: INSUFFICIENT_ALLOWANCE"
         self.allowance[owner][msg.sender] = allowed - amount
     self._transfer(owner, receiver, amount)
     return True
@@ -109,15 +95,17 @@ def transferFrom(owner: address, receiver: address, amount: uint256) -> bool:
 @external
 @view
 def getReserves() -> (uint112, uint112, uint32):
-    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)
+    return self.reserve0, self.reserve1, self.blockTimestampLast
 
 @external
 def mint(receiver: address) -> uint256:
-    self._ready()
-    old_reserve0: uint256 = self.reserve0
-    old_reserve1: uint256 = self.reserve1
-    amount0: uint256 = self.balance0 - old_reserve0
-    amount1: uint256 = self.balance1 - old_reserve1
+    self._lock()
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
+    balance0_: uint256 = self._balance(self.token0)
+    balance1_: uint256 = self._balance(self.token1)
+    amount0: uint256 = balance0_ - convert(old_reserve0, uint256)
+    amount1: uint256 = balance1_ - convert(old_reserve1, uint256)
     fee_on: bool = self._mint_fee(old_reserve0, old_reserve1)
     supply: uint256 = self.totalSupply
     liquidity: uint256 = 0
@@ -125,82 +113,118 @@ def mint(receiver: address) -> uint256:
         liquidity = self._sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
         self._mint(empty(address), MINIMUM_LIQUIDITY)
     else:
-        liquidity = self._min(amount0 * supply // old_reserve0, amount1 * supply // old_reserve1)
-    assert liquidity > 0, "liquidity"
+        liquidity = self._min(
+            amount0 * supply // convert(old_reserve0, uint256),
+            amount1 * supply // convert(old_reserve1, uint256),
+        )
+    assert liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED"
     self._mint(receiver, liquidity)
-    self._update(self.balance0, self.balance1, old_reserve0, old_reserve1)
+    self._update(balance0_, balance1_, old_reserve0, old_reserve1)
     if fee_on:
-        self.kLast = self.reserve0 * self.reserve1
-    log Mint(sender=msg.sender, amount0=amount0, amount1=amount1, liquidity=liquidity)
+        self.kLast = convert(self.reserve0, uint256) * convert(self.reserve1, uint256)
+    log Mint(sender=msg.sender, amount0=amount0, amount1=amount1)
+    self._unlock()
     return liquidity
 
 @external
-def stageBurn(liquidity: uint256) -> bool:
-    self._ready()
-    self._transfer(msg.sender, self, liquidity)
-    return True
-
-@external
 def burn(receiver: address) -> (uint256, uint256):
-    self._ready()
-    old_reserve0: uint256 = self.reserve0
-    old_reserve1: uint256 = self.reserve1
-    fee_on: bool = self._mint_fee(old_reserve0, old_reserve1)
+    self._lock()
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
+    token0_: address = self.token0
+    token1_: address = self.token1
+    balance0_: uint256 = self._balance(token0_)
+    balance1_: uint256 = self._balance(token1_)
     liquidity: uint256 = self.balanceOf[self]
+    fee_on: bool = self._mint_fee(old_reserve0, old_reserve1)
     supply: uint256 = self.totalSupply
-    amount0: uint256 = liquidity * self.balance0 // supply
-    amount1: uint256 = liquidity * self.balance1 // supply
-    assert amount0 > 0 and amount1 > 0, "liquidity"
+    amount0: uint256 = liquidity * balance0_ // supply
+    amount1: uint256 = liquidity * balance1_ // supply
+    assert amount0 > 0 and amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED"
     self._burn(self, liquidity)
-    self.balance0 -= amount0
-    self.balance1 -= amount1
-    self._update(self.balance0, self.balance1, old_reserve0, old_reserve1)
+    self._safe_transfer(token0_, receiver, amount0)
+    self._safe_transfer(token1_, receiver, amount1)
+    balance0_ = self._balance(token0_)
+    balance1_ = self._balance(token1_)
+    self._update(balance0_, balance1_, old_reserve0, old_reserve1)
     if fee_on:
-        self.kLast = self.reserve0 * self.reserve1
+        self.kLast = convert(self.reserve0, uint256) * convert(self.reserve1, uint256)
     log Burn(sender=msg.sender, amount0=amount0, amount1=amount1, receiver=receiver)
+    self._unlock()
     return amount0, amount1
 
 @external
-def swap(amount0Out: uint256, amount1Out: uint256, amount0In: uint256, amount1In: uint256, receiver: address) -> bool:
-    self._ready()
-    assert amount0Out > 0 or amount1Out > 0, "output"
-    old_reserve0: uint256 = self.reserve0
-    old_reserve1: uint256 = self.reserve1
-    assert amount0Out < old_reserve0 and amount1Out < old_reserve1, "liquidity"
-    assert amount0In > 0 or amount1In > 0, "input"
-    self.balance0 = self.balance0 + amount0In - amount0Out
-    self.balance1 = self.balance1 + amount1In - amount1Out
-    balance0_adjusted: uint256 = self.balance0 * 1000 - amount0In * 3
-    balance1_adjusted: uint256 = self.balance1 * 1000 - amount1In * 3
-    assert balance0_adjusted * balance1_adjusted >= old_reserve0 * old_reserve1 * 1000000, "k"
-    self._update(self.balance0, self.balance1, old_reserve0, old_reserve1)
+def swap(amount0Out: uint256, amount1Out: uint256, receiver: address, data: Bytes[1024]):
+    self._lock()
+    assert amount0Out > 0 or amount1Out > 0, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT"
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
+    assert amount0Out < convert(old_reserve0, uint256) and amount1Out < convert(old_reserve1, uint256), "UniswapV2: INSUFFICIENT_LIQUIDITY"
+    token0_: address = self.token0
+    token1_: address = self.token1
+    assert receiver != token0_ and receiver != token1_, "UniswapV2: INVALID_TO"
+    if amount0Out > 0:
+        self._safe_transfer(token0_, receiver, amount0Out)
+    if amount1Out > 0:
+        self._safe_transfer(token1_, receiver, amount1Out)
+    if len(data) > 0:
+        extcall UniswapV2Callee(receiver).uniswapV2Call(msg.sender, amount0Out, amount1Out, data)
+
+    balance0_: uint256 = self._balance(token0_)
+    balance1_: uint256 = self._balance(token1_)
+    amount0In: uint256 = 0
+    amount1In: uint256 = 0
+    reserve0_less_out: uint256 = convert(old_reserve0, uint256) - amount0Out
+    reserve1_less_out: uint256 = convert(old_reserve1, uint256) - amount1Out
+    if balance0_ > reserve0_less_out:
+        amount0In = balance0_ - reserve0_less_out
+    if balance1_ > reserve1_less_out:
+        amount1In = balance1_ - reserve1_less_out
+    assert amount0In > 0 or amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT"
+
+    balance0_adjusted: uint256 = balance0_ * 1000 - amount0In * 3
+    balance1_adjusted: uint256 = balance1_ * 1000 - amount1In * 3
+    assert balance0_adjusted * balance1_adjusted >= convert(old_reserve0, uint256) * convert(old_reserve1, uint256) * 1000000, "UniswapV2: K"
+    self._update(balance0_, balance1_, old_reserve0, old_reserve1)
     log Swap(sender=msg.sender, amount0In=amount0In, amount1In=amount1In, amount0Out=amount0Out, amount1Out=amount1Out, receiver=receiver)
-    return True
+    self._unlock()
 
 @external
-def skim(receiver: address) -> (uint256, uint256):
-    self._ready()
-    amount0: uint256 = self.balance0 - self.reserve0
-    amount1: uint256 = self.balance1 - self.reserve1
-    self.balance0 = self.reserve0
-    self.balance1 = self.reserve1
-    log Burn(sender=msg.sender, amount0=amount0, amount1=amount1, receiver=receiver)
-    return amount0, amount1
+def skim(receiver: address):
+    self._lock()
+    token0_: address = self.token0
+    token1_: address = self.token1
+    self._safe_transfer(token0_, receiver, self._balance(token0_) - convert(self.reserve0, uint256))
+    self._safe_transfer(token1_, receiver, self._balance(token1_) - convert(self.reserve1, uint256))
+    self._unlock()
 
 @external
-def sync() -> bool:
-    self._ready()
-    self._update(self.balance0, self.balance1, self.reserve0, self.reserve1)
-    return True
+def sync():
+    self._lock()
+    self._update(self._balance(self.token0), self._balance(self.token1), self.reserve0, self.reserve1)
+    self._unlock()
 
 @internal
 @view
-def _ready():
-    assert self.initialized, "not initialized"
+def _balance(token: address) -> uint256:
+    return staticcall ERC20(token).balanceOf(self)
+
+@internal
+def _safe_transfer(token: address, receiver: address, amount: uint256):
+    assert extcall ERC20(token).transfer(receiver, amount), "UniswapV2: TRANSFER_FAILED"
+
+@internal
+def _lock():
+    assert self.unlocked, "UniswapV2: LOCKED"
+    self.unlocked = False
+
+@internal
+def _unlock():
+    self.unlocked = True
 
 @internal
 def _transfer(owner: address, receiver: address, amount: uint256):
-    assert self.balanceOf[owner] >= amount, "balance"
+    assert self.balanceOf[owner] >= amount, "UniswapV2: INSUFFICIENT_BALANCE"
     self.balanceOf[owner] -= amount
     self.balanceOf[receiver] += amount
     log Transfer(sender=owner, receiver=receiver, amount=amount)
@@ -213,31 +237,32 @@ def _mint(receiver: address, amount: uint256):
 
 @internal
 def _burn(owner: address, amount: uint256):
-    assert self.balanceOf[owner] >= amount, "balance"
+    assert self.balanceOf[owner] >= amount, "UniswapV2: INSUFFICIENT_BALANCE"
     self.balanceOf[owner] -= amount
     self.totalSupply -= amount
     log Transfer(sender=owner, receiver=empty(address), amount=amount)
 
 @internal
-def _update(new_balance0: uint256, new_balance1: uint256, old_reserve0: uint256, old_reserve1: uint256):
-    assert new_balance0 <= convert(max_value(uint112), uint256) and new_balance1 <= convert(max_value(uint112), uint256), "overflow"
-    time_elapsed: uint256 = self.currentTimestamp - self.blockTimestampLast
+def _update(balance0_: uint256, balance1_: uint256, old_reserve0: uint112, old_reserve1: uint112):
+    assert balance0_ <= convert(max_value(uint112), uint256) and balance1_ <= convert(max_value(uint112), uint256), "UniswapV2: OVERFLOW"
+    block_timestamp: uint32 = convert(block.timestamp % 2**32, uint32)
+    time_elapsed: uint32 = block_timestamp - self.blockTimestampLast
     if time_elapsed > 0 and old_reserve0 != 0 and old_reserve1 != 0:
-        self.price0CumulativeLast += old_reserve1 * 10**18 // old_reserve0 * time_elapsed
-        self.price1CumulativeLast += old_reserve0 * 10**18 // old_reserve1 * time_elapsed
-    self.reserve0 = new_balance0
-    self.reserve1 = new_balance1
-    self.blockTimestampLast = self.currentTimestamp
-    log Sync(reserve0=new_balance0, reserve1=new_balance1)
+        self.price0CumulativeLast += (convert(old_reserve1, uint256) * Q112 // convert(old_reserve0, uint256)) * convert(time_elapsed, uint256)
+        self.price1CumulativeLast += (convert(old_reserve0, uint256) * Q112 // convert(old_reserve1, uint256)) * convert(time_elapsed, uint256)
+    self.reserve0 = convert(balance0_, uint112)
+    self.reserve1 = convert(balance1_, uint112)
+    self.blockTimestampLast = block_timestamp
+    log Sync(reserve0=self.reserve0, reserve1=self.reserve1)
 
 @internal
-def _mint_fee(old_reserve0: uint256, old_reserve1: uint256) -> bool:
-    current_fee_to: address = self.feeTo
+def _mint_fee(old_reserve0: uint112, old_reserve1: uint112) -> bool:
+    current_fee_to: address = staticcall Factory(self.factory).feeTo()
     fee_on: bool = current_fee_to != empty(address)
     last_k: uint256 = self.kLast
     if fee_on:
         if last_k != 0:
-            root_k: uint256 = self._sqrt(old_reserve0 * old_reserve1)
+            root_k: uint256 = self._sqrt(convert(old_reserve0, uint256) * convert(old_reserve1, uint256))
             root_k_last: uint256 = self._sqrt(last_k)
             if root_k > root_k_last:
                 liquidity: uint256 = self.totalSupply * (root_k - root_k_last) // (root_k * 5 + root_k_last)

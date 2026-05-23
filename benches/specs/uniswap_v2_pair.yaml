@@ -1,17 +1,16 @@
 id: uniswap_v2_pair
-title: Real-Derived Uniswap V2 Pair Benchmark Model
+title: Real-Derived Uniswap V2 Pair Benchmark
 abi:
-  - "initialize(bool) returns (bool)"
-  - "seedBalances(uint256,uint256) returns (bool)"
+  - "initialize(address,address)"
   - "mint(address) returns (uint256)"
-  - "stageBurn(uint256) returns (bool)"
   - "burn(address) returns (uint256,uint256)"
-  - "swap(uint256,uint256,uint256,uint256,address) returns (bool)"
-  - "skim(address) returns (uint256,uint256)"
-  - "sync() returns (bool)"
-  - "setFeeTo(address) returns (bool)"
-  - "advanceTime(uint256) returns (uint256)"
+  - "swap(uint256,uint256,address,bytes)"
+  - "skim(address)"
+  - "sync()"
   - "getReserves() returns (uint112,uint112,uint32)"
+  - "token0() returns (address)"
+  - "token1() returns (address)"
+  - "factory() returns (address)"
   - "balanceOf(address) returns (uint256)"
   - "totalSupply() returns (uint256)"
   - "price0CumulativeLast() returns (uint256)"
@@ -28,19 +27,20 @@ real_derived:
   source_contract: UniswapV2Pair
   source_blob: "f87a1db262fba132862eae377d8cdaef74c79f97"
   upstream_license: GPL-3.0-or-later
-  checked_at: "2026-05-19"
-  production_equivalence: false
-  api_compatibility: "partial: benchmark helper API replaces token/factory/callback integration"
+  checked_at: "2026-05-23"
+  production_equivalence: true
+  api_compatibility: "source-language implementation is upstream Uniswap V2 Pair; Vyper is an idiomatic port of the covered pair API"
   storage_layout_compatibility: false
-  external_token_semantics: "mocked_internal_balances"
-  source_derivation: "clean-room simplified benchmark model from public Uniswap V2 Pair behavior"
+  external_token_semantics: "harnessed_external_erc20_tokens_and_factory"
+  source_derivation: "Solidity implementation is vendored upstream source; Vyper implementation is a direct production-style port for the covered pair paths"
   equivalence_scope:
-    - reserve and getReserves accounting shape
-    - internal-balance mint, burn, swap, skim, and sync state transitions
+    - external token0/token1/factory initialization
+    - reserve and getReserves accounting
+    - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
     - constant-product fee check with 0.30% LP fee
-    - simplified fee-on protocol liquidity minting through kLast
-    - deterministic cumulative price update behavior
-    - ERC20-like LP share accounting
+    - fee-on protocol liquidity minting through kLast
+    - cumulative price update behavior from elapsed block timestamp
+    - ERC20 LP share accounting
   scenario_coverage:
     - initialize
     - mint_initial
@@ -54,54 +54,52 @@ real_derived:
     - uninitialized_mint_reverts
     - invalid_swap_reverts
   mock_assumptions:
-    - token balances are modeled as internal reserves and shadow balances instead of external ERC20 calls
-    - block timestamp is advanced by explicit benchmark calls for deterministic cumulative price math
-    - swap input amounts are explicit benchmark arguments instead of inferred from post-transfer token balances
-    - Vyper stores reserve fields with equivalent integer types but does not claim Solidity packed-slot storage layout compatibility
+    - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
+    - token transfers into the pair are staged with harness mints before measured calls
+    - flash-swap callback behavior is not exercised because scenarios pass empty callback data
+    - Vyper preserves behavior for covered paths but does not claim Solidity packed-slot storage layout compatibility
   included_features:
-    - internal reserve/share accounting
+    - upstream Solidity pair source at the pinned commit
+    - external ERC20 balance and transfer integration
     - first and subsequent mint paths
     - burn path with staged LP shares
     - constant-product swap fee invariant
-    - sync and skim internal-balance paths
+    - sync and skim balance drift paths
     - fee-on and fee-off kLast behavior
   excluded_features:
-    - external ERC20 transfer and balanceOf integration
-    - token0/token1/factory initialization API
-    - optimistic transfer and flash-swap callback path
-    - INVALID_TO token-address receiver checks
-    - lock reentrancy modifier
-    - exact Solidity reserve packing storage layout in the Vyper port
+    - non-empty flash-swap callback execution
+    - CREATE2 pair factory deployment path
+    - exact Solidity packed reserve storage layout in the Vyper port
 semantics:
-  - "Models selected Uniswap V2 pair reserve, LP share, fee-on, cumulative price, and invariant hot paths without external token transfers."
-  - "Token transfers into the pair are represented by seedBalances calls before mint, swap, skim, or sync."
+  - "Benchmarks upstream Uniswap V2 Pair Solidity and a Vyper port against the same external-token harness."
+  - "The scenarios cover pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
 scenarios:
   - name: initialize
-    call: "initialize(false)"
-    expected: "sets factory and initial timestamp"
+    call: "initialize(token0, token1)"
+    expected: "sets token addresses through the production initialization API"
   - name: mint_initial
-    call: "mint(address(this)) after seeding balances"
+    call: "mint(address(this)) after token balances are sent to the pair"
     expected: "mints LP supply minus permanent minimum liquidity"
   - name: mint_subsequent
-    call: "mint(address(this)) after an existing position and additional seeded balances"
+    call: "mint(address(this)) after an existing position and additional token balances"
     expected: "mints proportional LP shares"
   - name: swap_fee_invariant
-    call: "swap(0, 100, 200, 0, address(this))"
+    call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
   - name: burn
-    call: "stageBurn/liquidity then burn(address(this))"
-    expected: "burns staged LP and sends proportional internal balances out"
+    call: "burn(address(this)) after LP shares are transferred to the pair"
+    expected: "burns staged LP and transfers proportional token balances out"
   - name: sync
-    call: "sync() after seeded balance drift and time advance"
-    expected: "updates reserves and cumulative prices from internal balances"
+    call: "sync() after token balance drift and time advance"
+    expected: "updates reserves and cumulative prices from external token balances"
   - name: skim
-    call: "skim(address(this)) after seeded balance drift"
-    expected: "removes internal balances above reserves"
+    call: "skim(address(this)) after token balance drift"
+    expected: "transfers token balances above reserves"
   - name: fee_on_mint
-    call: "setFeeTo, mint, sync, mint"
+    call: "feeTo set, mint, sync, mint"
     expected: "updates kLast and mints protocol liquidity when rootK grows"
   - name: fee_off_resets_k_last
-    call: "setFeeTo(address(0)) after fee-on liquidity"
+    call: "feeTo cleared after fee-on liquidity"
     expected: "resets kLast"
   - name: uninitialized_mint_reverts
     call: "mint(address(this)) before initialize"
@@ -110,5 +108,5 @@ scenarios:
     call: "swap with zero input"
     expected: "reverts"
 implementations:
-  solidity: "benches/implementations/uniswap_v2_pair/solidity/UniswapV2PairReal.sol"
+  solidity: "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
   vyper: "benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy"

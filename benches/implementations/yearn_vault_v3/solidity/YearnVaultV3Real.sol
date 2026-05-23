@@ -1,14 +1,31 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.30;
+
+interface YearnBenchERC20 {
+    function transfer(address to, uint256 value) external returns (bool);
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+}
+
+interface YearnBenchStrategy {
+    function increaseDebt(uint256 amount) external returns (bool);
+    function withdrawTo(address receiver, uint256 amount, uint256 maxLoss) external returns (uint256 withdrawn, uint256 loss);
+    function report() external returns (uint256 gain, uint256 loss);
+}
 
 contract YearnVaultV3Real {
     uint256 public constant MAX_BPS = 10_000;
     uint256 public constant WAD = 1e18;
+    bytes32 public constant DOMAIN_TYPE_HASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant PERMIT_TYPE_HASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    string public constant name = "Real-Derived Yearn V3 Vault";
-    string public constant symbol = "RD-YV3";
+    string public constant name = "Yearn V3 Vault";
+    string public constant symbol = "yvV3";
+    string public constant API_VERSION = "3.0.4";
     uint8 public constant decimals = 18;
 
+    address public asset;
     address public roleManager;
     bool public initialized;
     bool public shutdown;
@@ -17,7 +34,6 @@ contract YearnVaultV3Real {
     uint256 public fullProfitUnlockDate;
     uint256 public profitUnlockingRate;
     uint256 public lastProfitUpdate;
-    uint256 public currentTimestamp;
     uint256 public feeBps;
     uint256 public totalIdle;
     uint256 public totalDebt;
@@ -27,19 +43,14 @@ contract YearnVaultV3Real {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
     mapping(address => uint256) public nonces;
+    mapping(address => uint256) public roles;
     mapping(address => Strategy) public strategies;
-    mapping(address => PendingReport) public pendingReports;
 
     struct Strategy {
         uint256 activation;
         uint256 currentDebt;
         uint256 maxDebt;
         uint256 balance;
-    }
-
-    struct PendingReport {
-        uint256 gain;
-        uint256 loss;
     }
 
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -61,22 +72,27 @@ contract YearnVaultV3Real {
         _;
     }
 
-    function initialize(uint256 limit, uint256 unlockTime, uint256 feeBps_) external returns (bool) {
-        require(!initialized, "initialized");
-        require(feeBps_ <= MAX_BPS, "fee");
-        initialized = true;
-        roleManager = msg.sender;
-        depositLimit = limit;
-        profitMaxUnlockTime = unlockTime;
-        feeBps = feeBps_;
-        currentTimestamp = 1;
-        lastProfitUpdate = 1;
-        return true;
+    constructor() {
+        asset = address(this);
     }
 
-    function advanceTime(uint256 secondsForward) external ready returns (uint256) {
-        currentTimestamp += secondsForward;
-        return currentTimestamp;
+    function initialize(
+        address asset_,
+        string calldata name_,
+        string calldata symbol_,
+        address roleManager_,
+        uint256 profitMaxUnlockTime_
+    ) external {
+        require(!initialized, "initialized");
+        require(asset_ != address(0), "asset");
+        require(roleManager_ != address(0), "role manager");
+        name_;
+        symbol_;
+        initialized = true;
+        asset = asset_;
+        roleManager = roleManager_;
+        profitMaxUnlockTime = profitMaxUnlockTime_;
+        lastProfitUpdate = block.timestamp;
     }
 
     function approve(address spender, uint256 value) external returns (bool) {
@@ -106,6 +122,7 @@ contract YearnVaultV3Real {
         require(totalAssets() + assets <= depositLimit, "limit");
         shares = _convertToShares(assets, false);
         require(shares > 0, "shares");
+        _safeTransferFrom(msg.sender, address(this), assets);
         totalIdle += assets;
         _mint(receiver, shares);
         emit Deposit(msg.sender, receiver, assets, shares);
@@ -116,6 +133,7 @@ contract YearnVaultV3Real {
         require(shares > 0, "shares");
         assets = _convertToAssets(shares, true);
         require(totalAssets() + assets <= depositLimit, "limit");
+        _safeTransferFrom(msg.sender, address(this), assets);
         totalIdle += assets;
         _mint(receiver, shares);
         emit Deposit(msg.sender, receiver, assets, shares);
@@ -127,6 +145,7 @@ contract YearnVaultV3Real {
         returns (uint256 shares)
     {
         shares = _convertToShares(assets, true);
+        _spendAllowance(owner, shares);
         uint256 actualAssets = _redeem(receiver, owner, assets, shares, maxLoss);
         emit Withdraw(msg.sender, receiver, owner, actualAssets, shares);
     }
@@ -136,27 +155,34 @@ contract YearnVaultV3Real {
         ready
         returns (uint256 assets)
     {
+        _spendAllowance(owner, shares);
         assets = _convertToAssets(shares, false);
         uint256 actualAssets = _redeem(receiver, owner, assets, shares, maxLoss);
         emit Withdraw(msg.sender, receiver, owner, actualAssets, shares);
         return actualAssets;
     }
 
-    function add_strategy(address strategy, bool addToQueue) external ready onlyManager returns (bool) {
+    function add_strategy(address strategy, bool addToQueue) external ready onlyManager {
         require(strategy != address(0), "strategy");
         require(strategies[strategy].activation == 0, "active");
-        strategies[strategy].activation = currentTimestamp;
+        strategies[strategy].activation = block.timestamp;
         if (addToQueue) {
             defaultQueueStrategy = strategy;
         }
-        emit StrategyChanged(strategy, currentTimestamp);
-        return true;
+        emit StrategyChanged(strategy, block.timestamp);
     }
 
-    function update_max_debt_for_strategy(address strategy, uint256 maxDebt) external ready onlyManager returns (bool) {
+    function set_role(address account, uint256 role) external ready onlyManager {
+        roles[account] = role;
+    }
+
+    function set_deposit_limit(uint256 limit, bool) external ready onlyManager {
+        depositLimit = limit;
+    }
+
+    function update_max_debt_for_strategy(address strategy, uint256 maxDebt) external ready onlyManager {
         require(strategies[strategy].activation != 0, "inactive");
         strategies[strategy].maxDebt = maxDebt;
-        return true;
     }
 
     function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss)
@@ -176,33 +202,28 @@ contract YearnVaultV3Real {
             totalDebt += debtIncrease;
             s.currentDebt = targetDebt;
             s.balance += debtIncrease;
+            _safeTransfer(strategy, debtIncrease);
+            require(YearnBenchStrategy(strategy).increaseDebt(debtIncrease), "strategy debt");
         } else {
             uint256 debtReduction = previousDebt - targetDebt;
-            uint256 withdrawn = _min(debtReduction, s.balance);
-            uint256 loss = debtReduction - withdrawn;
+            (uint256 withdrawn, uint256 loss) = YearnBenchStrategy(strategy).withdrawTo(address(this), debtReduction, maxLoss);
             require(debtReduction == 0 || loss * MAX_BPS <= debtReduction * maxLoss, "loss");
-            s.balance -= withdrawn;
-            s.currentDebt = targetDebt;
-            totalDebt = totalDebt + loss - debtReduction;
+            uint256 realized = withdrawn + loss;
+            require(realized <= s.currentDebt && realized <= totalDebt, "debt");
+            s.balance -= realized;
+            s.currentDebt -= realized;
+            totalDebt -= realized;
             totalIdle += withdrawn;
         }
         emit DebtUpdated(strategy, previousDebt, s.currentDebt);
         return s.currentDebt;
     }
 
-    function mock_strategy_report(address strategy, uint256 gain, uint256 loss) external ready onlyManager returns (bool) {
-        require(strategies[strategy].activation != 0, "inactive");
-        pendingReports[strategy] = PendingReport(gain, loss);
-        return true;
-    }
-
     function process_report(address strategy) external ready onlyManager returns (uint256 gain, uint256 loss) {
         Strategy storage s = strategies[strategy];
         require(s.activation != 0, "inactive");
-        PendingReport memory report = pendingReports[strategy];
-        gain = report.gain;
-        loss = _min(report.loss, s.currentDebt);
-        delete pendingReports[strategy];
+        (gain, loss) = YearnBenchStrategy(strategy).report();
+        loss = _min(loss, s.currentDebt);
 
         if (loss > 0) {
             s.currentDebt -= loss;
@@ -220,8 +241,8 @@ contract YearnVaultV3Real {
                 _mint(address(this), sharesToLock);
                 if (profitMaxUnlockTime != 0) {
                     profitUnlockingRate = sharesToLock / profitMaxUnlockTime;
-                    fullProfitUnlockDate = currentTimestamp + profitMaxUnlockTime;
-                    lastProfitUpdate = currentTimestamp;
+                    fullProfitUnlockDate = block.timestamp + profitMaxUnlockTime;
+                    lastProfitUpdate = block.timestamp;
                 }
             }
             if (fee > 0) {
@@ -234,11 +255,10 @@ contract YearnVaultV3Real {
         emit StrategyReported(strategy, gain, loss, totalDebt, totalIdle);
     }
 
-    function shutdown_vault() external ready onlyManager returns (bool) {
+    function shutdown_vault() external ready onlyManager {
         shutdown = true;
         depositLimit = 0;
         emit Shutdown();
-        return true;
     }
 
     function permitDigest(address owner, address spender, uint256 value, uint256 deadline)
@@ -246,9 +266,31 @@ contract YearnVaultV3Real {
         view
         returns (bytes32)
     {
-        owner;
-        spender;
-        return keccak256(abi.encode(value, nonces[owner], deadline));
+        return _permitDigest(owner, spender, value, deadline);
+    }
+
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparator();
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external ready returns (bool) {
+        require(owner != address(0), "invalid owner");
+        require(deadline >= block.timestamp, "permit expired");
+        bytes32 digest = _permitDigest(owner, spender, value, deadline);
+        address recovered = ecrecover(digest, v, r, s);
+        require(recovered == owner, "invalid signature");
+        nonces[owner] += 1;
+        allowance[owner][spender] = value;
+        emit Approval(owner, spender, value);
+        return true;
     }
 
     function totalAssets() public view returns (uint256) {
@@ -283,12 +325,27 @@ contract YearnVaultV3Real {
         return (s.activation, s.currentDebt, s.maxDebt, s.balance);
     }
 
-    function _redeem(address, address owner, uint256 assets, uint256 shares, uint256 maxLoss) internal returns (uint256) {
+    function _redeem(address receiver, address owner, uint256 assets, uint256 shares, uint256 maxLoss)
+        internal
+        returns (uint256)
+    {
         require(shares > 0 && balanceOf[owner] >= shares, "shares");
         uint256 actualAssets = _ensureIdle(assets, maxLoss);
         _burn(owner, shares);
         totalIdle -= actualAssets;
+        _safeTransfer(receiver, actualAssets);
         return actualAssets;
+    }
+
+    function _spendAllowance(address owner, uint256 shares) internal {
+        if (msg.sender == owner) {
+            return;
+        }
+        uint256 allowed = allowance[owner][msg.sender];
+        if (allowed != type(uint256).max) {
+            require(allowed >= shares, "allowance");
+            allowance[owner][msg.sender] = allowed - shares;
+        }
     }
 
     function _ensureIdle(uint256 assets, uint256 maxLoss) internal returns (uint256) {
@@ -299,16 +356,15 @@ contract YearnVaultV3Real {
         require(strategy != address(0), "queue");
         Strategy storage s = strategies[strategy];
         uint256 needed = assets - totalIdle;
-        uint256 withdrawn = _min(needed, s.balance);
-        s.balance -= withdrawn;
-        s.currentDebt -= withdrawn;
-        totalDebt -= withdrawn;
+        (uint256 withdrawn, uint256 loss) = YearnBenchStrategy(strategy).withdrawTo(address(this), needed, maxLoss);
+        require(needed == 0 || loss * MAX_BPS <= needed * maxLoss, "loss");
+        uint256 realized = withdrawn + loss;
+        require(realized <= s.currentDebt && realized <= totalDebt, "debt");
+        s.balance -= realized;
+        s.currentDebt -= realized;
+        totalDebt -= realized;
         totalIdle += withdrawn;
         if (totalIdle < assets) {
-            uint256 loss = assets - totalIdle;
-            require(loss * MAX_BPS <= assets * maxLoss, "loss");
-            s.currentDebt -= _min(loss, s.currentDebt);
-            totalDebt -= _min(loss, totalDebt);
             return totalIdle;
         }
         return assets;
@@ -321,8 +377,8 @@ contract YearnVaultV3Real {
     function _unlockedShares() internal view returns (uint256) {
         uint256 locked = balanceOf[address(this)];
         if (locked == 0) return 0;
-        if (profitMaxUnlockTime == 0 || currentTimestamp >= fullProfitUnlockDate) return locked;
-        uint256 elapsed = currentTimestamp - lastProfitUpdate;
+        if (profitMaxUnlockTime == 0 || block.timestamp >= fullProfitUnlockDate) return locked;
+        uint256 elapsed = block.timestamp - lastProfitUpdate;
         return _min(locked, elapsed * profitUnlockingRate);
     }
 
@@ -349,6 +405,41 @@ contract YearnVaultV3Real {
             assets += 1;
         }
         return assets;
+    }
+
+    function _safeTransfer(address to, uint256 value) internal {
+        require(YearnBenchERC20(asset).transfer(to, value), "transfer");
+    }
+
+    function _safeTransferFrom(address from, address to, uint256 value) internal {
+        require(YearnBenchERC20(asset).transferFrom(from, to, value), "transferFrom");
+    }
+
+    function _domainSeparator() internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                DOMAIN_TYPE_HASH,
+                keccak256("Yearn Vault"),
+                keccak256("3.0.4"),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
+    function _permitDigest(address owner, address spender, uint256 value, uint256 deadline)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                _domainSeparator(),
+                keccak256(abi.encode(PERMIT_TYPE_HASH, owner, spender, value, nonces[owner], deadline))
+            )
+        );
     }
 
     function _mint(address to, uint256 value) internal {
