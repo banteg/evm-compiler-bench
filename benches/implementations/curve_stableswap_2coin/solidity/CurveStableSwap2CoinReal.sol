@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 interface CurveBenchERC20 {
+    function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 value) external returns (bool);
     function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
@@ -10,9 +11,15 @@ contract CurveStableSwap2CoinReal {
     uint256 public constant N_COINS = 2;
     uint256 public constant A_PRECISION = 100;
     uint256 public constant FEE_DENOMINATOR = 10_000_000_000;
+    bytes32 public constant EIP712_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)");
+    bytes32 public constant EIP2612_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant ERC1271_MAGIC_VALUE = 0x1626ba7e00000000000000000000000000000000000000000000000000000000;
 
     string public constant name = "Curve.fi Stablecoin";
     string public constant symbol = "crv2";
+    string public constant version = "v7.0.0";
     uint8 public constant decimals = 18;
 
     address[2] public coins;
@@ -25,13 +32,21 @@ contract CurveStableSwap2CoinReal {
     uint256[2] public balances;
     uint256[2] public admin_balances;
     uint256 public totalSupply;
+    uint256 public cachedChainId;
+    bytes32 public salt;
+    bytes32 public nameHash;
+    bytes32 public cachedDomainSeparator;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => uint256) public nonces;
 
     event AddLiquidity(address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 invariant, uint256 tokenSupply);
     event TokenExchange(address indexed buyer, uint256 soldId, uint256 tokensSold, uint256 boughtId, uint256 tokensBought);
     event RemoveLiquidity(address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 tokenSupply);
     event RemoveLiquidityOne(address indexed provider, uint256 tokenAmount, uint256 coinIndex, uint256 coinAmount);
+    event RemoveLiquidityImbalance(
+        address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 invariant, uint256 tokenSupply
+    );
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
@@ -73,6 +88,10 @@ contract CurveStableSwap2CoinReal {
         fee = swapFee;
         admin_fee = 5_000_000_000;
         offpeg_fee_multiplier = offpegFeeMultiplier;
+        cachedChainId = block.chainid;
+        salt = block.number == 0 ? bytes32(0) : blockhash(block.number - 1);
+        nameHash = keccak256("Curve.fi Stablecoin");
+        cachedDomainSeparator = _buildDomainSeparator(cachedChainId);
     }
 
     function approve(address spender, uint256 value) external returns (bool) {
@@ -91,6 +110,7 @@ contract CurveStableSwap2CoinReal {
         if (allowed != type(uint256).max) {
             require(allowed >= value, "allowance");
             allowance[from][msg.sender] = allowed - value;
+            emit Approval(from, msg.sender, allowed - value);
         }
         _transfer(from, to, value);
         return true;
@@ -166,6 +186,33 @@ contract CurveStableSwap2CoinReal {
         emit TokenExchange(msg.sender, coinIn, dx, coinOut, dy);
     }
 
+    function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy, address receiver)
+        external
+        ready
+        returns (uint256 dy)
+    {
+        require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
+        require(dx > 0, "dx");
+        uint256 coinIn = uint256(int256(i));
+        uint256 coinOut = uint256(int256(j));
+        uint256 storedBalance = balances[coinIn] + admin_balances[coinIn];
+        uint256 tokenBalance = CurveBenchERC20(coins[coinIn]).balanceOf(address(this));
+        require(tokenBalance >= storedBalance + dx, "optimistic transfer");
+        uint256 actualDx = tokenBalance - storedBalance;
+
+        uint256 newBalanceIn;
+        uint256 newBalanceOut;
+        uint256 adminCut;
+        (newBalanceIn, newBalanceOut, dy, adminCut) = _calcExchange(coinIn, coinOut, actualDx);
+        require(dy >= minDy, "slippage");
+
+        balances[coinIn] = newBalanceIn;
+        balances[coinOut] = newBalanceOut;
+        admin_balances[coinOut] += adminCut;
+        _safeTransfer(coins[coinOut], receiver, dy);
+        emit TokenExchange(msg.sender, coinIn, actualDx, coinOut, dy);
+    }
+
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts, address receiver)
         external
         ready
@@ -183,6 +230,51 @@ contract CurveStableSwap2CoinReal {
             _safeTransfer(coins[i], receiver, amounts[i]);
         }
         emit RemoveLiquidity(msg.sender, amounts, _emptyFees(), totalSupply);
+    }
+
+    function remove_liquidity_imbalance(uint256[] calldata amounts, uint256 maxBurnAmount, address receiver)
+        external
+        ready
+        returns (uint256 burnAmount)
+    {
+        require(amounts.length == N_COINS, "amount length");
+        require(receiver != address(0), "receiver");
+        uint256[2] memory oldBalances = balances;
+        uint256 d0 = _getD(oldBalances[0], oldBalances[1]);
+        uint256[2] memory newBalances = oldBalances;
+        for (uint256 i = 0; i < N_COINS; i++) {
+            if (amounts[i] > 0) {
+                require(newBalances[i] >= amounts[i], "balance");
+                newBalances[i] -= amounts[i];
+            }
+        }
+
+        uint256 d1 = _getD(newBalances[0], newBalances[1]);
+        uint256 baseFee = _baseFee();
+        uint256 ys = (d0 + d1) / N_COINS;
+        uint256[] memory fees = new uint256[](N_COINS);
+        for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
+            uint256 idealBalance = d1 * oldBalances[feeIndex] / d0;
+            uint256 difference = _absDiff(idealBalance, newBalances[feeIndex]);
+            uint256 xs = oldBalances[feeIndex] + newBalances[feeIndex];
+            fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
+            admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
+            newBalances[feeIndex] -= fees[feeIndex];
+        }
+
+        d1 = _getD(newBalances[0], newBalances[1]);
+        burnAmount = (d0 - d1) * totalSupply / d0 + 1;
+        require(burnAmount > 1, "burn");
+        require(burnAmount <= maxBurnAmount, "slippage");
+        _burn(msg.sender, burnAmount);
+        balances[0] = newBalances[0];
+        balances[1] = newBalances[1];
+        for (uint256 i = 0; i < N_COINS; i++) {
+            if (amounts[i] > 0) {
+                _safeTransfer(coins[i], receiver, amounts[i]);
+            }
+        }
+        emit RemoveLiquidityImbalance(msg.sender, amounts, fees, d1, totalSupply);
     }
 
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount, address receiver)
@@ -215,6 +307,43 @@ contract CurveStableSwap2CoinReal {
         return _getD(balances[0], balances[1]) * 1e18 / totalSupply;
     }
 
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparator();
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (bool) {
+        require(owner != address(0), "owner");
+        require(block.timestamp <= deadline, "deadline");
+        uint256 nonce = nonces[owner];
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                _domainSeparator(),
+                keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline))
+            )
+        );
+        address recovered = ecrecover(digest, v, r, s);
+        if (recovered != owner) {
+            bytes memory signature = abi.encodePacked(r, s, bytes1(v));
+            (bool ok, bytes memory result) =
+                owner.staticcall(abi.encodeWithSignature("isValidSignature(bytes32,bytes)", digest, signature));
+            require(ok && result.length >= 32 && abi.decode(result, (bytes32)) == ERC1271_MAGIC_VALUE, "signature");
+        }
+        allowance[owner][spender] = value;
+        nonces[owner] = nonce + 1;
+        emit Approval(owner, spender, value);
+        return true;
+    }
+
     function _emptyFees() internal pure returns (uint256[] memory fees) {
         fees = new uint256[](N_COINS);
     }
@@ -225,6 +354,17 @@ contract CurveStableSwap2CoinReal {
 
     function _safeTransferFrom(address coin, address from, address to, uint256 value) internal {
         require(CurveBenchERC20(coin).transferFrom(from, to, value), "transferFrom");
+    }
+
+    function _domainSeparator() internal view returns (bytes32) {
+        if (block.chainid != cachedChainId) {
+            return _buildDomainSeparator(block.chainid);
+        }
+        return cachedDomainSeparator;
+    }
+
+    function _buildDomainSeparator(uint256 chainId) internal view returns (bytes32) {
+        return keccak256(abi.encode(EIP712_TYPEHASH, nameHash, keccak256("v7.0.0"), chainId, address(this), salt));
     }
 
     function _transfer(address from, address to, uint256 value) internal {

@@ -398,6 +398,8 @@ fn generate_test(
     out.push_str("    bytes32 constant LEAF = keccak256(\"leaf\");\n");
     out.push_str("    bytes32 constant SIBLING = keccak256(\"sibling\");\n");
     out.push_str("    bytes32 constant ROOT = LEAF < SIBLING ? keccak256(abi.encodePacked(LEAF, SIBLING)) : keccak256(abi.encodePacked(SIBLING, LEAF));\n\n");
+    out.push_str("    uint256 constant CURVE_PERMIT_KEY = 0xC0FFEE;\n");
+    out.push_str("    bytes32 constant CURVE_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
     out.push_str("    uint256 constant YEARN_PERMIT_KEY = 0xA11CE;\n");
     out.push_str("    bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
     out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; }\n");
@@ -741,6 +743,56 @@ fn helper_functions() -> &'static str {
         adminFee;
         require(address(curveDeps[target].coin0) != address(0), "curve deps");
         return true;
+    }
+
+    function benchCurveStageReceived(address target, uint256 coinIndex, uint256 amount) external returns (bool) {
+        CurveDeps storage deps = curveDeps[target];
+        require(address(deps.coin0) != address(0), "curve deps");
+        if (coinIndex == 0) {
+            require(deps.coin0.transfer(target, amount), "curve transfer0");
+        } else if (coinIndex == 1) {
+            require(deps.coin1.transfer(target, amount), "curve transfer1");
+        } else {
+            revert("curve coin");
+        }
+        return true;
+    }
+
+    function benchCurvePermitOwner() public returns (address) {
+        return vm.addr(CURVE_PERMIT_KEY);
+    }
+
+    function benchCurvePermitCalldata(address target, address spender, uint256 value, uint256 deadline)
+        public
+        returns (bytes memory)
+    {
+        address owner = benchCurvePermitOwner();
+        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
+        require(ok, "curve domain");
+        bytes32 domainSeparator = abi.decode(rawDomain, (bytes32));
+        bytes memory rawNonce;
+        (ok, rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
+        require(ok, "curve nonce");
+        uint256 nonce = abi.decode(rawNonce, (uint256));
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                domainSeparator,
+                keccak256(abi.encode(CURVE_PERMIT_TYPE_HASH, owner, spender, value, nonce, deadline))
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(CURVE_PERMIT_KEY, digest);
+        return abi.encodeWithSignature(
+            "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+            owner,
+            spender,
+            value,
+            deadline,
+            v,
+            r,
+            s
+        );
     }
 
     function benchYearnInit(address target, uint256 limit, uint256 unlockTime, uint256 feeBps)

@@ -3,13 +3,19 @@ title: Real-Derived Curve Stableswap NG 2-Coin Benchmark
 abi:
   - "add_liquidity(uint256[],uint256,address) returns (uint256)"
   - "exchange(int128,int128,uint256,uint256,address) returns (uint256)"
+  - "exchange_received(int128,int128,uint256,uint256,address) returns (uint256)"
   - "remove_liquidity(uint256,uint256[],address) returns (uint256[])"
   - "remove_liquidity_one_coin(uint256,int128,uint256,address) returns (uint256)"
+  - "remove_liquidity_imbalance(uint256[],uint256,address) returns (uint256)"
+  - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
   - "get_virtual_price() returns (uint256)"
   - "balances(uint256) returns (uint256)"
   - "admin_balances(uint256) returns (uint256)"
   - "coins(uint256) returns (address)"
   - "balanceOf(address) returns (uint256)"
+  - "allowance(address,address) returns (uint256)"
+  - "nonces(address) returns (uint256)"
+  - "DOMAIN_SEPARATOR() returns (bytes32)"
   - "totalSupply() returns (uint256)"
 real_derived:
   suite: real_derived
@@ -32,6 +38,9 @@ real_derived:
     - upstream Vyper constructor and external pool API for two standard ERC20 coins
     - dynamic-array add_liquidity and remove_liquidity calls
     - exchange and one-coin withdrawal signatures with receiver argument
+    - exchange_received optimistic-transfer swaps for standard tokens
+    - imbalanced liquidity removal
+    - EIP-712 LP-token permit for EOA signatures
     - LP token accounting
     - deterministic standard-token dynamic-fee and admin-fee accounting
     - virtual price and observable balances
@@ -42,10 +51,15 @@ real_derived:
     - exchange_0_to_1
     - exchange_1_to_0
     - exchange_slippage_reverts
+    - exchange_received_0_to_1
     - remove_liquidity
+    - remove_liquidity_imbalance
+    - remove_liquidity_imbalance_slippage_reverts
     - remove_one_coin
     - remove_one_coin_slippage_reverts
     - invalid_coin_reverts
+    - permit_valid
+    - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys two standard 18-decimal ERC20 test coins
     - factory/admin/fee receiver hooks are provided by the generated harness
@@ -56,13 +70,14 @@ real_derived:
     - constructor-initialized two-coin pool setup
     - balanced and imbalanced add liquidity
     - both exchange directions
+    - exchange_received optimistic-transfer flow
     - proportional and one-coin withdrawal
+    - imbalanced withdrawal
     - dynamic/off-peg fee and admin-fee accounting
+    - valid EIP-712 LP permit acceptance and invalid permit revert paths
     - slippage and invalid coin reverts
   excluded_features:
     - full Curve NG oracle, rate, rebasing, and ERC4626 integrations in the Solidity port
-    - exchange_received flow
-    - imbalanced removal path
     - exact storage layout compatibility in the Solidity port
 semantics:
   - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over the same two-standard-token harness."
@@ -86,9 +101,18 @@ scenarios:
   - name: exchange_slippage_reverts
     call: "exchange(0, 1, 25_000, 1_000_000, address(this))"
     expected: "reverts"
+  - name: exchange_received_0_to_1
+    call: "exchange_received(0, 1, 25_000, 0, address(this)) after direct token transfer to the pool"
+    expected: "uses the optimistic incoming token balance and swaps along the invariant"
   - name: remove_liquidity
     call: "remove_liquidity(10_000, [0, 0], address(this))"
     expected: "burns LP shares for proportional coin balances"
+  - name: remove_liquidity_imbalance
+    call: "remove_liquidity_imbalance([40_000, 10_000], 100_000, address(this))"
+    expected: "burns the required LP amount and withdraws imbalanced coin amounts with fees"
+  - name: remove_liquidity_imbalance_slippage_reverts
+    call: "remove_liquidity_imbalance([40_000, 10_000], 1, address(this))"
+    expected: "reverts"
   - name: remove_one_coin
     call: "remove_liquidity_one_coin(10_000, 1, 0, address(this))"
     expected: "burns LP shares for one coin with fee"
@@ -97,6 +121,12 @@ scenarios:
     expected: "reverts"
   - name: invalid_coin_reverts
     call: "exchange(0, 2, 1, 0, address(this))"
+    expected: "reverts"
+  - name: permit_valid
+    call: "permit with a harness-signed EIP-712 digest"
+    expected: "sets LP allowance and increments the owner's nonce"
+  - name: permit_invalid_reverts
+    call: "permit with a zero signature"
     expected: "reverts"
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
