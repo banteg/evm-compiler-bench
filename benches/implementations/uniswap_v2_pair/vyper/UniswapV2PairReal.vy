@@ -12,6 +12,10 @@ interface UniswapV2Callee:
 
 MINIMUM_LIQUIDITY: constant(uint256) = 1000
 Q112: constant(uint256) = 5192296858534827628530496329220096
+DOMAIN_TYPEHASH: constant(bytes32) = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+NAME_HASH: constant(bytes32) = keccak256("Uniswap V2")
+VERSION_HASH: constant(bytes32) = keccak256("1")
+PERMIT_TYPEHASH_VALUE: constant(bytes32) = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9
 
 factory: public(address)
 token0: public(address)
@@ -25,6 +29,8 @@ kLast: public(uint256)
 totalSupply: public(uint256)
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
+DOMAIN_SEPARATOR: public(bytes32)
+nonces: public(HashMap[address, uint256])
 unlocked: bool
 
 event Approval:
@@ -63,7 +69,28 @@ event Sync:
 @deploy
 def __init__():
     self.factory = msg.sender
+    self.DOMAIN_SEPARATOR = keccak256(abi_encode(DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, chain.id, self))
     self.unlocked = True
+
+@external
+@pure
+def name() -> String[10]:
+    return "Uniswap V2"
+
+@external
+@pure
+def symbol() -> String[6]:
+    return "UNI-V2"
+
+@external
+@pure
+def decimals() -> uint8:
+    return 18
+
+@external
+@pure
+def PERMIT_TYPEHASH() -> bytes32:
+    return PERMIT_TYPEHASH_VALUE
 
 @external
 def initialize(token0_: address, token1_: address):
@@ -77,6 +104,23 @@ def approve(spender: address, amount: uint256) -> bool:
     self.allowance[msg.sender][spender] = amount
     log Approval(owner=msg.sender, spender=spender, amount=amount)
     return True
+
+@external
+def permit(owner: address, spender: address, amount: uint256, deadline: uint256, v: uint8, r: bytes32, s: bytes32):
+    assert deadline >= block.timestamp, "UniswapV2: EXPIRED"
+    nonce: uint256 = self.nonces[owner]
+    digest: bytes32 = keccak256(
+        concat(
+            b"\x19\x01",
+            self.DOMAIN_SEPARATOR,
+            keccak256(abi_encode(PERMIT_TYPEHASH_VALUE, owner, spender, amount, nonce, deadline)),
+        )
+    )
+    recovered: address = ecrecover(digest, convert(v, uint256), convert(r, uint256), convert(s, uint256))
+    assert recovered != empty(address) and recovered == owner, "UniswapV2: INVALID_SIGNATURE"
+    self.nonces[owner] = nonce + 1
+    self.allowance[owner][spender] = amount
+    log Approval(owner=owner, spender=spender, amount=amount)
 
 @external
 def transfer(receiver: address, amount: uint256) -> bool:

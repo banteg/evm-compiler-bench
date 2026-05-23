@@ -6,9 +6,15 @@ scenarios:
       data: 'abi.encodeWithSignature("initialize(address,address)", address(0x1000), address(0x1001))'
     expect_success: true
     observers: &pair_observers
+      - data: 'abi.encodeWithSignature("name()")'
+      - data: 'abi.encodeWithSignature("symbol()")'
+      - data: 'abi.encodeWithSignature("decimals()")'
       - data: 'abi.encodeWithSignature("getReserves()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
       - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
+      - data: 'abi.encodeWithSignature("PERMIT_TYPEHASH()")'
+      - data: 'abi.encodeWithSignature("nonces(address)", benchUniswapPermitOwner())'
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchUniswapPermitOwner(), BOB)'
       - data: 'abi.encodeWithSignature("price0CumulativeLast()")'
       - data: 'abi.encodeWithSignature("price1CumulativeLast()")'
       - data: 'abi.encodeWithSignature("kLast()")'
@@ -55,6 +61,22 @@ scenarios:
       - data: 'abi.encodeWithSignature("getReserves()")'
     measured:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), address(this), bytes(""))'
+    expect_success: true
+    observers: *pair_observers
+  - name: flash_swap_callback
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapFundFlashCallee(address,uint256,uint256)", {target}, uint256(102), uint256(0))'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapFlashCallee({target}), abi.encode(benchUniswapToken0({target}), benchUniswapToken1({target}), uint256(102), uint256(0)))'
     expect_success: true
     observers: *pair_observers
   - name: burn
@@ -151,5 +173,17 @@ scenarios:
       - data: 'abi.encodeWithSignature("mint(address)", address(this))'
     measured:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), address(this), bytes(""))'
+    expect_success: false
+    observers: *pair_observers
+  - name: permit_valid
+    state_access_profile: mixed
+    measured:
+      data: 'benchUniswapPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers: *pair_observers
+  - name: permit_invalid_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)", address(this), BOB, uint256(123), uint256(999999), uint8(27), bytes32(0), bytes32(0))'
     expect_success: false
     observers: *pair_observers

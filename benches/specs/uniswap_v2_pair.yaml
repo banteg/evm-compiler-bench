@@ -7,11 +7,22 @@ abi:
   - "swap(uint256,uint256,address,bytes)"
   - "skim(address)"
   - "sync()"
+  - "approve(address,uint256) returns (bool)"
+  - "transfer(address,uint256) returns (bool)"
+  - "transferFrom(address,address,uint256) returns (bool)"
+  - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"
+  - "name() returns (string)"
+  - "symbol() returns (string)"
+  - "decimals() returns (uint8)"
   - "getReserves() returns (uint112,uint112,uint32)"
   - "token0() returns (address)"
   - "token1() returns (address)"
   - "factory() returns (address)"
   - "balanceOf(address) returns (uint256)"
+  - "allowance(address,address) returns (uint256)"
+  - "nonces(address) returns (uint256)"
+  - "DOMAIN_SEPARATOR() returns (bytes32)"
+  - "PERMIT_TYPEHASH() returns (bytes32)"
   - "totalSupply() returns (uint256)"
   - "price0CumulativeLast() returns (uint256)"
   - "price1CumulativeLast() returns (uint256)"
@@ -37,15 +48,17 @@ real_derived:
     - external token0/token1/factory initialization
     - reserve and getReserves accounting
     - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
+    - non-empty flash-swap callback execution and repayment
     - constant-product fee check with 0.30% LP fee
     - fee-on protocol liquidity minting through kLast
     - cumulative price update behavior from elapsed block timestamp
-    - ERC20 LP share accounting
+    - ERC20 LP share accounting, metadata, allowance, and EIP-2612 permit
   scenario_coverage:
     - initialize
     - mint_initial
     - mint_subsequent
     - swap_fee_invariant
+    - flash_swap_callback
     - burn
     - sync
     - skim
@@ -53,10 +66,12 @@ real_derived:
     - fee_off_resets_k_last
     - uninitialized_mint_reverts
     - invalid_swap_reverts
+    - permit_valid
+    - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
     - token transfers into the pair are staged with harness mints before measured calls
-    - flash-swap callback behavior is not exercised because scenarios pass empty callback data
+    - flash-swap callback repayment uses a deterministic harness callee
     - Vyper preserves behavior for covered paths but does not claim full contract behavior or Solidity packed-slot storage layout compatibility
   included_features:
     - upstream Solidity pair source at the pinned commit
@@ -64,10 +79,11 @@ real_derived:
     - first and subsequent mint paths
     - burn path with staged LP shares
     - constant-product swap fee invariant
+    - non-empty flash-swap callback execution
     - sync and skim balance drift paths
     - fee-on and fee-off kLast behavior
+    - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
-    - non-empty flash-swap callback execution
     - CREATE2 pair factory deployment path
     - exact Solidity packed reserve storage layout in the Vyper port
 semantics:
@@ -86,6 +102,9 @@ scenarios:
   - name: swap_fee_invariant
     call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
+  - name: flash_swap_callback
+    call: "swap(0, 100, flash callee, non-empty callback data)"
+    expected: "optimistically transfers output, invokes the callback, accepts repayment, and updates reserves"
   - name: burn
     call: "burn(address(this)) after LP shares are transferred to the pair"
     expected: "burns staged LP and transfers proportional token balances out"
@@ -106,6 +125,12 @@ scenarios:
     expected: "reverts"
   - name: invalid_swap_reverts
     call: "swap with zero input"
+    expected: "reverts"
+  - name: permit_valid
+    call: "permit with a harness-signed EIP-712 digest"
+    expected: "sets allowance and increments the owner's nonce"
+  - name: permit_invalid_reverts
+    call: "permit with a zero signature"
     expected: "reverts"
 implementations:
   solidity: "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
