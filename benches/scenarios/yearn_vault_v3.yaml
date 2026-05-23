@@ -243,6 +243,17 @@ scenarios:
       data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
     expect_success: false
     observers: *yearn_observers
+  - name: process_report_reentrant_accountant_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnConfigureReentrantAccountant(address)", {target})'
+    measured:
+      data: 'abi.encodeWithSignature("process_report(address)", {target})'
+    expect_success: false
+    observers: *yearn_observers
   - name: profit_unlock_after_time
     state_access_profile: mixed
     setup:

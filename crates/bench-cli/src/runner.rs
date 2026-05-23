@@ -409,7 +409,7 @@ fn generate_test(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
     out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; }\n");
-    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
+    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
@@ -824,6 +824,26 @@ contract BenchYearnAccountant {
     }
 }
 
+contract BenchYearnReentrantAccountant {
+    BenchERC20 public immutable asset;
+
+    constructor(BenchERC20 asset_) {
+        asset = asset_;
+    }
+
+    function prepare(address vault) external returns (bool) {
+        asset.mint(address(this), 1e18);
+        asset.approve(vault, type(uint256).max);
+        return true;
+    }
+
+    function report(address, uint256, uint256) external returns (uint256 fees, uint256 refunds) {
+        (bool ok,) = msg.sender.call(abi.encodeWithSignature("deposit(uint256,address)", uint256(1), address(this)));
+        require(ok, "reenter deposit");
+        return (fees, refunds);
+    }
+}
+
 contract BenchYearnDepositLimitModule {
     uint256 public limit;
 
@@ -1166,10 +1186,19 @@ fn helper_functions() -> &'static str {
             BenchYearnStrategy strategy2 = new BenchYearnStrategy(asset);
             BenchYearnStrategy strategy3 = new BenchYearnStrategy(asset);
             BenchYearnAccountant accountant = new BenchYearnAccountant(asset);
+            BenchYearnReentrantAccountant reentrantAccountant = new BenchYearnReentrantAccountant(asset);
             BenchYearnDepositLimitModule depositLimitModule = new BenchYearnDepositLimitModule();
             BenchYearnWithdrawLimitModule withdrawLimitModule = new BenchYearnWithdrawLimitModule();
-            yearnDeps[target] =
-                YearnDeps(asset, strategy, strategy2, strategy3, accountant, depositLimitModule, withdrawLimitModule);
+            yearnDeps[target] = YearnDeps(
+                asset,
+                strategy,
+                strategy2,
+                strategy3,
+                accountant,
+                reentrantAccountant,
+                depositLimitModule,
+                withdrawLimitModule
+            );
         }
     }
 
@@ -1191,6 +1220,10 @@ fn helper_functions() -> &'static str {
 
     function benchYearnAccountant(address target) public view returns (address) {
         return address(yearnDeps[target].accountant);
+    }
+
+    function benchYearnReentrantAccountant(address target) public view returns (address) {
+        return address(yearnDeps[target].reentrantAccountant);
     }
 
     function benchYearnDepositLimitModule(address target) public view returns (address) {
@@ -1263,6 +1296,16 @@ fn helper_functions() -> &'static str {
         deps.accountant.setReport(target, fees, refunds);
         (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.accountant)));
         require(ok, "yearn accountant");
+        return true;
+    }
+
+    function benchYearnConfigureReentrantAccountant(address target) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.reentrantAccountant) != address(0), "yearn deps");
+        deps.reentrantAccountant.prepare(target);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.reentrantAccountant)));
+        require(ok, "yearn reentrant accountant");
         return true;
     }
 

@@ -129,6 +129,7 @@ contract YearnVaultV3Real {
     uint256 internal full_profit_unlock_date;
     uint256 internal profit_unlocking_rate;
     uint256 internal last_profit_update;
+    bool internal unlocked;
 
     mapping(address => uint256) public nonces;
 
@@ -170,8 +171,16 @@ contract YearnVaultV3Real {
         _;
     }
 
+    modifier nonReentrant() {
+        require(unlocked, "reentrant call");
+        unlocked = false;
+        _;
+        unlocked = true;
+    }
+
     constructor() {
         asset = address(this);
+        unlocked = true;
     }
 
     function initialize(
@@ -193,6 +202,7 @@ contract YearnVaultV3Real {
         name = name_;
         symbol = symbol_;
         role_manager = roleManager_;
+        unlocked = true;
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -236,7 +246,7 @@ contract YearnVaultV3Real {
         return true;
     }
 
-    function deposit(uint256 assets, address receiver) external ready returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) external ready nonReentrant returns (uint256 shares) {
         uint256 amount = assets;
         if (amount == type(uint256).max) {
             amount = YearnBenchERC20(asset).balanceOf(msg.sender);
@@ -245,12 +255,17 @@ contract YearnVaultV3Real {
         _deposit(receiver, amount, shares);
     }
 
-    function mint(uint256 shares, address receiver) external ready returns (uint256 assets) {
+    function mint(uint256 shares, address receiver) external ready nonReentrant returns (uint256 assets) {
         assets = _convertToAssets(shares, true);
         _deposit(receiver, assets, shares);
     }
 
-    function withdraw(uint256 assets, address receiver, address owner) external ready returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        external
+        ready
+        nonReentrant
+        returns (uint256 shares)
+    {
         address[] memory queue = new address[](0);
         shares = _withdraw(msg.sender, assets, receiver, owner, 0, queue);
     }
@@ -258,6 +273,7 @@ contract YearnVaultV3Real {
     function withdraw(uint256 assets, address receiver, address owner, uint256 maxLoss)
         external
         ready
+        nonReentrant
         returns (uint256 shares)
     {
         address[] memory queue = new address[](0);
@@ -267,12 +283,18 @@ contract YearnVaultV3Real {
     function withdraw(uint256 assets, address receiver, address owner, uint256 maxLoss, address[] calldata strategies_)
         external
         ready
+        nonReentrant
         returns (uint256 shares)
     {
         shares = _withdraw(msg.sender, assets, receiver, owner, maxLoss, strategies_);
     }
 
-    function redeem(uint256 shares, address receiver, address owner) external ready returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner)
+        external
+        ready
+        nonReentrant
+        returns (uint256 assets)
+    {
         address[] memory queue = new address[](0);
         assets = _redeem(msg.sender, receiver, owner, _convertToAssets(shares, false), shares, MAX_BPS, queue);
     }
@@ -280,6 +302,7 @@ contract YearnVaultV3Real {
     function redeem(uint256 shares, address receiver, address owner, uint256 maxLoss)
         external
         ready
+        nonReentrant
         returns (uint256 assets)
     {
         address[] memory queue = new address[](0);
@@ -289,6 +312,7 @@ contract YearnVaultV3Real {
     function redeem(uint256 shares, address receiver, address owner, uint256 maxLoss, address[] calldata strategies_)
         external
         ready
+        nonReentrant
         returns (uint256 assets)
     {
         assets = _redeem(msg.sender, receiver, owner, _convertToAssets(shares, false), shares, maxLoss, strategies_);
@@ -439,12 +463,12 @@ contract YearnVaultV3Real {
         emit UpdateRoleManager(msg.sender);
     }
 
-    function process_report(address strategy) external ready returns (uint256 gain, uint256 loss) {
+    function process_report(address strategy) external ready nonReentrant returns (uint256 gain, uint256 loss) {
         _enforceRole(msg.sender, REPORTING_MANAGER);
         return _processReport(strategy);
     }
 
-    function buy_debt(address strategy, uint256 amount) external ready {
+    function buy_debt(address strategy, uint256 amount) external ready nonReentrant {
         _enforceRole(msg.sender, DEBT_PURCHASER);
         StrategyParams storage params = _strategies[strategy];
         require(params.activation != 0, "not active");
@@ -497,12 +521,17 @@ contract YearnVaultV3Real {
         emit UpdatedMaxDebtForStrategy(msg.sender, strategy, newMaxDebt);
     }
 
-    function update_debt(address strategy, uint256 targetDebt) external ready returns (uint256) {
+    function update_debt(address strategy, uint256 targetDebt) external ready nonReentrant returns (uint256) {
         _enforceRole(msg.sender, DEBT_MANAGER);
         return _updateDebt(strategy, targetDebt, MAX_BPS);
     }
 
-    function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss) external ready returns (uint256) {
+    function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss)
+        external
+        ready
+        nonReentrant
+        returns (uint256)
+    {
         _enforceRole(msg.sender, DEBT_MANAGER);
         return _updateDebt(strategy, targetDebt, maxLoss);
     }
