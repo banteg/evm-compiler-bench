@@ -124,6 +124,9 @@ real_derived:
     - add_strategy_default_queue
     - revoke_strategy_preserves_queue_order
     - add_remove_role
+    - set_invalid_role_reverts
+    - add_invalid_role_reverts
+    - remove_invalid_role_reverts
     - role_manager_transfer_accept
     - set_metadata
     - set_name_too_long_reverts
@@ -160,7 +163,7 @@ real_derived:
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
     - Vyper default-argument external overloads for strategy, debt, and deposit-limit management
     - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
-    - bitmask role mutation, delegated role execution, and two-step role-manager transfer
+    - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
@@ -211,6 +214,15 @@ scenarios:
   - name: add_remove_role
     call: "remove_role after set_role and add_role"
     expected: "updates the account role bitmask"
+  - name: set_invalid_role_reverts
+    call: "set_role with bit 14 set"
+    expected: "reverts at the same Vyper enum role bound as upstream"
+  - name: add_invalid_role_reverts
+    call: "add_role with bit 14 set"
+    expected: "reverts at the same Vyper enum role bound as upstream"
+  - name: remove_invalid_role_reverts
+    call: "remove_role with bit 14 set"
+    expected: "reverts at the same Vyper enum role bound as upstream"
   - name: role_manager_transfer_accept
     call: "accept_role_manager after transfer_role_manager"
     expected: "moves role manager authority to the pending manager"

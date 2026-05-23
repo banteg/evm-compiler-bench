@@ -60,6 +60,7 @@ contract YearnVaultV3Real {
     uint256 internal constant PROFIT_UNLOCK_MANAGER = 1 << 11;
     uint256 internal constant DEBT_PURCHASER = 1 << 12;
     uint256 internal constant EMERGENCY_MANAGER = 1 << 13;
+    uint256 internal constant ALL_ROLES = (1 << 14) - 1;
     string internal constant API_VERSION = "3.0.4";
     bytes32 internal constant DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -435,12 +436,14 @@ contract YearnVaultV3Real {
 
     function set_role(address account, uint256 role) external ready {
         require(msg.sender == role_manager, "not allowed");
+        require(role <= ALL_ROLES, "invalid role");
         roles[account] = role;
         emit RoleSet(account, role);
     }
 
     function add_role(address account, uint256 role) external ready {
         require(msg.sender == role_manager, "not allowed");
+        require(role <= ALL_ROLES, "invalid role");
         uint256 newRoles = roles[account] | role;
         roles[account] = newRoles;
         emit RoleSet(account, newRoles);
@@ -448,6 +451,7 @@ contract YearnVaultV3Real {
 
     function remove_role(address account, uint256 role) external ready {
         require(msg.sender == role_manager, "not allowed");
+        require(role <= ALL_ROLES, "invalid role");
         uint256 newRoles = roles[account] & ~role;
         roles[account] = newRoles;
         emit RoleSet(account, newRoles);

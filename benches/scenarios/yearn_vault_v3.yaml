@@ -173,6 +173,34 @@ scenarios:
       data: 'abi.encodeWithSignature("remove_role(address,uint256)", BOB, uint256(1))'
     expect_success: true
     observers: *yearn_observers
+  - name: set_invalid_role_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("set_role(address,uint256)", BOB, uint256(16_384))'
+    expect_success: false
+    observers: *yearn_observers
+  - name: add_invalid_role_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("add_role(address,uint256)", BOB, uint256(16_384))'
+    expect_success: false
+    observers: *yearn_observers
+  - name: remove_invalid_role_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("set_role(address,uint256)", BOB, uint256(1))'
+    measured:
+      data: 'abi.encodeWithSignature("remove_role(address,uint256)", BOB, uint256(16_384))'
+    expect_success: false
+    observers: *yearn_observers
   - name: role_manager_transfer_accept
     state_access_profile: warm
     setup:
