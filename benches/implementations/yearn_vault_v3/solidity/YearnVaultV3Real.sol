@@ -1053,9 +1053,7 @@ contract YearnVaultV3Real {
         }
 
         uint256 totalSupply_ = _totalSupply;
-        uint256 endingSupply = totalSupply_ + report.sharesToLock;
-        uint256 sharesToRemove = report.sharesToBurn + _unlockedShares();
-        endingSupply = endingSupply > sharesToRemove ? endingSupply - sharesToRemove : 0;
+        uint256 endingSupply = totalSupply_ + report.sharesToLock - report.sharesToBurn - _unlockedShares();
 
         if (endingSupply > totalSupply_) {
             _issueShares(endingSupply - totalSupply_, address(this));

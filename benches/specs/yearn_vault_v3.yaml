@@ -128,6 +128,7 @@ real_derived:
     - set_metadata
     - strategy_profit_report
     - strategy_report_with_accountant
+    - strategy_report_excessive_accountant_fee_reverts
     - profit_unlock_after_time
     - strategy_loss_withdraw
     - custom_queue_withdraw
@@ -158,7 +159,7 @@ real_derived:
     - bitmask role mutation, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
-    - profit/loss report accounting, refunds, fees, and locked-profit shares
+    - profit/loss report accounting, refunds, fees, locked-profit shares, and upstream excessive-fee underflow reverts
     - optional-return ERC20 asset handling
     - deposit-limit and permission reverts
     - valid EIP-712 permit acceptance and invalid permit revert paths
@@ -217,6 +218,9 @@ scenarios:
   - name: strategy_report_with_accountant
     call: "process_report with accountant fees/refunds and nonzero protocol fee config"
     expected: "accounts fees, refunds, protocol fee shares, and locked profit"
+  - name: strategy_report_excessive_accountant_fee_reverts
+    call: "process_report with accountant fees greater than removable supply"
+    expected: "reverts through the same checked ending-supply arithmetic as upstream Vyper"
   - name: profit_unlock_after_time
     call: "pricePerShare after profit report and time advance"
     expected: "observes unlocked-profit share accounting"
