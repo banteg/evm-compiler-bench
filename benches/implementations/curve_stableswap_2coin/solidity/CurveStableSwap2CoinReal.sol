@@ -475,9 +475,19 @@ contract CurveStableSwap2CoinReal {
         uint256 d0 = _getDMem(rates, currentBalances);
         uint256 d1 = _getDMem(rates, newBalances);
         if (totalSupply == 0) {
-            return isDeposit ? d1 : 0;
+            return d1;
         }
-        return isDeposit ? totalSupply * (d1 - d0) / d0 : totalSupply * (d0 - d1) / d0;
+        uint256 d2 = d1;
+        uint256 baseFee = _baseFee();
+        uint256 ys = (d0 + d1) / N_COINS;
+        for (uint256 idx = 0; idx < N_COINS; idx++) {
+            uint256 idealBalance = d1 * currentBalances[idx] / d0;
+            uint256 difference = _absDiff(idealBalance, newBalances[idx]);
+            uint256 xs = rates[idx] * (currentBalances[idx] + newBalances[idx]) / PRECISION;
+            newBalances[idx] -= _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
+        }
+        d2 = _getDMem(rates, newBalances);
+        return isDeposit ? totalSupply * (d2 - d0) / d0 : totalSupply * (d0 - d2) / d0;
     }
 
     function A() external view returns (uint256) {
@@ -523,24 +533,16 @@ contract CurveStableSwap2CoinReal {
     function get_dx(int128 i, int128 j, uint256 dy) external view returns (uint256) {
         require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
         require(dy > 0, "dy");
-        uint256 low = 1;
-        uint256 high = dy;
-        while (true) {
-            (,,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), high);
-            if (quoted >= dy) break;
-            high *= 2;
-        }
-        for (uint256 k = 0; k < 255; k++) {
-            if (low >= high) break;
-            uint256 mid = (low + high) / 2;
-            (,,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), mid);
-            if (quoted >= dy) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-        return high;
+        uint256 coinIn = uint256(int256(i));
+        uint256 coinOut = uint256(int256(j));
+        uint256[2] memory rates = _storedRates();
+        uint256[2] memory xp = _xpMem(rates, _balances());
+        uint256 d = _getD(xp[0], xp[1]);
+        uint256 dyWithFee = dy * rates[coinOut] / PRECISION + 1;
+        uint256 dynamicFee_ = _dynamicFee(xp[coinIn], xp[coinOut], fee);
+        uint256 y = xp[coinOut] - dyWithFee * FEE_DENOMINATOR / (FEE_DENOMINATOR - dynamicFee_);
+        uint256 x = _getY(coinOut, coinIn, y, xp, d);
+        return (x - xp[coinIn]) * PRECISION / rates[coinIn];
     }
 
     function dynamic_fee(int128 i, int128 j) external view returns (uint256) {

@@ -4,6 +4,10 @@ abi:
   - "add_liquidity(uint256[],uint256,address) returns (uint256)"
   - "exchange(int128,int128,uint256,uint256,address) returns (uint256)"
   - "exchange_received(int128,int128,uint256,uint256,address) returns (uint256)"
+  - "get_dy(int128,int128,uint256) returns (uint256)"
+  - "get_dx(int128,int128,uint256) returns (uint256)"
+  - "calc_token_amount(uint256[],bool) returns (uint256)"
+  - "dynamic_fee(int128,int128) returns (uint256)"
   - "remove_liquidity(uint256,uint256[],address) returns (uint256[])"
   - "remove_liquidity_one_coin(uint256,int128,uint256,address) returns (uint256)"
   - "remove_liquidity_imbalance(uint256[],uint256,address) returns (uint256)"
@@ -62,6 +66,11 @@ real_derived:
     - exchange_1_to_0
     - exchange_slippage_reverts
     - exchange_received_0_to_1
+    - get_dy_quote
+    - get_dx_quote
+    - calc_token_amount_deposit
+    - calc_token_amount_withdraw
+    - dynamic_fee_quote
     - remove_liquidity
     - remove_liquidity_no_return_tokens
     - remove_liquidity_imbalance
@@ -74,7 +83,7 @@ real_derived:
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys two standard 18-decimal ERC20 test coins with switchable optional return data
-    - factory/admin/fee receiver hooks are provided by the generated harness
+    - factory/admin/fee receiver hooks and the delegated NG views implementation are provided by the generated harness
     - oracle, rebasing, ERC4626, and external rate branches are implemented but not separately exercised by current scenarios
     - Solidity port keeps a fixed 2-coin shape and is not a full line-for-line NG translation
   included_features:
@@ -83,6 +92,7 @@ real_derived:
     - balanced and imbalanced add liquidity
     - both exchange directions
     - exchange_received optimistic-transfer flow
+    - factory-delegated NG quote views for get_dy, get_dx, calc_token_amount, and dynamic_fee
     - optional-return ERC20 transfer and transferFrom compatibility
     - proportional and one-coin withdrawal
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
@@ -124,6 +134,21 @@ scenarios:
   - name: exchange_received_0_to_1
     call: "exchange_received(0, 1, 25_000, 0, address(this)) after direct token transfer to the pool"
     expected: "uses the optimistic incoming token balance and swaps along the invariant"
+  - name: get_dy_quote
+    call: "get_dy(0, 1, 25_000) after initial liquidity"
+    expected: "quotes output through the production factory views implementation"
+  - name: get_dx_quote
+    call: "get_dx(0, 1, 20_000) after initial liquidity"
+    expected: "quotes required input through the production factory views implementation"
+  - name: calc_token_amount_deposit
+    call: "calc_token_amount([100_000, 300_000], true) after initial liquidity"
+    expected: "quotes LP minted for an imbalanced deposit with NG dynamic fees"
+  - name: calc_token_amount_withdraw
+    call: "calc_token_amount([40_000, 10_000], false) after initial liquidity"
+    expected: "quotes LP burned for an imbalanced withdrawal with NG dynamic fees"
+  - name: dynamic_fee_quote
+    call: "dynamic_fee(0, 1) after imbalanced liquidity"
+    expected: "returns the off-peg dynamic fee through the production factory views implementation"
   - name: remove_liquidity
     call: "remove_liquidity(10_000, [0, 0], address(this))"
     expected: "burns LP shares for proportional coin balances"
