@@ -193,6 +193,8 @@ contract YearnVaultV3Real {
         require(asset == address(0), "initialized");
         require(asset_ != address(0), "ZERO ADDRESS");
         require(roleManager_ != address(0), "ZERO ADDRESS");
+        require(bytes(name_).length <= 64, "name too long");
+        require(bytes(symbol_).length <= 32, "symbol too long");
         require(profitMaxUnlockTime_ <= 31_556_952, "profit unlock time too long");
 
         asset = asset_;
@@ -320,11 +322,13 @@ contract YearnVaultV3Real {
 
     function setName(string calldata newName) external ready {
         require(msg.sender == role_manager, "not allowed");
+        require(bytes(newName).length <= 64, "name too long");
         name = newName;
     }
 
     function setSymbol(string calldata newSymbol) external ready {
         require(msg.sender == role_manager, "not allowed");
+        require(bytes(newSymbol).length <= 32, "symbol too long");
         symbol = newSymbol;
     }
 

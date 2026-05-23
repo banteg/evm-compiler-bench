@@ -194,6 +194,24 @@ scenarios:
       data: 'abi.encodeWithSignature("setSymbol(string)", "yvV3R")'
     expect_success: true
     observers: *yearn_observers
+  - name: set_name_too_long_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setName(string)", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
+    expect_success: false
+    observers: *yearn_observers
+  - name: set_symbol_too_long_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setSymbol(string)", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
+    expect_success: false
+    observers: *yearn_observers
   - name: strategy_profit_report
     state_access_profile: mixed
     setup:

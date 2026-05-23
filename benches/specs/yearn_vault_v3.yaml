@@ -126,6 +126,8 @@ real_derived:
     - add_remove_role
     - role_manager_transfer_accept
     - set_metadata
+    - set_name_too_long_reverts
+    - set_symbol_too_long_reverts
     - strategy_profit_report
     - strategy_report_with_accountant
     - strategy_report_excessive_accountant_fee_reverts
@@ -159,6 +161,7 @@ real_derived:
     - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
+    - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - profit/loss report accounting, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, and shared nonreentrant lock rejection
     - optional-return ERC20 asset handling
@@ -213,6 +216,12 @@ scenarios:
   - name: set_metadata
     call: "setSymbol after setName"
     expected: "updates mutable vault metadata through the role manager"
+  - name: set_name_too_long_reverts
+    call: "setName with 65 bytes"
+    expected: "reverts at the same metadata length boundary as upstream Vyper String[64]"
+  - name: set_symbol_too_long_reverts
+    call: "setSymbol with 33 bytes"
+    expected: "reverts at the same metadata length boundary as upstream Vyper String[32]"
   - name: strategy_profit_report
     call: "process_report after debt allocation and harnessed strategy profit"
     expected: "records gain, mints locked profit shares, and updates total assets"
