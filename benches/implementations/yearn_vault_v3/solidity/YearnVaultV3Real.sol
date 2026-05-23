@@ -73,6 +73,31 @@ contract YearnVaultV3Real {
         uint256 maxDebt;
     }
 
+    struct RedeemQueueState {
+        uint256 requestedAssets;
+        uint256 currentTotalIdle;
+        uint256 currentTotalDebt;
+        uint256 assetsNeeded;
+        uint256 previousBalance;
+    }
+
+    struct ReportState {
+        uint256 totalAssets_;
+        uint256 currentDebt;
+        uint256 gain;
+        uint256 loss;
+        uint256 totalFees;
+        uint256 totalRefunds;
+        uint256 totalFeesShares;
+        uint16 protocolFeeBps;
+        uint256 protocolFeesShares;
+        address protocolFeeRecipient;
+        address accountant_;
+        uint256 sharesToBurn;
+        uint256 sharesToLock;
+        uint256 profitMaxUnlockTime_;
+    }
+
     address public asset;
     uint8 public decimals;
     address internal factory;
@@ -702,91 +727,110 @@ contract YearnVaultV3Real {
             _spendAllowance(owner, sender, shares);
         }
 
-        uint256 requestedAssets = assets;
-        uint256 currentTotalIdle = total_idle;
-        if (requestedAssets > currentTotalIdle) {
-            address[] memory queue = _queueFor(strategies_);
-            uint256 currentTotalDebt = total_debt;
-            uint256 assetsNeeded = requestedAssets - currentTotalIdle;
-            uint256 previousBalance = YearnBenchERC20(asset).balanceOf(address(this));
+        RedeemQueueState memory queueState = RedeemQueueState({
+            requestedAssets: assets,
+            currentTotalIdle: total_idle,
+            currentTotalDebt: total_debt,
+            assetsNeeded: 0,
+            previousBalance: 0
+        });
 
-            for (uint256 i = 0; i < queue.length; i++) {
-                address strategy = queue[i];
-                StrategyParams storage params = _strategies[strategy];
-                require(params.activation != 0, "inactive strategy");
-
-                uint256 currentDebt = params.currentDebt;
-                uint256 assetsToWithdraw = _min(assetsNeeded, currentDebt);
-                uint256 maxWithdraw_ =
-                    YearnBenchStrategy(strategy).convertToAssets(YearnBenchStrategy(strategy).maxRedeem(address(this)));
-
-                uint256 unrealisedLossesShare = _assessShareOfUnrealisedLosses(strategy, currentDebt, assetsToWithdraw);
-                if (unrealisedLossesShare > 0) {
-                    if (maxWithdraw_ < assetsToWithdraw - unrealisedLossesShare) {
-                        uint256 wanted = assetsToWithdraw - unrealisedLossesShare;
-                        unrealisedLossesShare = unrealisedLossesShare * maxWithdraw_ / wanted;
-                        assetsToWithdraw = maxWithdraw_ + unrealisedLossesShare;
-                    }
-
-                    assetsToWithdraw -= unrealisedLossesShare;
-                    requestedAssets -= unrealisedLossesShare;
-                    assetsNeeded -= unrealisedLossesShare;
-                    currentTotalDebt -= unrealisedLossesShare;
-
-                    if (maxWithdraw_ == 0 && unrealisedLossesShare > 0) {
-                        uint256 newDebtForLoss = currentDebt - unrealisedLossesShare;
-                        params.currentDebt = newDebtForLoss;
-                        emit DebtUpdated(strategy, currentDebt, newDebtForLoss);
-                    }
-                }
-
-                assetsToWithdraw = _min(assetsToWithdraw, maxWithdraw_);
-                if (assetsToWithdraw == 0) {
-                    continue;
-                }
-
-                _withdrawFromStrategy(strategy, assetsToWithdraw);
-                uint256 postBalance = YearnBenchERC20(asset).balanceOf(address(this));
-                uint256 withdrawn = postBalance - previousBalance;
-                uint256 loss = 0;
-                if (withdrawn > assetsToWithdraw) {
-                    if (withdrawn > currentDebt) {
-                        assetsToWithdraw = currentDebt;
-                    } else {
-                        assetsToWithdraw += withdrawn - assetsToWithdraw;
-                    }
-                } else if (withdrawn < assetsToWithdraw) {
-                    loss = assetsToWithdraw - withdrawn;
-                }
-
-                currentTotalIdle += assetsToWithdraw - loss;
-                requestedAssets -= loss;
-                currentTotalDebt -= assetsToWithdraw;
-
-                uint256 newDebt = currentDebt - (assetsToWithdraw + unrealisedLossesShare);
-                params.currentDebt = newDebt;
-                emit DebtUpdated(strategy, currentDebt, newDebt);
-
-                if (requestedAssets <= currentTotalIdle) {
-                    break;
-                }
-                previousBalance = postBalance;
-                assetsNeeded -= assetsToWithdraw;
-            }
-
-            require(currentTotalIdle >= requestedAssets, "insufficient assets in vault");
-            total_debt = currentTotalDebt;
+        if (queueState.requestedAssets > queueState.currentTotalIdle) {
+            queueState.assetsNeeded = queueState.requestedAssets - queueState.currentTotalIdle;
+            queueState.previousBalance = YearnBenchERC20(asset).balanceOf(address(this));
+            queueState = _withdrawFromQueue(_queueFor(strategies_), queueState);
+            require(queueState.currentTotalIdle >= queueState.requestedAssets, "insufficient assets in vault");
+            total_debt = queueState.currentTotalDebt;
         }
 
-        if (assets > requestedAssets && maxLoss < MAX_BPS) {
-            require(assets - requestedAssets <= assets * maxLoss / MAX_BPS, "too much loss");
+        if (assets > queueState.requestedAssets && maxLoss < MAX_BPS) {
+            require(assets - queueState.requestedAssets <= assets * maxLoss / MAX_BPS, "too much loss");
         }
 
         _burnShares(shares, owner);
-        total_idle = currentTotalIdle - requestedAssets;
-        _safeTransferToken(asset, receiver, requestedAssets);
-        emit Withdraw(sender, receiver, owner, requestedAssets, shares);
-        return requestedAssets;
+        total_idle = queueState.currentTotalIdle - queueState.requestedAssets;
+        _safeTransferToken(asset, receiver, queueState.requestedAssets);
+        emit Withdraw(sender, receiver, owner, queueState.requestedAssets, shares);
+        return queueState.requestedAssets;
+    }
+
+    function _withdrawFromQueue(address[] memory queue, RedeemQueueState memory state)
+        internal
+        returns (RedeemQueueState memory)
+    {
+        for (uint256 i = 0; i < queue.length; i++) {
+            state = _withdrawFromQueueStrategy(queue[i], state);
+            if (state.requestedAssets <= state.currentTotalIdle) {
+                break;
+            }
+        }
+        return state;
+    }
+
+    function _withdrawFromQueueStrategy(address strategy, RedeemQueueState memory state)
+        internal
+        returns (RedeemQueueState memory)
+    {
+        StrategyParams storage params = _strategies[strategy];
+        require(params.activation != 0, "inactive strategy");
+
+        uint256 currentDebt = params.currentDebt;
+        uint256 assetsToWithdraw = _min(state.assetsNeeded, currentDebt);
+        uint256 maxWithdraw_ =
+            YearnBenchStrategy(strategy).convertToAssets(YearnBenchStrategy(strategy).maxRedeem(address(this)));
+
+        uint256 unrealisedLossesShare = _assessShareOfUnrealisedLosses(strategy, currentDebt, assetsToWithdraw);
+        if (unrealisedLossesShare > 0) {
+            if (maxWithdraw_ < assetsToWithdraw - unrealisedLossesShare) {
+                uint256 wanted = assetsToWithdraw - unrealisedLossesShare;
+                unrealisedLossesShare = unrealisedLossesShare * maxWithdraw_ / wanted;
+                assetsToWithdraw = maxWithdraw_ + unrealisedLossesShare;
+            }
+
+            assetsToWithdraw -= unrealisedLossesShare;
+            state.requestedAssets -= unrealisedLossesShare;
+            state.assetsNeeded -= unrealisedLossesShare;
+            state.currentTotalDebt -= unrealisedLossesShare;
+
+            if (maxWithdraw_ == 0 && unrealisedLossesShare > 0) {
+                uint256 newDebtForLoss = currentDebt - unrealisedLossesShare;
+                params.currentDebt = newDebtForLoss;
+                emit DebtUpdated(strategy, currentDebt, newDebtForLoss);
+            }
+        }
+
+        assetsToWithdraw = _min(assetsToWithdraw, maxWithdraw_);
+        if (assetsToWithdraw == 0) {
+            return state;
+        }
+
+        _withdrawFromStrategy(strategy, assetsToWithdraw);
+        uint256 postBalance = YearnBenchERC20(asset).balanceOf(address(this));
+        uint256 withdrawn = postBalance - state.previousBalance;
+        uint256 loss = 0;
+        if (withdrawn > assetsToWithdraw) {
+            if (withdrawn > currentDebt) {
+                assetsToWithdraw = currentDebt;
+            } else {
+                assetsToWithdraw += withdrawn - assetsToWithdraw;
+            }
+        } else if (withdrawn < assetsToWithdraw) {
+            loss = assetsToWithdraw - withdrawn;
+        }
+
+        state.currentTotalIdle += assetsToWithdraw - loss;
+        state.requestedAssets -= loss;
+        state.currentTotalDebt -= assetsToWithdraw;
+
+        uint256 newDebt = currentDebt - (assetsToWithdraw + unrealisedLossesShare);
+        params.currentDebt = newDebt;
+        emit DebtUpdated(strategy, currentDebt, newDebt);
+
+        if (state.requestedAssets > state.currentTotalIdle) {
+            state.previousBalance = postBalance;
+            state.assetsNeeded -= assetsToWithdraw;
+        }
+        return state;
     }
 
     function _addStrategy(address newStrategy, bool addToQueue) internal {
@@ -920,85 +964,150 @@ contract YearnVaultV3Real {
     }
 
     function _processReport(address strategy) internal returns (uint256 gain, uint256 loss) {
-        uint256 totalAssets_;
-        uint256 currentDebt;
+        ReportState memory report = _loadReportState(strategy);
+        report = _applyAccountantReport(strategy, report);
+        report = _prepareReportShares(report);
+        report.currentDebt = _applyReportAssetAccounting(
+            strategy, report.currentDebt, report.gain, report.loss, report.totalRefunds, report.accountant_
+        );
+        _issueReportFeeShares(report);
+        _updateProfitUnlock(report.sharesToLock, report.profitMaxUnlockTime_);
 
+        _strategies[strategy].lastReport = block.timestamp;
+        if (report.loss + report.totalFees > report.gain + report.totalRefunds || report.profitMaxUnlockTime_ == 0) {
+            report.totalFees = _convertToAssets(report.totalFeesShares, false);
+        }
+
+        emit StrategyReported(
+            strategy,
+            report.gain,
+            report.loss,
+            report.currentDebt,
+            report.totalFees * uint256(report.protocolFeeBps) / MAX_BPS,
+            report.totalFees,
+            report.totalRefunds
+        );
+        return (report.gain, report.loss);
+    }
+
+    function _loadReportState(address strategy) internal view returns (ReportState memory report) {
         if (strategy != address(this)) {
             StrategyParams storage params = _strategies[strategy];
             require(params.activation != 0, "inactive strategy");
             uint256 strategyShares = YearnBenchStrategy(strategy).balanceOf(address(this));
-            totalAssets_ = YearnBenchStrategy(strategy).convertToAssets(strategyShares);
-            currentDebt = params.currentDebt;
+            report.totalAssets_ = YearnBenchStrategy(strategy).convertToAssets(strategyShares);
+            report.currentDebt = params.currentDebt;
         } else {
-            totalAssets_ = YearnBenchERC20(asset).balanceOf(address(this));
-            currentDebt = total_idle;
+            report.totalAssets_ = YearnBenchERC20(asset).balanceOf(address(this));
+            report.currentDebt = total_idle;
         }
 
-        if (totalAssets_ > currentDebt) {
-            gain = totalAssets_ - currentDebt;
+        if (report.totalAssets_ > report.currentDebt) {
+            report.gain = report.totalAssets_ - report.currentDebt;
         } else {
-            loss = currentDebt - totalAssets_;
+            report.loss = report.currentDebt - report.totalAssets_;
         }
+        report.accountant_ = accountant;
+        report.profitMaxUnlockTime_ = profit_max_unlock_time;
+    }
 
-        uint256 totalFees;
-        uint256 totalRefunds;
-        address accountant_ = accountant;
-        if (accountant_ != address(0)) {
-            (totalFees, totalRefunds) = YearnBenchAccountant(accountant_).report(strategy, gain, loss);
-            if (totalRefunds > 0) {
-                totalRefunds = _min(
-                    totalRefunds,
+    function _applyAccountantReport(address strategy, ReportState memory report)
+        internal
+        returns (ReportState memory)
+    {
+        if (report.accountant_ != address(0)) {
+            (report.totalFees, report.totalRefunds) =
+                YearnBenchAccountant(report.accountant_).report(strategy, report.gain, report.loss);
+            if (report.totalRefunds > 0) {
+                report.totalRefunds = _min(
+                    report.totalRefunds,
                     _min(
-                        YearnBenchERC20(asset).balanceOf(accountant_),
-                        YearnBenchERC20(asset).allowance(accountant_, address(this))
+                        YearnBenchERC20(asset).balanceOf(report.accountant_),
+                        YearnBenchERC20(asset).allowance(report.accountant_, address(this))
                     )
                 );
             }
         }
+        return report;
+    }
 
-        uint256 totalFeesShares;
-        uint16 protocolFeeBps;
-        uint256 protocolFeesShares;
-        address protocolFeeRecipient;
-        uint256 sharesToBurn;
-        if (loss + totalFees > 0) {
-            sharesToBurn = _convertToShares(loss + totalFees, true);
-            if (totalFees > 0) {
-                totalFeesShares = sharesToBurn * totalFees / (loss + totalFees);
-                (protocolFeeBps, protocolFeeRecipient) = YearnBenchFactory(factory).protocol_fee_config();
-                if (protocolFeeBps > 0) {
-                    protocolFeesShares = totalFeesShares * uint256(protocolFeeBps) / MAX_BPS;
+    function _prepareReportShares(ReportState memory report) internal returns (ReportState memory) {
+        if (report.loss + report.totalFees > 0) {
+            report.sharesToBurn = _convertToShares(report.loss + report.totalFees, true);
+            if (report.totalFees > 0) {
+                report.totalFeesShares = report.sharesToBurn * report.totalFees / (report.loss + report.totalFees);
+                (report.protocolFeeBps, report.protocolFeeRecipient) = YearnBenchFactory(factory).protocol_fee_config();
+                if (report.protocolFeeBps > 0) {
+                    report.protocolFeesShares = report.totalFeesShares * uint256(report.protocolFeeBps) / MAX_BPS;
                 }
             }
         }
 
-        uint256 sharesToLock;
-        uint256 profitMaxUnlockTime_ = profit_max_unlock_time;
-        if (gain + totalRefunds > 0 && profitMaxUnlockTime_ != 0) {
-            sharesToLock = _convertToShares(gain + totalRefunds, false);
+        if (report.gain + report.totalRefunds > 0 && report.profitMaxUnlockTime_ != 0) {
+            report.sharesToLock = _convertToShares(report.gain + report.totalRefunds, false);
         }
 
         uint256 totalSupply_ = _totalSupply;
-        uint256 totalLockedShares = _balanceOf[address(this)];
-        uint256 endingSupply = totalSupply_ + sharesToLock;
-        uint256 sharesToRemove = sharesToBurn + _unlockedShares();
+        uint256 endingSupply = totalSupply_ + report.sharesToLock;
+        uint256 sharesToRemove = report.sharesToBurn + _unlockedShares();
         endingSupply = endingSupply > sharesToRemove ? endingSupply - sharesToRemove : 0;
 
         if (endingSupply > totalSupply_) {
             _issueShares(endingSupply - totalSupply_, address(this));
         } else if (totalSupply_ > endingSupply) {
-            uint256 toBurn = _min(totalSupply_ - endingSupply, totalLockedShares);
+            uint256 toBurn = _min(totalSupply_ - endingSupply, _balanceOf[address(this)]);
             if (toBurn > 0) {
                 _burnShares(toBurn, address(this));
             }
         }
 
-        if (sharesToLock > sharesToBurn) {
-            sharesToLock -= sharesToBurn;
+        if (report.sharesToLock > report.sharesToBurn) {
+            report.sharesToLock -= report.sharesToBurn;
         } else {
-            sharesToLock = 0;
+            report.sharesToLock = 0;
         }
+        return report;
+    }
 
+    function _issueReportFeeShares(ReportState memory report) internal {
+        if (report.totalFeesShares > 0) {
+            _issueShares(report.totalFeesShares - report.protocolFeesShares, report.accountant_);
+            if (report.protocolFeesShares > 0) {
+                _issueShares(report.protocolFeesShares, report.protocolFeeRecipient);
+            }
+        }
+    }
+
+    function _updateProfitUnlock(uint256 sharesToLock, uint256 profitMaxUnlockTime_) internal {
+        uint256 totalLockedShares = _balanceOf[address(this)];
+        if (totalLockedShares > 0) {
+            uint256 previouslyLockedTime;
+            if (full_profit_unlock_date > block.timestamp) {
+                previouslyLockedTime = (totalLockedShares - sharesToLock) * (full_profit_unlock_date - block.timestamp);
+            }
+            uint256 newProfitLockingPeriod =
+                (previouslyLockedTime + sharesToLock * profitMaxUnlockTime_) / totalLockedShares;
+            if (newProfitLockingPeriod > 0) {
+                profit_unlocking_rate = totalLockedShares * MAX_BPS_EXTENDED / newProfitLockingPeriod;
+                full_profit_unlock_date = block.timestamp + newProfitLockingPeriod;
+                last_profit_update = block.timestamp;
+            } else {
+                profit_unlocking_rate = 0;
+                full_profit_unlock_date = 0;
+            }
+        } else {
+            full_profit_unlock_date = 0;
+        }
+    }
+
+    function _applyReportAssetAccounting(
+        address strategy,
+        uint256 currentDebt,
+        uint256 gain,
+        uint256 loss,
+        uint256 totalRefunds,
+        address accountant_
+    ) internal returns (uint256) {
         if (totalRefunds > 0) {
             _safeTransferFromToken(asset, accountant_, address(this), totalRefunds);
             total_idle += totalRefunds;
@@ -1024,41 +1133,7 @@ contract YearnVaultV3Real {
             }
         }
 
-        if (totalFeesShares > 0) {
-            _issueShares(totalFeesShares - protocolFeesShares, accountant_);
-            if (protocolFeesShares > 0) {
-                _issueShares(protocolFeesShares, protocolFeeRecipient);
-            }
-        }
-
-        totalLockedShares = _balanceOf[address(this)];
-        if (totalLockedShares > 0) {
-            uint256 previouslyLockedTime;
-            if (full_profit_unlock_date > block.timestamp) {
-                previouslyLockedTime = (totalLockedShares - sharesToLock) * (full_profit_unlock_date - block.timestamp);
-            }
-            uint256 newProfitLockingPeriod =
-                (previouslyLockedTime + sharesToLock * profitMaxUnlockTime_) / totalLockedShares;
-            if (newProfitLockingPeriod > 0) {
-                profit_unlocking_rate = totalLockedShares * MAX_BPS_EXTENDED / newProfitLockingPeriod;
-                full_profit_unlock_date = block.timestamp + newProfitLockingPeriod;
-                last_profit_update = block.timestamp;
-            } else {
-                profit_unlocking_rate = 0;
-                full_profit_unlock_date = 0;
-            }
-        } else {
-            full_profit_unlock_date = 0;
-        }
-
-        _strategies[strategy].lastReport = block.timestamp;
-        if (loss + totalFees > gain + totalRefunds || profitMaxUnlockTime_ == 0) {
-            totalFees = _convertToAssets(totalFeesShares, false);
-        }
-
-        emit StrategyReported(
-            strategy, gain, loss, currentDebt, totalFees * uint256(protocolFeeBps) / MAX_BPS, totalFees, totalRefunds
-        );
+        return currentDebt;
     }
 
     function _maxDeposit(address receiver) internal view returns (uint256) {
