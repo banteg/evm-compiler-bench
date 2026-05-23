@@ -7,6 +7,15 @@ interface CurveBenchERC20 {
     function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
 
+interface CurveBenchERC20Detailed {
+    function decimals() external view returns (uint8);
+}
+
+interface CurveBenchERC4626 {
+    function asset() external view returns (address);
+    function convertToAssets(uint256 shares) external view returns (uint256);
+}
+
 interface CurveBenchFactory {
     function fee_receiver() external view returns (address);
     function admin() external view returns (address);
@@ -44,7 +53,12 @@ contract CurveStableSwap2CoinReal {
     bool internal initialized;
 
     uint256[2] internal rate_multipliers;
-    uint256[2] public balances;
+    uint8[2] internal asset_types;
+    bool internal pool_contains_rebasing_tokens;
+    uint256[2] internal rate_oracles;
+    uint256[2] internal call_amount;
+    uint256[2] internal scale_factor;
+    uint256[2] internal stored_balances;
     uint256[2] public admin_balances;
     uint256[1] internal last_prices_packed;
     uint256 internal last_D_packed;
@@ -100,11 +114,11 @@ contract CurveStableSwap2CoinReal {
         address[] memory oracles
     ) {
         factory = CurveBenchFactory(msg.sender);
-        offpegFeeMultiplier;
-        assetTypes;
-        methodIds;
-        oracles;
         require(coins_.length == N_COINS, "coin length");
+        require(rateMultipliers.length >= N_COINS, "rate length");
+        require(assetTypes.length >= N_COINS, "asset length");
+        require(methodIds.length >= N_COINS, "method length");
+        require(oracles.length >= N_COINS, "oracle length");
         require(coins_[0] != address(0) && coins_[1] != address(0) && coins_[0] != coins_[1], "coins");
         require(amp > 0, "amp");
         require(swapFee <= FEE_DENOMINATOR / 10, "fee");
@@ -114,8 +128,19 @@ contract CurveStableSwap2CoinReal {
         symbol = symbol_;
         coins[0] = coins_[0];
         coins[1] = coins_[1];
-        rate_multipliers[0] = rateMultipliers.length > 0 ? rateMultipliers[0] : 1e18;
-        rate_multipliers[1] = rateMultipliers.length > 1 ? rateMultipliers[1] : 1e18;
+        for (uint256 i = 0; i < N_COINS; i++) {
+            rate_multipliers[i] = rateMultipliers[i];
+            asset_types[i] = assetTypes[i];
+            if (assetTypes[i] == 2) {
+                pool_contains_rebasing_tokens = true;
+            }
+            rate_oracles[i] = (uint256(uint32(methodIds[i])) << 224) | uint160(oracles[i]);
+            if (assetTypes[i] == 3) {
+                call_amount[i] = 10 ** uint256(CurveBenchERC20Detailed(coins_[i]).decimals());
+                address underlying = CurveBenchERC4626(coins_[i]).asset();
+                scale_factor[i] = 10 ** (18 - uint256(CurveBenchERC20Detailed(underlying).decimals()));
+            }
+        }
         uint256 preciseA = amp * A_PRECISION;
         initial_A = preciseA;
         future_A = preciseA;
@@ -177,19 +202,21 @@ contract CurveStableSwap2CoinReal {
         require(receiver != address(0), "receiver");
         require(amounts.length == N_COINS, "amount length");
         require(amounts[0] > 0 || amounts[1] > 0, "amount");
-        uint256[2] memory oldBalances = balances;
+        uint256[2] memory oldBalances = _balances();
+        uint256[2] memory rates = _storedRates();
         uint256 supply = totalSupply;
-        uint256 d0 = supply == 0 ? 0 : _getD(oldBalances[0], oldBalances[1]);
-        uint256[2] memory newBalances = oldBalances;
+        uint256 d0 = supply == 0 ? 0 : _getDMem(rates, oldBalances);
+        uint256[2] memory newBalances;
+        newBalances[0] = oldBalances[0];
+        newBalances[1] = oldBalances[1];
         for (uint256 i = 0; i < N_COINS; i++) {
             if (amounts[i] > 0) {
-                _safeTransferFrom(coins[i], msg.sender, address(this), amounts[i]);
-                newBalances[i] = oldBalances[i] + amounts[i];
+                newBalances[i] = oldBalances[i] + _transferIn(i, amounts[i], msg.sender, false);
             } else {
                 require(supply != 0, "initial amount");
             }
         }
-        uint256 d1 = _getD(newBalances[0], newBalances[1]);
+        uint256 d1 = _getDMem(rates, newBalances);
         require(d1 > d0, "invariant");
         uint256[] memory fees = new uint256[](N_COINS);
         if (supply == 0) {
@@ -200,17 +227,15 @@ contract CurveStableSwap2CoinReal {
             for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
                 uint256 idealBalance = d1 * oldBalances[feeIndex] / d0;
                 uint256 difference = _absDiff(idealBalance, newBalances[feeIndex]);
-                uint256 xs = oldBalances[feeIndex] + newBalances[feeIndex];
+                uint256 xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
                 fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
                 admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
                 newBalances[feeIndex] -= fees[feeIndex];
             }
-            d1 = _getD(newBalances[0], newBalances[1]);
+            d1 = _getDMem(rates, newBalances);
             minted = supply * (d1 - d0) / d0;
         }
         require(minted >= minMintAmount && minted > 0, "slippage");
-        balances[0] = newBalances[0];
-        balances[1] = newBalances[1];
         _mint(receiver, minted);
         emit AddLiquidity(msg.sender, amounts, fees, d1, totalSupply);
         if (supply == 0) {
@@ -222,7 +247,7 @@ contract CurveStableSwap2CoinReal {
                 ma_last_time = _pack2(priceTime, dTime);
             }
         } else {
-            _upkeepOracles(newBalances, _A(), d1);
+            _upkeepOracles(_xpMem(rates, newBalances), _A(), d1);
         }
     }
 
@@ -239,6 +264,7 @@ contract CurveStableSwap2CoinReal {
     }
 
     function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy) external ready returns (uint256 dy) {
+        require(!pool_contains_rebasing_tokens, "rebasing");
         return _exchange(i, j, dx, minDy, msg.sender, true);
     }
 
@@ -247,6 +273,7 @@ contract CurveStableSwap2CoinReal {
         ready
         returns (uint256 dy)
     {
+        require(!pool_contains_rebasing_tokens, "rebasing");
         return _exchange(i, j, dx, minDy, receiver, true);
     }
 
@@ -259,28 +286,23 @@ contract CurveStableSwap2CoinReal {
         require(dx > 0, "dx");
         uint256 coinIn = uint256(int256(i));
         uint256 coinOut = uint256(int256(j));
-        uint256 actualDx = dx;
-        if (expectOptimisticTransfer) {
-            uint256 storedBalance = balances[coinIn] + admin_balances[coinIn];
-            uint256 tokenBalance = CurveBenchERC20(coins[coinIn]).balanceOf(address(this));
-            require(tokenBalance >= storedBalance + dx, "optimistic transfer");
-            actualDx = tokenBalance - storedBalance;
-        } else {
-            _safeTransferFrom(coins[coinIn], msg.sender, address(this), dx);
-        }
+        uint256[2] memory rates = _storedRates();
+        uint256[2] memory xp = _xpMem(rates, _balances());
+        uint256 actualDx = _transferIn(coinIn, dx, msg.sender, expectOptimisticTransfer);
 
-        uint256 newBalanceIn;
-        uint256 newBalanceOut;
+        uint256 x;
+        uint256 y;
+        uint256 d;
         uint256 adminCut;
-        (newBalanceIn, newBalanceOut, dy, adminCut) = _calcExchange(coinIn, coinOut, actualDx);
+        (x, y, d, dy, adminCut) = _calcExchangeFromXP(coinIn, coinOut, actualDx, rates, xp);
         require(dy >= minDy, "slippage");
 
-        balances[coinIn] = newBalanceIn;
-        balances[coinOut] = newBalanceOut;
         admin_balances[coinOut] += adminCut;
-        _safeTransfer(coins[coinOut], receiver, dy);
+        xp[coinIn] = x;
+        xp[coinOut] = y;
+        _upkeepOracles(xp, _A(), d);
+        _transferOut(coinOut, dy, receiver);
         emit TokenExchange(msg.sender, i, actualDx, j, dy);
-        _upkeepOracles(balances, _A(), _getD(balances[0], balances[1]));
     }
 
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts)
@@ -316,16 +338,16 @@ contract CurveStableSwap2CoinReal {
         require(lpAmount > 0 && balanceOf[msg.sender] >= lpAmount, "lp");
         require(minAmounts.length == N_COINS, "amount length");
         uint256 supply = totalSupply;
+        uint256[2] memory currentBalances = _balances();
         amounts = new uint256[](N_COINS);
-        _burn(msg.sender, lpAmount);
         for (uint256 i = 0; i < N_COINS; i++) {
-            amounts[i] = balances[i] * lpAmount / supply;
+            amounts[i] = currentBalances[i] * lpAmount / supply;
             require(amounts[i] >= minAmounts[i], "slippage");
-            balances[i] -= amounts[i];
-            _safeTransfer(coins[i], receiver, amounts[i]);
+            _transferOut(i, amounts[i], receiver);
         }
+        _burn(msg.sender, lpAmount);
+        _upkeepDOracleAfterLiquidityRemoval(lpAmount, supply);
         emit RemoveLiquidity(msg.sender, amounts, _emptyFees(), totalSupply);
-        _upkeepOracles(balances, _A(), _getD(balances[0], balances[1]));
         if (claimAdminFees) {
             _withdrawAdminFees();
         }
@@ -353,43 +375,40 @@ contract CurveStableSwap2CoinReal {
     {
         require(amounts.length == N_COINS, "amount length");
         require(receiver != address(0), "receiver");
-        uint256[2] memory oldBalances = balances;
-        uint256 d0 = _getD(oldBalances[0], oldBalances[1]);
-        uint256[2] memory newBalances = oldBalances;
+        uint256[2] memory oldBalances = _balances();
+        uint256[2] memory rates = _storedRates();
+        uint256 d0 = _getDMem(rates, oldBalances);
+        uint256[2] memory newBalances;
+        newBalances[0] = oldBalances[0];
+        newBalances[1] = oldBalances[1];
         for (uint256 i = 0; i < N_COINS; i++) {
             if (amounts[i] > 0) {
                 require(newBalances[i] >= amounts[i], "balance");
                 newBalances[i] -= amounts[i];
+                _transferOut(i, amounts[i], receiver);
             }
         }
 
-        uint256 d1 = _getD(newBalances[0], newBalances[1]);
+        uint256 d1 = _getDMem(rates, newBalances);
         uint256 baseFee = _baseFee();
         uint256 ys = (d0 + d1) / N_COINS;
         uint256[] memory fees = new uint256[](N_COINS);
         for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
             uint256 idealBalance = d1 * oldBalances[feeIndex] / d0;
             uint256 difference = _absDiff(idealBalance, newBalances[feeIndex]);
-            uint256 xs = oldBalances[feeIndex] + newBalances[feeIndex];
+            uint256 xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
             fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
             admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
             newBalances[feeIndex] -= fees[feeIndex];
         }
 
-        d1 = _getD(newBalances[0], newBalances[1]);
+        d1 = _getDMem(rates, newBalances);
         burnAmount = (d0 - d1) * totalSupply / d0 + 1;
         require(burnAmount > 1, "burn");
         require(burnAmount <= maxBurnAmount, "slippage");
         _burn(msg.sender, burnAmount);
-        balances[0] = newBalances[0];
-        balances[1] = newBalances[1];
-        for (uint256 i = 0; i < N_COINS; i++) {
-            if (amounts[i] > 0) {
-                _safeTransfer(coins[i], receiver, amounts[i]);
-            }
-        }
         emit RemoveLiquidityImbalance(msg.sender, amounts, fees, d1, totalSupply);
-        _upkeepOracles(newBalances, _A(), d1);
+        _upkeepOracles(_xpMem(rates, newBalances), _A(), d1);
     }
 
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount)
@@ -417,27 +436,34 @@ contract CurveStableSwap2CoinReal {
         uint256 coinIndex = uint256(int256(i));
         require(lpAmount > 0 && balanceOf[msg.sender] >= lpAmount, "lp");
         uint256 feeAmount;
-        (userAmount, feeAmount) = _calcWithdrawOneCoin(lpAmount, coinIndex);
+        uint256[2] memory xp;
+        uint256 amp;
+        uint256 d;
+        (userAmount, feeAmount, xp, amp, d) = _calcWithdrawOneCoin(lpAmount, coinIndex);
         uint256 adminCut = feeAmount * admin_fee / FEE_DENOMINATOR;
         require(userAmount >= minAmount, "slippage");
-        _burn(msg.sender, lpAmount);
-        balances[coinIndex] = balances[coinIndex] - userAmount - adminCut;
         admin_balances[coinIndex] += adminCut;
-        _safeTransfer(coins[coinIndex], receiver, userAmount);
+        _burn(msg.sender, lpAmount);
+        _transferOut(coinIndex, userAmount, receiver);
         emit RemoveLiquidityOne(msg.sender, i, lpAmount, userAmount, totalSupply);
-        _upkeepOracles(balances, _A(), _getD(balances[0], balances[1]));
+        _upkeepOracles(xp, amp, d);
     }
 
     function get_virtual_price() external view returns (uint256) {
         if (totalSupply == 0) {
             return 1e18;
         }
-        return _getD(balances[0], balances[1]) * 1e18 / totalSupply;
+        uint256[2] memory rates = _storedRates();
+        return _getDMem(rates, _balances()) * 1e18 / totalSupply;
     }
 
     function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256) {
         require(amounts.length == N_COINS, "amount length");
-        uint256[2] memory newBalances = balances;
+        uint256[2] memory rates = _storedRates();
+        uint256[2] memory currentBalances = _balances();
+        uint256[2] memory newBalances;
+        newBalances[0] = currentBalances[0];
+        newBalances[1] = currentBalances[1];
         for (uint256 i = 0; i < N_COINS; i++) {
             if (isDeposit) {
                 newBalances[i] += amounts[i];
@@ -446,8 +472,8 @@ contract CurveStableSwap2CoinReal {
                 newBalances[i] -= amounts[i];
             }
         }
-        uint256 d0 = _getD(balances[0], balances[1]);
-        uint256 d1 = _getD(newBalances[0], newBalances[1]);
+        uint256 d0 = _getDMem(rates, currentBalances);
+        uint256 d1 = _getDMem(rates, newBalances);
         if (totalSupply == 0) {
             return isDeposit ? d1 : 0;
         }
@@ -463,27 +489,34 @@ contract CurveStableSwap2CoinReal {
     }
 
     function get_balances() external view returns (uint256[] memory result) {
+        uint256[2] memory currentBalances = _balances();
         result = new uint256[](N_COINS);
-        result[0] = balances[0];
-        result[1] = balances[1];
+        result[0] = currentBalances[0];
+        result[1] = currentBalances[1];
+    }
+
+    function balances(uint256 i) external view returns (uint256) {
+        require(i < N_COINS, "coin");
+        return _balances()[i];
     }
 
     function stored_rates() external view returns (uint256[] memory result) {
+        uint256[2] memory rates = _storedRates();
         result = new uint256[](N_COINS);
-        result[0] = rate_multipliers[0];
-        result[1] = rate_multipliers[1];
+        result[0] = rates[0];
+        result[1] = rates[1];
     }
 
     function calc_withdraw_one_coin(uint256 burnAmount, int128 i) external view returns (uint256) {
         require(i >= 0 && uint256(int256(i)) < N_COINS, "coin");
-        (uint256 dy,) = _calcWithdrawOneCoin(burnAmount, uint256(int256(i)));
+        (uint256 dy,,,,) = _calcWithdrawOneCoin(burnAmount, uint256(int256(i)));
         return dy;
     }
 
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256) {
         require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
         require(dx > 0, "dx");
-        (,, uint256 dy,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), dx);
+        (,,, uint256 dy,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), dx);
         return dy;
     }
 
@@ -493,14 +526,14 @@ contract CurveStableSwap2CoinReal {
         uint256 low = 1;
         uint256 high = dy;
         while (true) {
-            (,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), high);
+            (,,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), high);
             if (quoted >= dy) break;
             high *= 2;
         }
         for (uint256 k = 0; k < 255; k++) {
             if (low >= high) break;
             uint256 mid = (low + high) / 2;
-            (,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), mid);
+            (,,, uint256 quoted,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), mid);
             if (quoted >= dy) {
                 high = mid;
             } else {
@@ -512,7 +545,8 @@ contract CurveStableSwap2CoinReal {
 
     function dynamic_fee(int128 i, int128 j) external view returns (uint256) {
         require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
-        return _dynamicFee(balances[uint256(int256(i))], balances[uint256(int256(j))], fee);
+        uint256[2] memory xp = _xpMem(_storedRates(), _balances());
+        return _dynamicFee(xp[uint256(int256(i))], xp[uint256(int256(j))], fee);
     }
 
     function last_price(uint256 i) external view returns (uint256) {
@@ -527,8 +561,9 @@ contract CurveStableSwap2CoinReal {
 
     function get_p(uint256 i) external view returns (uint256) {
         require(i < N_COINS - 1, "price");
-        uint256 d = _getD(balances[0], balances[1]);
-        return _getP(balances, _A(), d);
+        uint256[2] memory xp = _xpMem(_storedRates(), _balances());
+        uint256 d = _getD(xp[0], xp[1]);
+        return _getP(xp, _A(), d);
     }
 
     function price_oracle(uint256 i) external view returns (uint256) {
@@ -650,8 +685,8 @@ contract CurveStableSwap2CoinReal {
         for (uint256 i = 0; i < N_COINS; i++) {
             uint256 amount = admin_balances[i];
             if (amount > 0) {
+                _transferOut(i, amount, receiver);
                 admin_balances[i] = 0;
-                _safeTransfer(coins[i], receiver, amount);
             }
         }
     }
@@ -699,6 +734,48 @@ contract CurveStableSwap2CoinReal {
             dTime = block.timestamp;
         }
         ma_last_time = _pack2(priceTime, dTime);
+    }
+
+    function _upkeepDOracleAfterLiquidityRemoval(uint256 lpAmount, uint256 previousSupply) internal {
+        uint256 lastTime = ma_last_time;
+        uint256 priceTime = lastTime & ((uint256(1) << 128) - 1);
+        uint256 dTime = lastTime >> 128;
+        uint256 currentPacked = last_D_packed;
+        uint256 oldD = currentPacked & ((uint256(1) << 128) - 1);
+        uint256 newD = oldD - oldD * lpAmount / previousSupply;
+        last_D_packed = _pack2(newD, _calcMovingAverage(currentPacked, D_ma_time, dTime));
+        if (dTime < block.timestamp) {
+            dTime = block.timestamp;
+            ma_last_time = _pack2(priceTime, dTime);
+        }
+    }
+
+    function _transferIn(uint256 coinIndex, uint256 amount, address sender, bool expectOptimisticTransfer)
+        internal
+        returns (uint256 received)
+    {
+        uint256 oldBalance = CurveBenchERC20(coins[coinIndex]).balanceOf(address(this));
+        if (expectOptimisticTransfer) {
+            received = oldBalance - stored_balances[coinIndex];
+            require(received >= amount, "optimistic transfer");
+        } else {
+            require(amount > 0, "amount");
+            _safeTransferFrom(coins[coinIndex], sender, address(this), amount);
+            received = CurveBenchERC20(coins[coinIndex]).balanceOf(address(this)) - oldBalance;
+        }
+        stored_balances[coinIndex] += received;
+    }
+
+    function _transferOut(uint256 coinIndex, uint256 amount, address receiver) internal {
+        require(receiver != address(0), "receiver");
+        if (!pool_contains_rebasing_tokens) {
+            stored_balances[coinIndex] -= amount;
+            _safeTransfer(coins[coinIndex], receiver, amount);
+        } else {
+            uint256 coinBalance = CurveBenchERC20(coins[coinIndex]).balanceOf(address(this));
+            _safeTransfer(coins[coinIndex], receiver, amount);
+            stored_balances[coinIndex] = coinBalance - amount;
+        }
     }
 
     function _safeTransfer(address coin, address to, uint256 value) internal {
@@ -750,6 +827,47 @@ contract CurveStableSwap2CoinReal {
         emit Transfer(from, address(0), value);
     }
 
+    function _storedRates() internal view returns (uint256[2] memory rates) {
+        rates = rate_multipliers;
+        for (uint256 i = 0; i < N_COINS; i++) {
+            if (asset_types[i] == 1 && rate_oracles[i] != 0) {
+                bytes4 selector = bytes4(uint32(rate_oracles[i] >> 224));
+                address oracle = address(uint160(rate_oracles[i]));
+                (bool ok, bytes memory response) = oracle.staticcall(abi.encodeWithSelector(selector));
+                require(ok && response.length == 32, "rate oracle");
+                uint256 fetchedRate = abi.decode(response, (uint256));
+                rates[i] = rates[i] * fetchedRate / PRECISION;
+            } else if (asset_types[i] == 3) {
+                rates[i] = rates[i] * CurveBenchERC4626(coins[i]).convertToAssets(call_amount[i]) * scale_factor[i]
+                    / PRECISION;
+            }
+        }
+    }
+
+    function _balances() internal view returns (uint256[2] memory result) {
+        for (uint256 i = 0; i < N_COINS; i++) {
+            if (pool_contains_rebasing_tokens) {
+                result[i] = CurveBenchERC20(coins[i]).balanceOf(address(this)) - admin_balances[i];
+            } else {
+                result[i] = stored_balances[i] - admin_balances[i];
+            }
+        }
+    }
+
+    function _xpMem(uint256[2] memory rates, uint256[2] memory sourceBalances)
+        internal
+        pure
+        returns (uint256[2] memory xp)
+    {
+        xp[0] = rates[0] * sourceBalances[0] / PRECISION;
+        xp[1] = rates[1] * sourceBalances[1] / PRECISION;
+    }
+
+    function _getDMem(uint256[2] memory rates, uint256[2] memory sourceBalances) internal view returns (uint256) {
+        uint256[2] memory xp = _xpMem(rates, sourceBalances);
+        return _getD(xp[0], xp[1]);
+    }
+
     function _getD(uint256 x0, uint256 x1) internal view returns (uint256) {
         uint256 sum = x0 + x1;
         if (sum == 0) {
@@ -792,18 +910,30 @@ contract CurveStableSwap2CoinReal {
     function _calcExchange(uint256 coinIn, uint256 coinOut, uint256 dx)
         internal
         view
-        returns (uint256 newBalanceIn, uint256 newBalanceOut, uint256 userDy, uint256 adminCut)
+        returns (uint256 x, uint256 y, uint256 d, uint256 userDy, uint256 adminCut)
     {
-        uint256[2] memory oldBalances = balances;
-        newBalanceIn = oldBalances[coinIn] + dx;
-        uint256 y = _getY(coinIn, coinOut, newBalanceIn, oldBalances, _getD(oldBalances[0], oldBalances[1]));
-        uint256 grossDy = oldBalances[coinOut] - y - 1;
+        uint256[2] memory oldBalances = _balances();
+        uint256[2] memory rates = _storedRates();
+        uint256[2] memory xp = _xpMem(rates, oldBalances);
+        return _calcExchangeFromXP(coinIn, coinOut, dx, rates, xp);
+    }
+
+    function _calcExchangeFromXP(
+        uint256 coinIn,
+        uint256 coinOut,
+        uint256 dx,
+        uint256[2] memory rates,
+        uint256[2] memory xp
+    ) internal view returns (uint256 x, uint256 y, uint256 d, uint256 userDy, uint256 adminCut) {
+        x = xp[coinIn] + dx * rates[coinIn] / PRECISION;
+        d = _getD(xp[0], xp[1]);
+        y = _getY(coinIn, coinOut, x, xp, d);
+        uint256 grossDy = xp[coinOut] - y - 1;
         uint256 feeAmount = grossDy
-            * _dynamicFee((oldBalances[coinIn] + newBalanceIn) / 2, (oldBalances[coinOut] + y) / 2, fee)
+            * _dynamicFee((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, fee)
             / FEE_DENOMINATOR;
-        adminCut = feeAmount * admin_fee / FEE_DENOMINATOR;
-        userDy = grossDy - feeAmount;
-        newBalanceOut = oldBalances[coinOut] - grossDy + feeAmount - adminCut;
+        adminCut = feeAmount * admin_fee / FEE_DENOMINATOR * PRECISION / rates[coinOut];
+        userDy = (grossDy - feeAmount) * PRECISION / rates[coinOut];
     }
 
     function _getY(uint256 i, uint256 j, uint256 x, uint256[2] memory xp, uint256 d) internal view returns (uint256) {
@@ -860,12 +990,20 @@ contract CurveStableSwap2CoinReal {
         return y;
     }
 
-    function _calcWithdrawOneCoin(uint256 lpAmount, uint256 i) internal view returns (uint256 dy, uint256 feeAmount) {
-        uint256[2] memory xp = balances;
+    function _calcWithdrawOneCoin(uint256 lpAmount, uint256 i)
+        internal
+        view
+        returns (uint256 dy, uint256 feeAmount, uint256[2] memory xp, uint256 amp, uint256 d1)
+    {
+        amp = _A();
+        uint256[2] memory rates = _storedRates();
+        xp = _xpMem(rates, _balances());
         uint256 d0 = _getD(xp[0], xp[1]);
-        uint256 d1 = d0 - lpAmount * d0 / totalSupply;
+        d1 = d0 - lpAmount * d0 / totalSupply;
         uint256 newY = _getYD(i, xp, d1);
-        uint256[2] memory xpReduced = xp;
+        uint256[2] memory xpReduced;
+        xpReduced[0] = xp[0];
+        xpReduced[1] = xp[1];
         uint256 baseFee = _baseFee();
         uint256 ys = (d0 + d1) / (2 * N_COINS);
 
@@ -883,7 +1021,9 @@ contract CurveStableSwap2CoinReal {
         }
 
         uint256 reducedY = _getYD(i, xpReduced, d1);
-        dy = xpReduced[i] - reducedY - 1;
-        feeAmount = xp[i] - newY - dy;
+        uint256 dyNoFee = (xp[i] - newY) * PRECISION / rates[i];
+        dy = (xpReduced[i] - reducedY - 1) * PRECISION / rates[i];
+        feeAmount = dyNoFee - dy;
+        xp[i] = newY;
     }
 }

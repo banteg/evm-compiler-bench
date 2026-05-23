@@ -33,12 +33,12 @@ real_derived:
   source_contract: CurveStableSwapNG
   source_blob: "f192932a22958735acad4ca24c977cc4e058f1aa"
   upstream_license: "Curve copyright notice; upstream file says all rights reserved"
-  checked_at: "2026-05-23"
+  checked_at: "2026-05-24"
   production_equivalence: false
-  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped 2-coin standard-token port of the covered API"
+  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped fixed-2-coin port of the covered API"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_tokens"
-  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port for the covered 2-coin standard-token paths"
+  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic fixed-2-coin port of the covered NG paths"
   equivalence_scope:
     - upstream Vyper constructor and external pool API for two standard ERC20 coins
     - dynamic-array add_liquidity and remove_liquidity calls
@@ -51,6 +51,8 @@ real_derived:
     - deterministic standard-token dynamic-fee and admin-fee accounting
     - virtual price and observable balances
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
+    - constructor-provided rate multipliers, rate oracles, rebasing asset flags, and ERC4626 rate scaling
+    - NG-style gross stored_balances accounting with admin_balances excluded through balances views
   scenario_coverage:
     - add_initial_liquidity
     - add_imbalanced_liquidity
@@ -73,8 +75,8 @@ real_derived:
   mock_assumptions:
     - benchmark harness deploys two standard 18-decimal ERC20 test coins with switchable optional return data
     - factory/admin/fee receiver hooks are provided by the generated harness
-    - oracle, rebasing, ERC4626, and external rate paths are intentionally out of scope
-    - Solidity port keeps the benchmarked standard-token behavior but is not a full line-for-line NG translation
+    - oracle, rebasing, ERC4626, and external rate branches are implemented but not separately exercised by current scenarios
+    - Solidity port keeps a fixed 2-coin shape and is not a full line-for-line NG translation
   included_features:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
@@ -86,14 +88,17 @@ real_derived:
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
     - imbalanced withdrawal
     - dynamic/off-peg fee and admin-fee accounting
+    - constructor-driven stored rates, oracle rates, rebasing balance reads, and ERC4626 conversion rates
+    - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
     - valid EIP-712 LP permit acceptance and invalid permit revert paths
     - slippage and invalid coin reverts
   excluded_features:
-    - full Curve NG oracle, rate, rebasing, and ERC4626 integrations in the Solidity port
     - exact storage layout compatibility in the Solidity port
+    - dynamic N-coin generality beyond this fixed 2-coin Solidity port
+    - separate scenario coverage for non-standard oracle, rebasing, and ERC4626 deployments
 semantics:
   - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over the same two-standard-token harness."
-  - "The Solidity port is scoped to the covered 2-coin flows and should not be read as a full production Curve NG rewrite."
+  - "The Solidity port is scoped to a fixed 2-coin shape and should not be read as a line-for-line production Curve NG rewrite."
 scenarios:
   - name: add_initial_liquidity
     call: "add_liquidity([1_000_000, 1_000_000], 0, address(this))"
