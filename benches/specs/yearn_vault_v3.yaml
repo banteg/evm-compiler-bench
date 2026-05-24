@@ -193,6 +193,7 @@ real_derived:
     - strategy_report_accountant_mints_refund_during_report
     - strategy_report_accountant_reduces_allowance_during_report
     - strategy_loss_report_with_accountant_fee
+    - strategy_gain_report_fee_exceeds_gain
     - strategy_report_fee_no_profit_lock
     - strategy_loss_report_after_partial_unlock
     - strategy_report_excessive_accountant_fee_reverts
@@ -277,7 +278,7 @@ real_derived:
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss report accounting, self-report idle asset accrual, refunds, refund clipping after accountant state mutation, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss report accounting, self-report idle asset accrual, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -492,6 +493,9 @@ scenarios:
   - name: strategy_loss_report_with_accountant_fee
     call: "process_report with a strategy loss and nonzero accountant fees"
     expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"
+  - name: strategy_gain_report_fee_exceeds_gain
+    call: "process_report with strategy gain and accountant fees greater than the gain"
+    expected: "charges accountant fees while taking the gain branch and recalculating reported fee assets through the net-loss path"
   - name: strategy_report_fee_no_profit_lock
     call: "process_report with strategy gain, accountant fees, and profit locking disabled"
     expected: "charges accountant fees and recalculates reported fee assets through the no-lock branch"
