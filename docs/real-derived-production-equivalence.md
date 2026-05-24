@@ -130,6 +130,9 @@ Exact now:
   excessive-fee rejection, reentrant accountant rejection, realized and
   unrealized loss paths, module acceptance/rejection, long-queue bounds, and
   permit before/after initialization.
+- The generated differential harness normalizes deployment-specific vault,
+  asset, strategy, accountant, and module addresses and compares event/log
+  hashes for the listed scenarios.
 
 Remaining:
 
@@ -153,5 +156,3 @@ Suggested next chips:
   function, then close or scenario-cover each unchecked branch.
 - Add sequence tests that combine role changes, queue changes, debt changes,
   reports, module changes, shutdown, and withdrawals in the same run.
-- Add event/log checks for the management and accounting paths before removing
-  the parity-audit excluded feature.

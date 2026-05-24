@@ -3005,7 +3005,10 @@ fn property_helper_name(property_name: &str) -> Result<&'static str> {
 }
 
 fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(benchmark_id, "curve_stableswap_2coin" | "uniswap_v2_pair")
+    matches!(
+        benchmark_id,
+        "curve_stableswap_2coin" | "uniswap_v2_pair" | "yearn_vault_v3"
+    )
 }
 
 fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scenario) {

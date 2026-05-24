@@ -61,6 +61,8 @@ contract YearnVaultV3Real {
     uint256 internal constant DEBT_PURCHASER = 1 << 12;
     uint256 internal constant EMERGENCY_MANAGER = 1 << 13;
     uint256 internal constant ALL_ROLES = (1 << 14) - 1;
+    uint256 internal constant STRATEGY_CHANGE_ADDED = 1;
+    uint256 internal constant STRATEGY_CHANGE_REVOKED = 2;
     string internal constant API_VERSION = "3.0.4";
     bytes32 internal constant DOMAIN_TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -885,7 +887,7 @@ contract YearnVaultV3Real {
             default_queue.push(newStrategy);
         }
 
-        emit StrategyChanged(newStrategy, 0);
+        emit StrategyChanged(newStrategy, STRATEGY_CHANGE_ADDED);
     }
 
     function _revokeStrategy(address strategy, bool force) internal {
@@ -914,7 +916,7 @@ contract YearnVaultV3Real {
             default_queue.pop();
         }
 
-        emit StrategyChanged(strategy, 1);
+        emit StrategyChanged(strategy, STRATEGY_CHANGE_REVOKED);
     }
 
     function _updateDebt(address strategy, uint256 targetDebt, uint256 maxLoss) internal returns (uint256) {
