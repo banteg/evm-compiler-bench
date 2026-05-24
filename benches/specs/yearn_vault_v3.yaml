@@ -268,6 +268,7 @@ real_derived:
     - deposit_limit_module_reverts
     - deposit_limit_module_call_reverts
     - withdraw_limit_module
+    - withdraw_limit_module_max_uint_withdraw
     - max_withdraw_limit_module
     - max_withdraw_limit_module_caps_to_balance
     - max_redeem_limit_module_max_uint
@@ -299,7 +300,7 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - deposit-limit module finite and max-uint deposit acceptance plus over-limit rejection
-    - withdraw-limit-module max-withdraw capping above and below balance, module-call failure, and withdraw acceptance/rejection paths
+    - withdraw-limit-module max-withdraw capping above and below balance, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, refunds, refund clipping after accountant state mutation, fees, net-positive and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -732,6 +733,9 @@ scenarios:
   - name: withdraw_limit_module
     call: "withdraw below a custom withdraw limit module limit"
     expected: "uses the module-provided limit and accepts an in-limit withdrawal"
+  - name: withdraw_limit_module_max_uint_withdraw
+    call: "withdraw through a custom withdraw limit module returning max uint256"
+    expected: "accepts the high module return through the same max-withdraw path used by maxRedeem"
   - name: max_withdraw_limit_module
     call: "maxWithdraw with a custom withdraw limit module"
     expected: "returns the module-capped withdrawable amount"
