@@ -192,6 +192,7 @@ real_derived:
     - self_report_airdrop
     - self_report_idle_loss
     - self_report_accountant_refund
+    - self_report_refund_clipped_to_zero
     - self_report_idle_gain_with_accountant_fee_refund
     - process_report_inactive_strategy_reverts
     - strategy_report_with_accountant
@@ -318,7 +319,7 @@ real_derived:
     - deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit and maxMint returns, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -530,6 +531,9 @@ scenarios:
   - name: self_report_accountant_refund
     call: "process_report(address(this)) with an accountant refund and no idle gain or loss"
     expected: "pulls the refund and accounts it through the self-report total-idle path"
+  - name: self_report_refund_clipped_to_zero
+    call: "process_report(address(this)) with a positive reported refund but no accountant balance or allowance"
+    expected: "clips the reported refund to zero through the self-report path without changing total idle"
   - name: self_report_idle_gain_with_accountant_fee_refund
     call: "process_report(address(this)) after direct vault asset gain with accountant fees and refunds"
     expected: "accounts the self-report gain path while charging fees, pulling refunds, and locking net profit"
