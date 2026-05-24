@@ -242,6 +242,18 @@ scenarios:
       data: 'abi.encodeWithSignature("burn(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: burn_without_staged_liquidity_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("burn(address)", address(this))'
+    expect_success: false
+    observers: *pair_observers
   - name: burn_no_return_tokens
     state_access_profile: mixed
     setup:

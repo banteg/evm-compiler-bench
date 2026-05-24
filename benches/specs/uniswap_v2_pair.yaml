@@ -74,6 +74,7 @@ real_derived:
     - flash_swap_64k_callback_data
     - flash_swap_reentrancy_reverts
     - burn
+    - burn_without_staged_liquidity_reverts
     - burn_no_return_tokens
     - burn_false_return_token_reverts
     - swap_no_return_tokens
@@ -115,7 +116,7 @@ real_derived:
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY
-    - burn path with staged LP shares
+    - burn path with staged LP shares and no-staged-liquidity rejection
     - constant-product swap fee invariant for both token0-input and token1-input paths
     - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
     - non-empty flash-swap callback execution
@@ -186,6 +187,9 @@ scenarios:
   - name: burn
     call: "burn(address(this)) after LP shares are transferred to the pair"
     expected: "burns staged LP and transfers proportional token balances out"
+  - name: burn_without_staged_liquidity_reverts
+    call: "burn(address(this)) after pool initialization without transferring LP shares to the pair"
+    expected: "reverts through the upstream insufficient-liquidity-burned guard"
   - name: burn_no_return_tokens
     call: "burn(address(this)) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data and burns staged LP"
