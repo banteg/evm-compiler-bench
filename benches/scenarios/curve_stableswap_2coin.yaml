@@ -396,6 +396,60 @@ scenarios:
       data: 'abi.encodeWithSignature("withdraw_admin_fees()")'
     expect_success: true
     observers: *curve_observers
+  - name: oracle_rate_exchange
+    deployment_variant: curve_oracle
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
+    warmup:
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+    measured:
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(0), address(this))'
+    expect_success: true
+    observers: *curve_observers
+  - name: rebasing_balance_exchange
+    deployment_variant: curve_rebasing
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveRebaseCoin(address,uint256,uint256)", {target}, uint256(0), uint256(50_000))'
+    warmup:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+    measured:
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(0), address(this))'
+    expect_success: true
+    observers: *curve_observers
+  - name: rebasing_exchange_received_reverts
+    deployment_variant: curve_rebasing
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveStageReceived(address,uint256,uint256)", {target}, uint256(0), uint256(25_000))'
+    measured:
+      data: 'abi.encodeWithSignature("exchange_received(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(0), address(this))'
+    expect_success: false
+    observers: *curve_observers
+  - name: erc4626_rate_exchange
+    deployment_variant: curve_erc4626
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
+    warmup:
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+    measured:
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(1), uint256(25_000), uint256(0), address(this))'
+    expect_success: true
+    observers: *curve_observers
   - name: permit_valid
     state_access_profile: mixed
     setup:

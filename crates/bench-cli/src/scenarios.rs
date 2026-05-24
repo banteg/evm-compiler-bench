@@ -1,4 +1,4 @@
-use crate::models::ScenarioFile;
+use crate::models::{DeploymentVariant, ScenarioFile};
 use anyhow::{Context, Result, bail};
 use std::{
     collections::BTreeMap,
@@ -73,6 +73,16 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
     for scenario in &file.scenarios {
         if scenario.name.trim().is_empty() {
             bail!("{} has scenario with empty name", path.display());
+        }
+        if scenario.deployment_variant != DeploymentVariant::Standard
+            && file.benchmark_id != "curve_stableswap_2coin"
+        {
+            bail!(
+                "{} scenario {} has deployment_variant for unsupported benchmark {}",
+                path.display(),
+                scenario.name,
+                file.benchmark_id
+            );
         }
         if names.insert(scenario.name.clone(), ()).is_some() {
             bail!(
@@ -170,7 +180,9 @@ fn yaml_files(dir: &Path) -> Result<Vec<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::validate_scenario_file;
-    use crate::models::{CallDestination, CallSpec, Scenario, ScenarioFile, StateAccessProfile};
+    use crate::models::{
+        CallDestination, CallSpec, DeploymentVariant, Scenario, ScenarioFile, StateAccessProfile,
+    };
     use std::path::Path;
 
     #[test]
@@ -190,6 +202,7 @@ mod tests {
             benchmark_id: "counter".to_string(),
             scenarios: vec![Scenario {
                 name: "read".to_string(),
+                deployment_variant: DeploymentVariant::Standard,
                 state_access_profile: StateAccessProfile::Cold,
                 setup: vec![],
                 warmup: vec![],

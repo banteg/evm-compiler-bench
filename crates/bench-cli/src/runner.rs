@@ -1,8 +1,8 @@
 use crate::{
     cache::{self, CacheLookup},
     models::{
-        CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, GasRecord,
-        PropertySpec, RandomizedSpec, Scenario,
+        CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, DeploymentVariant,
+        GasRecord, PropertySpec, RandomizedSpec, Scenario,
     },
     scenarios::ScenarioCatalog,
     util::{Progress, ensure_dir, require_success, run_measured, sha256_bytes},
@@ -662,6 +662,40 @@ contract BenchERC20OptionalReturn {
         balanceOf[from] -= value;
         balanceOf[to] += value;
         emit Transfer(from, to, value);
+    }
+}
+
+contract BenchCurveRateOracle {
+    uint256 internal rateValue;
+
+    constructor(uint256 rate_) {
+        rateValue = rate_;
+    }
+
+    function setRate(uint256 rate_) external {
+        rateValue = rate_;
+    }
+
+    function rate() external view returns (uint256) {
+        return rateValue;
+    }
+}
+
+contract BenchCurveERC4626 is BenchERC20OptionalReturn {
+    address public immutable asset;
+    uint256 public assetsPerShare;
+
+    constructor(address asset_, uint256 assetsPerShare_) {
+        asset = asset_;
+        assetsPerShare = assetsPerShare_;
+    }
+
+    function setAssetsPerShare(uint256 assetsPerShare_) external {
+        assetsPerShare = assetsPerShare_;
+    }
+
+    function convertToAssets(uint256 shares) external view returns (uint256) {
+        return shares * assetsPerShare / 1e18;
     }
 }
 
@@ -1342,6 +1376,19 @@ fn helper_functions() -> &'static str {
             require(deps.coin0.transfer(target, amount), "curve transfer0");
         } else if (coinIndex == 1) {
             require(deps.coin1.transfer(target, amount), "curve transfer1");
+        } else {
+            revert("curve coin");
+        }
+        return true;
+    }
+
+    function benchCurveRebaseCoin(address target, uint256 coinIndex, uint256 amount) external returns (bool) {
+        CurveDeps storage deps = curveDeps[target];
+        require(address(deps.coin0) != address(0), "curve deps");
+        if (coinIndex == 0) {
+            require(deps.coin0.mint(target, amount), "curve mint0");
+        } else if (coinIndex == 1) {
+            require(deps.coin1.mint(target, amount), "curve mint1");
         } else {
             revert("curve coin");
         }
@@ -2326,12 +2373,31 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     out.push_str("    function deployArtifact");
     out.push_str(&index.to_string());
     out.push_str("() internal returns (address target, uint256 deployGas) {\n");
+    if artifact.benchmark_id == "curve_stableswap_2coin" {
+        out.push_str("        return deployArtifact");
+        out.push_str(&index.to_string());
+        out.push_str("(0);\n");
+        out.push_str("    }\n\n");
+        out.push_str("    function deployArtifact");
+        out.push_str(&index.to_string());
+        out.push_str(
+            "(uint8 deploymentVariant) internal returns (address target, uint256 deployGas) {\n",
+        );
+    }
     out.push_str("        bytes memory code = hex\"");
     out.push_str(artifact.creation_bytecode.trim_start_matches("0x"));
     out.push_str("\";\n");
     if artifact.benchmark_id == "curve_stableswap_2coin" {
-        out.push_str("        BenchERC20OptionalReturn coin0 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        BenchERC20OptionalReturn coin0;\n");
         out.push_str("        BenchERC20OptionalReturn coin1 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        if (deploymentVariant == 3) {\n");
+        out.push_str(
+            "            BenchERC20OptionalReturn underlying0 = new BenchERC20OptionalReturn();\n",
+        );
+        out.push_str("            coin0 = new BenchCurveERC4626(address(underlying0), 1_125_000_000_000_000_000);\n");
+        out.push_str("        } else {\n");
+        out.push_str("            coin0 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        }\n");
         out.push_str("        address[] memory coins = new address[](2);\n");
         out.push_str("        coins[0] = address(coin0);\n");
         out.push_str("        coins[1] = address(coin1);\n");
@@ -2341,6 +2407,18 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        uint8[] memory assetTypes = new uint8[](2);\n");
         out.push_str("        bytes4[] memory methodIds = new bytes4[](2);\n");
         out.push_str("        address[] memory oracles = new address[](2);\n");
+        out.push_str("        if (deploymentVariant == 1) {\n");
+        out.push_str("            BenchCurveRateOracle oracle0 = new BenchCurveRateOracle(1_250_000_000_000_000_000);\n");
+        out.push_str("            assetTypes[0] = 1;\n");
+        out.push_str("            methodIds[0] = BenchCurveRateOracle.rate.selector;\n");
+        out.push_str("            oracles[0] = address(oracle0);\n");
+        out.push_str("        } else if (deploymentVariant == 2) {\n");
+        out.push_str("            assetTypes[0] = 2;\n");
+        out.push_str("        } else if (deploymentVariant == 3) {\n");
+        out.push_str("            assetTypes[0] = 3;\n");
+        out.push_str("        } else {\n");
+        out.push_str("            require(deploymentVariant == 0, \"curve variant\");\n");
+        out.push_str("        }\n");
         out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
     }
     if let Some(args) = constructor_args(&artifact.benchmark_id) {
@@ -2377,9 +2455,9 @@ fn write_gas_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
-    out.push_str("        (address target, uint256 deployGas) = deployArtifact");
-    out.push_str(&index.to_string());
-    out.push_str("();\n");
+    out.push_str("        (address target, uint256 deployGas) = ");
+    out.push_str(&deploy_call(index, artifact, scenario));
+    out.push_str(";\n");
     write_setup(out, "target", &scenario.setup, "setup");
     write_setup(out, "target", &scenario.warmup, "warmup");
     out.push_str("        uint256 calldataGas = _calldataGas(");
@@ -2436,12 +2514,12 @@ fn write_diff_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
-    out.push_str("        (address solTarget,) = deployArtifact");
-    out.push_str(&solidity_idx.to_string());
-    out.push_str("();\n");
-    out.push_str("        (address vyperTarget,) = deployArtifact");
-    out.push_str(&vyper_idx.to_string());
-    out.push_str("();\n");
+    out.push_str("        (address solTarget,) = ");
+    out.push_str(&deploy_call(solidity_idx, solidity, scenario));
+    out.push_str(";\n");
+    out.push_str("        (address vyperTarget,) = ");
+    out.push_str(&deploy_call(vyper_idx, vyper, scenario));
+    out.push_str(";\n");
     write_setup(out, "solTarget", &scenario.setup, "setup");
     write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "solTarget", &scenario.warmup, "warmup");
@@ -2624,6 +2702,20 @@ fn call_destination<'a>(call: &CallSpec, target: &'a str) -> &'a str {
 
 fn call_data(call: &CallSpec, target: &str) -> String {
     call.data.replace("{target}", target)
+}
+
+fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -> String {
+    if artifact.benchmark_id == "curve_stableswap_2coin"
+        && scenario.deployment_variant != DeploymentVariant::Standard
+    {
+        format!(
+            "deployArtifact{}({})",
+            index,
+            scenario.deployment_variant.as_solidity_arg()
+        )
+    } else {
+        format!("deployArtifact{}()", index)
+    }
 }
 
 fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize, usize)> {

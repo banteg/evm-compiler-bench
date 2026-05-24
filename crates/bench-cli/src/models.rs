@@ -143,6 +143,26 @@ pub enum CallDestination {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeploymentVariant {
+    Standard,
+    CurveOracle,
+    CurveRebasing,
+    CurveErc4626,
+}
+
+impl DeploymentVariant {
+    pub fn as_solidity_arg(self) -> &'static str {
+        match self {
+            Self::Standard => "0",
+            Self::CurveOracle => "1",
+            Self::CurveRebasing => "2",
+            Self::CurveErc4626 => "3",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StateAccessProfile {
     Cold,
@@ -180,6 +200,11 @@ impl MetadataMode {
 #[serde(deny_unknown_fields)]
 pub struct Scenario {
     pub name: String,
+    #[serde(
+        default = "default_deployment_variant",
+        skip_serializing_if = "is_default_deployment_variant"
+    )]
+    pub deployment_variant: DeploymentVariant,
     #[serde(default = "default_state_access_profile")]
     pub state_access_profile: StateAccessProfile,
     #[serde(default)]
@@ -435,6 +460,14 @@ fn default_call_destination() -> CallDestination {
 
 fn is_default_call_destination(destination: &CallDestination) -> bool {
     *destination == CallDestination::Target
+}
+
+fn default_deployment_variant() -> DeploymentVariant {
+    DeploymentVariant::Standard
+}
+
+fn is_default_deployment_variant(variant: &DeploymentVariant) -> bool {
+    *variant == DeploymentVariant::Standard
 }
 
 fn default_state_access_profile() -> StateAccessProfile {

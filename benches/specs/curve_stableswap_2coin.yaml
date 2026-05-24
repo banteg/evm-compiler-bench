@@ -64,7 +64,7 @@ real_derived:
   external_token_semantics: "harnessed_external_erc20_tokens"
   source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic fixed-2-coin port of the covered NG paths"
   equivalence_scope:
-    - upstream Vyper constructor and external pool API for two standard ERC20 coins
+    - upstream Vyper constructor and external pool API for two-coin deployments
     - Vyper dynamic-array length behavior for add_liquidity, calc_token_amount, remove_liquidity, and remove_liquidity_imbalance
     - exchange and one-coin withdrawal signatures with receiver argument
     - exchange_received optimistic-transfer swaps for standard tokens
@@ -115,12 +115,16 @@ real_derived:
     - set_ma_exp_time
     - set_ma_exp_time_zero_reverts
     - withdraw_admin_fees
+    - oracle_rate_exchange
+    - rebasing_balance_exchange
+    - rebasing_exchange_received_reverts
+    - erc4626_rate_exchange
     - permit_valid
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys two standard 18-decimal ERC20 test coins with switchable optional return data
+    - default benchmark scenarios deploy two standard 18-decimal ERC20 test coins with switchable optional return data
     - factory/admin/fee receiver hooks and the delegated NG views implementation are provided by the generated harness
-    - oracle, rebasing, ERC4626, and external rate branches are implemented but not separately exercised by current scenarios
+    - oracle, rebasing, and ERC4626 coverage uses deterministic harness coins, rate oracles, and vault-share rates
     - Solidity port keeps a fixed 2-coin shape and is not a full line-for-line NG translation
   included_features:
     - upstream Vyper pool source at the pinned commit
@@ -136,16 +140,15 @@ real_derived:
     - imbalanced withdrawal
     - admin amplification ramp, stop-ramp, fee, moving-average, and admin-fee withdrawal controls
     - dynamic/off-peg fee and admin-fee accounting
-    - constructor-driven stored rates, oracle rates, rebasing balance reads, and ERC4626 conversion rates
+    - constructor-driven stored rates, oracle rates, rebasing balance reads, ERC4626 conversion rates, and the rebasing exchange_received rejection path
     - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
     - valid EIP-712 LP permit acceptance and invalid permit revert paths
     - slippage and invalid coin reverts
   excluded_features:
     - exact storage layout compatibility in the Solidity port
     - dynamic N-coin generality beyond this fixed 2-coin Solidity port
-    - separate scenario coverage for non-standard oracle, rebasing, and ERC4626 deployments
 semantics:
-  - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over the same two-standard-token harness."
+  - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over matched two-coin standard-token, oracle-rate, rebasing, and ERC4626 harness deployments."
   - "The Solidity port is scoped to a fixed 2-coin shape and should not be read as a line-for-line production Curve NG rewrite."
 scenarios:
   - name: add_initial_liquidity

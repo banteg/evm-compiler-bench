@@ -1,5 +1,8 @@
 use crate::{
-    models::{Benchmark, BenchmarkSuite, CallSpec, Scenario, ScenarioFile, StateAccessProfile},
+    models::{
+        Benchmark, BenchmarkSuite, CallSpec, DeploymentVariant, Scenario, ScenarioFile,
+        StateAccessProfile,
+    },
     util::{ensure_dir, sha256_bytes},
 };
 use anyhow::{Context, Result, bail};
@@ -676,6 +679,7 @@ fn scenario(
 ) -> Scenario {
     Scenario {
         name: name.to_string(),
+        deployment_variant: DeploymentVariant::Standard,
         state_access_profile,
         setup,
         warmup,
