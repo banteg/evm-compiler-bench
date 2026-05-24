@@ -125,6 +125,22 @@ scenarios:
       - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(6))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(6))'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: get_dx_three_coin
+    deployment_variant: curve_three_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("get_dx(int128,int128,uint256)", int128(0), int128(2), uint256(20_000))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: get_dx_eight_coin
     deployment_variant: curve_eight_coin
     state_access_profile: warm

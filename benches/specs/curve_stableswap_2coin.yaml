@@ -85,6 +85,7 @@ real_derived:
     - add_initial_liquidity_eight_coin
     - get_dy_three_coin
     - get_dy_eight_coin
+    - get_dx_three_coin
     - get_dx_eight_coin
     - calc_token_amount_eight_coin
     - exchange_three_coin
@@ -158,7 +159,7 @@ real_derived:
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
     - constructor-initialized eight-coin MAX_COINS boundary setup
-    - factory-delegated three-coin quote views
+    - factory-delegated three-coin get_dy and get_dx quote views
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
@@ -221,6 +222,9 @@ scenarios:
   - name: get_dy_eight_coin
     call: "get_dy(0, 7, 25_000) after initial liquidity on an eight-coin deployment"
     expected: "routes through the benchmark views implementation at the upstream MAX_COINS boundary"
+  - name: get_dx_three_coin
+    call: "get_dx(0, 2, 20_000) after initial liquidity on a three-coin deployment"
+    expected: "quotes required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_eight_coin
     call: "get_dx(0, 7, 20_000) after initial liquidity on an eight-coin deployment"
     expected: "quotes required input through the benchmark views implementation at the upstream MAX_COINS boundary"
