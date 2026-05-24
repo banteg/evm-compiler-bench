@@ -125,7 +125,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant refund state mutation, fee/refund clipping, loss/no-lock/net-loss fee recalculation, and partial-unlock loss reports are covered; remaining strategy reporting variants remain open. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Self-report gain/loss, third-party accountant refund state mutation, fee/refund clipping, loss/no-lock/net-loss fee recalculation, and partial-unlock loss reports are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 
@@ -136,4 +136,4 @@ These items should be closed before flipping `yearn_vault_v3` to
 
 - Add any remaining adversarial strategy report value combinations beyond the
   covered current-debt-above-max-debt, fee-recalculation, net-loss,
-  partial-unlock, and accountant-mutation paths.
+  self-report, partial-unlock, and accountant-mutation paths.

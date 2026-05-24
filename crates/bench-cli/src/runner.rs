@@ -1994,6 +1994,13 @@ fn all_helper_functions() -> &'static str {
         return true;
     }
 
+    function benchYearnBurnVaultAssets(address target, uint256 amount) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.asset) != address(0), "yearn deps");
+        deps.asset.burn(target, amount);
+        return true;
+    }
+
     function benchYearnSetAssetReturnData(
         address target,
         bool approveEnabled,
