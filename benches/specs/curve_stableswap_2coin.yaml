@@ -84,6 +84,7 @@ real_derived:
     - add_initial_liquidity_three_coin
     - add_initial_liquidity_eight_coin
     - get_dy_three_coin
+    - get_dy_eight_coin
     - calc_token_amount_eight_coin
     - exchange_three_coin
     - exchange_eight_coin_boundary
@@ -152,6 +153,7 @@ real_derived:
     - constructor-initialized three-coin pool setup
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin quote views
+    - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
     - standard-token three-coin exchange path
     - standard-token three-coin exchange_received optimistic-transfer path
@@ -205,6 +207,9 @@ scenarios:
   - name: get_dy_three_coin
     call: "get_dy(0, 2, 25_000) after initial liquidity on a three-coin deployment"
     expected: "routes through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dy_eight_coin
+    call: "get_dy(0, 7, 25_000) after initial liquidity on an eight-coin deployment"
+    expected: "routes through the benchmark views implementation at the upstream MAX_COINS boundary"
   - name: exchange_three_coin
     call: "exchange(0, 2, 25_000, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates all constructor-sized accounting and oracle slots after a non-two-coin swap"
