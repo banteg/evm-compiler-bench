@@ -1920,6 +1920,15 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(2_000), address(this))'
     expect_success: false
     observers: *yearn_observers
+  - name: deposit_limit_exact_limit
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(1_000), address(this))'
+    expect_success: true
+    observers: *yearn_observers
   - name: deposit_limit_module
     state_access_profile: mixed
     setup:
