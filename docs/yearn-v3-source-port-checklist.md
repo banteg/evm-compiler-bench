@@ -44,7 +44,7 @@ Status meanings:
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
 | `set_auto_allocate` | `set_auto_allocate` | mapped, covered | Covered with a default-queue strategy deposit. |
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Default direct-limit update, active-module rejection, and active-module override clearing are covered. |
-| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, reverting module calls, and max-uint module returns are covered; more unusual module return values remain open. |
+| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, reverting module calls, finite and max-uint deposit acceptance, and max-uint view returns are covered; more unusual module return values remain open. |
 | `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, max-uint module returns through `maxRedeem`, withdraw rejection, and reverting module calls are covered; more unusual module return values remain open. |
 | `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | More debt update interactions remain useful. |
 | `setProfitMaxUnlockTime` | `setProfitMaxUnlockTime` | mapped, covered | Zero-reset branch with locked shares is now covered by `reset_profit_unlock_after_report`. |
