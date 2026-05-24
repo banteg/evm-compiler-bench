@@ -88,6 +88,7 @@ real_derived:
     - get_dx_three_coin
     - get_dx_eight_coin
     - calc_token_amount_three_coin
+    - calc_token_amount_three_coin_withdraw
     - calc_token_amount_eight_coin
     - exchange_three_coin
     - exchange_eight_coin_boundary
@@ -161,7 +162,7 @@ real_derived:
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
     - constructor-initialized eight-coin MAX_COINS boundary setup
-    - factory-delegated three-coin get_dy, get_dx, calc_token_amount, and dynamic_fee quote views
+    - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
@@ -311,6 +312,9 @@ scenarios:
   - name: calc_token_amount_three_coin
     call: "calc_token_amount([100_000, 300_000, 200_000], true) after initial liquidity on a three-coin deployment"
     expected: "quotes LP minted through the factory views implementation using constructor-driven N_COINS quote math"
+  - name: calc_token_amount_three_coin_withdraw
+    call: "calc_token_amount([40_000, 10_000, 25_000], false) after initial liquidity on a three-coin deployment"
+    expected: "quotes LP burned through the factory views implementation using constructor-driven N_COINS quote math"
   - name: calc_token_amount_eight_coin
     call: "calc_token_amount([100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000], true) after initial liquidity on an eight-coin deployment"
     expected: "quotes LP minted through the factory views implementation at the upstream MAX_COINS boundary"
