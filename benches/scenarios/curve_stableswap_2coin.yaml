@@ -390,6 +390,45 @@ scenarios:
       data: 'abi.encodeWithSignature("D_oracle()")'
     expect_success: true
     observers: *curve_observers
+  - name: price_oracle_three_coin_after_time
+    deployment_variant: curve_three_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+      - data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(2), uint256(25_000), uint256(0), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(866))'
+    measured:
+      data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("ma_last_time()")'
+  - name: d_oracle_three_coin_after_time
+    deployment_variant: curve_three_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(100_000, 300_000, 200_000), uint256(0), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(866))'
+    measured:
+      data: 'abi.encodeWithSignature("D_oracle()")'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("D_oracle()")'
+      - data: 'abi.encodeWithSignature("ma_last_time()")'
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
   - name: remove_liquidity
     state_access_profile: mixed
     setup:
