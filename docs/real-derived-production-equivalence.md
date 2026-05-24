@@ -149,7 +149,8 @@ Exact now:
   `default_return_value=True` transfer handling for no-return ERC20s while
   still rejecting explicit false-return transfers.
 - Scenarios cover initial and subsequent mints, factory CREATE2 deployment,
-  swap invariant checks, no-return token transfers, false-return transfer
+  token0-input and upstream token1-input swap invariant checks, one-wei
+  over-output K rejection, no-return token transfers, false-return transfer
   rejection, flash callback repayment, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
