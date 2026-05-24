@@ -82,8 +82,8 @@ Status meanings:
 | `convertToAssets` | `convertToAssets` | mapped, covered | Zero-shares and max-uint special cases are covered. |
 | `maxDeposit` | `maxDeposit` | mapped, covered | Zero receiver and vault receiver branches are covered. |
 | `maxMint` | `maxMint` | mapped, covered | Zero receiver, unlimited deposit limit, and module-return paths are covered. |
-| `maxWithdraw` | overloaded `maxWithdraw` | mapped, covered | Limited strategy redeem behavior is covered. |
-| `maxRedeem` | overloaded `maxRedeem` | mapped, covered | Limited strategy redeem behavior is covered through the shared max-withdraw path. |
+| `maxWithdraw` | overloaded `maxWithdraw` | mapped, covered | Limited strategy redeem and unrealized-loss queue-break behavior are covered. |
+| `maxRedeem` | overloaded `maxRedeem` | mapped, covered | Limited strategy redeem and unrealized-loss queue-break behavior are covered through the shared max-withdraw path. |
 | `previewWithdraw` | `previewWithdraw` | mapped, covered | Rounded-up conversion plus zero and max-uint branches are covered. |
 | `previewRedeem` | `previewRedeem` | mapped, covered | Rounded-down conversion plus zero and max-uint branches are covered. |
 | `FACTORY` | `FACTORY` | mapped, covered | Factory is harness-provided; full factory behavior is out of scope. |
@@ -115,11 +115,11 @@ Status meanings:
 | `_erc20_safe_transfer` | `_safeTransferToken` | mapped, covered | No-return and false-return transfer paths are covered. |
 | `_issue_shares` | `_issueShares` | mapped, covered | Covered by deposit, reports, and fees. |
 | `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered. |
-| `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem is covered; nonzero unrealized loss queue break remains open. |
+| `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem and nonzero unrealized-loss queue break are covered. |
 | `_deposit` | `_deposit` | mapped, covered | Auto-allocate and deposit-all entry paths are covered. |
 | `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches are covered. |
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
-| `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
+| `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, zero-redeem after full unrealized loss, and partial/over strategy redeem returns are covered. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |

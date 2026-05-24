@@ -212,8 +212,11 @@ real_derived:
     - update_debt_partial_strategy_redeem_loss_reverts
     - update_debt_over_strategy_redeem
     - max_withdraw_limited_strategy_redeem
+    - max_withdraw_unrealized_loss_queue_break
+    - max_redeem_unrealized_loss_queue_break
     - withdraw_limited_strategy_redeem
     - withdraw_zero_strategy_redeem_falls_through
+    - withdraw_unrealized_loss_zero_redeem_falls_through
     - withdraw_partial_strategy_redeem_loss_allowed
     - withdraw_partial_strategy_redeem_loss_reverts
     - withdraw_over_strategy_redeem
@@ -533,12 +536,21 @@ scenarios:
   - name: max_withdraw_limited_strategy_redeem
     call: "maxWithdraw when strategy maxRedeem caps available strategy shares"
     expected: "counts idle assets plus only the strategy-declared redeemable amount"
+  - name: max_withdraw_unrealized_loss_queue_break
+    call: "maxWithdraw with a nonzero unrealized loss above max_loss in the first queued strategy"
+    expected: "stops queue assessment before counting later strategy debt"
+  - name: max_redeem_unrealized_loss_queue_break
+    call: "maxRedeem with a nonzero unrealized loss above max_loss in the first queued strategy"
+    expected: "converts the max-withdraw queue-break result back to shares"
   - name: withdraw_limited_strategy_redeem
     call: "withdraw exactly the idle balance plus a capped strategy maxRedeem amount"
     expected: "pulls only the strategy-declared redeemable amount and records the partial debt decrease"
   - name: withdraw_zero_strategy_redeem_falls_through
     call: "withdraw through a queue where the first strategy reports zero maxRedeem"
     expected: "skips the non-redeemable first strategy and services the withdrawal from the next queued strategy"
+  - name: withdraw_unrealized_loss_zero_redeem_falls_through
+    call: "withdraw through a queue where the first strategy has a full unrealized loss and zero redeemable assets"
+    expected: "realizes the loss, continues to the next strategy, and services the loss-adjusted withdrawal"
   - name: withdraw_partial_strategy_redeem_loss_allowed
     call: "withdraw through a strategy that returns less than the requested redeem amount within max_loss"
     expected: "realizes the shortfall as user loss and updates strategy debt by the requested strategy withdrawal amount"
