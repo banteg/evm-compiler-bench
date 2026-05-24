@@ -1106,12 +1106,36 @@ fn all_helper_functions() -> &'static str {
         (uint256 coinIn, uint256 coinOut) = benchCurveCoinPair(i, j);
         (uint256[2] memory rates,, uint256[2] memory xp) = benchCurveRatesBalancesXp(pool);
         uint256 amp = benchCurveUint(pool, "A()") * 100;
-        uint256 d = benchCurveGetD(xp, amp);
+        return benchCurveGetDyFromState(pool, coinIn, coinOut, dx, rates, xp, amp, benchCurveGetD(xp, amp));
+    }
+
+    function benchCurveGetDyFromState(
+        address pool,
+        uint256 coinIn,
+        uint256 coinOut,
+        uint256 dx,
+        uint256[2] memory rates,
+        uint256[2] memory xp,
+        uint256 amp,
+        uint256 d
+    ) internal view returns (uint256) {
         uint256 x = xp[coinIn] + dx * rates[coinIn] / 1e18;
         uint256 y = benchCurveGetY(coinIn, coinOut, x, xp, amp, d);
         uint256 dy = xp[coinOut] - y - 1;
-        uint256 feeAmount = benchCurvePoolDynamicFee(pool, (xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2) * dy / 10_000_000_000;
-        return (dy - feeAmount) * 1e18 / rates[coinOut];
+        dy -= benchCurveGetDyFee(pool, coinIn, coinOut, x, y, dy, xp);
+        return dy * 1e18 / rates[coinOut];
+    }
+
+    function benchCurveGetDyFee(
+        address pool,
+        uint256 coinIn,
+        uint256 coinOut,
+        uint256 x,
+        uint256 y,
+        uint256 dy,
+        uint256[2] memory xp
+    ) internal view returns (uint256) {
+        return benchCurvePoolDynamicFee(pool, (xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2) * dy / 10_000_000_000;
     }
 
     function benchCurveGetDx(int128 i, int128 j, uint256 dy, address pool) internal view returns (uint256) {
@@ -1152,18 +1176,42 @@ fn all_helper_functions() -> &'static str {
         if (totalSupply == 0) {
             return d1;
         }
-        uint256 baseFee = benchCurveUint(pool, "fee()") * 2 / 4;
-        uint256 feeMultiplier = benchCurveUint(pool, "offpeg_fee_multiplier()");
-        uint256 ys = (d0 + d1) / 2;
         for (uint256 i = 0; i < 2; i++) {
-            uint256 idealBalance = d1 * oldBalances[i] / d0;
-            uint256 difference = idealBalance > newBalances[i] ? idealBalance - newBalances[i] : newBalances[i] - idealBalance;
-            uint256 xs = rates[i] * (oldBalances[i] + newBalances[i]) / 1e18;
-            newBalances[i] -= benchCurveDynamicFeeXp(xs, ys, baseFee, feeMultiplier) * difference / 10_000_000_000;
+            newBalances[i] = benchCurveCalcFeeAdjustedBalance(
+                pool,
+                rates[i],
+                oldBalances[i],
+                newBalances[i],
+                d0,
+                d1
+            );
             xp[i] = rates[i] * newBalances[i] / 1e18;
         }
         uint256 d2 = benchCurveGetD(xp, amp);
         return isDeposit ? (d2 - d0) * totalSupply / d0 : (d0 - d2) * totalSupply / d0;
+    }
+
+    function benchCurveCalcFeeAdjustedBalance(
+        address pool,
+        uint256 rate,
+        uint256 oldBalance,
+        uint256 newBalance,
+        uint256 d0,
+        uint256 d1
+    ) internal view returns (uint256) {
+        uint256 idealBalance = d1 * oldBalance / d0;
+        uint256 difference = idealBalance > newBalance ? idealBalance - newBalance : newBalance - idealBalance;
+        uint256 xs = rate * (oldBalance + newBalance) / 1e18;
+        return newBalance - benchCurveCalcBalanceFee(pool, xs, (d0 + d1) / 2) * difference / 10_000_000_000;
+    }
+
+    function benchCurveCalcBalanceFee(address pool, uint256 xs, uint256 ys) internal view returns (uint256) {
+        return benchCurveDynamicFeeXp(
+            xs,
+            ys,
+            benchCurveUint(pool, "fee()") * 2 / 4,
+            benchCurveUint(pool, "offpeg_fee_multiplier()")
+        );
     }
 
     function benchCurveRatesBalancesXp(address pool)
@@ -1900,7 +1948,8 @@ fn all_helper_functions() -> &'static str {
     {
         vm.recordLogs();
         (ok, retHash, gasUsed) = _run(destination, data, value, sender);
-        logHash = _normalizedLogHash(target, vm.getRecordedLogs());
+        // Reverted transactions do not commit logs, even if Foundry recorded subcall logs.
+        logHash = ok ? _normalizedLogHash(target, vm.getRecordedLogs()) : bytes32(0);
     }
 
     function _observe(address target, bytes memory data) internal returns (bytes32) {
@@ -2956,7 +3005,7 @@ fn property_helper_name(property_name: &str) -> Result<&'static str> {
 }
 
 fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(benchmark_id, "uniswap_v2_pair")
+    matches!(benchmark_id, "curve_stableswap_2coin" | "uniswap_v2_pair")
 }
 
 fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scenario) {

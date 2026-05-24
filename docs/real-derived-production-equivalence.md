@@ -86,6 +86,8 @@ Exact now:
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
   two-coin deployment.
+- The generated differential harness normalizes deployment-specific pool and
+  coin addresses and compares event/log hashes for the listed scenarios.
 
 Remaining:
 

@@ -219,10 +219,11 @@ contract CurveStableSwap2CoinReal {
         }
         uint256 d1 = _getDMem(rates, newBalances);
         require(d1 > d0, "invariant");
-        uint256[] memory fees = new uint256[](N_COINS);
+        uint256[] memory fees = new uint256[](0);
         if (supply == 0) {
             minted = d1;
         } else {
+            fees = new uint256[](N_COINS);
             uint256 baseFee = _baseFee();
             uint256 ys = (d0 + d1) / N_COINS;
             for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
@@ -663,7 +664,7 @@ contract CurveStableSwap2CoinReal {
     }
 
     function _emptyFees() internal pure returns (uint256[] memory fees) {
-        fees = new uint256[](N_COINS);
+        fees = new uint256[](0);
     }
 
     function _A() internal view returns (uint256) {
