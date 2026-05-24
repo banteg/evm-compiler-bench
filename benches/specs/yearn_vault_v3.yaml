@@ -138,7 +138,11 @@ real_derived:
     - redeem_default_max_loss
     - approve
     - transfer
+    - transfer_zero_receiver_reverts
+    - transfer_vault_receiver_reverts
     - transfer_from
+    - transfer_from_zero_receiver_reverts
+    - transfer_from_vault_receiver_reverts
     - transfer_from_infinite_allowance
     - max_withdraw_default
     - max_redeem_default
@@ -305,9 +309,21 @@ scenarios:
   - name: transfer
     call: "transfer(BOB, 20_000) after deposit"
     expected: "moves vault shares between accounts"
+  - name: transfer_zero_receiver_reverts
+    call: "transfer(empty(address), 20_000)"
+    expected: "reverts at the upstream receiver guard"
+  - name: transfer_vault_receiver_reverts
+    call: "transfer(vault, 20_000)"
+    expected: "reverts at the upstream receiver guard"
   - name: transfer_from
     call: "transferFrom(address(this), BOB, 20_000) from an approved spender"
     expected: "moves vault shares and spends allowance"
+  - name: transfer_from_zero_receiver_reverts
+    call: "transferFrom(address(this), empty(address), 20_000)"
+    expected: "reverts at the upstream receiver guard before spending allowance"
+  - name: transfer_from_vault_receiver_reverts
+    call: "transferFrom(address(this), vault, 20_000)"
+    expected: "reverts at the upstream receiver guard before spending allowance"
   - name: transfer_from_infinite_allowance
     call: "transferFrom(address(this), BOB, 20_000) from an infinite-allowance spender"
     expected: "moves vault shares while leaving max_value(uint256) allowance untouched"

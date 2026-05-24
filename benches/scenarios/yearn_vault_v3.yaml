@@ -149,6 +149,26 @@ scenarios:
       data: 'abi.encodeWithSignature("transfer(address,uint256)", BOB, uint256(20_000))'
     expect_success: true
     observers: *yearn_observers
+  - name: transfer_zero_receiver_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("transfer(address,uint256)", address(0), uint256(20_000))'
+    expect_success: false
+    observers: *yearn_observers
+  - name: transfer_vault_receiver_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("transfer(address,uint256)", {target}, uint256(20_000))'
+    expect_success: false
+    observers: *yearn_observers
   - name: transfer_from
     state_access_profile: mixed
     setup:
@@ -160,6 +180,30 @@ scenarios:
       data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), BOB, uint256(20_000))'
       sender: BOB
     expect_success: true
+    observers: *yearn_observers
+  - name: transfer_from_zero_receiver_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, uint256(50_000))'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), address(0), uint256(20_000))'
+      sender: BOB
+    expect_success: false
+    observers: *yearn_observers
+  - name: transfer_from_vault_receiver_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, uint256(50_000))'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), {target}, uint256(20_000))'
+      sender: BOB
+    expect_success: false
     observers: *yearn_observers
   - name: transfer_from_infinite_allowance
     state_access_profile: mixed

@@ -100,8 +100,8 @@ Status meanings:
 | Upstream helper | Port counterpart | Status | Remaining work |
 | --- | --- | --- | --- |
 | `_spend_allowance` | `_spendAllowance` | mapped, covered | Infinite allowance branch is covered. |
-| `_transfer` | `_transfer` | mapped, covered | Receiver checks happen in external wrappers, matching upstream external surface. |
-| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches are covered. |
+| `_transfer` | `_transfer` | mapped, covered | Receiver checks happen in external wrappers, with zero and vault receiver rejection covered. |
+| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches plus zero/vault receiver guards are covered. |
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
 | `_permit` | `permit` plus `domain_separator` | mapped, covered | Chain-id drift remains open. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
