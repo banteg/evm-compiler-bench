@@ -190,8 +190,8 @@ Exact now:
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
   donation-before-first-deposit handling, initial three-coin and eight-coin
   liquidity, three-coin quote views, three-coin exchange and
-  `exchange_received`, proportional three-coin withdrawal, imbalanced three-coin
-  withdrawal, three-coin one-coin withdrawal,
+  `exchange_received`, proportional three-coin and eight-coin withdrawal,
+  imbalanced three-coin withdrawal, three-coin one-coin withdrawal,
   eight-coin endpoint exchange,
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
@@ -210,8 +210,9 @@ Remaining:
   up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and
   three-coin initial-liquidity, quote, exchange, proportional-withdrawal,
   imbalanced-withdrawal, one-coin-withdrawal, oracle-update scenarios, and
-  eight-coin initial-liquidity plus endpoint-exchange coverage, but every NG
-  action has not been repeated at every possible constructor coin count.
+  eight-coin initial-liquidity, endpoint-exchange, and proportional-withdrawal
+  coverage, but every NG action has not been repeated at every possible
+  constructor coin count.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.
