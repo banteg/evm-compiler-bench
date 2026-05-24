@@ -160,6 +160,7 @@ real_derived:
     - max_mint_limit_module
     - max_mint_unlimited_limit_module
     - update_debt_increase
+    - update_debt_respects_minimum_idle
     - update_debt_decrease
     - update_debt_default_max_loss
     - update_max_debt_for_strategy
@@ -318,7 +319,7 @@ real_derived:
     - auto-allocation of deposits into the first default-queue strategy
     - Vyper default-argument external overloads for strategy, debt, deposit-limit, and queue-bound management
     - first-class measured management calls for max debt, additive roles, pending role-manager transfer, accountant, default-queue toggle, withdraw-limit module, and shutdown
-    - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
+    - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle set/update-debt clipping, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
@@ -327,7 +328,7 @@ real_derived:
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
-    - strategy maxDeposit limiting and zero-deposit debt update behavior
+    - strategy maxDeposit limiting, minimum-idle clipping, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
     - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem
@@ -442,6 +443,9 @@ scenarios:
   - name: update_debt_increase
     call: "update_debt(strategy, 100_000, 0)"
     expected: "moves idle assets into strategy debt"
+  - name: update_debt_respects_minimum_idle
+    call: "update_debt(strategy, 200_000, 0) after setting minimum_total_idle to 75_000"
+    expected: "clips the debt increase to preserve the upstream minimum idle asset reserve"
   - name: update_debt_decrease
     call: "update_debt(strategy, 40_000, 0) after a higher debt allocation"
     expected: "redeems strategy shares and returns assets to idle"

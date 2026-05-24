@@ -390,6 +390,19 @@ scenarios:
       data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: update_debt_respects_minimum_idle
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(200_000))'
+      - data: 'abi.encodeWithSignature("set_minimum_total_idle(uint256)", uint256(75_000))'
+    measured:
+      data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(200_000), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
   - name: update_debt_decrease
     state_access_profile: mixed
     setup:
