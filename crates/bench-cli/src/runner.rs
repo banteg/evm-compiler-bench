@@ -411,7 +411,7 @@ fn generate_test(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
     out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; }\n");
-    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
+    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnMutatingAccountant mutatingAccountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
@@ -997,6 +997,51 @@ contract BenchYearnAccountant {
         refunds = totalRefunds;
         totalFees = 0;
         totalRefunds = 0;
+    }
+}
+
+contract BenchYearnMutatingAccountant {
+    BenchERC20 public immutable asset;
+    uint256 public totalFees;
+    uint256 public totalRefunds;
+    uint256 public reportMintedRefunds;
+    uint256 public reportApprovedRefunds;
+
+    constructor(BenchERC20 asset_) {
+        asset = asset_;
+    }
+
+    function setReport(
+        address vault,
+        uint256 fees,
+        uint256 refunds,
+        uint256 preMintedRefunds,
+        uint256 preApprovedRefunds,
+        uint256 mintedDuringReport,
+        uint256 approvedDuringReport
+    ) external returns (bool) {
+        totalFees = fees;
+        totalRefunds = refunds;
+        reportMintedRefunds = mintedDuringReport;
+        reportApprovedRefunds = approvedDuringReport;
+        if (preMintedRefunds > 0) {
+            asset.mint(address(this), preMintedRefunds);
+        }
+        asset.approve(vault, preApprovedRefunds);
+        return true;
+    }
+
+    function report(address, uint256, uint256) external returns (uint256 fees, uint256 refunds) {
+        if (reportMintedRefunds > 0) {
+            asset.mint(address(this), reportMintedRefunds);
+        }
+        asset.approve(msg.sender, reportApprovedRefunds);
+        fees = totalFees;
+        refunds = totalRefunds;
+        totalFees = 0;
+        totalRefunds = 0;
+        reportMintedRefunds = 0;
+        reportApprovedRefunds = 0;
     }
 }
 
@@ -1733,6 +1778,7 @@ fn all_helper_functions() -> &'static str {
             BenchYearnStrategy strategy2 = new BenchYearnStrategy(asset);
             BenchYearnStrategy strategy3 = new BenchYearnStrategy(asset);
             BenchYearnAccountant accountant = new BenchYearnAccountant(asset);
+            BenchYearnMutatingAccountant mutatingAccountant = new BenchYearnMutatingAccountant(asset);
             BenchYearnReentrantAccountant reentrantAccountant = new BenchYearnReentrantAccountant(asset);
             BenchYearnDepositLimitModule depositLimitModule = new BenchYearnDepositLimitModule();
             BenchYearnWithdrawLimitModule withdrawLimitModule = new BenchYearnWithdrawLimitModule();
@@ -1742,6 +1788,7 @@ fn all_helper_functions() -> &'static str {
                 strategy2,
                 strategy3,
                 accountant,
+                mutatingAccountant,
                 reentrantAccountant,
                 depositLimitModule,
                 withdrawLimitModule
@@ -1825,6 +1872,7 @@ fn all_helper_functions() -> &'static str {
         if (value == address(deps.reentrantAccountant)) return 6;
         if (value == address(deps.depositLimitModule)) return 7;
         if (value == address(deps.withdrawLimitModule)) return 8;
+        if (value == address(deps.mutatingAccountant)) return 9;
         return uint256(uint160(value));
     }
 
@@ -1985,6 +2033,31 @@ fn all_helper_functions() -> &'static str {
         deps.accountant.setClippedRefundReport(target, fees, refunds, mintedRefunds, approvedRefunds);
         (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.accountant)));
         require(ok, "yearn accountant");
+        return true;
+    }
+
+    function benchYearnConfigureMutatingAccountant(
+        address target,
+        uint256 fees,
+        uint256 refunds,
+        uint256 preMintedRefunds,
+        uint256 preApprovedRefunds,
+        uint256 reportMintedRefunds,
+        uint256 reportApprovedRefunds
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.mutatingAccountant) != address(0), "yearn deps");
+        deps.mutatingAccountant.setReport(
+            target,
+            fees,
+            refunds,
+            preMintedRefunds,
+            preApprovedRefunds,
+            reportMintedRefunds,
+            reportApprovedRefunds
+        );
+        (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.mutatingAccountant)));
+        require(ok, "yearn mutating accountant");
         return true;
     }
 
@@ -2305,6 +2378,7 @@ fn all_helper_functions() -> &'static str {
         if (account == address(yearn.reentrantAccountant)) return 45;
         if (account == address(yearn.depositLimitModule)) return 46;
         if (account == address(yearn.withdrawLimitModule)) return 47;
+        if (account == address(yearn.mutatingAccountant)) return 48;
         return 0;
     }
 

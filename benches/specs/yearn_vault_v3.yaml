@@ -190,6 +190,8 @@ real_derived:
     - strategy_report_zero_accountant
     - strategy_report_refund_balance_clipped
     - strategy_report_refund_allowance_clipped
+    - strategy_report_accountant_mints_refund_during_report
+    - strategy_report_accountant_reduces_allowance_during_report
     - strategy_loss_report_with_accountant_fee
     - strategy_report_fee_no_profit_lock
     - strategy_loss_report_after_partial_unlock
@@ -254,9 +256,9 @@ real_derived:
     - permit_before_initialize_valid
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, an accountant, and limit modules
+    - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, deterministic and refund-mutating accountants, and limit modules
     - factory protocol fee config is provided by the harness and covers zero-fee and nonzero protocol-fee scenarios
-    - accountant and custom deposit/withdraw limit module coverage uses deterministic harness mocks
+    - accountant coverage uses deterministic and refund-mutating harness mocks; custom deposit/withdraw limit module coverage uses deterministic harness mocks
     - unrealized strategy-loss coverage uses a deterministic harness burn from strategy-held assets
     - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
   included_features:
@@ -274,7 +276,7 @@ real_derived:
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss report accounting, self-report idle asset accrual, refunds, refund clipping after accountant state mutation, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -286,7 +288,7 @@ real_derived:
     - deposit-limit and permission reverts
     - valid EIP-712 permit acceptance before and after initialization plus invalid permit revert paths
   excluded_features:
-    - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage
+    - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage beyond the covered deterministic and refund-mutating accountant paths
     - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, and withdrawal flows
     - exhaustive revert-data and Vyper String/DynArray decoder-boundary parity audit outside the listed scenarios
     - exact storage layout compatibility in the Solidity port
@@ -480,6 +482,12 @@ scenarios:
   - name: strategy_report_refund_allowance_clipped
     call: "process_report with reported refunds above the accountant asset allowance"
     expected: "clips refunds to the accountant allowance before pulling assets"
+  - name: strategy_report_accountant_mints_refund_during_report
+    call: "process_report with refund balance and allowance created inside the accountant report hook"
+    expected: "clips and pulls refunds using the post-hook accountant balance and allowance"
+  - name: strategy_report_accountant_reduces_allowance_during_report
+    call: "process_report with refund allowance reduced inside the accountant report hook"
+    expected: "clips refunds to the post-hook accountant allowance before pulling assets"
   - name: strategy_loss_report_with_accountant_fee
     call: "process_report with a strategy loss and nonzero accountant fees"
     expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"

@@ -111,9 +111,9 @@ Immediate chips:
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt clipping/rejection paths are covered. |
-| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, refund clipping, zero-return accountant reports, loss/no-lock fee recalculation, partial-unlock loss reports, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
+| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, refund clipping after accountant state mutation, zero-return accountant reports, loss/no-lock fee recalculation, partial-unlock loss reports, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, duplicate entries, full-queue append skipping, long-queue failures, strategy maxRedeem limits, zero-redeem after full unrealized loss, and partial/over strategy redeems are covered. |
-| Limit modules and accountant dependencies | Fixture-exact | Deterministic mocks cover important accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
+| Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover three management orderings, including a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
 | Vyper `String` and `DynArray` decoder details | Approximate | Length success/failure is covered, but decoder timing and revert data are not exact. |
 | Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
@@ -125,8 +125,8 @@ Immediate chips:
   `docs/yearn-v3-source-port-checklist.md`.
 - Add edge-case scenarios for repeated transitions across roles, queues, debt,
   reports, modules, shutdown, withdrawals, and redeems.
-- Expand third-party accountant/module/strategy mock coverage for unusual but
-  interface-valid implementations.
+- Expand third-party module/strategy mock coverage and any remaining unusual
+  third-party accountant paths beyond refund balance/allowance mutation.
 
 ## `uniswap_v2_pair`
 
@@ -223,10 +223,11 @@ Exact now:
   optional-return asset transfer/transferFrom/approve handling.
 - Scenarios now cover self-report idle asset accrual, accountant fees/refunds,
   zero-return accountant reports, refund clipping by balance/allowance,
-  excessive-fee rejection, reentrant accountant rejection, realized and
-  unrealized loss paths, locked-profit zero reset, module acceptance/rejection,
-  long-queue bounds, no-return/false-return asset handling, and permit
-  before/after initialization.
+  refund balance/allowance mutation during accountant reports, excessive-fee
+  rejection, reentrant accountant rejection, realized and unrealized loss paths,
+  locked-profit zero reset, module acceptance/rejection, long-queue bounds,
+  no-return/false-return asset handling, and permit before/after
+  initialization.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, plus limited `maxRedeem`, max-debt-below-current,
   shutdown pull-only, and actual redeem variance during debt decreases.
@@ -256,10 +257,11 @@ Remaining:
 
 - The source-to-port checklist still has open branch gaps before the spec can
   honestly set `production_equivalence: true`.
-- Third-party accountant, deposit-limit module, withdraw-limit module, and
-  strategy behavior is represented by deterministic harness mocks. The current
-  scenarios cover important boundary paths but not exhaustive adversarial or
-  unusual implementations behind those interfaces.
+- Third-party accountant behavior is represented by deterministic and
+  refund-mutating harness mocks; deposit-limit module, withdraw-limit module,
+  and strategy behavior is represented by deterministic harness mocks. The
+  current scenarios cover important boundary paths but not exhaustive
+  adversarial or unusual implementations behind those interfaces.
 - The current sequence coverage proves three representative combined management
   orderings, including repeated transitions across queues, debt, reports,
   modules, and role-manager handoff. Third-party edge cases remain to be

@@ -52,10 +52,10 @@ Status meanings:
 | `transfer_role_manager` | `transfer_role_manager` | mapped, covered | Covered in pending and accepted paths. |
 | `accept_role_manager` | `accept_role_manager` | mapped, covered | Covered directly and inside combined sequences. |
 | `isShutdown` | `isShutdown` | mapped, covered | Covered as observer. |
-| `unlockedShares` | `unlockedShares` | mapped, covered | Needs more edge coverage around partially unlocked shares plus loss/fee reports. |
+| `unlockedShares` | `unlockedShares` | mapped, covered | Covered before and after reports, including partial-unlock loss reports. |
 | `pricePerShare` | `pricePerShare` | mapped, covered | Covered as observer before and after reports. |
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
-| `process_report` | `process_report` | mapped, covered | More third-party accountant and strategy reporting variants remain open. |
+| `process_report` | `process_report` | mapped, covered | Third-party accountant refund state mutation is covered; more strategy reporting variants remain open. |
 | `buy_debt` | `buy_debt` | mapped, covered | Over-current-debt clipping and zero-share rejection are covered. |
 | `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip behavior is covered. |
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
@@ -123,7 +123,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant state-mutation variants remain open; fee/refund clipping, loss/no-lock fee recalculation, and partial-unlock loss reports are covered. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant refund state mutation, fee/refund clipping, loss/no-lock fee recalculation, and partial-unlock loss reports are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Chain-id drift remains open. |
 
@@ -132,10 +132,9 @@ Status meanings:
 These items should be closed before flipping `yearn_vault_v3` to
 `production_equivalence: true`:
 
-- Add adversarial but ABI-valid accountant mocks for state changes outside the
-  current deterministic accountant.
 - Add any remaining adversarial strategy report value combinations beyond the
-  covered current-debt-above-max-debt and fee-recalculation paths.
+  covered current-debt-above-max-debt, fee-recalculation, partial-unlock, and
+  accountant-mutation paths.
 - Decide whether Vyper `String` and `DynArray` decoder timing/revert data are
   acceptable language-level approximations or need explicit non-equivalence
   callouts.
