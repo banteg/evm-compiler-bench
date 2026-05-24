@@ -135,6 +135,6 @@ These items should be closed before flipping `yearn_vault_v3` to
 `production_equivalence: true`:
 
 - Add any remaining adversarial strategy report value combinations beyond the
-  covered current-debt-above-max-debt, net-positive/net-negative mixed loss/fee/refund,
+  covered current-debt-above-max-debt, net-positive/exact-offset/net-negative mixed loss/fee/refund,
   fee-recalculation, net-loss, self-report, partial-unlock, and
   accountant-mutation paths.
