@@ -776,6 +776,7 @@ contract BenchYearnStrategy {
     uint256 public pendingLoss;
     uint256 public maxDepositLimit = type(uint256).max;
     uint256 public maxRedeemLimit = type(uint256).max;
+    uint256 public redeemReturnBps = 10_000;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -834,6 +835,7 @@ contract BenchYearnStrategy {
         assets = convertToAssets(shares);
         balanceOf[owner] -= shares;
         totalSupply -= shares;
+        assets = assets * redeemReturnBps / 10_000;
         require(asset.transfer(receiver, assets), "transfer");
     }
 
@@ -885,6 +887,11 @@ contract BenchYearnStrategy {
 
     function setMaxRedeemLimit(uint256 limit) external returns (bool) {
         maxRedeemLimit = limit;
+        return true;
+    }
+
+    function setRedeemReturnBps(uint256 bps) external returns (bool) {
+        redeemReturnBps = bps;
         return true;
     }
 
@@ -1837,6 +1844,21 @@ fn all_helper_functions() -> &'static str {
             "yearn strategy"
         );
         BenchYearnStrategy(strategy).setMaxRedeemLimit(limit);
+        return true;
+    }
+
+    function benchYearnSetStrategyRedeemReturnBps(address target, address strategy, uint256 bps)
+        external
+        returns (bool)
+    {
+        require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
+        require(
+            strategy == address(yearnDeps[target].strategy)
+                || strategy == address(yearnDeps[target].strategy2)
+                || strategy == address(yearnDeps[target].strategy3),
+            "yearn strategy"
+        );
+        BenchYearnStrategy(strategy).setRedeemReturnBps(bps);
         return true;
     }
 

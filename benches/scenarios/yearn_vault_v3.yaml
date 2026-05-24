@@ -664,6 +664,51 @@ scenarios:
       data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(200_000), address(this), address(this), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: withdraw_partial_strategy_redeem_loss_allowed
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetStrategyRedeemReturnBps(address,address,uint256)", {target}, benchYearnStrategy({target}), uint256(5_000))'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(125_000), address(this), address(this), uint256(1_000))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: withdraw_partial_strategy_redeem_loss_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetStrategyRedeemReturnBps(address,address,uint256)", {target}, benchYearnStrategy({target}), uint256(5_000))'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(125_000), address(this), address(this), uint256(999))'
+    expect_success: false
+    observers: *yearn_observers
+  - name: withdraw_over_strategy_redeem
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetStrategyRedeemReturnBps(address,address,uint256)", {target}, benchYearnStrategy({target}), uint256(12_000))'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(125_000), address(this), address(this), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
   - name: custom_queue_withdraw
     state_access_profile: mixed
     setup:

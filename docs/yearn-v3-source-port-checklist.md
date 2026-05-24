@@ -65,8 +65,8 @@ Status meanings:
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module; post-shutdown debt pull is open. |
 | `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch remains open. |
 | `mint` | `mint` | mapped, covered | Covered directly and through preview observers. |
-| `withdraw` | overloaded `withdraw` | mapped, covered | Long-queue, custom/default selection, limited strategy redeem, and zero-redeem queue fallthrough covered; more partial-loss strategy variants remain open. |
-| `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited strategy redeem is covered through withdraw, while more partial-loss strategy variants remain open. |
+| `withdraw` | overloaded `withdraw` | mapped, covered | Long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
+| `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
 | `approve` | `approve` | mapped, covered | Covered directly. |
 | `transfer` | `transfer` | mapped, covered | Receiver zero/self rejection is mapped but not fully covered. |
 | `transferFrom` | `transferFrom` | mapped, covered | Infinite allowance path is open. |
@@ -118,8 +118,8 @@ Status meanings:
 | `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem is covered; nonzero unrealized loss queue break remains open. |
 | `_deposit` | `_deposit` | mapped, covered | Auto-allocate branch covered; deposit-all branch remains open. |
 | `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches remain open. |
-| `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Strategy redeem variants remain open. |
-| `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit and zero-redeem fallthrough are covered; queue loss and partial/over-withdraw variants remain open. |
+| `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
+| `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full add branch remains open. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add-after-revoke remain open. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero and limited-deposit branches are covered; max-debt below current, shutdown pull-only, and realized-loss variants remain open. |
@@ -135,8 +135,8 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add adversarial but ABI-valid accountant mocks for fee/refund clipping,
   zero-return fees, excessive fees, and state changes outside the current
   deterministic accountant.
-- Add strategy mocks for partial/over withdrawals, zero-share debt purchase, and
-  report values that move max debt below current debt.
+- Add strategy mocks for zero-share debt purchase and report values that move
+  max debt below current debt.
 - Cover queue-full behavior, duplicate strategy queue behavior, non-forced
   debt revoke failure, re-add after revoke, and post-shutdown debt pull.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.

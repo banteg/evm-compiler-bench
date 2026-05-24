@@ -177,6 +177,9 @@ real_derived:
     - max_withdraw_limited_strategy_redeem
     - withdraw_limited_strategy_redeem
     - withdraw_zero_strategy_redeem_falls_through
+    - withdraw_partial_strategy_redeem_loss_allowed
+    - withdraw_partial_strategy_redeem_loss_reverts
+    - withdraw_over_strategy_redeem
     - custom_queue_withdraw
     - set_default_queue
     - forced_default_queue_withdraw
@@ -228,6 +231,7 @@ real_derived:
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
+    - partial and over-returning strategy redeem accounting during user withdrawals
     - profit unlock reset while locked profit shares are outstanding
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -386,6 +390,15 @@ scenarios:
   - name: withdraw_zero_strategy_redeem_falls_through
     call: "withdraw through a queue where the first strategy reports zero maxRedeem"
     expected: "skips the non-redeemable first strategy and services the withdrawal from the next queued strategy"
+  - name: withdraw_partial_strategy_redeem_loss_allowed
+    call: "withdraw through a strategy that returns less than the requested redeem amount within max_loss"
+    expected: "realizes the shortfall as user loss and updates strategy debt by the requested strategy withdrawal amount"
+  - name: withdraw_partial_strategy_redeem_loss_reverts
+    call: "withdraw through a strategy that returns less than the requested redeem amount above max_loss"
+    expected: "reverts after detecting the actual balance shortfall exceeds the allowed loss"
+  - name: withdraw_over_strategy_redeem
+    call: "withdraw through a strategy that returns more than the requested redeem amount"
+    expected: "accounts the extra received assets as additional strategy debt reduction"
   - name: custom_queue_withdraw
     call: "withdraw with an explicit two-strategy custom queue"
     expected: "uses the supplied queue to free strategy debt"
