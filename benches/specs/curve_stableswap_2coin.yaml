@@ -90,6 +90,7 @@ real_derived:
     - calc_token_amount_three_coin
     - calc_token_amount_three_coin_withdraw
     - calc_token_amount_eight_coin
+    - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
     - exchange_eight_coin_boundary
     - exchange_received_eight_coin_boundary
@@ -165,7 +166,7 @@ real_derived:
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
-    - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
+    - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
     - factory-delegated eight-coin dynamic_fee quote at MAX_COINS
     - standard-token three-coin exchange path
     - standard-token three-coin exchange_received optimistic-transfer path
@@ -318,6 +319,9 @@ scenarios:
   - name: calc_token_amount_eight_coin
     call: "calc_token_amount([100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000], true) after initial liquidity on an eight-coin deployment"
     expected: "quotes LP minted through the factory views implementation at the upstream MAX_COINS boundary"
+  - name: calc_token_amount_eight_coin_withdraw
+    call: "calc_token_amount([40_000, 10_000, 25_000, 30_000, 15_000, 20_000, 5_000, 12_000], false) after initial liquidity on an eight-coin deployment"
+    expected: "quotes LP burned through the factory views implementation at the upstream MAX_COINS boundary"
   - name: calc_token_amount_too_many_amounts_reverts
     call: "calc_token_amount([100_000, 300_000, ... length 9], true) after initial liquidity"
     expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"

@@ -613,6 +613,20 @@ scenarios:
       - data: 'abi.encodeWithSignature("get_balances()")'
       - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: calc_token_amount_eight_coin_withdraw
+    deployment_variant: curve_eight_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts8(1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("calc_token_amount(uint256[],bool)", curveAmounts8(40_000, 10_000, 25_000, 30_000, 15_000, 20_000, 5_000, 12_000), false)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: calc_token_amount_too_many_amounts_reverts
     state_access_profile: warm
     setup:
