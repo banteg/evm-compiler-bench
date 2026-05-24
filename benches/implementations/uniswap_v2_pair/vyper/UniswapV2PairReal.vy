@@ -8,7 +8,7 @@ interface Factory:
     def feeTo() -> address: view
 
 interface UniswapV2Callee:
-    def uniswapV2Call(sender: address, amount0: uint256, amount1: uint256, data: Bytes[4096]): nonpayable
+    def uniswapV2Call(sender: address, amount0: uint256, amount1: uint256, data: Bytes[65536]): nonpayable
 
 MINIMUM_LIQUIDITY: public(constant(uint256)) = 1000
 Q112: constant(uint256) = 5192296858534827628530496329220096
@@ -200,7 +200,7 @@ def burn(receiver: address) -> (uint256, uint256):
     return amount0, amount1
 
 @external
-def swap(amount0Out: uint256, amount1Out: uint256, receiver: address, data: Bytes[4096]):
+def swap(amount0Out: uint256, amount1Out: uint256, receiver: address, data: Bytes[65536]):
     self._lock()
     assert amount0Out > 0 or amount1Out > 0, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT"
     packed_reserves: uint256 = self.reserve_packed

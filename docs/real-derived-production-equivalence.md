@@ -33,7 +33,7 @@ layout.
 
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
-| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
+| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[65536]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens, plus three-coin and eight-coin standard-token coverage. | Solidity port has moved to constructor-driven `N_COINS` for the covered standard-token paths, but not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
@@ -68,15 +68,15 @@ layout.
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, burn, invariant swap, drift, skim, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
-| Flash-swap callback | Approximate | Non-empty, reentrant, and larger-than-old-1024-byte data are covered, but Vyper still has a `Bytes[4096]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
+| Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, and larger-than-old-4096-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
 | Revert data and ABI boundary behavior | Incomplete | Success/failure is covered for important paths, but exhaustive revert-data and decoder-boundary parity has not been audited. |
 | Storage layout | Approximate | Packed reserves intentionally match; the rest is idiomatic Vyper storage and not full layout-compatible. |
 
 Immediate chips:
 
-- Decide whether the `Bytes[4096]` bound is an accepted language-policy
-  exception, or add an over-4096-byte divergence scenario and keep the port
-  non-production-equivalent.
+- Decide whether the `Bytes[65536]` bound is an accepted language-policy
+  exception, or keep the port non-production-equivalent for truly unbounded
+  callback calldata.
 - Decide whether the benchmark remains pair-only or must include the full
   upstream factory implementation.
 - Complete the ABI/revert audit for the pair ABI outside the current scenarios.
@@ -151,7 +151,8 @@ Exact now:
 - Scenarios cover initial and subsequent mints, factory CREATE2 deployment,
   token0-input and upstream token1-input swap invariant checks, one-wei
   over-output K rejection, no-return token transfers, false-return transfer
-  rejection, flash callback repayment, flash reentrancy rejection,
+  rejection, flash callback repayment through callback data above the old
+  4 KiB port bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
   and compares event/log hashes for the listed scenarios.
@@ -159,7 +160,8 @@ Exact now:
 Remaining:
 
 - Upstream `swap` accepts unbounded `bytes calldata`. Vyper requires a bounded
-  byte array and the current port uses `Bytes[4096]`. Decide whether this
+  byte array and the current port uses `Bytes[65536]`, with scenarios now
+  covering payloads above the old 4 KiB port bound. Decide whether this
   language-level bound keeps the benchmark non-production-equivalent, or
   document an explicit policy exception before removing the excluded feature.
 - The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
@@ -170,8 +172,8 @@ Remaining:
 
 Suggested next chips:
 
-- Add a targeted over-4096-byte flash callback divergence scenario, or make the
-  bounded-by-language policy decision explicit.
+- Decide whether the remaining 64 KiB Vyper callback-data bound is an accepted
+  language-level semantic boundary, or keep it listed as an excluded feature.
 - Decide whether full upstream factory behavior is in scope for this benchmark
   or whether the benchmark is explicitly "Pair only".
 

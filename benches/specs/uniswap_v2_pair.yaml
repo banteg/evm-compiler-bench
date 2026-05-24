@@ -67,6 +67,7 @@ real_derived:
     - swap_token1_input_k_reverts
     - flash_swap_callback
     - flash_swap_large_callback_data
+    - flash_swap_8k_callback_data
     - flash_swap_reentrancy_reverts
     - burn
     - burn_no_return_tokens
@@ -96,7 +97,7 @@ real_derived:
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
-    - Vyper preserves behavior for covered paths but does not claim unbounded callback calldata
+    - Vyper preserves behavior for covered paths but does not claim truly unbounded callback calldata
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including the MINIMUM_LIQUIDITY constant getter
@@ -108,7 +109,7 @@ real_derived:
     - constant-product swap fee invariant for both token0-input and token1-input paths
     - production K-invariant rejection for one-wei over-output swaps
     - non-empty flash-swap callback execution
-    - flash-swap callback data above the old 1024-byte Vyper port bound
+    - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
@@ -119,7 +120,7 @@ real_derived:
     - LP token metadata, balances, direct transfers, approvals, finite and infinite allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
-    - truly unbounded flash-swap callback calldata length in the Vyper port
+    - truly unbounded flash-swap callback calldata length in the Vyper port beyond its 65536-byte source bound
     - full upstream UniswapV2Factory behavior beyond pair initialize, feeTo, and benchmark CREATE2 deployment
     - exhaustive revert-data and ABI-boundary parity audit outside the listed scenarios
 semantics:
@@ -153,6 +154,9 @@ scenarios:
   - name: flash_swap_large_callback_data
     call: "swap(0, 100, flash callee, callback data larger than 1024 bytes)"
     expected: "accepts and forwards callback data above the previous Vyper port bound"
+  - name: flash_swap_8k_callback_data
+    call: "swap(0, 100, flash callee, callback data larger than 4096 bytes)"
+    expected: "executes the callback and repays through the widened Vyper callback-data bound"
   - name: flash_swap_reentrancy_reverts
     call: "swap(0, 100, reentrant flash callee, non-empty callback data)"
     expected: "rejects reentrant pair calls from the callback through the production lock"
