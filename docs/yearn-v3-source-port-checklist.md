@@ -27,16 +27,18 @@ Status meanings:
   this can support `production_equivalence: true`.
 - `approximate`: the Solidity port matches success/failure intent but cannot
   exactly reproduce Vyper ABI decoder timing, revert data, or bounded type
-  mechanics.
+  mechanics. Exact decoder timing and revert bytes are not production
+  equivalence blockers when the semantic boundary is covered and the source
+  behavior does not expose or depend on those lower-level details.
 
 ## External Surface
 
 | Upstream function | Port counterpart | Status | Remaining work |
 | --- | --- | --- | --- |
 | `__init__` | `constructor` plus harness minimal proxy deployment | mapped, covered | Keep deployment explicitly clone-based; direct implementation initialization is intentionally not the measured path. |
-| `initialize` | `initialize` | mapped, covered | String bounds are runtime checks in Solidity, Vyper decoder bounds upstream. |
-| `setName` | `setName` | mapped, covered | Revert data and decoder timing remain approximate. |
-| `setSymbol` | `setSymbol` | mapped, covered | Revert data and decoder timing remain approximate. |
+| `initialize` | `initialize` | mapped, covered | String success/failure bounds are covered under the semantic-boundary policy. |
+| `setName` | `setName` | mapped, covered | String success/failure bounds are covered under the semantic-boundary policy. |
+| `setSymbol` | `setSymbol` | mapped, covered | String success/failure bounds are covered under the semantic-boundary policy. |
 | `set_accountant` | `set_accountant` | mapped, covered | Third-party accountant behavior remains harness-scoped. |
 | `set_default_queue` | `set_default_queue` | mapped, covered | Duplicate active strategy entries are covered. |
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
@@ -135,6 +137,3 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add any remaining adversarial strategy report value combinations beyond the
   covered current-debt-above-max-debt, fee-recalculation, net-loss,
   partial-unlock, and accountant-mutation paths.
-- Decide whether Vyper `String` and `DynArray` decoder timing/revert data are
-  acceptable language-level approximations or need explicit non-equivalence
-  callouts.

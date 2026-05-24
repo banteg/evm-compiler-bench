@@ -162,5 +162,10 @@ just zip-design
   diagnostic comparators only and must not be read as production gas or deploy
   size claims for the upstream protocols. The current parity inventory lives in
   `docs/real-derived-production-equivalence.md`.
+- For idiomatic cross-language ports, production equivalence is about
+  externally observable contract behavior: ABI shape, success or revert,
+  accounting state, events, and external calls. Exact language-level decoder
+  timing and revert bytes are tracked as approximations unless the upstream
+  contract exposes or depends on them.
 - Vyper Venom rows use `--experimental-codegen`.
 - Vyper 0.5.0a1 is pre-release.
