@@ -85,7 +85,7 @@ real_derived:
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
-    - Vyper preserves behavior for covered paths but does not claim full contract behavior or Solidity packed-slot storage layout compatibility
+    - Vyper preserves behavior for covered paths but does not claim CREATE2 factory deployment behavior or unbounded callback calldata
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including the MINIMUM_LIQUIDITY constant getter
@@ -99,12 +99,12 @@ real_derived:
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
+    - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
     - fee-on and fee-off kLast behavior
     - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
     - CREATE2 pair factory deployment path
-    - exact Solidity packed reserve storage layout in the Vyper port
     - truly unbounded flash-swap callback calldata length in the Vyper port
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."

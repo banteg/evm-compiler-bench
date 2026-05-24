@@ -1079,10 +1079,14 @@ fn vyper_internal_order(name: &str) -> usize {
         "_redeem" => 14,
         "_getD" => 15,
         "_getY" => 16,
-        "_update" => 17,
-        "_mint_fee" => 18,
-        "_compute_address" => 19,
-        "_predict_clone" => 20,
+        "_unpack_reserve0" => 17,
+        "_unpack_reserve1" => 18,
+        "_unpack_block_timestamp" => 19,
+        "_pack_reserves" => 20,
+        "_update" => 21,
+        "_mint_fee" => 22,
+        "_compute_address" => 23,
+        "_predict_clone" => 24,
         _ => 100,
     }
 }
