@@ -257,6 +257,7 @@ real_derived:
     - permit_valid
     - permit_after_chain_id_change
     - permit_before_initialize_valid
+    - permit_expired_reverts
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, deterministic and refund-mutating accountants, and limit modules
@@ -290,7 +291,7 @@ real_derived:
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
     - deposit-limit and permission reverts
-    - valid EIP-712 permit acceptance before and after initialization, after chain-id changes, plus invalid permit revert paths
+    - valid EIP-712 permit acceptance before and after initialization, after chain-id changes, plus expired-deadline and invalid-signature revert paths
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage beyond the covered deterministic and refund-mutating accountant paths
     - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, and withdrawal flows
@@ -677,6 +678,9 @@ scenarios:
   - name: permit_before_initialize_valid
     call: "permit with a harness-signed EIP-712 digest before initialize"
     expected: "sets allowance and increments the owner's nonce, matching upstream's ungated permit path"
+  - name: permit_expired_reverts
+    call: "permit with a deadline before the current block timestamp"
+    expected: "reverts before accepting the signature or changing nonce/allowance"
   - name: permit_invalid_reverts
     call: "permit with a zero signature"
     expected: "reverts"

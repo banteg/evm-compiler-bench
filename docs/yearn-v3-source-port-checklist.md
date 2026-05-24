@@ -72,7 +72,7 @@ Status meanings:
 | `approve` | `approve` | mapped, covered | Covered directly. |
 | `transfer` | `transfer` | mapped, covered | Receiver zero/self rejection is mapped but not fully covered. |
 | `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |
-| `permit` | `permit` | mapped, covered | Valid, invalid, pre-initialization, and post-chain-id-change permit paths are covered. |
+| `permit` | `permit` | mapped, covered | Valid, expired, invalid, pre-initialization, and post-chain-id-change permit paths are covered. |
 | `balanceOf` | `balanceOf` | mapped, covered | Vault-self locked-share branch covered through observers after reports. |
 | `totalSupply` | `totalSupply` | mapped, covered | Covered as observer. |
 | `totalAssets` | `totalAssets` | mapped, covered | Covered as observer. |
@@ -95,7 +95,7 @@ Status meanings:
 | `fullProfitUnlockDate` | `fullProfitUnlockDate` | mapped, covered | Covered as observer. |
 | `profitUnlockingRate` | `profitUnlockingRate` | mapped, covered | Covered as observer. |
 | `lastProfitUpdate` | `lastProfitUpdate` | mapped, covered | Covered as observer. |
-| `DOMAIN_SEPARATOR` | `DOMAIN_SEPARATOR` | mapped, covered | Chain-id drift remains open. |
+| `DOMAIN_SEPARATOR` | `DOMAIN_SEPARATOR` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 
 ## Internal Logic
 
