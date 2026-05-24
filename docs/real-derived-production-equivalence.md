@@ -245,8 +245,9 @@ Exact now:
 - The Solidity port covers the listed upstream vault API: initialization,
   ERC4626 deposit/mint/withdraw/redeem overloads, ERC20 share transfers,
   permit, role bitmasks, role-manager handoff, mutable metadata, deposit and
-  withdraw limit modules, default/custom queues, strategy add/revoke/debt
-  flows, process-report accounting, locked-profit shares, shutdown, and
+  withdraw limit modules, post-shutdown deposit-limit management rejection,
+  default/custom queues, strategy add/revoke/debt flows, process-report
+  accounting, locked-profit shares, shutdown, and
   optional-return asset transfer/transferFrom/approve handling.
 - Scenarios now cover self-report idle asset accrual/loss, self-report idle
   gains with accountant fees/refunds, accountant fees/refunds,

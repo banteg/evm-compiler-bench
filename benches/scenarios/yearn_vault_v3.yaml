@@ -2011,6 +2011,16 @@ scenarios:
       data: 'abi.encodeWithSignature("set_deposit_limit(uint256,bool)", uint256(500_000), true)'
     expect_success: true
     observers: *yearn_observers
+  - name: set_deposit_limit_after_shutdown_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("shutdown_vault()")'
+    measured:
+      data: 'abi.encodeWithSignature("set_deposit_limit(uint256)", uint256(500_000))'
+    expect_success: false
+    observers: *yearn_observers
   - name: set_deposit_limit_module_default
     state_access_profile: warm
     setup:
@@ -2037,6 +2047,16 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("set_deposit_limit_module(address,bool)", benchYearnDepositLimitModule({target}), true)'
     expect_success: true
+    observers: *yearn_observers
+  - name: set_deposit_limit_module_after_shutdown_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("shutdown_vault()")'
+    measured:
+      data: 'abi.encodeWithSignature("set_deposit_limit_module(address)", benchYearnDepositLimitModule({target}))'
+    expect_success: false
     observers: *yearn_observers
   - name: set_withdraw_limit_module
     state_access_profile: warm

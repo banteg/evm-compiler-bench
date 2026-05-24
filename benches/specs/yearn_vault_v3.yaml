@@ -125,7 +125,7 @@ real_derived:
     - locked-profit share accounting observable through pricePerShare
     - optional-return ERC20 asset transfer, transferFrom, and approve compatibility
     - EIP-712 permit acceptance and invalid-permit reverts
-    - shutdown, deposit-limit, and permission reverts
+    - shutdown, deposit-limit, post-shutdown deposit-limit management, and permission reverts
     - inactive strategy management reverts and strategy re-addition after revoke or force-revoke
   scenario_coverage:
     - initialize
@@ -273,9 +273,11 @@ real_derived:
     - set_deposit_limit_default
     - set_deposit_limit_using_module_reverts
     - set_deposit_limit_override_module
+    - set_deposit_limit_after_shutdown_reverts
     - set_deposit_limit_module_default
     - set_deposit_limit_module_using_direct_limit_reverts
     - set_deposit_limit_module_override_direct_limit
+    - set_deposit_limit_module_after_shutdown_reverts
     - set_withdraw_limit_module
     - deposit_limit_reverts
     - deposit_limit_exact_limit
@@ -781,6 +783,9 @@ scenarios:
   - name: set_deposit_limit_override_module
     call: "set_deposit_limit(limit, true) while a deposit-limit module is active"
     expected: "clears the active module and updates the direct deposit limit"
+  - name: set_deposit_limit_after_shutdown_reverts
+    call: "set_deposit_limit(limit) after shutdown_vault()"
+    expected: "reverts because upstream forbids deposit-limit changes after shutdown"
   - name: set_deposit_limit_module_default
     call: "set_deposit_limit_module(module) using the Vyper default override=false overload"
     expected: "sets the deposit limit module when the direct limit is already max uint256"
@@ -790,6 +795,9 @@ scenarios:
   - name: set_deposit_limit_module_override_direct_limit
     call: "set_deposit_limit_module(module, true) while a finite direct deposit limit is active"
     expected: "resets the direct deposit limit to max uint256 and sets the module"
+  - name: set_deposit_limit_module_after_shutdown_reverts
+    call: "set_deposit_limit_module(module) after shutdown_vault()"
+    expected: "reverts because upstream forbids deposit-limit module changes after shutdown"
   - name: set_withdraw_limit_module
     call: "set_withdraw_limit_module(module)"
     expected: "updates the withdraw limit module through the withdraw-limit manager role"
