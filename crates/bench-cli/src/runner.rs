@@ -1517,6 +1517,17 @@ fn all_helper_functions() -> &'static str {
         return true;
     }
 
+    function benchUniswapSetTransferReturnValue(address target, bool token0Value, bool token1Value)
+        external
+        returns (bool)
+    {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        deps.token0.setReturnValue(true, token0Value, true);
+        deps.token1.setReturnValue(true, token1Value, true);
+        return true;
+    }
+
     function benchUniswapSeedNoReturn(address target, uint256 amount0, uint256 amount1) external returns (bool) {
         NoReturnPairDeps storage deps = noReturnPairDeps[target];
         require(address(deps.token0) != address(0), "pair deps");

@@ -50,7 +50,7 @@ real_derived:
     - pair deployment through the factory CREATE2 path
     - reserve and getReserves accounting
     - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
-    - output transfers to ERC20 tokens that return either bool or no data
+    - output transfers to ERC20 tokens that return true, false, or no data
     - non-empty flash-swap callback execution and repayment
     - reentrancy lock rejection during flash-swap callbacks
     - constant-product fee check with 0.30% LP fee
@@ -69,6 +69,7 @@ real_derived:
     - burn
     - burn_no_return_tokens
     - swap_no_return_tokens
+    - swap_false_return_token_reverts
     - sync
     - sync_timestamp_wrap
     - skim
@@ -110,6 +111,7 @@ real_derived:
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
+    - false-return token swap transfer-out rejection
     - fee-on and fee-off kLast behavior
     - LP token metadata, balances, direct transfers, approvals, finite and infinite allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
@@ -154,6 +156,9 @@ scenarios:
   - name: swap_no_return_tokens
     call: "swap(0, 100, address(this), empty bytes) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data on the output token and updates reserves"
+  - name: swap_false_return_token_reverts
+    call: "swap(0, 100, address(this), empty bytes) with an output token that returns false from transfer"
+    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: sync
     call: "sync() after token balance drift and time advance"
     expected: "updates reserves and cumulative prices from external token balances"

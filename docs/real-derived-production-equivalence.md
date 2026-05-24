@@ -146,11 +146,12 @@ Exact now:
   mint, burn, swap, skim, sync, fee-on `kLast`, cumulative prices, LP ERC20
   accounting, and permit.
 - The Vyper port uses packed reserves with the upstream bit layout and
-  `default_return_value=True` transfer handling for no-return ERC20s.
+  `default_return_value=True` transfer handling for no-return ERC20s while
+  still rejecting explicit false-return transfers.
 - Scenarios cover initial and subsequent mints, factory CREATE2 deployment,
-  swap invariant checks, no-return token transfers, flash callback repayment,
-  flash reentrancy rejection, fee-on/off behavior, timestamp wrapping, and
-  permit success/failure.
+  swap invariant checks, no-return token transfers, false-return transfer
+  rejection, flash callback repayment, flash reentrancy rejection,
+  fee-on/off behavior, timestamp wrapping, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
   and compares event/log hashes for the listed scenarios.
 
