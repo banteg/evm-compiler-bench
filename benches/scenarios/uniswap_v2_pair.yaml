@@ -314,6 +314,15 @@ scenarios:
       data: 'benchUniswapPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
     observers: *pair_observers
+  - name: permit_after_chain_id_change
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchChainId(uint256)", uint256(31338))'
+    measured:
+      data: 'benchUniswapPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers: *pair_observers
   - name: permit_invalid_reverts
     state_access_profile: cold
     measured:

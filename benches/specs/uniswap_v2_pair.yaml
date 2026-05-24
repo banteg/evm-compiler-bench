@@ -81,6 +81,7 @@ real_derived:
     - invalid_swap_reverts
     - swap_to_token_reverts
     - permit_valid
+    - permit_after_chain_id_change
     - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
@@ -105,7 +106,7 @@ real_derived:
     - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
     - fee-on and fee-off kLast behavior
-    - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
+    - LP token metadata, allowance, and EIP-712 permit acceptance, chain-id drift, and reverts
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - truly unbounded flash-swap callback calldata length in the Vyper port
@@ -184,6 +185,9 @@ scenarios:
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
+  - name: permit_after_chain_id_change
+    call: "permit with a harness-signed EIP-712 digest after block.chainid changes"
+    expected: "uses the constructor-time domain separator and accepts the permit"
   - name: permit_invalid_reverts
     call: "permit with a zero signature"
     expected: "reverts"
