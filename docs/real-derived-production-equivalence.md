@@ -34,7 +34,7 @@ layout.
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
 | `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens. | Solidity port is fixed at `N_COINS = 2`; upstream is constructor-driven up to 8 coins; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
+| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens, plus initial three-coin liquidity. | Solidity port has started moving to constructor-driven `N_COINS`, but non-two-coin coverage is not yet complete up to 8 coins; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
@@ -87,7 +87,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Incomplete | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port hard-codes two coins. |
+| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and an initial three-coin liquidity scenario, but full non-two-coin swap, withdrawal, oracle, and 8-coin coverage remains open. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
@@ -186,9 +186,10 @@ Exact now:
   amplification and fee admin controls, LP ERC20 accounting, permit, moving
   averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
-  donation-before-first-deposit handling, rebasing asset behavior, ERC4626 rate
-  scaling, dynamic fees, admin controls, slippage and invalid coin reverts, and
-  Vyper DynArray length edges for the two-coin deployment.
+  donation-before-first-deposit handling, initial three-coin liquidity,
+  rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
+  slippage and invalid coin reverts, and Vyper DynArray length edges for the
+  two-coin deployment.
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path rather than only same-block oracle
   upkeep.
@@ -200,8 +201,10 @@ Exact now:
 Remaining:
 
 - Upstream `CurveStableSwapNG` is generic over `N_COINS` from constructor input
-  up to `MAX_COINS = 8`; the Solidity port hard-codes `N_COINS = 2` and uses
-  fixed-size two-element internal arrays.
+  up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and a
+  three-coin initial-liquidity scenario, but the non-two-coin surface has not
+  been completed through swaps, withdrawals, views, oracle updates, and 8-coin
+  boundary scenarios.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.

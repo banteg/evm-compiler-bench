@@ -411,7 +411,7 @@ fn generate_test(
     out.push_str(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
-    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; }\n");
+    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; BenchERC20OptionalReturn coin2; }\n");
     out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnMutatingAccountant mutatingAccountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
@@ -1692,6 +1692,8 @@ fn all_helper_functions() -> &'static str {
             require(deps.coin0.transfer(target, amount), "curve transfer0");
         } else if (coinIndex == 1) {
             require(deps.coin1.transfer(target, amount), "curve transfer1");
+        } else if (coinIndex == 2 && address(deps.coin2) != address(0)) {
+            require(deps.coin2.transfer(target, amount), "curve transfer2");
         } else {
             revert("curve coin");
         }
@@ -1705,6 +1707,8 @@ fn all_helper_functions() -> &'static str {
             require(deps.coin0.mint(target, amount), "curve mint0");
         } else if (coinIndex == 1) {
             require(deps.coin1.mint(target, amount), "curve mint1");
+        } else if (coinIndex == 2 && address(deps.coin2) != address(0)) {
+            require(deps.coin2.mint(target, amount), "curve mint2");
         } else {
             revert("curve coin");
         }
@@ -1716,6 +1720,9 @@ fn all_helper_functions() -> &'static str {
         require(address(deps.coin0) != address(0), "curve deps");
         deps.coin0.setReturnData(enabled);
         deps.coin1.setReturnData(enabled);
+        if (address(deps.coin2) != address(0)) {
+            deps.coin2.setReturnData(enabled);
+        }
         return true;
     }
 
@@ -2429,6 +2436,7 @@ fn all_helper_functions() -> &'static str {
         CurveDeps storage curve = curveDeps[target];
         if (account == address(curve.coin0)) return 30;
         if (account == address(curve.coin1)) return 31;
+        if (account == address(curve.coin2)) return 32;
         YearnDeps storage yearn = yearnDeps[target];
         if (account == address(yearn.asset)) return 40;
         if (account == address(yearn.strategy)) return 41;
@@ -3088,6 +3096,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     if artifact.benchmark_id == "curve_stableswap_2coin" {
         out.push_str("        BenchERC20OptionalReturn coin0;\n");
         out.push_str("        BenchERC20OptionalReturn coin1 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        BenchERC20OptionalReturn coin2;\n");
         out.push_str("        if (deploymentVariant == 3) {\n");
         out.push_str(
             "            BenchERC20OptionalReturn underlying0 = new BenchERC20OptionalReturn();\n",
@@ -3096,15 +3105,27 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else {\n");
         out.push_str("            coin0 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
-        out.push_str("        address[] memory coins = new address[](2);\n");
+        out.push_str("        if (deploymentVariant == 4) {\n");
+        out.push_str("            coin2 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        }\n");
+        out.push_str(
+            "        uint256 nCoins = deploymentVariant == 4 ? uint256(3) : uint256(2);\n",
+        );
+        out.push_str("        address[] memory coins = new address[](nCoins);\n");
         out.push_str("        coins[0] = address(coin0);\n");
         out.push_str("        coins[1] = address(coin1);\n");
-        out.push_str("        uint256[] memory rates = new uint256[](2);\n");
+        out.push_str("        if (deploymentVariant == 4) {\n");
+        out.push_str("            coins[2] = address(coin2);\n");
+        out.push_str("        }\n");
+        out.push_str("        uint256[] memory rates = new uint256[](nCoins);\n");
         out.push_str("        rates[0] = 1e18;\n");
         out.push_str("        rates[1] = 1e18;\n");
-        out.push_str("        uint8[] memory assetTypes = new uint8[](2);\n");
-        out.push_str("        bytes4[] memory methodIds = new bytes4[](2);\n");
-        out.push_str("        address[] memory oracles = new address[](2);\n");
+        out.push_str("        if (deploymentVariant == 4) {\n");
+        out.push_str("            rates[2] = 1e18;\n");
+        out.push_str("        }\n");
+        out.push_str("        uint8[] memory assetTypes = new uint8[](nCoins);\n");
+        out.push_str("        bytes4[] memory methodIds = new bytes4[](nCoins);\n");
+        out.push_str("        address[] memory oracles = new address[](nCoins);\n");
         out.push_str("        if (deploymentVariant == 1) {\n");
         out.push_str("            BenchCurveRateOracle oracle0 = new BenchCurveRateOracle(1_250_000_000_000_000_000);\n");
         out.push_str("            assetTypes[0] = 1;\n");
@@ -3115,7 +3136,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else if (deploymentVariant == 3) {\n");
         out.push_str("            assetTypes[0] = 3;\n");
         out.push_str("        } else {\n");
-        out.push_str("            require(deploymentVariant == 0, \"curve variant\");\n");
+        out.push_str("            require(deploymentVariant == 0 || deploymentVariant == 4, \"curve variant\");\n");
         out.push_str("        }\n");
         out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
     }
@@ -3155,9 +3176,13 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     }
     out.push_str("        deployGas = startGas - gasleft();\n");
     if artifact.benchmark_id == "curve_stableswap_2coin" {
-        out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1);\n");
+        out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1, coin2);\n");
         out.push_str("        coin0.mint(address(this), 1e30);\n");
         out.push_str("        coin1.mint(address(this), 1e30);\n");
+        out.push_str("        if (address(coin2) != address(0)) {\n");
+        out.push_str("            coin2.mint(address(this), 1e30);\n");
+        out.push_str("            coin2.approve(target, type(uint256).max);\n");
+        out.push_str("        }\n");
         out.push_str("        coin0.approve(target, type(uint256).max);\n");
         out.push_str("        coin1.approve(target, type(uint256).max);\n");
     }
