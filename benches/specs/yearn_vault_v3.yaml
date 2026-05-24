@@ -172,6 +172,8 @@ real_derived:
     - unrealized_loss_withdraw_reverts
     - unrealized_loss_withdraw_allowed
     - update_debt_unrealized_loss_reverts
+    - update_debt_limited_max_deposit
+    - update_debt_zero_max_deposit
     - custom_queue_withdraw
     - set_default_queue
     - forced_default_queue_withdraw
@@ -221,6 +223,7 @@ real_derived:
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - strategy maxDeposit limiting and zero-deposit debt update behavior
     - profit unlock reset while locked profit shares are outstanding
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -364,6 +367,12 @@ scenarios:
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
+  - name: update_debt_limited_max_deposit
+    call: "update_debt upward when the strategy maxDeposit is lower than the target increase"
+    expected: "allocates only the strategy-declared maxDeposit amount and records the partial debt increase"
+  - name: update_debt_zero_max_deposit
+    call: "update_debt upward when the strategy maxDeposit is zero"
+    expected: "returns current debt without depositing or emitting a debt update"
   - name: custom_queue_withdraw
     call: "withdraw with an explicit two-strategy custom queue"
     expected: "uses the supplied queue to free strategy debt"

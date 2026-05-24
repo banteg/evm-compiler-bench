@@ -774,6 +774,7 @@ contract BenchYearnStrategy {
     mapping(address => mapping(address => uint256)) public allowance;
     uint256 public pendingGain;
     uint256 public pendingLoss;
+    uint256 public maxDepositLimit = type(uint256).max;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -782,8 +783,8 @@ contract BenchYearnStrategy {
         asset = asset_;
     }
 
-    function maxDeposit(address) external pure returns (uint256) {
-        return type(uint256).max;
+    function maxDeposit(address) external view returns (uint256) {
+        return maxDepositLimit;
     }
 
     function maxRedeem(address owner) external view returns (uint256) {
@@ -871,6 +872,11 @@ contract BenchYearnStrategy {
                 asset.burn(address(this), burnAmount);
             }
         }
+        return true;
+    }
+
+    function setMaxDepositLimit(uint256 limit) external returns (bool) {
+        maxDepositLimit = limit;
         return true;
     }
 
@@ -1799,6 +1805,18 @@ fn all_helper_functions() -> &'static str {
             "yearn strategy"
         );
         BenchYearnStrategy(strategy).setReport(gain, loss);
+        return true;
+    }
+
+    function benchYearnSetStrategyMaxDeposit(address target, address strategy, uint256 limit) external returns (bool) {
+        require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
+        require(
+            strategy == address(yearnDeps[target].strategy)
+                || strategy == address(yearnDeps[target].strategy2)
+                || strategy == address(yearnDeps[target].strategy3),
+            "yearn strategy"
+        );
+        BenchYearnStrategy(strategy).setMaxDepositLimit(limit);
         return true;
     }
 

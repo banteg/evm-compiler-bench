@@ -61,7 +61,7 @@ Status meanings:
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Non-forced active-debt revert should be scenario-covered. |
 | `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal; re-add after force revoke remains open. |
 | `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Inactive-strategy revert remains open. |
-| `update_debt` | overloaded `update_debt` | mapped, covered | More strategy `maxDeposit`, limited `maxRedeem`, and realized-loss variants remain open. |
+| `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit` limiting and zero-deposit branches are covered; limited `maxRedeem` and realized-loss variants remain open. |
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module; post-shutdown debt pull is open. |
 | `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch remains open. |
 | `mint` | `mint` | mapped, covered | Covered directly and through preview observers. |
@@ -122,7 +122,7 @@ Status meanings:
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Queue loss and strategy limit variants remain open. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full add branch remains open. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add-after-revoke remain open. |
-| `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, max-debt below current, shutdown pull-only, and realized-loss variants remain open. |
+| `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero and limited-deposit branches are covered; max-debt below current, shutdown pull-only, and realized-loss variants remain open. |
 | `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant, fee/refund clipping, and post-unlock loss/fee variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Chain-id drift remains open. |
@@ -135,9 +135,9 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add adversarial but ABI-valid accountant mocks for fee/refund clipping,
   zero-return fees, excessive fees, and state changes outside the current
   deterministic accountant.
-- Add strategy mocks for limited `maxDeposit`, limited `maxRedeem`,
-  partial/over withdrawals, zero-share debt purchase, and report values that
-  move max debt below current debt.
+- Add strategy mocks for limited `maxRedeem`, partial/over withdrawals,
+  zero-share debt purchase, and report values that move max debt below current
+  debt.
 - Cover queue-full behavior, duplicate strategy queue behavior, non-forced
   debt revoke failure, re-add after revoke, and post-shutdown debt pull.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.
