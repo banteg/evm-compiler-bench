@@ -107,7 +107,7 @@ Status meanings:
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
 | `_permit` | `permit` plus `domain_separator` | mapped, covered | Post-chain-id-change signatures are covered. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
-| `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent loss/fee report is covered. |
+| `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent profit and loss/fee reports are covered. |
 | `_total_supply` | `_effectiveSupply` | mapped, covered | Covered as observer. |
 | `_total_assets` | `totalAssets` | mapped, covered | Covered as observer. |
 | `_convert_to_assets` | `_convertToAssets` | mapped, covered | Max-uint and zero-value special cases are covered. |
@@ -125,7 +125,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Self-report gain/loss, third-party accountant refund state mutation, fee/refund clipping, loss/no-lock/net-loss fee recalculation, and partial-unlock loss reports are covered; remaining strategy reporting variants remain open. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Self-report gain/loss, third-party accountant refund state mutation, fee/refund clipping, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 

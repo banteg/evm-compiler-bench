@@ -201,6 +201,7 @@ real_derived:
     - strategy_report_excessive_accountant_fee_reverts
     - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
+    - strategy_second_profit_report_while_unlocking
     - strategy_loss_withdraw
     - assess_unrealized_loss
     - assess_unrealized_loss_over_debt_reverts
@@ -524,6 +525,9 @@ scenarios:
   - name: profit_unlock_after_time
     call: "pricePerShare after profit report and time advance"
     expected: "observes unlocked-profit share accounting"
+  - name: strategy_second_profit_report_while_unlocking
+    call: "process_report for a second profitable strategy report before the first locked-profit period has fully unlocked"
+    expected: "weights the remaining locked-share time with the new profit-locking period"
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
