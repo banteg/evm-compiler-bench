@@ -1865,6 +1865,18 @@ scenarios:
       data: 'abi.encodeWithSignature("maxWithdraw(address)", address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: max_redeem_limit_module_max_uint
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetWithdrawLimitModule(address,uint256)", {target}, type(uint256).max)'
+    measured:
+      data: 'abi.encodeWithSignature("maxRedeem(address)", address(this))'
+    expect_success: true
+    observers: *yearn_observers
   - name: withdraw_limit_module_reverts
     state_access_profile: mixed
     setup:

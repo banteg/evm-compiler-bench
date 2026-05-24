@@ -268,6 +268,7 @@ real_derived:
     - withdraw_limit_module
     - max_withdraw_limit_module
     - max_withdraw_limit_module_caps_to_balance
+    - max_redeem_limit_module_max_uint
     - withdraw_limit_module_reverts
     - withdraw_limit_module_call_reverts
     - permit_valid
@@ -301,6 +302,7 @@ real_derived:
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
+    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem
     - partial and over-returning strategy redeem accounting during user withdrawals
     - buy-debt current-debt clipping and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
@@ -727,6 +729,9 @@ scenarios:
   - name: max_withdraw_limit_module_caps_to_balance
     call: "maxWithdraw with a custom withdraw limit module above the owner's balance"
     expected: "caps the module return to the owner's balance-derived max withdraw"
+  - name: max_redeem_limit_module_max_uint
+    call: "maxRedeem with a custom withdraw limit module returning max uint256"
+    expected: "caps the module return to the owner's balance-derived max withdraw before converting to redeemable shares"
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
