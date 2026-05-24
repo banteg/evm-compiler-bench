@@ -110,9 +110,9 @@ Status meanings:
 | `_total_assets` | `totalAssets` | mapped, covered | Covered as observer. |
 | `_convert_to_assets` | `_convertToAssets` | mapped, covered | Max-uint and zero-value special cases are covered. |
 | `_convert_to_shares` | `_convertToShares` | mapped, covered | Max-uint and zero-value special cases are covered. |
-| `_erc20_safe_approve` | `_safeApproveToken` | mapped, covered | Optional-return false-return path remains open. |
-| `_erc20_safe_transfer_from` | `_safeTransferFromToken` | mapped, covered | No-return token path covered; false-return path remains open. |
-| `_erc20_safe_transfer` | `_safeTransferToken` | mapped, covered | No-return token path covered; false-return path remains open. |
+| `_erc20_safe_approve` | `_safeApproveToken` | mapped, covered | No-return and false-return approve paths are covered. |
+| `_erc20_safe_transfer_from` | `_safeTransferFromToken` | mapped, covered | No-return and false-return transferFrom paths are covered. |
+| `_erc20_safe_transfer` | `_safeTransferToken` | mapped, covered | No-return and false-return transfer paths are covered. |
 | `_issue_shares` | `_issueShares` | mapped, covered | Covered by deposit, reports, and fees. |
 | `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered. |
 | `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem is covered; nonzero unrealized loss queue break remains open. |
@@ -137,7 +137,6 @@ These items should be closed before flipping `yearn_vault_v3` to
   deterministic accountant.
 - Add more adversarial strategy report value combinations beyond the covered
   current-debt-above-max-debt update path.
-- Cover ERC20 false-return asset behavior in addition to no-return behavior.
 - Decide whether Vyper `String` and `DynArray` decoder timing/revert data are
   acceptable language-level approximations or need explicit non-equivalence
   callouts.

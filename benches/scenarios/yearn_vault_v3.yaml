@@ -72,6 +72,28 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: deposit_asset_no_return
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnData(address,bool,bool,bool)", {target}, true, true, false)'
+    measured:
+      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: deposit_asset_false_return_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnValue(address,bool,bool,bool)", {target}, true, true, false)'
+    measured:
+      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    expect_success: false
+    observers: *yearn_observers
   - name: deposit_all_max_uint
     state_access_profile: mixed
     setup:
@@ -99,6 +121,30 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(20_000), address(this), address(this), uint256(0))'
     expect_success: true
+    observers: *yearn_observers
+  - name: withdraw_asset_no_return
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnData(address,bool,bool,bool)", {target}, true, false, true)'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(20_000), address(this), address(this), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: withdraw_asset_false_return_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnValue(address,bool,bool,bool)", {target}, true, false, true)'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(20_000), address(this), address(this), uint256(0))'
+    expect_success: false
     observers: *yearn_observers
   - name: withdraw_default_max_loss
     state_access_profile: mixed
@@ -787,6 +833,34 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
     expect_success: true
+    observers: *yearn_observers
+  - name: update_debt_asset_approve_no_return
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnData(address,bool,bool,bool)", {target}, false, true, true)'
+    measured:
+      data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: update_debt_asset_approve_false_return_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnValue(address,bool,bool,bool)", {target}, false, true, true)'
+    measured:
+      data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+    expect_success: false
     observers: *yearn_observers
   - name: update_debt_zero_max_deposit
     state_access_profile: mixed

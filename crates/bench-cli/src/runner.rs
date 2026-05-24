@@ -498,12 +498,30 @@ contract BenchERC20 {
     string public constant symbol = "BENCH";
     uint8 public constant decimals = 18;
 
+    bool public approveReturnData = true;
+    bool public transferReturnData = true;
+    bool public transferFromReturnData = true;
+    bool public approveReturnValue = true;
+    bool public transferReturnValue = true;
+    bool public transferFromReturnValue = true;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function setReturnData(bool approveEnabled, bool transferEnabled, bool transferFromEnabled) external {
+        approveReturnData = approveEnabled;
+        transferReturnData = transferEnabled;
+        transferFromReturnData = transferFromEnabled;
+    }
+
+    function setReturnValue(bool approveValue, bool transferValue, bool transferFromValue) external {
+        approveReturnValue = approveValue;
+        transferReturnValue = transferValue;
+        transferFromReturnValue = transferFromValue;
+    }
 
     function mint(address to, uint256 value) external returns (bool) {
         totalSupply += value;
@@ -523,12 +541,12 @@ contract BenchERC20 {
     function approve(address spender, uint256 value) external returns (bool) {
         allowance[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
-        return true;
+        return _optionalReturn(approveReturnData, approveReturnValue);
     }
 
     function transfer(address to, uint256 value) external returns (bool) {
         _transfer(msg.sender, to, value);
-        return true;
+        return _optionalReturn(transferReturnData, transferReturnValue);
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
@@ -538,7 +556,7 @@ contract BenchERC20 {
             allowance[from][msg.sender] = allowed - value;
         }
         _transfer(from, to, value);
-        return true;
+        return _optionalReturn(transferFromReturnData, transferFromReturnValue);
     }
 
     function _transfer(address from, address to, uint256 value) internal {
@@ -546,6 +564,15 @@ contract BenchERC20 {
         balanceOf[from] -= value;
         balanceOf[to] += value;
         emit Transfer(from, to, value);
+    }
+
+    function _optionalReturn(bool returnData, bool returnValue) internal pure returns (bool) {
+        if (!returnData) {
+            assembly {
+                return(0, 0)
+            }
+        }
+        return returnValue;
     }
 }
 
@@ -1894,6 +1921,30 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.asset) != address(0), "yearn deps");
         deps.asset.mint(target, amount);
+        return true;
+    }
+
+    function benchYearnSetAssetReturnData(
+        address target,
+        bool approveEnabled,
+        bool transferEnabled,
+        bool transferFromEnabled
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.asset) != address(0), "yearn deps");
+        deps.asset.setReturnData(approveEnabled, transferEnabled, transferFromEnabled);
+        return true;
+    }
+
+    function benchYearnSetAssetReturnValue(
+        address target,
+        bool approveValue,
+        bool transferValue,
+        bool transferFromValue
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.asset) != address(0), "yearn deps");
+        deps.asset.setReturnValue(approveValue, transferValue, transferFromValue);
         return true;
     }
 

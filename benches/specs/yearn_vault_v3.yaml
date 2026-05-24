@@ -130,9 +130,13 @@ real_derived:
   scenario_coverage:
     - initialize
     - deposit
+    - deposit_asset_no_return
+    - deposit_asset_false_return_reverts
     - deposit_all_max_uint
     - mint
     - withdraw_idle
+    - withdraw_asset_no_return
+    - withdraw_asset_false_return_reverts
     - withdraw_default_max_loss
     - redeem_idle
     - redeem_default_max_loss
@@ -193,6 +197,8 @@ real_derived:
     - unrealized_loss_withdraw_allowed
     - update_debt_unrealized_loss_reverts
     - update_debt_limited_max_deposit
+    - update_debt_asset_approve_no_return
+    - update_debt_asset_approve_false_return_reverts
     - update_debt_zero_max_deposit
     - update_debt_limited_max_redeem
     - update_debt_max_debt_below_current
@@ -285,6 +291,12 @@ scenarios:
   - name: deposit
     call: "deposit(100_000, address(this))"
     expected: "transfers assets in, mints shares, and increases idle assets"
+  - name: deposit_asset_no_return
+    call: "deposit(100_000, address(this)) with an asset transferFrom that returns no data"
+    expected: "accepts the no-return ERC20 path through Vyper default_return_value=True semantics"
+  - name: deposit_asset_false_return_reverts
+    call: "deposit(100_000, address(this)) with an asset transferFrom that returns false"
+    expected: "reverts at the optional-return transferFrom assertion"
   - name: deposit_all_max_uint
     call: "deposit(max_value(uint256), address(this))"
     expected: "deposits the sender's full asset balance through the upstream deposit-all branch"
@@ -294,6 +306,12 @@ scenarios:
   - name: withdraw_idle
     call: "withdraw(20_000, address(this), address(this), 0)"
     expected: "burns shares and transfers idle assets"
+  - name: withdraw_asset_no_return
+    call: "withdraw(20_000, address(this), address(this), 0) with an asset transfer that returns no data"
+    expected: "accepts the no-return ERC20 path through Vyper default_return_value=True semantics"
+  - name: withdraw_asset_false_return_reverts
+    call: "withdraw(20_000, address(this), address(this), 0) with an asset transfer that returns false"
+    expected: "reverts at the optional-return transfer assertion"
   - name: withdraw_default_max_loss
     call: "withdraw(20_000, address(this), address(this)) using the Vyper default max_loss overload"
     expected: "burns shares and transfers idle assets with the upstream default max-loss selector"
@@ -465,6 +483,12 @@ scenarios:
   - name: update_debt_limited_max_deposit
     call: "update_debt upward when the strategy maxDeposit is lower than the target increase"
     expected: "allocates only the strategy-declared maxDeposit amount and records the partial debt increase"
+  - name: update_debt_asset_approve_no_return
+    call: "update_debt upward with an asset approve that returns no data"
+    expected: "accepts the no-return ERC20 approve path through Vyper default_return_value=True semantics"
+  - name: update_debt_asset_approve_false_return_reverts
+    call: "update_debt upward with an asset approve that returns false"
+    expected: "reverts at the optional-return approve assertion"
   - name: update_debt_zero_max_deposit
     call: "update_debt upward when the strategy maxDeposit is zero"
     expected: "returns current debt without depositing or emitting a debt update"

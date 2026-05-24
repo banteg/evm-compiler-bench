@@ -106,7 +106,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream vault source | Exact source | `VaultV3.vy` is vendored at the pinned blob. |
 | Blueprint/minimal-proxy deployment | Exact source path | The upstream Vyper benchmark is deployed through the blueprint/clone path. |
-| ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, and zero/max-uint conversion boundaries are scenario-covered. |
+| ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, and zero/max-uint conversion boundaries are scenario-covered. |
 | ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, and invalid permits are covered. |
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
@@ -220,11 +220,12 @@ Exact now:
   permit, role bitmasks, role-manager handoff, mutable metadata, deposit and
   withdraw limit modules, default/custom queues, strategy add/revoke/debt
   flows, process-report accounting, locked-profit shares, shutdown, and
-  optional-return asset transfers.
+  optional-return asset transfer/transferFrom/approve handling.
 - Scenarios now cover self-report idle asset accrual, accountant fees/refunds,
   excessive-fee rejection, reentrant accountant rejection, realized and
   unrealized loss paths, locked-profit zero reset, module acceptance/rejection,
-  long-queue bounds, and permit before/after initialization.
+  long-queue bounds, no-return/false-return asset handling, and permit
+  before/after initialization.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, plus limited `maxRedeem`, max-debt-below-current,
   shutdown pull-only, and actual redeem variance during debt decreases.
