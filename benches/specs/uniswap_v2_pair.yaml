@@ -68,6 +68,7 @@ real_derived:
     - flash_swap_callback
     - flash_swap_large_callback_data
     - flash_swap_8k_callback_data
+    - flash_swap_64k_callback_data
     - flash_swap_reentrancy_reverts
     - burn
     - burn_no_return_tokens
@@ -115,7 +116,7 @@ real_derived:
     - constant-product swap fee invariant for both token0-input and token1-input paths
     - production K-invariant rejection for one-wei over-output swaps
     - non-empty flash-swap callback execution
-    - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds
+    - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds, plus the current 65536-byte port boundary
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
     - upstream uint112 reserve overflow rejection
@@ -164,6 +165,9 @@ scenarios:
   - name: flash_swap_8k_callback_data
     call: "swap(0, 100, flash callee, callback data larger than 4096 bytes)"
     expected: "executes the callback and repays through the widened Vyper callback-data bound"
+  - name: flash_swap_64k_callback_data
+    call: "swap(0, 100, flash callee, callback data exactly at the Vyper port's 65536-byte bound)"
+    expected: "executes the callback and repays at the largest callback-data payload accepted by the Vyper port"
   - name: flash_swap_reentrancy_reverts
     call: "swap(0, 100, reentrant flash callee, non-empty callback data)"
     expected: "rejects reentrant pair calls from the callback through the production lock"

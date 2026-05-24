@@ -68,7 +68,7 @@ layout.
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, burn, invariant swap, drift, skim, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
-| Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, and larger-than-old-4096-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
+| Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
 | Revert data and ABI boundary behavior | Incomplete | Success/failure is covered for important paths, but exhaustive revert-data and decoder-boundary parity has not been audited. |
 | Storage layout | Approximate | Packed reserves intentionally match; the rest is idiomatic Vyper storage and not full layout-compatible. |
 
@@ -153,7 +153,7 @@ Exact now:
   token0-input and upstream token1-input swap invariant checks, one-wei
   over-output K rejection, no-return token transfers, false-return transfer
   rejection across swap, burn, and skim, flash callback repayment through callback data above the old
-  4 KiB port bound, flash reentrancy rejection,
+  4 KiB port bound and at the current 64 KiB bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP
   transfer/allowance failures, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
@@ -163,7 +163,8 @@ Remaining:
 
 - Upstream `swap` accepts unbounded `bytes calldata`. Vyper requires a bounded
   byte array and the current port uses `Bytes[65536]`, with scenarios now
-  covering payloads above the old 4 KiB port bound. Decide whether this
+  covering payloads above the old 4 KiB port bound and exactly at the current
+  64 KiB bound. Decide whether this
   language-level bound keeps the benchmark non-production-equivalent, or
   document an explicit policy exception before removing the excluded feature.
 - The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
