@@ -57,7 +57,7 @@ Status meanings:
 | `unlockedShares` | `unlockedShares` | mapped, covered | Covered before and after reports, including partial-unlock loss reports. |
 | `pricePerShare` | `pricePerShare` | mapped, covered | Covered as observer before and after reports. |
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
-| `process_report` | `process_report` | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, self-report refunds, self-report idle gain with accountant fees/refunds, and third-party accountant refund state mutation are covered; more strategy reporting variants remain open. |
+| `process_report` | `process_report` | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, self-report refunds, self-report idle gain with accountant fees/refunds, gain plus clipped refunds, and third-party accountant refund state mutation are covered; more strategy reporting variants remain open. |
 | `buy_debt` | `buy_debt` | mapped, covered | Over-current-debt clipping and zero-share rejection are covered. |
 | `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip behavior is covered. |
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
@@ -125,7 +125,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, plain strategy loss, self-report gain/loss/refunds, self-report idle gain with accountant fees/refunds, third-party accountant refund state mutation, fee/refund clipping, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, plain strategy loss, self-report gain/loss/refunds, self-report idle gain with accountant fees/refunds, third-party accountant refund state mutation, fee/refund clipping, gain plus clipped refund locking, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 

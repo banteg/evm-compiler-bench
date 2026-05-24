@@ -195,6 +195,7 @@ real_derived:
     - self_report_idle_gain_with_accountant_fee_refund
     - process_report_inactive_strategy_reverts
     - strategy_report_with_accountant
+    - strategy_gain_report_refund_balance_clipped
     - strategy_report_zero_accountant
     - strategy_report_refund_balance_clipped
     - strategy_report_refund_allowance_clipped
@@ -305,7 +306,7 @@ real_derived:
     - deposit-limit module finite and max-uint deposit acceptance, receiver-specific maxDeposit returns, plus over-limit rejection
     - withdraw-limit-module max-withdraw capping above and below balance, owner-specific maxWithdraw returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, refund clipping after accountant state mutation, fees, net-positive and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, refund clipping after accountant state mutation, fees, net-positive and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -526,6 +527,9 @@ scenarios:
   - name: strategy_report_with_accountant
     call: "process_report with accountant fees/refunds and nonzero protocol fee config"
     expected: "accounts fees, refunds, protocol fee shares, and locked profit"
+  - name: strategy_gain_report_refund_balance_clipped
+    call: "process_report with a strategy gain and reported refunds above accountant asset balance"
+    expected: "clips the refund before combining it with strategy gain for locked-profit share accounting"
   - name: strategy_report_zero_accountant
     call: "process_report with an accountant that returns zero fees and zero refunds"
     expected: "routes through the accountant hook without changing fee or refund accounting"

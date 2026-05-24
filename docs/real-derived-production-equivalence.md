@@ -117,7 +117,7 @@ Immediate chips:
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Exact counterpart surface, audit pending | Name and symbol setters plus Vyper string length success/failure boundaries are covered with Solidity runtime checks under the semantic-boundary policy. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt clipping/rejection paths are covered. |
-| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain with accountant fees/refunds, accountant fees/refunds, net-positive and net-negative mixed loss/fee/refund reports, refund clipping after accountant state mutation, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, partial-unlock loss reports, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
+| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain with accountant fees/refunds, accountant fees/refunds, gain plus clipped refund locking, net-positive and net-negative mixed loss/fee/refund reports, refund clipping after accountant state mutation, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, partial-unlock loss reports, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, duplicate entries, full-queue append skipping, long-queue failures, strategy maxRedeem limits, zero-redeem after full unrealized loss, and partial/over strategy redeems are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject paths, high-return deposit/withdraw execution and capping, receiver/owner-specific returns, and reverting calls, but arbitrary third-party behavior is not exhaustive. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover three management orderings, including a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
@@ -242,7 +242,7 @@ Exact now:
   optional-return asset transfer/transferFrom/approve handling.
 - Scenarios now cover self-report idle asset accrual/loss, self-report idle
   gains with accountant fees/refunds, accountant fees/refunds,
-  receiver/owner-specific limit-module returns, mixed
+  gain plus clipped refund locking, receiver/owner-specific limit-module returns, mixed
   loss/fee/refund reports, zero-return accountant reports,
   refund clipping by balance/allowance, refund balance/allowance mutation
   during accountant reports, excessive-fee rejection, reentrant accountant
