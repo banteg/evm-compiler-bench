@@ -69,7 +69,7 @@ Status meanings:
 | `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
 | `approve` | `approve` | mapped, covered | Covered directly. |
 | `transfer` | `transfer` | mapped, covered | Receiver zero/self rejection is mapped but not fully covered. |
-| `transferFrom` | `transferFrom` | mapped, covered | Infinite allowance path is open. |
+| `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |
 | `permit` | `permit` | mapped, covered | Valid, invalid, and pre-initialization permit paths covered; chain-id drift remains open. |
 | `balanceOf` | `balanceOf` | mapped, covered | Vault-self locked-share branch covered through observers after reports. |
 | `totalSupply` | `totalSupply` | mapped, covered | Covered as observer. |
@@ -88,7 +88,7 @@ Status meanings:
 | `previewRedeem` | `previewRedeem` | mapped, covered | Rounded-down conversion plus zero and max-uint branches are covered. |
 | `FACTORY` | `FACTORY` | mapped, covered | Factory is harness-provided; full factory behavior is out of scope. |
 | `apiVersion` | `apiVersion` | mapped, covered | Covered as observer. |
-| `assess_share_of_unrealised_losses` | `assess_share_of_unrealised_losses` | mapped, covered | Current-debt `< assets_needed` revert remains open. |
+| `assess_share_of_unrealised_losses` | `assess_share_of_unrealised_losses` | mapped, covered | Current-debt `< assets_needed` revert is covered. |
 | `profitMaxUnlockTime` | `profitMaxUnlockTime` | mapped, covered | Covered as observer. |
 | `fullProfitUnlockDate` | `fullProfitUnlockDate` | mapped, covered | Covered as observer. |
 | `profitUnlockingRate` | `profitUnlockingRate` | mapped, covered | Covered as observer. |
@@ -99,9 +99,9 @@ Status meanings:
 
 | Upstream helper | Port counterpart | Status | Remaining work |
 | --- | --- | --- | --- |
-| `_spend_allowance` | `_spendAllowance` | mapped, covered | Infinite allowance branch remains open. |
+| `_spend_allowance` | `_spendAllowance` | mapped, covered | Infinite allowance branch is covered. |
 | `_transfer` | `_transfer` | mapped, covered | Receiver checks happen in external wrappers, matching upstream external surface. |
-| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Same allowance branch gap. |
+| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches are covered. |
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
 | `_permit` | `permit` plus `domain_separator` | mapped, covered | Chain-id drift remains open. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
@@ -117,7 +117,7 @@ Status meanings:
 | `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered. |
 | `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem is covered; nonzero unrealized loss queue break remains open. |
 | `_deposit` | `_deposit` | mapped, covered | Auto-allocate and deposit-all entry paths are covered. |
-| `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches remain open. |
+| `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches are covered. |
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |

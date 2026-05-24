@@ -161,6 +161,18 @@ scenarios:
       sender: BOB
     expect_success: true
     observers: *yearn_observers
+  - name: transfer_from_infinite_allowance
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, type(uint256).max)'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), BOB, uint256(20_000))'
+      sender: BOB
+    expect_success: true
+    observers: *yearn_observers
   - name: max_withdraw_default
     state_access_profile: warm
     setup:
@@ -659,6 +671,19 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("assess_share_of_unrealised_losses(address,uint256)", benchYearnStrategy({target}), uint256(50_000))'
     expect_success: true
+    observers: *yearn_observers
+  - name: assess_unrealized_loss_over_debt_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+    measured:
+      data: 'abi.encodeWithSignature("assess_share_of_unrealised_losses(address,uint256)", benchYearnStrategy({target}), uint256(100_001))'
+    expect_success: false
     observers: *yearn_observers
   - name: unrealized_loss_withdraw_reverts
     state_access_profile: mixed

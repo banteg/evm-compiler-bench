@@ -139,6 +139,7 @@ real_derived:
     - approve
     - transfer
     - transfer_from
+    - transfer_from_infinite_allowance
     - max_withdraw_default
     - max_redeem_default
     - conversion_zero_edges
@@ -183,6 +184,7 @@ real_derived:
     - profit_unlock_after_time
     - strategy_loss_withdraw
     - assess_unrealized_loss
+    - assess_unrealized_loss_over_debt_reverts
     - unrealized_loss_withdraw_reverts
     - unrealized_loss_withdraw_allowed
     - update_debt_unrealized_loss_reverts
@@ -306,6 +308,9 @@ scenarios:
   - name: transfer_from
     call: "transferFrom(address(this), BOB, 20_000) from an approved spender"
     expected: "moves vault shares and spends allowance"
+  - name: transfer_from_infinite_allowance
+    call: "transferFrom(address(this), BOB, 20_000) from an infinite-allowance spender"
+    expected: "moves vault shares while leaving max_value(uint256) allowance untouched"
   - name: max_withdraw_default
     call: "maxWithdraw(address(this)) using the Vyper default max_loss overload"
     expected: "returns the default-loss withdrawable asset amount"
@@ -435,6 +440,12 @@ scenarios:
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
+  - name: assess_unrealized_loss
+    call: "assess_share_of_unrealised_losses after burning strategy assets"
+    expected: "returns the user's proportional unrealized loss share"
+  - name: assess_unrealized_loss_over_debt_reverts
+    call: "assess_share_of_unrealised_losses with assets_needed above current strategy debt"
+    expected: "reverts at the upstream current-debt boundary"
   - name: update_debt_limited_max_deposit
     call: "update_debt upward when the strategy maxDeposit is lower than the target increase"
     expected: "allocates only the strategy-declared maxDeposit amount and records the partial debt increase"
