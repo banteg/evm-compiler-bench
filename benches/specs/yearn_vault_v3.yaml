@@ -158,6 +158,7 @@ real_derived:
     - max_mint_vault_receiver
     - max_mint_unlimited
     - max_mint_limit_module
+    - max_mint_unlimited_limit_module
     - update_debt_increase
     - update_debt_decrease
     - update_debt_default_max_loss
@@ -263,6 +264,7 @@ real_derived:
     - deposit_limit_module_call_reverts
     - withdraw_limit_module
     - max_withdraw_limit_module
+    - max_withdraw_limit_module_caps_to_balance
     - withdraw_limit_module_reverts
     - withdraw_limit_module_call_reverts
     - permit_valid
@@ -290,7 +292,7 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - withdraw-limit-module max-withdraw capping, module-call failure, and withdraw acceptance/rejection paths
+    - withdraw-limit-module max-withdraw capping above and below balance, module-call failure, and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report idle asset accrual and loss, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -401,6 +403,9 @@ scenarios:
   - name: max_mint_limit_module
     call: "maxMint(address(this)) with a deposit-limit module"
     expected: "uses the module-provided deposit limit and converts it to shares"
+  - name: max_mint_unlimited_limit_module
+    call: "maxMint(address(this)) with a deposit-limit module returning max uint256"
+    expected: "returns max_value(uint256) through the upstream max-uint conversion path"
   - name: update_debt_increase
     call: "update_debt(strategy, 100_000, 0)"
     expected: "moves idle assets into strategy debt"
@@ -707,6 +712,9 @@ scenarios:
   - name: max_withdraw_limit_module
     call: "maxWithdraw with a custom withdraw limit module"
     expected: "returns the module-capped withdrawable amount"
+  - name: max_withdraw_limit_module_caps_to_balance
+    call: "maxWithdraw with a custom withdraw limit module above the owner's balance"
+    expected: "caps the module return to the owner's balance-derived max withdraw"
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
