@@ -218,6 +218,7 @@ real_derived:
     - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
     - strategy_second_profit_report_while_unlocking
+    - strategy_profit_report_after_partial_unlock_with_accountant
     - strategy_loss_withdraw
     - assess_unrealized_loss
     - assess_unrealized_loss_over_debt_reverts
@@ -323,7 +324,7 @@ real_derived:
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns and withdrawal execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -613,6 +614,9 @@ scenarios:
   - name: strategy_second_profit_report_while_unlocking
     call: "process_report for a second profitable strategy report before the first locked-profit period has fully unlocked"
     expected: "weights the remaining locked-share time with the new profit-locking period"
+  - name: strategy_profit_report_after_partial_unlock_with_accountant
+    call: "process_report for a second profitable strategy report with accountant fees/refunds after partial profit unlock"
+    expected: "accounts unlocked shares while charging fees, pulling refunds, and weighting new locked-profit shares"
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
