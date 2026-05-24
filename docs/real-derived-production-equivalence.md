@@ -87,7 +87,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus initial three-coin liquidity, quote, and exchange scenarios, but full non-two-coin withdrawal, oracle, and 8-coin coverage remains open. |
+| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus initial three-coin liquidity, quote, exchange, and proportional withdrawal scenarios, but full non-two-coin imbalanced/one-coin withdrawal, oracle, and 8-coin coverage remains open. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
@@ -187,9 +187,10 @@ Exact now:
   averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
   donation-before-first-deposit handling, initial three-coin liquidity,
-  three-coin quote views, three-coin exchange, rebasing asset behavior, ERC4626
-  rate scaling, dynamic fees, admin controls, slippage and invalid coin
-  reverts, and Vyper DynArray length edges for the two-coin deployment.
+  three-coin quote views, three-coin exchange, proportional three-coin
+  withdrawal, rebasing asset behavior, ERC4626 rate scaling, dynamic fees,
+  admin controls, slippage and invalid coin reverts, and Vyper DynArray length
+  edges for the two-coin deployment.
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path rather than only same-block oracle
   upkeep.
@@ -202,9 +203,10 @@ Remaining:
 
 - Upstream `CurveStableSwapNG` is generic over `N_COINS` from constructor input
   up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and a
-  three-coin initial-liquidity, quote, and exchange scenario, but the
-  non-two-coin surface has not been completed through withdrawals, oracle
-  updates, and 8-coin boundary scenarios.
+  three-coin initial-liquidity, quote, exchange, and proportional-withdrawal
+  scenario, but the non-two-coin surface has not been completed through
+  imbalanced/one-coin withdrawals, oracle updates, and 8-coin boundary
+  scenarios.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.
