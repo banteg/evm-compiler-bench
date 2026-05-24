@@ -91,6 +91,7 @@ real_derived:
     - remove_liquidity_three_coin
     - remove_liquidity_eight_coin
     - remove_one_coin_eight_coin
+    - remove_liquidity_imbalance_eight_coin
     - remove_liquidity_imbalance_three_coin
     - calc_withdraw_one_coin_three_coin
     - remove_one_coin_three_coin
@@ -158,6 +159,7 @@ real_derived:
     - proportional three-coin liquidity removal
     - proportional eight-coin liquidity removal at MAX_COINS
     - eight-coin one-coin withdrawal at MAX_COINS
+    - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees
     - three-coin one-coin withdrawal and quote paths
     - first liquidity after pre-deposit token donation
@@ -221,6 +223,9 @@ scenarios:
   - name: remove_one_coin_eight_coin
     call: "remove_liquidity_one_coin(10_000, 7, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns LP shares for one endpoint coin at the upstream MAX_COINS boundary"
+  - name: remove_liquidity_imbalance_eight_coin
+    call: "remove_liquidity_imbalance([40_000, 10_000, 25_000, 5_000, 12_000, 8_000, 15_000, 20_000], 250_000, address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "burns the required LP amount and applies dynamic fees at the upstream MAX_COINS boundary"
   - name: remove_liquidity_imbalance_three_coin
     call: "remove_liquidity_imbalance([40_000, 10_000, 25_000], 100_000, address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns the required LP amount and applies dynamic fees across all constructor-sized coins"
