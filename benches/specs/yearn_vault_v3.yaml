@@ -163,6 +163,7 @@ real_derived:
     - update_debt_respects_minimum_idle
     - update_debt_minimum_idle_no_available_idle
     - update_debt_decrease
+    - update_debt_decrease_restores_minimum_idle
     - update_debt_default_max_loss
     - update_max_debt_for_strategy
     - update_max_debt_inactive_reverts
@@ -453,6 +454,9 @@ scenarios:
   - name: update_debt_decrease
     call: "update_debt(strategy, 40_000, 0) after a higher debt allocation"
     expected: "redeems strategy shares and returns assets to idle"
+  - name: update_debt_decrease_restores_minimum_idle
+    call: "update_debt(strategy, 140_000, 0) after setting minimum_total_idle above current idle"
+    expected: "redeems more than the requested debt decrease to restore the upstream minimum idle asset reserve"
   - name: update_debt_default_max_loss
     call: "update_debt(strategy, 100_000) using the Vyper default max_loss overload"
     expected: "allocates debt with the upstream default max-loss selector"

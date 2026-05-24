@@ -259,8 +259,9 @@ Exact now:
   bounds, no-return/false-return asset handling, and permit before/after
   initialization plus after chain-id changes.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
-  during debt increases, plus limited `maxRedeem`, max-debt-below-current,
-  shutdown pull-only, and actual redeem variance during debt decreases.
+  during debt increases, minimum-idle clipping/restoration on debt changes,
+  limited `maxRedeem`, max-debt-below-current, shutdown pull-only, and actual
+  redeem variance during debt decreases.
 - Strategy withdrawal scenarios now cover limited `maxRedeem` caps and
   zero-redeem queue fallthrough.
 - Strategy withdrawal accounting now covers actual redeem returns below and
