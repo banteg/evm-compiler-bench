@@ -575,6 +575,22 @@ scenarios:
       data: 'abi.encodeWithSignature("dynamic_fee(int128,int128)", int128(0), int128(1))'
     expect_success: true
     observers: *curve_observers
+  - name: dynamic_fee_eight_coin
+    deployment_variant: curve_eight_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts8(1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts8(100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("dynamic_fee(int128,int128)", int128(0), int128(7))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(6))'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: price_oracle_after_time
     state_access_profile: warm
     setup:
