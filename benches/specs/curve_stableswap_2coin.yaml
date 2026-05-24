@@ -117,6 +117,7 @@ real_derived:
     - calc_token_amount_extra_amounts
     - calc_token_amount_too_many_amounts_reverts
     - dynamic_fee_quote
+    - dynamic_fee_three_coin
     - dynamic_fee_eight_coin
     - price_oracle_after_time
     - d_oracle_after_time
@@ -160,7 +161,7 @@ real_derived:
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
     - constructor-initialized eight-coin MAX_COINS boundary setup
-    - factory-delegated three-coin get_dy, get_dx, and calc_token_amount quote views
+    - factory-delegated three-coin get_dy, get_dx, calc_token_amount, and dynamic_fee quote views
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
@@ -319,6 +320,9 @@ scenarios:
   - name: dynamic_fee_quote
     call: "dynamic_fee(0, 1) after imbalanced liquidity"
     expected: "returns the off-peg dynamic fee through the factory views implementation"
+  - name: dynamic_fee_three_coin
+    call: "dynamic_fee(0, 2) after imbalanced liquidity on a three-coin deployment"
+    expected: "returns the off-peg dynamic fee through the factory views implementation using constructor-driven N_COINS math"
   - name: dynamic_fee_eight_coin
     call: "dynamic_fee(0, 7) after imbalanced liquidity on an eight-coin deployment"
     expected: "returns the endpoint off-peg dynamic fee through the factory views implementation at the upstream MAX_COINS boundary"
