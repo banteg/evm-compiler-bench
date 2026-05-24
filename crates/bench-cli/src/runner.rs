@@ -1952,6 +1952,21 @@ fn all_helper_functions() -> &'static str {
         return abi.encodeWithSignature("set_default_queue(address[])", benchYearnTripleQueue(target));
     }
 
+    function benchYearnSetDuplicateDefaultQueueCalldata(address target) public view returns (bytes memory) {
+        address[] memory queue = new address[](2);
+        queue[0] = address(yearnDeps[target].strategy);
+        queue[1] = address(yearnDeps[target].strategy);
+        return abi.encodeWithSignature("set_default_queue(address[])", queue);
+    }
+
+    function benchYearnSetFullDuplicateDefaultQueueCalldata(address target) public view returns (bytes memory) {
+        address[] memory queue = new address[](10);
+        for (uint256 i = 0; i < queue.length; i++) {
+            queue[i] = address(yearnDeps[target].strategy);
+        }
+        return abi.encodeWithSignature("set_default_queue(address[])", queue);
+    }
+
     function benchYearnWithdrawQueueCalldata(
         address target,
         uint256 assets,

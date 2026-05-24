@@ -859,6 +859,27 @@ scenarios:
       data: 'benchYearnSetDefaultQueueCalldata({target}, true)'
     expect_success: true
     observers: *yearn_observers
+  - name: set_default_queue_duplicate_strategy
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+    measured:
+      data: 'benchYearnSetDuplicateDefaultQueueCalldata({target})'
+    expect_success: true
+    observers: *yearn_observers
+  - name: add_strategy_queue_full_skips_append
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'benchYearnSetFullDuplicateDefaultQueueCalldata({target})'
+    measured:
+      data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy2({target}), true)'
+    expect_success: true
+    observers: *yearn_observers
   - name: forced_default_queue_withdraw
     state_access_profile: mixed
     setup:

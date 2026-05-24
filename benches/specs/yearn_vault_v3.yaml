@@ -118,6 +118,7 @@ real_derived:
     - mutable ERC20 metadata through role-manager setters
     - accountant, deposit-limit module, and withdraw-limit module configuration surfaces
     - default and custom withdrawal queue configuration including Vyper MAX_QUEUE bounds
+    - duplicate default-queue entries and full default-queue append-skip behavior
     - process_report using ERC4626-compatible strategy accounting plus accountant/protocol fee paths and upstream nonreentrant guard behavior
     - unrealized strategy-loss assessment, withdrawal max-loss enforcement, and debt-decrease rejection before a new report
     - locked-profit share accounting observable through pricePerShare
@@ -192,6 +193,8 @@ real_derived:
     - withdraw_over_strategy_redeem
     - custom_queue_withdraw
     - set_default_queue
+    - set_default_queue_duplicate_strategy
+    - add_strategy_queue_full_skips_append
     - forced_default_queue_withdraw
     - combined_management_sequence_withdraw
     - alternate_management_sequence_redeem
@@ -447,6 +450,12 @@ scenarios:
   - name: set_default_queue
     call: "set_default_queue with the two strategies in reverse order"
     expected: "updates the stored default withdrawal queue"
+  - name: set_default_queue_duplicate_strategy
+    call: "set_default_queue with the same active strategy twice"
+    expected: "accepts duplicate active strategies exactly like upstream"
+  - name: add_strategy_queue_full_skips_append
+    call: "add_strategy(strategy, true) while the default queue already has MAX_QUEUE entries"
+    expected: "activates the strategy but leaves the full default queue unchanged"
   - name: forced_default_queue_withdraw
     call: "withdraw with a custom queue while use_default_queue is enabled"
     expected: "ignores the custom queue and uses the stored default queue"

@@ -38,7 +38,7 @@ Status meanings:
 | `setName` | `setName` | mapped, covered | Revert data and decoder timing remain approximate. |
 | `setSymbol` | `setSymbol` | mapped, covered | Revert data and decoder timing remain approximate. |
 | `set_accountant` | `set_accountant` | mapped, covered | Third-party accountant behavior remains harness-scoped. |
-| `set_default_queue` | `set_default_queue` | mapped, covered | More duplicate-strategy queue cases would harden the audit. |
+| `set_default_queue` | `set_default_queue` | mapped, covered | Duplicate active strategy entries are covered. |
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
 | `set_auto_allocate` | `set_auto_allocate` | mapped, covered | Covered with a default-queue strategy deposit. |
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Shutdown/module override branches covered only partially. |
@@ -57,7 +57,7 @@ Status meanings:
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
 | `process_report` | `process_report` | mapped, covered | More third-party accountant and strategy reporting variants remain open. |
 | `buy_debt` | `buy_debt` | mapped, covered | Over-current-debt clipping and zero-share rejection are covered. |
-| `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full behavior is not yet covered. |
+| `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip behavior is covered. |
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
 | `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal and re-add after forced debt accounting. |
 | `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Covered for active-strategy update and inactive-strategy rejection. |
@@ -120,7 +120,7 @@ Status meanings:
 | `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches remain open. |
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
-| `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full add branch remains open. |
+| `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant, fee/refund clipping, and post-unlock loss/fee variants remain open. |
@@ -137,7 +137,6 @@ These items should be closed before flipping `yearn_vault_v3` to
   deterministic accountant.
 - Add more adversarial strategy report value combinations beyond the covered
   current-debt-above-max-debt update path.
-- Cover queue-full behavior and duplicate strategy queue behavior.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.
 - Cover max-uint and zero-value conversion branches that are externally
   observable through deposit, convert, preview, withdraw, and redeem calls.
