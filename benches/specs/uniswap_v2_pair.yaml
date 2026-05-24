@@ -108,6 +108,8 @@ real_derived:
     - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
     - truly unbounded flash-swap callback calldata length in the Vyper port
+    - full upstream UniswapV2Factory behavior beyond pair initialize, feeTo, and benchmark CREATE2 deployment
+    - exhaustive event, revert-data, and ABI-boundary parity audit outside the listed scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover factory CREATE2 pair deployment plus pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."

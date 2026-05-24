@@ -213,6 +213,8 @@ real_derived:
     - valid EIP-712 permit acceptance before and after initialization plus invalid permit revert paths
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage
+    - sequence-level parity coverage for combined role, queue, debt, report, module, shutdown, and withdrawal flows
+    - exhaustive event, revert-data, and Vyper String/DynArray decoder-boundary parity audit outside the listed scenarios
     - exact storage layout compatibility in the Solidity port
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."

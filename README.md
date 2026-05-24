@@ -153,6 +153,7 @@ just zip-design
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Scoped or partial counterpart-language ports are
   diagnostic comparators only and must not be read as production gas or deploy
-  size claims for the upstream protocols.
+  size claims for the upstream protocols. The current parity inventory lives in
+  `docs/real-derived-production-equivalence.md`.
 - Vyper Venom rows use `--experimental-codegen`.
 - Vyper 0.5.0a1 is pre-release.
