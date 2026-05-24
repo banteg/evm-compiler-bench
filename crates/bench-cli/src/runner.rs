@@ -1716,6 +1716,13 @@ fn all_helper_functions() -> &'static str {
         return true;
     }
 
+    function benchYearnAirdrop(address target, uint256 amount) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.asset) != address(0), "yearn deps");
+        deps.asset.mint(target, amount);
+        return true;
+    }
+
     function benchYearnConfigureAccountant(address target, uint256 fees, uint256 refunds) external returns (bool) {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.accountant) != address(0), "yearn deps");

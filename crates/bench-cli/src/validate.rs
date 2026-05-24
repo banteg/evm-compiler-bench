@@ -11,6 +11,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -59,7 +60,7 @@ fn validate_specs(root: &Path) -> Result<usize> {
                 path.display()
             );
         };
-        validate_checked_in_spec_metadata(&value, &path, benchmark)?;
+        validate_checked_in_spec_metadata(root, &value, &path, benchmark)?;
         count += 1;
     }
     if count != benchmarks.len() {
@@ -453,6 +454,7 @@ fn validate_benchmark_spec(root: &Path, value: &serde_yaml::Value, path: &Path) 
 }
 
 fn validate_checked_in_spec_metadata(
+    root: &Path,
     value: &serde_yaml::Value,
     path: &Path,
     benchmark: &Benchmark,
@@ -474,7 +476,7 @@ fn validate_checked_in_spec_metadata(
                     benchmark.id
                 );
             };
-            validate_real_derived_spec(value, path, provenance)?;
+            validate_real_derived_spec(root, value, path, benchmark, provenance)?;
         }
         BenchmarkSuite::Scale => {
             bail!(
@@ -487,8 +489,10 @@ fn validate_checked_in_spec_metadata(
 }
 
 fn validate_real_derived_spec(
+    root: &Path,
     value: &serde_yaml::Value,
     path: &Path,
+    benchmark: &Benchmark,
     provenance: &Provenance,
 ) -> Result<()> {
     let real = value
@@ -557,7 +561,62 @@ fn validate_real_derived_spec(
             path.display()
         );
     }
+    validate_source_blob(root, path, benchmark, provenance)?;
     Ok(())
+}
+
+fn validate_source_blob(
+    root: &Path,
+    path: &Path,
+    benchmark: &Benchmark,
+    provenance: &Provenance,
+) -> Result<()> {
+    let Some(expected_blob) = provenance.source_blob.as_deref() else {
+        return Ok(());
+    };
+    let implementation = match provenance.source_language {
+        crate::models::Language::Solidity => &benchmark.solidity_path,
+        crate::models::Language::Vyper => &benchmark.vyper_path,
+    };
+    if !implementation.ends_with(&provenance.source_path) {
+        bail!(
+            "{} source-language implementation {} does not end with pinned upstream source_path {}",
+            path.display(),
+            implementation,
+            provenance.source_path
+        );
+    }
+    let implementation_path = root.join(implementation);
+    let actual_blob = git_blob_hash(&implementation_path)
+        .with_context(|| format!("hashing source blob {}", implementation_path.display()))?;
+    if actual_blob != expected_blob {
+        bail!(
+            "{} source_blob mismatch for {}: expected {}, got {}",
+            path.display(),
+            implementation_path.display(),
+            expected_blob,
+            actual_blob
+        );
+    }
+    Ok(())
+}
+
+fn git_blob_hash(path: &Path) -> Result<String> {
+    let output = Command::new("git")
+        .arg("hash-object")
+        .arg(path)
+        .output()
+        .with_context(|| format!("running git hash-object {}", path.display()))?;
+    if !output.status.success() {
+        bail!(
+            "git hash-object {} failed with status {}\nstdout:\n{}\nstderr:\n{}",
+            path.display(),
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn validate_row_status(row: &Value, path: &Path) -> Result<()> {
