@@ -1101,9 +1101,7 @@ contract YearnVaultV3Real {
             _issueShares(endingSupply - totalSupply_, address(this));
         } else if (totalSupply_ > endingSupply) {
             uint256 toBurn = _min(totalSupply_ - endingSupply, _balanceOf[address(this)]);
-            if (toBurn > 0) {
-                _burnShares(toBurn, address(this));
-            }
+            _burnShares(toBurn, address(this));
         }
 
         if (report.sharesToLock > report.sharesToBurn) {

@@ -190,6 +190,8 @@ real_derived:
     - strategy_report_zero_accountant
     - strategy_report_refund_balance_clipped
     - strategy_report_refund_allowance_clipped
+    - strategy_loss_report_with_accountant_fee
+    - strategy_report_fee_no_profit_lock
     - strategy_report_excessive_accountant_fee_reverts
     - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
@@ -474,6 +476,12 @@ scenarios:
   - name: strategy_report_refund_allowance_clipped
     call: "process_report with reported refunds above the accountant asset allowance"
     expected: "clips refunds to the accountant allowance before pulling assets"
+  - name: strategy_loss_report_with_accountant_fee
+    call: "process_report with a strategy loss and nonzero accountant fees"
+    expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"
+  - name: strategy_report_fee_no_profit_lock
+    call: "process_report with strategy gain, accountant fees, and profit locking disabled"
+    expected: "charges accountant fees and recalculates reported fee assets through the no-lock branch"
   - name: strategy_report_excessive_accountant_fee_reverts
     call: "process_report with accountant fees greater than removable supply"
     expected: "reverts through the same checked ending-supply arithmetic as upstream Vyper"
