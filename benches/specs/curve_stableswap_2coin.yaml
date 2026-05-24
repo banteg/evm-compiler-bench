@@ -136,7 +136,7 @@ real_derived:
     - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
     - both exchange directions
     - exchange_received optimistic-transfer flow
-    - quote-view coverage for get_dy, get_dx, calc_token_amount, and dynamic_fee, with the upstream Vyper side dispatching through the benchmark views fixture
+    - factory-delegated NG quote views for get_dy, get_dx, calc_token_amount, and dynamic_fee
     - optional-return ERC20 transfer and transferFrom compatibility
     - proportional and one-coin withdrawal
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
@@ -152,7 +152,6 @@ real_derived:
   excluded_features:
     - exact storage layout compatibility in the Solidity port
     - dynamic N-coin generality beyond this fixed 2-coin Solidity port
-    - upstream delegated StableSwapViews call topology for quote views in the Solidity port
     - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
     - exhaustive revert-data and Vyper DynArray decoder-boundary parity audit outside the listed scenarios
 semantics:
@@ -191,10 +190,10 @@ scenarios:
     expected: "uses the optimistic incoming token balance and swaps along the invariant"
   - name: get_dy_quote
     call: "get_dy(0, 1, 25_000) after initial liquidity"
-    expected: "quotes output; upstream Vyper dispatches through the factory views implementation"
+    expected: "quotes output through the factory views implementation"
   - name: get_dx_quote
     call: "get_dx(0, 1, 20_000) after initial liquidity"
-    expected: "quotes required input; upstream Vyper dispatches through the factory views implementation"
+    expected: "quotes required input through the factory views implementation"
   - name: calc_token_amount_deposit
     call: "calc_token_amount([100_000, 300_000], true) after initial liquidity"
     expected: "quotes LP minted for an imbalanced deposit with NG dynamic fees"
@@ -209,7 +208,7 @@ scenarios:
     expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"
   - name: dynamic_fee_quote
     call: "dynamic_fee(0, 1) after imbalanced liquidity"
-    expected: "returns the off-peg dynamic fee; upstream Vyper dispatches through the factory views implementation"
+    expected: "returns the off-peg dynamic fee through the factory views implementation"
   - name: price_oracle_after_time
     call: "price_oracle(0) after an exchange changes the spot price and time advances by one averaging window"
     expected: "returns the exponentially decayed NG price oracle value"

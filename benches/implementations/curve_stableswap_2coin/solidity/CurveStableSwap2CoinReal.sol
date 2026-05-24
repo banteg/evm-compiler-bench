@@ -19,6 +19,17 @@ interface CurveBenchERC4626 {
 interface CurveBenchFactory {
     function fee_receiver() external view returns (address);
     function admin() external view returns (address);
+    function views_implementation() external view returns (address);
+}
+
+interface CurveBenchStableSwapViews {
+    function get_dx(int128 i, int128 j, uint256 dy, address pool) external view returns (uint256);
+    function get_dy(int128 i, int128 j, uint256 dx, address pool) external view returns (uint256);
+    function dynamic_fee(int128 i, int128 j, address pool) external view returns (uint256);
+    function calc_token_amount(uint256[] calldata amounts, bool isDeposit, address pool)
+        external
+        view
+        returns (uint256);
 }
 
 contract CurveStableSwap2CoinReal {
@@ -460,36 +471,9 @@ contract CurveStableSwap2CoinReal {
     }
 
     function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256) {
-        _checkDynArrayAmountLength(amounts.length);
-        uint256[2] memory rates = _storedRates();
-        uint256[2] memory currentBalances = _balances();
-        uint256[2] memory newBalances;
-        newBalances[0] = currentBalances[0];
-        newBalances[1] = currentBalances[1];
-        for (uint256 i = 0; i < N_COINS; i++) {
-            if (isDeposit) {
-                newBalances[i] += amounts[i];
-            } else {
-                require(newBalances[i] >= amounts[i], "balance");
-                newBalances[i] -= amounts[i];
-            }
-        }
-        uint256 d0 = _getDMem(rates, currentBalances);
-        uint256 d1 = _getDMem(rates, newBalances);
-        if (totalSupply == 0) {
-            return d1;
-        }
-        uint256 d2 = d1;
-        uint256 baseFee = _baseFee();
-        uint256 ys = (d0 + d1) / N_COINS;
-        for (uint256 idx = 0; idx < N_COINS; idx++) {
-            uint256 idealBalance = d1 * currentBalances[idx] / d0;
-            uint256 difference = _absDiff(idealBalance, newBalances[idx]);
-            uint256 xs = rates[idx] * (currentBalances[idx] + newBalances[idx]) / PRECISION;
-            newBalances[idx] -= _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
-        }
-        d2 = _getDMem(rates, newBalances);
-        return isDeposit ? totalSupply * (d2 - d0) / d0 : totalSupply * (d0 - d2) / d0;
+        return CurveBenchStableSwapViews(factory.views_implementation()).calc_token_amount(
+            amounts, isDeposit, address(this)
+        );
     }
 
     function A() external view returns (uint256) {
@@ -526,31 +510,15 @@ contract CurveStableSwap2CoinReal {
     }
 
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256) {
-        require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
-        require(dx > 0, "dx");
-        (,,, uint256 dy,) = _calcExchange(uint256(int256(i)), uint256(int256(j)), dx);
-        return dy;
+        return CurveBenchStableSwapViews(factory.views_implementation()).get_dy(i, j, dx, address(this));
     }
 
     function get_dx(int128 i, int128 j, uint256 dy) external view returns (uint256) {
-        require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
-        require(dy > 0, "dy");
-        uint256 coinIn = uint256(int256(i));
-        uint256 coinOut = uint256(int256(j));
-        uint256[2] memory rates = _storedRates();
-        uint256[2] memory xp = _xpMem(rates, _balances());
-        uint256 d = _getD(xp[0], xp[1]);
-        uint256 dyWithFee = dy * rates[coinOut] / PRECISION + 1;
-        uint256 dynamicFee_ = _dynamicFee(xp[coinIn], xp[coinOut], fee);
-        uint256 y = xp[coinOut] - dyWithFee * FEE_DENOMINATOR / (FEE_DENOMINATOR - dynamicFee_);
-        uint256 x = _getY(coinOut, coinIn, y, xp, d);
-        return (x - xp[coinIn]) * PRECISION / rates[coinIn];
+        return CurveBenchStableSwapViews(factory.views_implementation()).get_dx(i, j, dy, address(this));
     }
 
     function dynamic_fee(int128 i, int128 j) external view returns (uint256) {
-        require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
-        uint256[2] memory xp = _xpMem(_storedRates(), _balances());
-        return _dynamicFee(xp[uint256(int256(i))], xp[uint256(int256(j))], fee);
+        return CurveBenchStableSwapViews(factory.views_implementation()).dynamic_fee(i, j, address(this));
     }
 
     function last_price(uint256 i) external view returns (uint256) {

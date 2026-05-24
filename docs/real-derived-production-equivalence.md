@@ -30,7 +30,7 @@ layout.
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
 | `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens. | Solidity port is fixed at `N_COINS = 2`; upstream is constructor-driven up to 8 coins; delegated `StableSwapViews` call topology is internalized; factory/views dependencies are harness fixtures. |
+| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens. | Solidity port is fixed at `N_COINS = 2`; upstream is constructor-driven up to 8 coins; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
@@ -88,15 +88,13 @@ Immediate chips:
 | Dynamic/off-peg fees and admin fees | Exact counterpart surface | Fee quotes, exchange accounting, and admin-fee withdrawal are covered. |
 | Admin controls | Exact counterpart surface | Ramp, stop-ramp, fee updates, moving-average windows, and admin gating are covered. |
 | LP token and permit | Exact counterpart surface | EOA and ERC1271 permit success plus invalid permit failure are covered. |
-| Factory and views dependencies | Fixture-exact | The upstream Vyper side calls the benchmark-provided factory/views fixture. |
-| `StableSwapViews` call topology in Solidity | Incomplete | The Solidity port currently computes `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` internally instead of calling `factory.views_implementation()`. |
+| Factory and views dependencies | Fixture-exact | Both implementations call the benchmark-provided factory/views fixture. |
+| `StableSwapViews` call topology in Solidity | Exact counterpart surface for quote views | The Solidity port now mirrors upstream by routing `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` through `factory.views_implementation()`. |
 | Vyper `DynArray[MAX_COINS]` ABI bounds | Approximate | Too-long arrays and ignored extra entries are covered, but Solidity enforces this with runtime checks, not Vyper decoder behavior. |
 | Storage layout | Approximate | The Solidity port is idiomatic and not storage-layout-compatible. |
 
 Immediate chips:
 
-- Mirror the `factory.views_implementation()` quote-view call boundary in the
-  Solidity port, then rerun the targeted Curve benchmark.
 - Decide whether production equivalence means a full generic NG Solidity port
   or an explicitly production-equivalent two-coin specialization.
 - If full NG is the target, replace the fixed two-coin arrays and loops with
@@ -196,9 +194,6 @@ Remaining:
 - Upstream `CurveStableSwapNG` is generic over `N_COINS` from constructor input
   up to `MAX_COINS = 8`; the Solidity port hard-codes `N_COINS = 2` and uses
   fixed-size two-element internal arrays.
-- Upstream `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` delegate
-  to `factory.views_implementation()`. The Solidity port internalizes those
-  calculations, so behavior may match while call topology and gas shape do not.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.
@@ -210,8 +205,6 @@ Suggested next chips:
 - Decide whether the target is the full NG contract or a production-equivalent
   two-coin specialization. If it is full NG, replace the Solidity port's
   fixed-size arrays and loops with constructor-driven `N_COINS` behavior.
-- Mirror the delegated views call boundary, or document why an idiomatic
-  internalized Solidity view path is acceptable for the comparison.
 - Expand scenarios beyond two coins before claiming full NG equivalence.
 
 ## `yearn_vault_v3`
