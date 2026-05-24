@@ -255,9 +255,10 @@ Exact now:
   refund clipping by balance/allowance, refund balance/allowance mutation
   during accountant reports, excessive-fee rejection, reentrant accountant
   rejection, realized and unrealized loss paths, locked-profit zero reset,
-  module acceptance/rejection, high-return withdraw-limit capping, long-queue
-  bounds, no-return/false-return asset handling, and permit before/after
-  initialization plus after chain-id changes.
+  module acceptance/rejection, high-return withdraw-limit capping, withdraw
+  module `max_loss` and strategy-queue argument forwarding, long-queue bounds,
+  no-return/false-return asset handling, and permit before/after initialization
+  plus after chain-id changes.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, minimum-idle clipping/restoration on debt changes,
   limited `maxRedeem`, max-debt-below-current, shutdown pull-only, and actual

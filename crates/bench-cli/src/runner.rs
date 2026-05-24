@@ -1101,6 +1101,12 @@ contract BenchYearnWithdrawLimitModule {
     uint256 public limit;
     address public specialOwner;
     uint256 public specialOwnerLimit;
+    bool public useSpecialMaxLoss;
+    uint256 public specialMaxLoss;
+    uint256 public specialMaxLossLimit;
+    bool public useSpecialStrategiesHash;
+    bytes32 public specialStrategiesHash;
+    uint256 public specialStrategiesLimit;
     bool public shouldRevert;
 
     function setLimit(uint256 limit_) external returns (bool) {
@@ -1114,15 +1120,47 @@ contract BenchYearnWithdrawLimitModule {
         return true;
     }
 
+    function setSpecialMaxLoss(uint256 maxLoss, uint256 limit_) external returns (bool) {
+        useSpecialMaxLoss = true;
+        specialMaxLoss = maxLoss;
+        specialMaxLossLimit = limit_;
+        return true;
+    }
+
+    function setSpecialStrategiesHash(bytes32 strategiesHash, uint256 limit_) external returns (bool) {
+        useSpecialStrategiesHash = true;
+        specialStrategiesHash = strategiesHash;
+        specialStrategiesLimit = limit_;
+        return true;
+    }
+
+    function clearSpecialCases() external returns (bool) {
+        specialOwner = address(0);
+        specialOwnerLimit = 0;
+        useSpecialMaxLoss = false;
+        specialMaxLoss = 0;
+        specialMaxLossLimit = 0;
+        useSpecialStrategiesHash = false;
+        specialStrategiesHash = bytes32(0);
+        specialStrategiesLimit = 0;
+        return true;
+    }
+
     function setShouldRevert(bool shouldRevert_) external returns (bool) {
         shouldRevert = shouldRevert_;
         return true;
     }
 
-    function available_withdraw_limit(address owner, uint256, address[] calldata) external view returns (uint256) {
+    function available_withdraw_limit(address owner, uint256 maxLoss, address[] calldata strategies) external view returns (uint256) {
         require(!shouldRevert, "withdraw limit module");
         if (owner == specialOwner) {
             return specialOwnerLimit;
+        }
+        if (useSpecialMaxLoss && maxLoss == specialMaxLoss) {
+            return specialMaxLossLimit;
+        }
+        if (useSpecialStrategiesHash && keccak256(abi.encode(strategies)) == specialStrategiesHash) {
+            return specialStrategiesLimit;
         }
         return limit;
     }
@@ -2238,7 +2276,7 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
         deps.withdrawLimitModule.setLimit(limit);
-        deps.withdrawLimitModule.setSpecialOwner(address(0), 0);
+        deps.withdrawLimitModule.clearSpecialCases();
         deps.withdrawLimitModule.setShouldRevert(false);
         (bool ok,) =
             target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
@@ -2255,7 +2293,43 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
         deps.withdrawLimitModule.setLimit(defaultLimit);
+        deps.withdrawLimitModule.clearSpecialCases();
         deps.withdrawLimitModule.setSpecialOwner(owner, ownerLimit);
+        deps.withdrawLimitModule.setShouldRevert(false);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
+        require(ok, "yearn withdraw module");
+        return true;
+    }
+
+    function benchYearnSetMaxLossWithdrawLimitModule(
+        address target,
+        uint256 defaultLimit,
+        uint256 maxLoss,
+        uint256 maxLossLimit
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
+        deps.withdrawLimitModule.setLimit(defaultLimit);
+        deps.withdrawLimitModule.clearSpecialCases();
+        deps.withdrawLimitModule.setSpecialMaxLoss(maxLoss, maxLossLimit);
+        deps.withdrawLimitModule.setShouldRevert(false);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
+        require(ok, "yearn withdraw module");
+        return true;
+    }
+
+    function benchYearnSetStrategyQueueWithdrawLimitModule(
+        address target,
+        uint256 defaultLimit,
+        uint256 queueLimit
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
+        deps.withdrawLimitModule.setLimit(defaultLimit);
+        deps.withdrawLimitModule.clearSpecialCases();
+        deps.withdrawLimitModule.setSpecialStrategiesHash(keccak256(abi.encode(benchYearnTripleQueue(target))), queueLimit);
         deps.withdrawLimitModule.setShouldRevert(false);
         (bool ok,) =
             target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
@@ -2405,12 +2479,28 @@ fn all_helper_functions() -> &'static str {
         return abi.encodeWithSignature("maxWithdraw(address,uint256,address[])", owner, maxLoss, benchYearnLongQueue(target));
     }
 
+    function benchYearnMaxWithdrawTripleQueueCalldata(address target, address owner, uint256 maxLoss)
+        public
+        view
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("maxWithdraw(address,uint256,address[])", owner, maxLoss, benchYearnTripleQueue(target));
+    }
+
     function benchYearnMaxRedeemLongQueueCalldata(address target, address owner, uint256 maxLoss)
         public
         view
         returns (bytes memory)
     {
         return abi.encodeWithSignature("maxRedeem(address,uint256,address[])", owner, maxLoss, benchYearnLongQueue(target));
+    }
+
+    function benchYearnMaxRedeemTripleQueueCalldata(address target, address owner, uint256 maxLoss)
+        public
+        view
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("maxRedeem(address,uint256,address[])", owner, maxLoss, benchYearnTripleQueue(target));
     }
 
     function benchYearnLongQueue(address target) public view returns (address[] memory queue) {

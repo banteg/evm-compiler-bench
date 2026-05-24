@@ -298,6 +298,8 @@ real_derived:
     - withdraw_limit_module_owner_specific_withdraw
     - max_redeem_limit_module_owner_specific
     - redeem_limit_module_owner_specific_redeem
+    - max_withdraw_limit_module_max_loss_specific
+    - max_redeem_limit_module_strategy_queue_specific
     - withdraw_limit_module_zero_max_redeem
     - withdraw_limit_module_reverts
     - withdraw_limit_module_call_reverts
@@ -327,13 +329,13 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
-    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
+    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
-    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem
+    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding
     - partial and over-returning strategy redeem accounting during user withdrawals
     - buy-debt current-debt clipping and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
@@ -850,6 +852,12 @@ scenarios:
   - name: redeem_limit_module_owner_specific_redeem
     call: "redeem(12_345, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument through the shared max-withdraw path and accepts redeeming exactly at the owner-specific limit"
+  - name: max_withdraw_limit_module_max_loss_specific
+    call: "maxWithdraw(address(this), 4_321, []) through a custom withdraw limit module with a max-loss-specific limit"
+    expected: "passes the max_loss argument to the module and returns the matching module limit"
+  - name: max_redeem_limit_module_strategy_queue_specific
+    call: "maxRedeem(address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
+    expected: "passes the strategy queue argument to the module and returns the matching module limit converted to shares"
   - name: withdraw_limit_module_zero_max_redeem
     call: "maxRedeem through a custom withdraw limit module returning zero"
     expected: "returns zero shares through the shared max-withdraw module path"
