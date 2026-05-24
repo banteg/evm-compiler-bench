@@ -174,6 +174,12 @@ real_derived:
     - update_debt_unrealized_loss_reverts
     - update_debt_limited_max_deposit
     - update_debt_zero_max_deposit
+    - update_debt_limited_max_redeem
+    - update_debt_max_debt_below_current
+    - update_debt_shutdown_pull_only
+    - update_debt_partial_strategy_redeem_loss_allowed
+    - update_debt_partial_strategy_redeem_loss_reverts
+    - update_debt_over_strategy_redeem
     - max_withdraw_limited_strategy_redeem
     - withdraw_limited_strategy_redeem
     - withdraw_zero_strategy_redeem_falls_through
@@ -232,6 +238,7 @@ real_derived:
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
+    - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
     - partial and over-returning strategy redeem accounting during user withdrawals
     - buy-debt current-debt clipping and zero-share rejection
@@ -384,6 +391,24 @@ scenarios:
   - name: update_debt_zero_max_deposit
     call: "update_debt upward when the strategy maxDeposit is zero"
     expected: "returns current debt without depositing or emitting a debt update"
+  - name: update_debt_limited_max_redeem
+    call: "update_debt downward when strategy maxRedeem is lower than the requested debt decrease"
+    expected: "withdraws only the strategy-declared redeemable amount and records the partial debt decrease"
+  - name: update_debt_max_debt_below_current
+    call: "update_debt upward after a strategy gain report has moved current debt above max debt"
+    expected: "returns current debt without depositing, withdrawing, or emitting a debt update"
+  - name: update_debt_shutdown_pull_only
+    call: "update_debt after shutdown with a target equal to current debt"
+    expected: "ignores the target and pulls all available strategy debt back to idle"
+  - name: update_debt_partial_strategy_redeem_loss_allowed
+    call: "update_debt downward through a strategy that returns less than the requested redeem amount within max_loss"
+    expected: "accepts the shortfall, increases idle by actual received assets, and decreases debt by the requested withdrawal"
+  - name: update_debt_partial_strategy_redeem_loss_reverts
+    call: "update_debt downward through a strategy that returns less than the requested redeem amount above max_loss"
+    expected: "reverts after detecting the actual balance shortfall exceeds the allowed loss"
+  - name: update_debt_over_strategy_redeem
+    call: "update_debt downward through a strategy that returns more than the requested redeem amount"
+    expected: "uses the actual received amount as the strategy debt decrease"
   - name: max_withdraw_limited_strategy_redeem
     call: "maxWithdraw when strategy maxRedeem caps available strategy shares"
     expected: "counts idle assets plus only the strategy-declared redeemable amount"
