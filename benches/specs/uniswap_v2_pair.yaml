@@ -76,6 +76,7 @@ real_derived:
     - swap_false_return_token_reverts
     - sync
     - sync_timestamp_wrap
+    - sync_reserve_overflow_reverts
     - skim
     - skim_no_return_tokens
     - skim_false_return_token_reverts
@@ -117,6 +118,7 @@ real_derived:
     - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds
     - flash-swap reentrancy guard rejection
     - sync and skim balance drift paths
+    - upstream uint112 reserve overflow rejection
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
@@ -186,6 +188,9 @@ scenarios:
   - name: sync_timestamp_wrap
     call: "sync() after block.timestamp crosses the uint32 reserve timestamp boundary"
     expected: "updates reserves and cumulative prices using Uniswap's intended uint32 wraparound elapsed time"
+  - name: sync_reserve_overflow_reverts
+    call: "sync() after token0 balance exceeds uint112 max"
+    expected: "reverts through the upstream reserve overflow guard"
   - name: skim
     call: "skim(address(this)) after token balance drift"
     expected: "transfers token balances above reserves"
