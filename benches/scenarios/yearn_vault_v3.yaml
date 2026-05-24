@@ -1938,6 +1938,17 @@ scenarios:
       data: 'abi.encodeWithSignature("maxDeposit(address)", address(this))'
     expect_success: false
     observers: *yearn_observers
+  - name: deposit_limit_module_zero_receiver_short_circuits
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetRevertingDepositLimitModule(address)", {target})'
+    measured:
+      data: 'abi.encodeWithSignature("maxDeposit(address)", address(0))'
+    expect_success: true
+    observers: *yearn_observers
   - name: withdraw_limit_module
     state_access_profile: mixed
     setup:

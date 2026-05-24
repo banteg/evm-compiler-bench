@@ -119,7 +119,7 @@ Immediate chips:
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt clipping/rejection paths are covered. |
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain with accountant fees/refunds, accountant fees/refunds, gain plus clipped refund locking, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, refund clipping after accountant state mutation, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, partial-unlock loss reports, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, duplicate entries, full-queue append skipping, long-queue failures, strategy maxRedeem limits, zero-redeem after full unrealized loss, and partial/over strategy redeems are covered. |
-| Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject paths, zero and high-return deposit/withdraw execution and capping, receiver/owner-specific asset/share max-view returns, and reverting calls, but arbitrary third-party behavior is not exhaustive. |
+| Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject paths, zero and high-return deposit/withdraw execution and capping, receiver/owner-specific asset/share max-view returns, zero-receiver short-circuiting before deposit-module calls, and reverting calls, but arbitrary third-party behavior is not exhaustive. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover three management orderings, including a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
 | Vyper `String` and `DynArray` bounds | Exact counterpart surface, audit pending | Accepted and rejected lengths are covered at the semantic boundary; exact decoder timing and revert bytes are intentionally out of scope unless source behavior depends on them. |
 | Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
@@ -286,8 +286,9 @@ Remaining:
 - Third-party accountant behavior is represented by deterministic and
   refund-mutating harness mocks; deposit-limit module, withdraw-limit module,
   and strategy behavior is represented by deterministic harness mocks. The
-  current scenarios cover important boundary paths but not exhaustive
-  adversarial or unusual implementations behind those interfaces.
+  current scenarios cover important boundary paths and receiver/owner
+  short-circuits, but not exhaustive adversarial or unusual implementations
+  behind those interfaces.
 - The current sequence coverage proves three representative combined management
   orderings, including repeated transitions across queues, debt, reports,
   modules, and role-manager handoff. Third-party edge cases remain to be
