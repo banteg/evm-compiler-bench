@@ -209,6 +209,7 @@ real_derived:
     - strategy_report_accountant_reduces_allowance_during_report
     - strategy_loss_report
     - strategy_loss_report_with_accountant_fee
+    - strategy_loss_report_with_accountant_protocol_fee
     - strategy_loss_report_with_fee_and_refund
     - strategy_loss_report_with_fee_and_exact_refund
     - strategy_loss_report_with_fee_and_partial_refund
@@ -331,7 +332,7 @@ real_derived:
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -594,6 +595,9 @@ scenarios:
   - name: strategy_loss_report_with_accountant_fee
     call: "process_report with a strategy loss and nonzero accountant fees"
     expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"
+  - name: strategy_loss_report_with_accountant_protocol_fee
+    call: "process_report with a strategy loss, nonzero accountant fees, and nonzero protocol fee config"
+    expected: "splits fee shares between accountant and protocol while taking the strategy loss path"
   - name: strategy_loss_report_with_fee_and_refund
     call: "process_report with a strategy loss, nonzero accountant fees, and refunds greater than the loss plus fees"
     expected: "pulls refunds, takes the strategy loss branch, charges fees, and locks the net-positive refund shares"
