@@ -158,6 +158,7 @@ real_derived:
     - auto_allocate_deposit
     - set_minimum_total_idle
     - set_profit_max_unlock_time
+    - reset_profit_unlock_after_report
     - set_name_too_long_reverts
     - set_symbol_too_long_reverts
     - strategy_profit_report
@@ -218,8 +219,9 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
-    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across two orderings
+    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit unlock reset while locked profit shares are outstanding
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
     - deposit-limit and permission reverts
@@ -332,6 +334,9 @@ scenarios:
   - name: set_profit_max_unlock_time
     call: "setProfitMaxUnlockTime(3_600)"
     expected: "updates future profit unlocking duration through the role manager"
+  - name: reset_profit_unlock_after_report
+    call: "setProfitMaxUnlockTime(0) after a profitable strategy report has minted locked shares"
+    expected: "burns vault-held locked shares and resets profit unlocking state"
   - name: set_name_too_long_reverts
     call: "setName with 65 bytes"
     expected: "reverts at the same metadata length boundary as upstream Vyper String[64]"

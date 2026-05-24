@@ -111,19 +111,19 @@ Immediate chips:
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, max debt, debt increase/decrease, max-loss defaults, and buy-debt paths are covered. |
-| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, protocol fees, excessive-fee failure, reentrancy failure, and unlock-over-time paths are covered. |
+| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, and long-queue failures are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic mocks cover important accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover three management orderings, including a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
 | Vyper `String` and `DynArray` decoder details | Approximate | Length success/failure is covered, but decoder timing and revert data are not exact. |
-| Function-by-function parity audit | Incomplete | The Solidity port is broad, but each upstream branch has not been checked off against the pinned Vyper source. |
+| Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
 | Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
 
 Immediate chips:
 
-- Build and keep a source-to-port checklist for every Yearn external and
-  internal function branch.
-- Add sequence scenarios for repeated transitions across roles, queues, debt,
+- Close the open Yearn branch gaps tracked in
+  `docs/yearn-v3-source-port-checklist.md`.
+- Add edge-case scenarios for repeated transitions across roles, queues, debt,
   reports, modules, shutdown, withdrawals, and redeems.
 - Expand third-party accountant/module/strategy mock coverage for unusual but
   interface-valid implementations.
@@ -223,8 +223,8 @@ Exact now:
   optional-return asset transfers.
 - Scenarios now cover self-report idle asset accrual, accountant fees/refunds,
   excessive-fee rejection, reentrant accountant rejection, realized and
-  unrealized loss paths, module acceptance/rejection, long-queue bounds, and
-  permit before/after initialization.
+  unrealized loss paths, locked-profit zero reset, module acceptance/rejection,
+  long-queue bounds, and permit before/after initialization.
 - First-class management scenarios now measure max-debt updates, additive role
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
@@ -238,12 +238,13 @@ Exact now:
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
+- `docs/yearn-v3-source-port-checklist.md` maps every upstream external and
+  internal function to the Solidity port and tracks the remaining branch gaps.
 
 Remaining:
 
-- The Solidity port still needs a function-by-function and sequence-level
-  parity audit against the pinned Vyper source before the spec can honestly set
-  `production_equivalence: true`.
+- The source-to-port checklist still has open branch gaps before the spec can
+  honestly set `production_equivalence: true`.
 - Third-party accountant, deposit-limit module, withdraw-limit module, and
   strategy behavior is represented by deterministic harness mocks. The current
   scenarios cover important boundary paths but not exhaustive adversarial or
@@ -261,7 +262,7 @@ Remaining:
 
 Suggested next chips:
 
-- Build a source-to-port checklist from every external and internal Yearn
-  function, then close or scenario-cover each unchecked branch.
-- Add more sequence tests for repeated role, queue, debt, report, module,
+- Close the open branch gaps listed in
+  `docs/yearn-v3-source-port-checklist.md`.
+- Add more edge-case scenarios for repeated role, queue, debt, report, module,
   shutdown, withdrawal, and redeem transitions.
