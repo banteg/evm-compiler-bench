@@ -140,16 +140,21 @@ real_derived:
     - update_debt_increase
     - update_debt_decrease
     - update_debt_default_max_loss
+    - update_max_debt_for_strategy
     - role_delegate_add_strategy
     - add_strategy_default_queue
     - revoke_strategy_preserves_queue_order
     - add_remove_role
+    - add_role_grants_extra_permission
     - set_invalid_role_reverts
     - add_invalid_role_reverts
     - remove_invalid_role_reverts
     - role_manager_transfer_accept
+    - transfer_role_manager_pending
     - set_metadata
+    - set_accountant
     - set_auto_allocate
+    - set_use_default_queue
     - auto_allocate_deposit
     - set_minimum_total_idle
     - set_profit_max_unlock_time
@@ -177,9 +182,11 @@ real_derived:
     - max_withdraw_long_queue_reverts
     - max_redeem_long_queue_reverts
     - shutdown_rejects_deposit
+    - shutdown_vault
     - permission_revert
     - set_deposit_limit_default
     - set_deposit_limit_module_default
+    - set_withdraw_limit_module
     - deposit_limit_reverts
     - deposit_limit_module
     - deposit_limit_module_reverts
@@ -202,6 +209,7 @@ real_derived:
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
     - auto-allocation of deposits into the first default-queue strategy
     - Vyper default-argument external overloads for strategy, debt, deposit-limit, and queue-bound management
+    - first-class measured management calls for max debt, additive roles, pending role-manager transfer, accountant, default-queue toggle, withdraw-limit module, and shutdown
     - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle, default queue, custom queue, and debt purchase surfaces
     - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
@@ -268,6 +276,9 @@ scenarios:
   - name: update_debt_default_max_loss
     call: "update_debt(strategy, 100_000) using the Vyper default max_loss overload"
     expected: "allocates debt with the upstream default max-loss selector"
+  - name: update_max_debt_for_strategy
+    call: "update_max_debt_for_strategy(strategy, 150_000)"
+    expected: "updates the strategy max debt management parameter"
   - name: role_delegate_add_strategy
     call: "add_strategy(strategy, true) from an address granted ADD_STRATEGY_MANAGER"
     expected: "accepts delegated bitmask role execution"
@@ -280,6 +291,9 @@ scenarios:
   - name: add_remove_role
     call: "remove_role after set_role and add_role"
     expected: "updates the account role bitmask"
+  - name: add_role_grants_extra_permission
+    call: "add_role after an initial set_role"
+    expected: "adds the requested role bit without clearing existing role bits"
   - name: set_invalid_role_reverts
     call: "set_role with bit 14 set"
     expected: "reverts at the same Vyper enum role bound as upstream"
@@ -292,12 +306,21 @@ scenarios:
   - name: role_manager_transfer_accept
     call: "accept_role_manager after transfer_role_manager"
     expected: "moves role manager authority to the pending manager"
+  - name: transfer_role_manager_pending
+    call: "transfer_role_manager(BOB)"
+    expected: "records the pending role manager without changing the active role manager"
   - name: set_metadata
     call: "setSymbol after setName"
     expected: "updates mutable vault metadata through the role manager"
+  - name: set_accountant
+    call: "set_accountant(accountant)"
+    expected: "updates the accountant address through the accountant manager role"
   - name: set_auto_allocate
     call: "set_auto_allocate(true)"
     expected: "updates the auto-allocation management flag"
+  - name: set_use_default_queue
+    call: "set_use_default_queue(true)"
+    expected: "updates the withdrawal queue selection flag"
   - name: auto_allocate_deposit
     call: "deposit(100_000, address(this)) with auto_allocate enabled and a default-queue strategy"
     expected: "mints shares and allocates newly idle assets into the first strategy"
@@ -367,6 +390,9 @@ scenarios:
   - name: shutdown_rejects_deposit
     call: "deposit after shutdown"
     expected: "reverts"
+  - name: shutdown_vault
+    call: "shutdown_vault() with an active deposit limit module"
+    expected: "shuts down deposits, clears the deposit limit module, and emits shutdown state changes"
   - name: permission_revert
     call: "add_strategy from a non-manager sender"
     expected: "reverts"
@@ -376,6 +402,9 @@ scenarios:
   - name: set_deposit_limit_module_default
     call: "set_deposit_limit_module(module) using the Vyper default override=false overload"
     expected: "sets the deposit limit module when the direct limit is already max uint256"
+  - name: set_withdraw_limit_module
+    call: "set_withdraw_limit_module(module)"
+    expected: "updates the withdraw limit module through the withdraw-limit manager role"
   - name: deposit_limit_reverts
     call: "deposit above the configured limit"
     expected: "reverts"

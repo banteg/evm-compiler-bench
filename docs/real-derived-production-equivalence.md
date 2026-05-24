@@ -130,6 +130,10 @@ Exact now:
   excessive-fee rejection, reentrant accountant rejection, realized and
   unrealized loss paths, module acceptance/rejection, long-queue bounds, and
   permit before/after initialization.
+- First-class management scenarios now measure max-debt updates, additive role
+  grants, pending role-manager transfer, accountant updates, default-queue
+  toggles, withdraw-limit module updates, and shutdown with an active deposit
+  limit module.
 - The scenario set includes a combined management sequence that mutates
   delegated roles, the default queue, debt, reporting, limit modules, shutdown
   state, and then withdraws from the post-sequence vault state.
