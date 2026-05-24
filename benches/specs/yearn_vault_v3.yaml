@@ -274,6 +274,7 @@ real_derived:
     - deposit_limit_module_reverts
     - deposit_limit_module_call_reverts
     - deposit_limit_module_zero_receiver_short_circuits
+    - deposit_limit_module_vault_receiver_short_circuits
     - withdraw_limit_module
     - withdraw_limit_module_max_uint_withdraw
     - max_withdraw_limit_module
@@ -309,7 +310,7 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - deposit-limit module finite, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit and maxMint returns, zero-receiver short-circuit before module calls, plus over-limit rejection
+    - deposit-limit module finite, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit and maxMint returns, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
     - withdraw-limit-module max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
@@ -761,6 +762,9 @@ scenarios:
   - name: deposit_limit_module_zero_receiver_short_circuits
     call: "maxDeposit(empty(address)) while a reverting custom deposit limit module is active"
     expected: "returns zero at the upstream receiver guard before calling the module"
+  - name: deposit_limit_module_vault_receiver_short_circuits
+    call: "maxMint(vault) while a reverting custom deposit limit module is active"
+    expected: "returns zero through the shared upstream receiver guard before calling the module"
   - name: withdraw_limit_module
     call: "withdraw below a custom withdraw limit module limit"
     expected: "uses the module-provided limit and accepts an in-limit withdrawal"
