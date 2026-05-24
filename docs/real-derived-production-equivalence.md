@@ -186,9 +186,9 @@ Exact now:
   amplification and fee admin controls, LP ERC20 accounting, permit, moving
   averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
-  rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
-  slippage and invalid coin reverts, and Vyper DynArray length edges for the
-  two-coin deployment.
+  donation-before-first-deposit handling, rebasing asset behavior, ERC4626 rate
+  scaling, dynamic fees, admin controls, slippage and invalid coin reverts, and
+  Vyper DynArray length edges for the two-coin deployment.
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path rather than only same-block oracle
   upkeep.

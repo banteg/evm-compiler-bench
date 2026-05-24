@@ -80,6 +80,7 @@ real_derived:
     - NG-style gross stored_balances accounting with admin_balances excluded through balances views
   scenario_coverage:
     - add_initial_liquidity
+    - add_initial_liquidity_after_donation
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
     - add_liquidity_too_many_amounts_reverts
@@ -132,6 +133,7 @@ real_derived:
   included_features:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
+    - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
     - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
     - both exchange directions
@@ -161,6 +163,9 @@ scenarios:
   - name: add_initial_liquidity
     call: "add_liquidity([1_000_000, 1_000_000], 0, address(this))"
     expected: "mints initial LP shares from D"
+  - name: add_initial_liquidity_after_donation
+    call: "add_liquidity([0.1e18, 0.1e18], 0, address(this)) after 10 wei of token0 is donated to the empty pool"
+    expected: "matches upstream donation-before-first-deposit behavior and initializes stored balances without treating the dust as user input"
   - name: add_imbalanced_liquidity
     call: "add_liquidity([100_000, 300_000], 0, address(this)) after initial liquidity"
     expected: "mints proportional LP shares"

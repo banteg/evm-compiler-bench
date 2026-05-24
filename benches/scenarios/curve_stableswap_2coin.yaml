@@ -36,6 +36,17 @@ scenarios:
       - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("D_oracle()")'
+  - name: add_initial_liquidity_after_donation
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveStageReceived(address,uint256,uint256)", {target}, uint256(0), uint256(10))'
+    measured:
+      data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(100_000_000_000_000_000, 100_000_000_000_000_000), uint256(0), address(this))'
+    expect_success: true
+    observers: *curve_observers
   - name: add_imbalanced_liquidity
     state_access_profile: mixed
     setup:
