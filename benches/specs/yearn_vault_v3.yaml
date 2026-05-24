@@ -191,6 +191,7 @@ real_derived:
     - self_zero_report
     - self_report_airdrop
     - self_report_idle_loss
+    - self_report_accountant_refund
     - process_report_inactive_strategy_reverts
     - strategy_report_with_accountant
     - strategy_report_zero_accountant
@@ -295,7 +296,7 @@ real_derived:
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - withdraw-limit-module max-withdraw capping above and below balance, module-call failure, and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss accounting, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -503,6 +504,9 @@ scenarios:
   - name: self_report_idle_loss
     call: "process_report(address(this)) after vault-held idle assets are burned below recorded total idle"
     expected: "accounts the self-report loss branch and reduces total idle assets"
+  - name: self_report_accountant_refund
+    call: "process_report(address(this)) with an accountant refund and no idle gain or loss"
+    expected: "pulls the refund and accounts it through the self-report total-idle path"
   - name: process_report_inactive_strategy_reverts
     call: "process_report with a non-vault strategy that has not been added"
     expected: "reverts at the upstream inactive-strategy guard before reading strategy assets"
