@@ -112,7 +112,7 @@ Immediate chips:
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, max debt, debt increase/decrease, max-loss defaults, strategy maxDeposit limits, and buy-debt paths are covered. |
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
-| Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, and long-queue failures are covered. |
+| Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, long-queue failures, and strategy maxRedeem limits are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic mocks cover important accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover three management orderings, including a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
 | Vyper `String` and `DynArray` decoder details | Approximate | Length success/failure is covered, but decoder timing and revert data are not exact. |
@@ -227,6 +227,8 @@ Exact now:
   long-queue bounds, and permit before/after initialization.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases.
+- Strategy withdrawal scenarios now cover limited `maxRedeem` caps and
+  zero-redeem queue fallthrough.
 - First-class management scenarios now measure max-debt updates, additive role
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
