@@ -176,6 +176,7 @@ real_derived:
     - forced_default_queue_withdraw
     - combined_management_sequence_withdraw
     - alternate_management_sequence_redeem
+    - repeated_management_transitions_redeem
     - force_revoke_strategy
     - buy_debt
     - withdraw_long_queue_reverts
@@ -373,6 +374,9 @@ scenarios:
   - name: alternate_management_sequence_redeem
     call: "redeem with an explicit queue after accountant/module setup, reversed debt allocation, role-manager transfer, delegated emergency shutdown, and a strategy report"
     expected: "preserves final observable state and redeem behavior across an alternate management ordering"
+  - name: repeated_management_transitions_redeem
+    call: "redeem after a three-strategy queue rewrite, repeated default-queue toggles, debt increase/decrease cycles, multiple reports, module rewrites, role-manager transfer, and delegated emergency shutdown"
+    expected: "preserves final observable state and redeem behavior after repeated cross-feature transitions"
   - name: force_revoke_strategy
     call: "force_revoke_strategy(strategy)"
     expected: "force removes the strategy through the emergency role path"

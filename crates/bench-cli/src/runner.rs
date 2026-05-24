@@ -1793,7 +1793,9 @@ fn all_helper_functions() -> &'static str {
     {
         require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
         require(
-            strategy == address(yearnDeps[target].strategy) || strategy == address(yearnDeps[target].strategy2),
+            strategy == address(yearnDeps[target].strategy)
+                || strategy == address(yearnDeps[target].strategy2)
+                || strategy == address(yearnDeps[target].strategy3),
             "yearn strategy"
         );
         BenchYearnStrategy(strategy).setReport(gain, loss);
@@ -1865,6 +1867,10 @@ fn all_helper_functions() -> &'static str {
         return abi.encodeWithSignature("set_default_queue(address[])", queue);
     }
 
+    function benchYearnSetTripleDefaultQueueCalldata(address target) public view returns (bytes memory) {
+        return abi.encodeWithSignature("set_default_queue(address[])", benchYearnTripleQueue(target));
+    }
+
     function benchYearnWithdrawQueueCalldata(
         address target,
         uint256 assets,
@@ -1904,6 +1910,23 @@ fn all_helper_functions() -> &'static str {
         }
         return abi.encodeWithSignature(
             "redeem(uint256,address,address,uint256,address[])", shares, receiver, owner, maxLoss, queue
+        );
+    }
+
+    function benchYearnRedeemTripleQueueCalldata(
+        address target,
+        uint256 shares,
+        address receiver,
+        address owner,
+        uint256 maxLoss
+    ) public view returns (bytes memory) {
+        return abi.encodeWithSignature(
+            "redeem(uint256,address,address,uint256,address[])",
+            shares,
+            receiver,
+            owner,
+            maxLoss,
+            benchYearnTripleQueue(target)
         );
     }
 
@@ -1965,6 +1988,13 @@ fn all_helper_functions() -> &'static str {
         for (uint256 i = 3; i < queue.length; i++) {
             queue[i] = address(yearnDeps[target].strategy);
         }
+    }
+
+    function benchYearnTripleQueue(address target) public view returns (address[] memory queue) {
+        queue = new address[](3);
+        queue[0] = address(yearnDeps[target].strategy3);
+        queue[1] = address(yearnDeps[target].strategy);
+        queue[2] = address(yearnDeps[target].strategy2);
     }
     // bench-cli:helpers end yearn
 
