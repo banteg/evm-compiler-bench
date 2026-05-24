@@ -697,8 +697,12 @@ contract BenchYearnStrategy {
     BenchERC20 public immutable asset;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
     uint256 public pendingGain;
     uint256 public pendingLoss;
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     constructor(BenchERC20 asset_) {
         asset = asset_;
@@ -755,6 +759,27 @@ contract BenchYearnStrategy {
         require(asset.transfer(receiver, assets), "transfer");
     }
 
+    function approve(address spender, uint256 value) external returns (bool) {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        return true;
+    }
+
+    function transfer(address to, uint256 value) external returns (bool) {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool) {
+        uint256 allowed = allowance[from][msg.sender];
+        if (allowed != type(uint256).max) {
+            require(allowed >= value, "allowance");
+            allowance[from][msg.sender] = allowed - value;
+        }
+        _transfer(from, to, value);
+        return true;
+    }
+
     function increaseDebt(uint256 amount) external returns (bool) {
         amount;
         return true;
@@ -794,6 +819,13 @@ contract BenchYearnStrategy {
         if (withdrawn > 0) {
             require(asset.transfer(receiver, withdrawn), "transfer");
         }
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(balanceOf[from] >= value, "balance");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        emit Transfer(from, to, value);
     }
 }
 
