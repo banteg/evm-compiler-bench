@@ -175,6 +175,7 @@ real_derived:
     - set_default_queue
     - forced_default_queue_withdraw
     - combined_management_sequence_withdraw
+    - alternate_management_sequence_redeem
     - force_revoke_strategy
     - buy_debt
     - withdraw_long_queue_reverts
@@ -216,7 +217,7 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
-    - combined role, default-queue, debt, report, module, shutdown, and withdrawal sequence parity
+    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across two orderings
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -369,6 +370,9 @@ scenarios:
   - name: combined_management_sequence_withdraw
     call: "withdraw after delegated strategy/queue changes, debt allocation, accountant/protocol-fee report, module changes, and shutdown"
     expected: "preserves final observable state and withdraw behavior across the combined management sequence"
+  - name: alternate_management_sequence_redeem
+    call: "redeem with an explicit queue after accountant/module setup, reversed debt allocation, role-manager transfer, delegated emergency shutdown, and a strategy report"
+    expected: "preserves final observable state and redeem behavior across an alternate management ordering"
   - name: force_revoke_strategy
     call: "force_revoke_strategy(strategy)"
     expected: "force removes the strategy through the emergency role path"

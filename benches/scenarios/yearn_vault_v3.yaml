@@ -654,6 +654,39 @@ scenarios:
       data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(150_000), address(this), address(this), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: alternate_management_sequence_redeem
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(10), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(320_000), address(this))'
+      - data: 'abi.encodeWithSignature("set_accountant(address)", benchYearnAccountant({target}))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy2({target}), true)'
+      - data: 'benchYearnSetDefaultQueueCalldata({target}, false)'
+      - data: 'abi.encodeWithSignature("set_use_default_queue(bool)", true)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetWithdrawLimitModule(address,uint256)", {target}, uint256(260_000))'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy2({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy2({target}), uint256(90_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(70_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnConfigureAccountant(address,uint256,uint256)", {target}, uint256(400), uint256(200))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReportFor(address,address,uint256,uint256)", {target}, benchYearnStrategy({target}), uint256(4_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
+      - data: 'abi.encodeWithSignature("transfer_role_manager(address)", BOB)'
+      - data: 'abi.encodeWithSignature("accept_role_manager()")'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("add_role(address,uint256)", CAROL, uint256(8192))'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("shutdown_vault()")'
+        sender: CAROL
+    measured:
+      data: 'benchYearnRedeemQueueCalldata({target}, uint256(240_000), address(this), address(this), uint256(0), false)'
+    expect_success: true
+    observers: *yearn_observers
   - name: force_revoke_strategy
     state_access_profile: mixed
     setup:

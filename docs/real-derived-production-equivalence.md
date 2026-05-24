@@ -114,7 +114,7 @@ Immediate chips:
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, protocol fees, excessive-fee failure, reentrancy failure, and unlock-over-time paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, and long-queue failures are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic mocks cover important accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
-| Cross-feature sequence behavior | Incomplete | One combined management sequence is covered; alternate orderings and repeated transitions remain. |
+| Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover two management orderings; more repeated transitions remain. |
 | Vyper `String` and `DynArray` decoder details | Approximate | Length success/failure is covered, but decoder timing and revert data are not exact. |
 | Function-by-function parity audit | Incomplete | The Solidity port is broad, but each upstream branch has not been checked off against the pinned Vyper source. |
 | Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
@@ -123,8 +123,8 @@ Immediate chips:
 
 - Build and keep a source-to-port checklist for every Yearn external and
   internal function branch.
-- Add sequence scenarios for alternate orderings of roles, queues, debt,
-  reports, modules, shutdown, and withdrawals.
+- Add sequence scenarios for repeated transitions across roles, queues, debt,
+  reports, modules, shutdown, withdrawals, and redeems.
 - Expand third-party accountant/module/strategy mock coverage for unusual but
   interface-valid implementations.
 
@@ -229,9 +229,10 @@ Exact now:
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
   limit module.
-- The scenario set includes a combined management sequence that mutates
-  delegated roles, the default queue, debt, reporting, limit modules, shutdown
-  state, and then withdraws from the post-sequence vault state.
+- The scenario set includes two combined management sequences that mutate
+  delegated roles, role-manager authority, the default/custom queue, debt,
+  reporting, limit modules, shutdown state, and then withdraw or redeem from the
+  post-sequence vault state.
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
@@ -245,8 +246,8 @@ Remaining:
   strategy behavior is represented by deterministic harness mocks. The current
   scenarios cover important boundary paths but not exhaustive adversarial or
   unusual implementations behind those interfaces.
-- The current sequence coverage proves one representative combined management
-  ordering; other orderings and repeated transitions remain to be covered.
+- The current sequence coverage proves two representative combined management
+  orderings; repeated transitions remain to be covered.
 - Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
   ABI behavior is approximated in Solidity with runtime checks; success/failure
   is covered, but decoder timing and revert data are not exact.
@@ -258,5 +259,5 @@ Suggested next chips:
 
 - Build a source-to-port checklist from every external and internal Yearn
   function, then close or scenario-cover each unchecked branch.
-- Add more sequence tests for alternate role, queue, debt, report, module,
-  shutdown, and withdrawal orderings.
+- Add more sequence tests for repeated role, queue, debt, report, module,
+  shutdown, withdrawal, and redeem transitions.

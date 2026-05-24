@@ -1886,6 +1886,27 @@ fn all_helper_functions() -> &'static str {
         );
     }
 
+    function benchYearnRedeemQueueCalldata(
+        address target,
+        uint256 shares,
+        address receiver,
+        address owner,
+        uint256 maxLoss,
+        bool reverse
+    ) public view returns (bytes memory) {
+        address[] memory queue = new address[](2);
+        if (reverse) {
+            queue[0] = address(yearnDeps[target].strategy2);
+            queue[1] = address(yearnDeps[target].strategy);
+        } else {
+            queue[0] = address(yearnDeps[target].strategy);
+            queue[1] = address(yearnDeps[target].strategy2);
+        }
+        return abi.encodeWithSignature(
+            "redeem(uint256,address,address,uint256,address[])", shares, receiver, owner, maxLoss, queue
+        );
+    }
+
     function benchYearnWithdrawLongQueueCalldata(
         address target,
         uint256 assets,
