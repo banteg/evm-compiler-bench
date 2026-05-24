@@ -642,6 +642,11 @@ fn row(
     } else {
         "not_applicable"
     };
+    let log_status = if supports_log_diff(&artifact.benchmark_id) {
+        baseline_status
+    } else {
+        "not_run"
+    };
     let randomized_status = correctness_status(
         scenario_file.randomized.is_some(),
         &failure_links,
@@ -716,7 +721,7 @@ fn row(
             "profile_behavior_check": "not_run",
             "observer_check": if has_observers { baseline_status } else { "not_applicable" },
             "return_data_check": baseline_status,
-            "log_check": "not_run",
+            "log_check": log_status,
             "randomized_differential_check": randomized_status,
             "property_tests": property_status,
             "properties": scenario_file.properties.iter().map(|property| property.name.clone()).collect::<Vec<_>>(),
@@ -728,6 +733,10 @@ fn row(
 
 fn differential_benchmarks(compiled: &CompileSet) -> BTreeSet<String> {
     baseline_pairs(&compiled.artifacts).into_keys().collect()
+}
+
+fn supports_log_diff(benchmark_id: &str) -> bool {
+    matches!(benchmark_id, "uniswap_v2_pair")
 }
 
 fn failure_row(failure: &CompileFailure) -> serde_json::Value {

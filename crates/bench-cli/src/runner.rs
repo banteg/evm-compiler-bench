@@ -13,7 +13,7 @@ use serde_json::json;
 use std::{collections::BTreeMap, fs, path::Path, process::Command};
 
 const FAILURE_DIR: &str = "../results/raw/failures";
-const GAS_CACHE_SCHEMA: &str = "gas-v1";
+const GAS_CACHE_SCHEMA: &str = "gas-v2";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 
 pub fn run_foundry(
@@ -371,6 +371,7 @@ fn generate_test(
     out.push_str("pragma solidity ^0.8.20;\n\n");
     out.push_str(support_contracts());
     out.push_str("interface Vm {\n");
+    out.push_str("    struct Log { bytes32[] topics; bytes data; address emitter; }\n");
     out.push_str("    function createDir(string calldata path, bool recursive) external;\n");
     out.push_str("    function writeFile(string calldata path, string calldata data) external;\n");
     out.push_str("    function writeLine(string calldata path, string calldata data) external;\n");
@@ -380,6 +381,8 @@ fn generate_test(
     out.push_str("    function warp(uint256 newTimestamp) external;\n");
     out.push_str("    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\n");
     out.push_str("    function addr(uint256 privateKey) external returns (address);\n");
+    out.push_str("    function recordLogs() external;\n");
+    out.push_str("    function getRecordedLogs() external returns (Log[] memory entries);\n");
     out.push_str("}\n\n");
     out.push_str("contract ");
     out.push_str(contract_name);
@@ -1891,9 +1894,100 @@ fn all_helper_functions() -> &'static str {
         retHash = keccak256(ret);
     }
 
+    function _runWithLogs(address target, address destination, bytes memory data, uint256 value, address sender)
+        internal
+        returns (bool ok, bytes32 retHash, bytes32 logHash, uint256 gasUsed)
+    {
+        vm.recordLogs();
+        (ok, retHash, gasUsed) = _run(destination, data, value, sender);
+        logHash = _normalizedLogHash(target, vm.getRecordedLogs());
+    }
+
     function _observe(address target, bytes memory data) internal returns (bytes32) {
         (bool ok, bytes memory ret) = target.call(data);
         return keccak256(abi.encode(ok, ret));
+    }
+
+    function _normalizedLogHash(address target, Vm.Log[] memory entries) internal view returns (bytes32 hash) {
+        hash = bytes32(0);
+        for (uint256 i = 0; i < entries.length; i++) {
+            bytes32[] memory topics = new bytes32[](entries[i].topics.length);
+            for (uint256 topicIndex = 0; topicIndex < entries[i].topics.length; topicIndex++) {
+                topics[topicIndex] = _normalizeLogWord(target, entries[i].topics[topicIndex]);
+            }
+            hash = keccak256(
+                abi.encode(
+                    hash,
+                    _normalizeLogEmitter(target, entries[i].emitter),
+                    topics,
+                    _normalizeLogData(target, entries[i].data)
+                )
+            );
+        }
+    }
+
+    function _normalizeLogData(address target, bytes memory data) internal view returns (bytes memory normalized) {
+        normalized = data;
+        for (uint256 offset = 0; offset + 32 <= normalized.length; offset += 32) {
+            bytes32 word;
+            assembly {
+                word := mload(add(add(normalized, 0x20), offset))
+            }
+            bytes32 normalizedWord = _normalizeLogWord(target, word);
+            if (normalizedWord != word) {
+                assembly {
+                    mstore(add(add(normalized, 0x20), offset), normalizedWord)
+                }
+            }
+        }
+    }
+
+    function _normalizeLogEmitter(address target, address emitter) internal view returns (bytes32) {
+        uint256 id = _logAddressId(target, emitter);
+        if (id != 0) {
+            return bytes32(id);
+        }
+        return bytes32(uint256(uint160(emitter)));
+    }
+
+    function _normalizeLogWord(address target, bytes32 word) internal view returns (bytes32) {
+        if (uint256(word) >> 160 != 0) {
+            return word;
+        }
+        uint256 id = _logAddressId(target, address(uint160(uint256(word))));
+        if (id != 0) {
+            return bytes32(id);
+        }
+        return word;
+    }
+
+    function _logAddressId(address target, address account) internal view returns (uint256) {
+        if (account == address(0)) return 0;
+        if (account == target) return 1;
+        if (account == address(this)) return 2;
+        if (account == BOB) return 3;
+        if (account == CAROL) return 4;
+        PairDeps storage pair = pairDeps[target];
+        if (account == address(pair.token0)) return 10;
+        if (account == address(pair.token1)) return 11;
+        if (account == address(pair.flashCallee)) return 12;
+        if (account == address(pair.reentrantCallee)) return 13;
+        NoReturnPairDeps storage noReturnPair = noReturnPairDeps[target];
+        if (account == address(noReturnPair.token0)) return 20;
+        if (account == address(noReturnPair.token1)) return 21;
+        CurveDeps storage curve = curveDeps[target];
+        if (account == address(curve.coin0)) return 30;
+        if (account == address(curve.coin1)) return 31;
+        YearnDeps storage yearn = yearnDeps[target];
+        if (account == address(yearn.asset)) return 40;
+        if (account == address(yearn.strategy)) return 41;
+        if (account == address(yearn.strategy2)) return 42;
+        if (account == address(yearn.strategy3)) return 43;
+        if (account == address(yearn.accountant)) return 44;
+        if (account == address(yearn.reentrantAccountant)) return 45;
+        if (account == address(yearn.depositLimitModule)) return 46;
+        if (account == address(yearn.withdrawLimitModule)) return 47;
+        return 0;
     }
 
     function _calldataGas(bytes memory data) internal pure returns (uint256 gasCost) {
@@ -2702,11 +2796,21 @@ fn write_diff_test(
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "solTarget", &scenario.setup, "setup");
     write_setup(out, "solTarget", &scenario.warmup, "warmup");
-    out.push_str("        (bool solOk, bytes32 solHash,) = _run(");
-    out.push_str(call_destination(&scenario.measured, "solTarget"));
-    out.push_str(", ");
-    write_call_args(out, &scenario.measured, "solTarget");
-    out.push_str(");\n");
+    if supports_log_diff(benchmark_id) {
+        out.push_str(
+            "        (bool solOk, bytes32 solHash, bytes32 solLogHash,) = _runWithLogs(solTarget, ",
+        );
+        out.push_str(call_destination(&scenario.measured, "solTarget"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "solTarget");
+        out.push_str(");\n");
+    } else {
+        out.push_str("        (bool solOk, bytes32 solHash,) = _run(");
+        out.push_str(call_destination(&scenario.measured, "solTarget"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "solTarget");
+        out.push_str(");\n");
+    }
     out.push_str("        bytes32 solObserved = _observeAll_");
     out.push_str(&sanitize(&solidity.benchmark_id));
     out.push('_');
@@ -2715,11 +2819,21 @@ fn write_diff_test(
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
-    out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(");
-    out.push_str(call_destination(&scenario.measured, "vyperTarget"));
-    out.push_str(", ");
-    write_call_args(out, &scenario.measured, "vyperTarget");
-    out.push_str(");\n");
+    if supports_log_diff(benchmark_id) {
+        out.push_str(
+            "        (bool vyperOk, bytes32 vyperHash, bytes32 vyperLogHash,) = _runWithLogs(vyperTarget, ",
+        );
+        out.push_str(call_destination(&scenario.measured, "vyperTarget"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "vyperTarget");
+        out.push_str(");\n");
+    } else {
+        out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(");
+        out.push_str(call_destination(&scenario.measured, "vyperTarget"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "vyperTarget");
+        out.push_str(");\n");
+    }
     out.push_str("        bytes32 vyperObserved = _observeAll_");
     out.push_str(&sanitize(&vyper.benchmark_id));
     out.push('_');
@@ -2739,6 +2853,11 @@ fn write_diff_test(
     out.push_str(
         "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
     );
+    if supports_log_diff(benchmark_id) {
+        out.push_str(
+            "        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n",
+        );
+    }
     out.push_str("    }\n\n");
     write_observer_function(out, &solidity.benchmark_id, scenario);
 }
@@ -2834,6 +2953,10 @@ fn property_helper_name(property_name: &str) -> Result<&'static str> {
         "amm_reserve_liquidity_coherence" => Ok("_property_amm_pair_subset"),
         _ => bail!("unsupported property {property_name}"),
     }
+}
+
+fn supports_log_diff(benchmark_id: &str) -> bool {
+    matches!(benchmark_id, "uniswap_v2_pair")
 }
 
 fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scenario) {

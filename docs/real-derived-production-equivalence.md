@@ -29,7 +29,7 @@ layout.
 
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
-| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/event/revert audit still pending. |
+| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens. | Solidity port is fixed at `N_COINS = 2`; upstream is constructor-driven up to 8 coins; delegated `StableSwapViews` call topology is internalized; factory/views dependencies are harness fixtures. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
@@ -50,6 +50,8 @@ Exact now:
   swap invariant checks, no-return token transfers, flash callback repayment,
   flash reentrancy rejection, fee-on/off behavior, timestamp wrapping, and
   permit success/failure.
+- The generated differential harness normalizes deployment-specific addresses
+  and compares event/log hashes for the listed scenarios.
 
 Remaining:
 
@@ -59,16 +61,14 @@ Remaining:
   document an explicit policy exception before removing the excluded feature.
 - The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
   path and `feeTo`, but it is not the full upstream `UniswapV2Factory`.
-- The final audit still needs to check event topics/data, revert reasons or
-  decoder failures where they matter, permit/domain separator behavior across
-  chain-id changes, and every ABI entry outside the current scenarios.
+- The final audit still needs to check revert reasons or decoder failures where
+  they matter, permit/domain separator behavior across chain-id changes, and
+  every ABI entry outside the current scenarios.
 
 Suggested next chips:
 
 - Add a targeted over-4096-byte flash callback divergence scenario, or make the
   bounded-by-language policy decision explicit.
-- Add an event/log differential check for mint, burn, swap, sync, approval,
-  transfer, and permit scenarios.
 - Decide whether full upstream factory behavior is in scope for this benchmark
   or whether the benchmark is explicitly "Pair only".
 
