@@ -33,6 +33,17 @@ scenarios:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: mint_initial_below_minimum_liquidity_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(999), uint256(999))'
+    measured:
+      data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    expect_success: false
+    observers: *pair_observers
   - name: factory_create2_mint_initial
     deployment_variant: uniswap_create2
     state_access_profile: mixed

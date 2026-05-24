@@ -60,6 +60,7 @@ real_derived:
   scenario_coverage:
     - initialize
     - mint_initial
+    - mint_initial_below_minimum_liquidity_reverts
     - factory_create2_mint_initial
     - mint_subsequent
     - swap_fee_invariant
@@ -113,7 +114,7 @@ real_derived:
     - pair creation through a benchmark factory using CREATE2 and factory-owned initialize
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
-    - first and subsequent mint paths
+    - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY
     - burn path with staged LP shares
     - constant-product swap fee invariant for both token0-input and token1-input paths
     - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
@@ -143,6 +144,9 @@ scenarios:
   - name: mint_initial
     call: "mint(address(this)) after token balances are sent to the pair"
     expected: "mints LP supply minus permanent minimum liquidity"
+  - name: mint_initial_below_minimum_liquidity_reverts
+    call: "mint(address(this)) after token balances below MINIMUM_LIQUIDITY are sent to the pair"
+    expected: "reverts through the upstream initial-liquidity underflow guard"
   - name: factory_create2_mint_initial
     call: "mint(address(this)) after the pair is created by a factory CREATE2 deployment"
     expected: "factory deploys and initializes the pair before the initial mint path"
