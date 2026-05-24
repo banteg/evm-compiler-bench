@@ -266,6 +266,7 @@ real_derived:
     - deposit_limit_reverts
     - deposit_limit_module
     - deposit_limit_module_max_uint_deposit
+    - deposit_limit_module_receiver_specific
     - deposit_limit_module_reverts
     - deposit_limit_module_call_reverts
     - withdraw_limit_module
@@ -273,6 +274,7 @@ real_derived:
     - max_withdraw_limit_module
     - max_withdraw_limit_module_caps_to_balance
     - max_redeem_limit_module_max_uint
+    - withdraw_limit_module_owner_specific
     - withdraw_limit_module_reverts
     - withdraw_limit_module_call_reverts
     - permit_valid
@@ -300,8 +302,8 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - deposit-limit module finite and max-uint deposit acceptance plus over-limit rejection
-    - withdraw-limit-module max-withdraw capping above and below balance, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
+    - deposit-limit module finite and max-uint deposit acceptance, receiver-specific maxDeposit returns, plus over-limit rejection
+    - withdraw-limit-module max-withdraw capping above and below balance, owner-specific maxWithdraw returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, refund clipping after accountant state mutation, fees, net-positive and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -728,6 +730,9 @@ scenarios:
   - name: deposit_limit_module_max_uint_deposit
     call: "deposit through a custom deposit limit module returning max uint256"
     expected: "accepts the high module return through the same max-deposit path used by maxMint"
+  - name: deposit_limit_module_receiver_specific
+    call: "maxDeposit(BOB) through a custom deposit limit module with a receiver-specific limit"
+    expected: "passes the receiver argument to the module and returns the receiver-specific limit"
   - name: deposit_limit_module_reverts
     call: "deposit above a custom deposit limit module limit"
     expected: "reverts"
@@ -749,6 +754,9 @@ scenarios:
   - name: max_redeem_limit_module_max_uint
     call: "maxRedeem with a custom withdraw limit module returning max uint256"
     expected: "caps the module return to the owner's balance-derived max withdraw before converting to redeemable shares"
+  - name: withdraw_limit_module_owner_specific
+    call: "maxWithdraw(BOB) through a custom withdraw limit module with an owner-specific limit"
+    expected: "passes the owner argument to the module and returns the owner-specific capped max withdraw"
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
