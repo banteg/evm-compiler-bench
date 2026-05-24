@@ -63,7 +63,7 @@ Status meanings:
 | `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Covered for active-strategy update and inactive-strategy rejection. |
 | `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit`/`maxRedeem` limits, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module, including post-shutdown debt pull. |
-| `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch remains open. |
+| `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch is covered. |
 | `mint` | `mint` | mapped, covered | Covered directly and through preview observers. |
 | `withdraw` | overloaded `withdraw` | mapped, covered | Long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
 | `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
@@ -76,16 +76,16 @@ Status meanings:
 | `totalAssets` | `totalAssets` | mapped, covered | Covered as observer. |
 | `totalIdle` | `totalIdle` | mapped, covered | Covered as observer. |
 | `totalDebt` | `totalDebt` | mapped, covered | Covered as observer. |
-| `convertToShares` | `convertToShares` | mapped, covered | Zero-assets and max-uint special cases remain open. |
-| `previewDeposit` | `previewDeposit` | mapped, covered | Same conversion gaps as `convertToShares`. |
-| `previewMint` | `previewMint` | mapped, covered | Same conversion gaps as `convertToAssets`. |
-| `convertToAssets` | `convertToAssets` | mapped, covered | Zero-shares and max-uint special cases remain open. |
-| `maxDeposit` | `maxDeposit` | mapped, covered | Zero receiver/vault receiver branches remain open. |
-| `maxMint` | `maxMint` | mapped, covered | Module and zero-receiver branches remain open. |
+| `convertToShares` | `convertToShares` | mapped, covered | Zero-assets and max-uint special cases are covered. |
+| `previewDeposit` | `previewDeposit` | mapped, covered | Zero-assets and max-uint special cases are covered through the shared conversion path. |
+| `previewMint` | `previewMint` | mapped, covered | Zero-shares and max-uint special cases are covered through the shared conversion path. |
+| `convertToAssets` | `convertToAssets` | mapped, covered | Zero-shares and max-uint special cases are covered. |
+| `maxDeposit` | `maxDeposit` | mapped, covered | Zero receiver and vault receiver branches are covered. |
+| `maxMint` | `maxMint` | mapped, covered | Zero receiver, unlimited deposit limit, and module-return paths are covered. |
 | `maxWithdraw` | overloaded `maxWithdraw` | mapped, covered | Limited strategy redeem behavior is covered. |
 | `maxRedeem` | overloaded `maxRedeem` | mapped, covered | Limited strategy redeem behavior is covered through the shared max-withdraw path. |
-| `previewWithdraw` | `previewWithdraw` | mapped, covered | Rounded-up conversion branch covered indirectly; max-uint remains open. |
-| `previewRedeem` | `previewRedeem` | mapped, covered | Rounded-down conversion branch covered indirectly; max-uint remains open. |
+| `previewWithdraw` | `previewWithdraw` | mapped, covered | Rounded-up conversion plus zero and max-uint branches are covered. |
+| `previewRedeem` | `previewRedeem` | mapped, covered | Rounded-down conversion plus zero and max-uint branches are covered. |
 | `FACTORY` | `FACTORY` | mapped, covered | Factory is harness-provided; full factory behavior is out of scope. |
 | `apiVersion` | `apiVersion` | mapped, covered | Covered as observer. |
 | `assess_share_of_unrealised_losses` | `assess_share_of_unrealised_losses` | mapped, covered | Current-debt `< assets_needed` revert remains open. |
@@ -108,15 +108,15 @@ Status meanings:
 | `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent loss/fee report edge remains open. |
 | `_total_supply` | `_effectiveSupply` | mapped, covered | Covered as observer. |
 | `_total_assets` | `totalAssets` | mapped, covered | Covered as observer. |
-| `_convert_to_assets` | `_convertToAssets` | mapped, covered | Max-uint and zero-value special cases remain open. |
-| `_convert_to_shares` | `_convertToShares` | mapped, covered | Max-uint and zero-value special cases remain open. |
+| `_convert_to_assets` | `_convertToAssets` | mapped, covered | Max-uint and zero-value special cases are covered. |
+| `_convert_to_shares` | `_convertToShares` | mapped, covered | Max-uint and zero-value special cases are covered. |
 | `_erc20_safe_approve` | `_safeApproveToken` | mapped, covered | Optional-return false-return path remains open. |
 | `_erc20_safe_transfer_from` | `_safeTransferFromToken` | mapped, covered | No-return token path covered; false-return path remains open. |
 | `_erc20_safe_transfer` | `_safeTransferToken` | mapped, covered | No-return token path covered; false-return path remains open. |
 | `_issue_shares` | `_issueShares` | mapped, covered | Covered by deposit, reports, and fees. |
-| `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases remain open. |
+| `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered. |
 | `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem is covered; nonzero unrealized loss queue break remains open. |
-| `_deposit` | `_deposit` | mapped, covered | Auto-allocate branch covered; deposit-all branch remains open. |
+| `_deposit` | `_deposit` | mapped, covered | Auto-allocate and deposit-all entry paths are covered. |
 | `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches remain open. |
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
@@ -138,8 +138,6 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add more adversarial strategy report value combinations beyond the covered
   current-debt-above-max-debt update path.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.
-- Cover max-uint and zero-value conversion branches that are externally
-  observable through deposit, convert, preview, withdraw, and redeem calls.
 - Decide whether Vyper `String` and `DynArray` decoder timing/revert data are
   acceptable language-level approximations or need explicit non-equivalence
   callouts.

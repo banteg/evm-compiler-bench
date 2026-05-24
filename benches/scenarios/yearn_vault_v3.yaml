@@ -72,6 +72,15 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: deposit_all_max_uint
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("deposit(uint256,address)", type(uint256).max, address(this))'
+    expect_success: true
+    observers: *yearn_observers
   - name: mint
     state_access_profile: mixed
     setup:
@@ -170,6 +179,81 @@ scenarios:
       - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     measured:
       data: 'abi.encodeWithSignature("maxRedeem(address)", address(this))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: conversion_zero_edges
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("convertToShares(uint256)", uint256(0))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("previewDeposit(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("previewMint(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("convertToAssets(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("previewWithdraw(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("previewRedeem(uint256)", uint256(0))'
+  - name: conversion_max_uint_edges
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("convertToShares(uint256)", type(uint256).max)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("previewDeposit(uint256)", type(uint256).max)'
+      - data: 'abi.encodeWithSignature("previewMint(uint256)", type(uint256).max)'
+      - data: 'abi.encodeWithSignature("convertToAssets(uint256)", type(uint256).max)'
+      - data: 'abi.encodeWithSignature("previewWithdraw(uint256)", type(uint256).max)'
+      - data: 'abi.encodeWithSignature("previewRedeem(uint256)", type(uint256).max)'
+  - name: max_deposit_zero_receiver
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("maxDeposit(address)", address(0))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: max_deposit_vault_receiver
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("maxDeposit(address)", {target})'
+    expect_success: true
+    observers: *yearn_observers
+  - name: max_mint_zero_receiver
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("maxMint(address)", address(0))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: max_mint_unlimited
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("maxMint(address)", address(this))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: max_mint_limit_module
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetDepositLimitModule(address,uint256)", {target}, uint256(1_500))'
+    measured:
+      data: 'abi.encodeWithSignature("maxMint(address)", address(this))'
     expect_success: true
     observers: *yearn_observers
   - name: update_debt_increase

@@ -111,6 +111,7 @@ real_derived:
   equivalence_scope:
     - upstream Vyper blueprint plus minimal-proxy deployment model
     - ERC4626-style deposit, mint, withdraw, and redeem
+    - deposit-all, max-uint, and zero-value ERC4626 conversion boundaries
     - ERC20 share approve, transfer, and transferFrom flows
     - role-gated strategy registry, max debt, and debt update paths
     - strategy revoke, force revoke, minimum-idle, and bad-debt purchase management
@@ -129,6 +130,7 @@ real_derived:
   scenario_coverage:
     - initialize
     - deposit
+    - deposit_all_max_uint
     - mint
     - withdraw_idle
     - withdraw_default_max_loss
@@ -139,6 +141,13 @@ real_derived:
     - transfer_from
     - max_withdraw_default
     - max_redeem_default
+    - conversion_zero_edges
+    - conversion_max_uint_edges
+    - max_deposit_zero_receiver
+    - max_deposit_vault_receiver
+    - max_mint_zero_receiver
+    - max_mint_unlimited
+    - max_mint_limit_module
     - update_debt_increase
     - update_debt_decrease
     - update_debt_default_max_loss
@@ -270,6 +279,9 @@ scenarios:
   - name: deposit
     call: "deposit(100_000, address(this))"
     expected: "transfers assets in, mints shares, and increases idle assets"
+  - name: deposit_all_max_uint
+    call: "deposit(max_value(uint256), address(this))"
+    expected: "deposits the sender's full asset balance through the upstream deposit-all branch"
   - name: mint
     call: "mint(50_000, address(this))"
     expected: "transfers required assets in and mints requested shares"
@@ -300,6 +312,27 @@ scenarios:
   - name: max_redeem_default
     call: "maxRedeem(address(this)) using the Vyper default max_loss overload"
     expected: "returns the default-loss redeemable share amount"
+  - name: conversion_zero_edges
+    call: "convertToShares(0) with zero-value preview/convert observers"
+    expected: "returns zero through every upstream zero-value conversion early-return path"
+  - name: conversion_max_uint_edges
+    call: "convertToShares(max_value(uint256)) with max-uint preview/convert observers"
+    expected: "returns max_value(uint256) through every upstream max-uint conversion early-return path"
+  - name: max_deposit_zero_receiver
+    call: "maxDeposit(empty(address))"
+    expected: "returns zero for the upstream zero-receiver guard"
+  - name: max_deposit_vault_receiver
+    call: "maxDeposit(vault)"
+    expected: "returns zero for the upstream vault-receiver guard"
+  - name: max_mint_zero_receiver
+    call: "maxMint(empty(address))"
+    expected: "returns zero through the same receiver guard and conversion path"
+  - name: max_mint_unlimited
+    call: "maxMint(address(this)) with unlimited deposit limit"
+    expected: "returns max_value(uint256) through the upstream unlimited-deposit conversion path"
+  - name: max_mint_limit_module
+    call: "maxMint(address(this)) with a deposit-limit module"
+    expected: "uses the module-provided deposit limit and converts it to shares"
   - name: update_debt_increase
     call: "update_debt(strategy, 100_000, 0)"
     expected: "moves idle assets into strategy debt"
