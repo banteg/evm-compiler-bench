@@ -219,6 +219,15 @@ scenarios:
       data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
     expect_success: true
     observers: *yearn_observers
+  - name: update_max_debt_inactive_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+    expect_success: false
+    observers: *yearn_observers
   - name: role_delegate_add_strategy
     state_access_profile: mixed
     setup:
@@ -249,6 +258,30 @@ scenarios:
       - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy3({target}), true)'
     measured:
       data: 'abi.encodeWithSignature("revoke_strategy(address)", benchYearnStrategy({target}))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: revoke_strategy_with_debt_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(100_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(50_000), uint256(0))'
+    measured:
+      data: 'abi.encodeWithSignature("revoke_strategy(address)", benchYearnStrategy({target}))'
+    expect_success: false
+    observers: *yearn_observers
+  - name: readd_after_revoke_strategy
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("revoke_strategy(address)", benchYearnStrategy({target}))'
+    measured:
+      data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
     expect_success: true
     observers: *yearn_observers
   - name: add_remove_role
@@ -981,6 +1014,20 @@ scenarios:
       - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
     measured:
       data: 'abi.encodeWithSignature("force_revoke_strategy(address)", benchYearnStrategy({target}))'
+    expect_success: true
+    observers: *yearn_observers
+  - name: readd_after_force_revoke_strategy
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(100_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(50_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("force_revoke_strategy(address)", benchYearnStrategy({target}))'
+    measured:
+      data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
     expect_success: true
     observers: *yearn_observers
   - name: buy_debt

@@ -58,9 +58,9 @@ Status meanings:
 | `process_report` | `process_report` | mapped, covered | More third-party accountant and strategy reporting variants remain open. |
 | `buy_debt` | `buy_debt` | mapped, covered | Over-current-debt clipping and zero-share rejection are covered. |
 | `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full behavior is not yet covered. |
-| `revoke_strategy` | `revoke_strategy` | mapped, covered | Non-forced active-debt revert should be scenario-covered. |
-| `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal; re-add after force revoke remains open. |
-| `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Inactive-strategy revert remains open. |
+| `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
+| `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal and re-add after forced debt accounting. |
+| `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Covered for active-strategy update and inactive-strategy rejection. |
 | `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit`/`maxRedeem` limits, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module, including post-shutdown debt pull. |
 | `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch remains open. |
@@ -121,7 +121,7 @@ Status meanings:
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, and partial/over strategy redeem returns are covered; nonzero unrealized-loss queue-break variants remain open. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full add branch remains open. |
-| `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add-after-revoke remain open. |
+| `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant, fee/refund clipping, and post-unlock loss/fee variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
@@ -137,8 +137,7 @@ These items should be closed before flipping `yearn_vault_v3` to
   deterministic accountant.
 - Add more adversarial strategy report value combinations beyond the covered
   current-debt-above-max-debt update path.
-- Cover queue-full behavior, duplicate strategy queue behavior, non-forced
-  debt revoke failure, re-add after revoke, and post-shutdown debt pull.
+- Cover queue-full behavior and duplicate strategy queue behavior.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.
 - Cover max-uint and zero-value conversion branches that are externally
   observable through deposit, convert, preview, withdraw, and redeem calls.
