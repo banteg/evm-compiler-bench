@@ -377,6 +377,15 @@ scenarios:
       data: 'abi.encodeWithSignature("transfer(address,uint256)", BOB, uint256(10_000))'
     expect_success: true
     observers: *pair_observers
+  - name: lp_transfer_insufficient_balance_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+    measured:
+      data: 'abi.encodeWithSignature("transfer(address,uint256)", BOB, uint256(1))'
+    expect_success: false
+    observers: *pair_observers
   - name: lp_approve
     state_access_profile: mixed
     setup:
@@ -402,6 +411,20 @@ scenarios:
       data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, uint256(4_000))'
       sender: BOB
     expect_success: true
+    observers: *pair_observers
+  - name: lp_transfer_from_insufficient_allowance_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, uint256(4_000))'
+      sender: BOB
+    expect_success: false
     observers: *pair_observers
   - name: lp_transfer_from_infinite_allowance
     state_access_profile: mixed

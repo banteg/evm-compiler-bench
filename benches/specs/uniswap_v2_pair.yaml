@@ -82,8 +82,10 @@ real_derived:
     - fee_on_mint
     - fee_off_resets_k_last
     - lp_transfer
+    - lp_transfer_insufficient_balance_reverts
     - lp_approve
     - lp_transfer_from_finite_allowance
+    - lp_transfer_from_insufficient_allowance_reverts
     - lp_transfer_from_infinite_allowance
     - uninitialized_mint_reverts
     - reinitialize_by_factory
@@ -120,7 +122,7 @@ real_derived:
     - no-return token swap, burn, and skim transfer-out paths
     - false-return token swap, burn, and skim transfer-out rejection
     - fee-on and fee-off kLast behavior
-    - LP token metadata, balances, direct transfers, approvals, finite and infinite allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
+    - LP token metadata, balances, direct transfers, insufficient-balance transfer rejection, approvals, finite/infinite/insufficient allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - truly unbounded flash-swap callback calldata length in the Vyper port beyond its 65536-byte source bound
@@ -202,12 +204,18 @@ scenarios:
   - name: lp_transfer
     call: "transfer LP shares to another account"
     expected: "moves LP share balance and emits a normalized transfer log"
+  - name: lp_transfer_insufficient_balance_reverts
+    call: "transfer LP shares without a sufficient sender balance"
+    expected: "reverts through the upstream ERC20 balance check"
   - name: lp_approve
     call: "approve another account to spend LP shares"
     expected: "sets allowance and emits a normalized approval log"
   - name: lp_transfer_from_finite_allowance
     call: "transferFrom LP shares through a finite allowance"
     expected: "moves LP shares and decreases the allowance by the spent amount"
+  - name: lp_transfer_from_insufficient_allowance_reverts
+    call: "transferFrom LP shares above the approved finite allowance"
+    expected: "reverts through the upstream ERC20 allowance check"
   - name: lp_transfer_from_infinite_allowance
     call: "transferFrom LP shares through a max uint256 allowance"
     expected: "moves LP shares without decreasing the allowance"
