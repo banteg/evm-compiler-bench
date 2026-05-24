@@ -192,6 +192,7 @@ real_derived:
     - strategy_report_refund_allowance_clipped
     - strategy_loss_report_with_accountant_fee
     - strategy_report_fee_no_profit_lock
+    - strategy_loss_report_after_partial_unlock
     - strategy_report_excessive_accountant_fee_reverts
     - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
@@ -485,6 +486,9 @@ scenarios:
   - name: strategy_report_fee_no_profit_lock
     call: "process_report with strategy gain, accountant fees, and profit locking disabled"
     expected: "charges accountant fees and recalculates reported fee assets through the no-lock branch"
+  - name: strategy_loss_report_after_partial_unlock
+    call: "process_report with a strategy loss and accountant fee after a prior profit report has partially unlocked"
+    expected: "accounts unlocked shares while charging fees, taking loss, and recalculating reported fee assets"
   - name: strategy_report_excessive_accountant_fee_reverts
     call: "process_report with accountant fees greater than removable supply"
     expected: "reverts through the same checked ending-supply arithmetic as upstream Vyper"

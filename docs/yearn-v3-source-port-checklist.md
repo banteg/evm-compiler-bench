@@ -105,7 +105,7 @@ Status meanings:
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
 | `_permit` | `permit` plus `domain_separator` | mapped, covered | Chain-id drift remains open. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
-| `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent loss/fee report edge remains open. |
+| `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent loss/fee report is covered. |
 | `_total_supply` | `_effectiveSupply` | mapped, covered | Covered as observer. |
 | `_total_assets` | `totalAssets` | mapped, covered | Covered as observer. |
 | `_convert_to_assets` | `_convertToAssets` | mapped, covered | Max-uint and zero-value special cases are covered. |
@@ -123,7 +123,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant state-mutation variants remain open; fee/refund clipping and loss/no-lock fee recalculation branches are covered. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant state-mutation variants remain open; fee/refund clipping, loss/no-lock fee recalculation, and partial-unlock loss reports are covered. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Chain-id drift remains open. |
 
