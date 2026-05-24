@@ -276,6 +276,7 @@ real_derived:
     - deposit_limit_module_exact_limit
     - deposit_limit_module_max_uint_deposit
     - deposit_limit_module_receiver_specific
+    - deposit_limit_module_receiver_specific_deposit
     - max_mint_limit_module_receiver_specific
     - deposit_limit_module_zero_max_mint
     - deposit_limit_module_reverts
@@ -289,6 +290,7 @@ real_derived:
     - max_withdraw_limit_module_caps_to_balance
     - max_redeem_limit_module_max_uint
     - withdraw_limit_module_owner_specific
+    - withdraw_limit_module_owner_specific_withdraw
     - max_redeem_limit_module_owner_specific
     - withdraw_limit_module_zero_max_redeem
     - withdraw_limit_module_reverts
@@ -318,8 +320,8 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit and maxMint returns, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
-    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
+    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
+    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns and withdrawal execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -776,6 +778,9 @@ scenarios:
   - name: deposit_limit_module_receiver_specific
     call: "maxDeposit(BOB) through a custom deposit limit module with a receiver-specific limit"
     expected: "passes the receiver argument to the module and returns the receiver-specific limit"
+  - name: deposit_limit_module_receiver_specific_deposit
+    call: "deposit(1_500, BOB) through a custom deposit limit module with a receiver-specific limit"
+    expected: "passes the receiver argument to the module and accepts a deposit exactly at the receiver-specific limit"
   - name: max_mint_limit_module_receiver_specific
     call: "maxMint(BOB) through a custom deposit limit module with a receiver-specific limit"
     expected: "passes the receiver argument through the shared max-deposit path before converting to shares"
@@ -815,6 +820,9 @@ scenarios:
   - name: withdraw_limit_module_owner_specific
     call: "maxWithdraw(BOB) through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument to the module and returns the owner-specific capped max withdraw"
+  - name: withdraw_limit_module_owner_specific_withdraw
+    call: "withdraw(12_345, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
+    expected: "passes the owner argument to the module and accepts a withdrawal exactly at the owner-specific limit"
   - name: max_redeem_limit_module_owner_specific
     call: "maxRedeem(BOB) through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument through the shared max-withdraw path before converting and capping redeemable shares"
