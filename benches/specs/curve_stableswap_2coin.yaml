@@ -84,6 +84,7 @@ real_derived:
     - add_initial_liquidity_three_coin
     - add_initial_liquidity_eight_coin
     - get_dy_three_coin
+    - calc_token_amount_eight_coin
     - exchange_three_coin
     - exchange_eight_coin_boundary
     - exchange_received_three_coin
@@ -150,6 +151,7 @@ real_derived:
     - constructor-initialized three-coin pool setup
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin quote views
+    - factory-delegated eight-coin calc_token_amount quote at MAX_COINS
     - standard-token three-coin exchange path
     - standard-token three-coin exchange_received optimistic-transfer path
     - standard-token eight-coin endpoint exchange path
@@ -270,6 +272,9 @@ scenarios:
   - name: calc_token_amount_extra_amounts
     call: "calc_token_amount([100_000, 300_000, 777], true) after initial liquidity"
     expected: "accepts an amount DynArray longer than the 2 active coins and ignores extra entries"
+  - name: calc_token_amount_eight_coin
+    call: "calc_token_amount([100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000], true) after initial liquidity on an eight-coin deployment"
+    expected: "quotes LP minted through the factory views implementation at the upstream MAX_COINS boundary"
   - name: calc_token_amount_too_many_amounts_reverts
     call: "calc_token_amount([100_000, 300_000, ... length 9], true) after initial liquidity"
     expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"
