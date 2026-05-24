@@ -96,6 +96,8 @@ real_derived:
     - calc_token_amount_extra_amounts
     - calc_token_amount_too_many_amounts_reverts
     - dynamic_fee_quote
+    - price_oracle_after_time
+    - d_oracle_after_time
     - remove_liquidity
     - remove_liquidity_no_return_tokens
     - remove_liquidity_extra_min_amounts_reverts
@@ -140,6 +142,7 @@ real_derived:
     - imbalanced withdrawal
     - admin amplification ramp, stop-ramp, fee, moving-average, and admin-fee withdrawal controls
     - dynamic/off-peg fee and admin-fee accounting
+    - upstream exponential moving-average oracle decay for price and D oracle reads after elapsed time
     - constructor-driven stored rates, oracle rates, rebasing balance reads, ERC4626 conversion rates, and the rebasing exchange_received rejection path
     - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
     - valid EIP-712 LP permit acceptance and invalid permit revert paths
@@ -206,6 +209,12 @@ scenarios:
   - name: dynamic_fee_quote
     call: "dynamic_fee(0, 1) after imbalanced liquidity"
     expected: "returns the off-peg dynamic fee through the production factory views implementation"
+  - name: price_oracle_after_time
+    call: "price_oracle(0) after an exchange changes the spot price and time advances by one averaging window"
+    expected: "returns the exponentially decayed NG price oracle value"
+  - name: d_oracle_after_time
+    call: "D_oracle() after imbalanced liquidity changes D and time advances by one averaging window"
+    expected: "returns the exponentially decayed NG D oracle value"
   - name: remove_liquidity
     call: "remove_liquidity(10_000, [0, 0], address(this))"
     expected: "burns LP shares for proportional coin balances"

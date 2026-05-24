@@ -700,13 +700,45 @@ contract CurveStableSwap2CoinReal {
         return x | (y << 128);
     }
 
-    function _calcMovingAverage(uint256 packedValue, uint256, uint256 lastTime) internal view returns (uint256) {
+    function _calcMovingAverage(uint256 packedValue, uint256 averagingWindow, uint256 lastTime)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 lastSpot = packedValue & ((uint256(1) << 128) - 1);
         uint256 lastEma = packedValue >> 128;
-        if (lastEma == 0 || lastTime < block.timestamp) {
-            return lastSpot;
+        if (lastTime < block.timestamp) {
+            uint256 alpha = _wadExp(-int256((block.timestamp - lastTime) * 1e18 / averagingWindow));
+            return (lastSpot * (1e18 - alpha) + lastEma * alpha) / 1e18;
         }
         return lastEma;
+    }
+
+    function _wadExp(int256 x) internal pure returns (uint256) {
+        if (x <= -41446531673892822313) {
+            return 0;
+        }
+        require(x < 135305999368893231589, "wad_exp overflow");
+
+        int256 value = (x << 78) / int256(5 ** 18);
+        int256 k = (((value << 96) / 54916777467707473351141471128) + (int256(1) << 95)) >> 96;
+        value -= k * 54916777467707473351141471128;
+
+        int256 y = (((value + 1346386616545796478920950773328) * value) >> 96)
+            + 57155421227552351082224309758442;
+        int256 p = (((((y + value) - 94201549194550492254356042504812) * y) >> 96)
+            + 28719021644029726153956944680412240) * value
+            + (int256(4385272521454847904659076985693276) << 96);
+
+        int256 q = (((value - 2855989394907223263936484059900) * value) >> 96)
+            + 50020603652535783019961831881945;
+        q = ((q * value) >> 96) - 533845033583426703283633433725380;
+        q = ((q * value) >> 96) + 3604857256930695427073651918091429;
+        q = ((q * value) >> 96) - 14423608567350463180887372962807573;
+        q = ((q * value) >> 96) + 26449188498355588339934803723976023;
+
+        int256 r = p / q;
+        return (uint256(r) * 3822833074963236453042738258902158003155416615667) >> uint256(195 - k);
     }
 
     function _getP(uint256[2] memory xp, uint256 amp, uint256 d) internal pure returns (uint256) {

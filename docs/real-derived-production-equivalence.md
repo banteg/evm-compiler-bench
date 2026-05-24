@@ -86,6 +86,9 @@ Exact now:
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
   two-coin deployment.
+- Price and D oracle scenarios now advance time and exercise the upstream NG
+  exponential moving-average decay path rather than only same-block oracle
+  upkeep.
 - The generated differential harness normalizes deployment-specific pool and
   coin addresses and compares event/log hashes for the listed scenarios.
 
