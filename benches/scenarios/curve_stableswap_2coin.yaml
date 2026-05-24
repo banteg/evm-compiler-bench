@@ -372,6 +372,21 @@ scenarios:
       - data: 'abi.encodeWithSignature("get_balances()")'
       - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: calc_withdraw_one_coin_eight_coin
+    deployment_variant: curve_eight_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts8(1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("calc_withdraw_one_coin(uint256,int128)", uint256(10_000), int128(7))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(6))'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: remove_one_coin_three_coin
     deployment_variant: curve_three_coin
     state_access_profile: mixed

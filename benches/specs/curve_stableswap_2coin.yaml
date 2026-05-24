@@ -97,6 +97,7 @@ real_derived:
     - remove_liquidity_imbalance_eight_coin
     - remove_liquidity_imbalance_three_coin
     - calc_withdraw_one_coin_three_coin
+    - calc_withdraw_one_coin_eight_coin
     - remove_one_coin_three_coin
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
@@ -167,6 +168,7 @@ real_derived:
     - proportional three-coin liquidity removal
     - proportional eight-coin liquidity removal at MAX_COINS
     - eight-coin one-coin withdrawal at MAX_COINS
+    - eight-coin one-coin withdrawal quote at MAX_COINS
     - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees
     - three-coin one-coin withdrawal and quote paths
@@ -249,6 +251,9 @@ scenarios:
   - name: calc_withdraw_one_coin_three_coin
     call: "calc_withdraw_one_coin(10_000, 2) after initial liquidity on a three-coin deployment"
     expected: "quotes a single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
+  - name: calc_withdraw_one_coin_eight_coin
+    call: "calc_withdraw_one_coin(10_000, 7) after initial liquidity on an eight-coin deployment"
+    expected: "quotes an endpoint single-coin withdrawal at the upstream MAX_COINS boundary"
   - name: remove_one_coin_three_coin
     call: "remove_liquidity_one_coin(10_000, 2, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers the selected coin while updating constructor-sized fee and oracle accounting"
