@@ -149,6 +149,7 @@ pub enum DeploymentVariant {
     CurveOracle,
     CurveRebasing,
     CurveErc4626,
+    UniswapCreate2,
 }
 
 impl DeploymentVariant {
@@ -158,6 +159,7 @@ impl DeploymentVariant {
             Self::CurveOracle => "1",
             Self::CurveRebasing => "2",
             Self::CurveErc4626 => "3",
+            Self::UniswapCreate2 => "1",
         }
     }
 }

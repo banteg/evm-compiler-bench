@@ -75,7 +75,10 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
             bail!("{} has scenario with empty name", path.display());
         }
         if scenario.deployment_variant != DeploymentVariant::Standard
-            && file.benchmark_id != "curve_stableswap_2coin"
+            && !matches!(
+                file.benchmark_id.as_str(),
+                "curve_stableswap_2coin" | "uniswap_v2_pair"
+            )
         {
             bail!(
                 "{} scenario {} has deployment_variant for unsupported benchmark {}",

@@ -414,6 +414,7 @@ fn generate_test(
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
     out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
+    out.push_str("    BenchUniswapCreate2Factory internal uniswapCreate2Factory;\n");
     out.push_str("    address public feeTo;\n");
     out.push_str("    uint16 public protocolFeeBps;\n");
     out.push_str("    address public protocolFeeRecipient;\n\n");
@@ -724,6 +725,29 @@ contract BenchUniswapReentrantCallee {
         if (repay1 > 0) {
             require(BenchERC20(token1).transfer(msg.sender, repay1), "repay1");
         }
+    }
+}
+
+interface BenchUniswapPairLike {
+    function initialize(address token0, address token1) external;
+}
+
+contract BenchUniswapCreate2Factory {
+    address public feeTo;
+
+    function setFeeTo(address newFeeTo) external {
+        feeTo = newFeeTo;
+    }
+
+    function deployPair(bytes memory code, bytes32 salt, address token0, address token1)
+        external
+        returns (address pair)
+    {
+        assembly {
+            pair := create2(0, add(code, 0x20), mload(code), salt)
+        }
+        require(pair != address(0) && pair.code.length != 0, "pair create2");
+        BenchUniswapPairLike(pair).initialize(token0, token1);
     }
 }
 
@@ -1319,6 +1343,13 @@ fn helper_functions() -> &'static str {
     function benchUniswapSetFeeTo(address newFeeTo) external returns (bool) {
         feeTo = newFeeTo;
         return true;
+    }
+
+    function _uniswapCreate2Factory() internal returns (BenchUniswapCreate2Factory) {
+        if (address(uniswapCreate2Factory) == address(0)) {
+            uniswapCreate2Factory = new BenchUniswapCreate2Factory();
+        }
+        return uniswapCreate2Factory;
     }
 
     function benchUniswapPermitOwner() public returns (address) {
@@ -2377,10 +2408,14 @@ fn randomized_helper_functions() -> &'static str {
 }
 
 fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArtifact) {
+    let has_deployment_variants = matches!(
+        artifact.benchmark_id.as_str(),
+        "curve_stableswap_2coin" | "uniswap_v2_pair"
+    );
     out.push_str("    function deployArtifact");
     out.push_str(&index.to_string());
     out.push_str("() internal returns (address target, uint256 deployGas) {\n");
-    if artifact.benchmark_id == "curve_stableswap_2coin" {
+    if has_deployment_variants {
         out.push_str("        return deployArtifact");
         out.push_str(&index.to_string());
         out.push_str("(0);\n");
@@ -2428,6 +2463,22 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        }\n");
         out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
     }
+    if artifact.benchmark_id == "uniswap_v2_pair" {
+        out.push_str("        BenchERC20 uniswapToken0;\n");
+        out.push_str("        BenchERC20 uniswapToken1;\n");
+        out.push_str("        BenchUniswapFlashCallee uniswapFlashCallee;\n");
+        out.push_str("        BenchUniswapReentrantCallee uniswapReentrantCallee;\n");
+        out.push_str("        BenchUniswapCreate2Factory uniswapFactory;\n");
+        out.push_str("        if (deploymentVariant == 1) {\n");
+        out.push_str("            uniswapToken0 = new BenchERC20();\n");
+        out.push_str("            uniswapToken1 = new BenchERC20();\n");
+        out.push_str("            uniswapFlashCallee = new BenchUniswapFlashCallee();\n");
+        out.push_str("            uniswapReentrantCallee = new BenchUniswapReentrantCallee();\n");
+        out.push_str("            uniswapFactory = _uniswapCreate2Factory();\n");
+        out.push_str("        } else {\n");
+        out.push_str("            require(deploymentVariant == 0, \"uniswap variant\");\n");
+        out.push_str("        }\n");
+    }
     if let Some(args) = constructor_args(&artifact.benchmark_id) {
         out.push_str("        code = abi.encodePacked(code, ");
         out.push_str(args);
@@ -2437,6 +2488,12 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     if artifact.benchmark_id == "yearn_vault_v3" {
         out.push_str("        address implementation = _deploy(code);\n");
         out.push_str("        target = _deployMinimalProxy(implementation);\n");
+    } else if artifact.benchmark_id == "uniswap_v2_pair" {
+        out.push_str("        if (deploymentVariant == 1) {\n");
+        out.push_str("            target = uniswapFactory.deployPair(code, keccak256(abi.encode(SALT, keccak256(code))), address(uniswapToken0), address(uniswapToken1));\n");
+        out.push_str("        } else {\n");
+        out.push_str("            target = _deploy(code);\n");
+        out.push_str("        }\n");
     } else {
         out.push_str("        target = _deploy(code);\n");
     }
@@ -2447,6 +2504,11 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        coin1.mint(address(this), 1e30);\n");
         out.push_str("        coin0.approve(target, type(uint256).max);\n");
         out.push_str("        coin1.approve(target, type(uint256).max);\n");
+    }
+    if artifact.benchmark_id == "uniswap_v2_pair" {
+        out.push_str("        if (deploymentVariant == 1) {\n");
+        out.push_str("            pairDeps[target] = PairDeps(uniswapToken0, uniswapToken1, uniswapFlashCallee, uniswapReentrantCallee);\n");
+        out.push_str("        }\n");
     }
     out.push_str("    }\n\n");
 }
@@ -2712,8 +2774,10 @@ fn call_data(call: &CallSpec, target: &str) -> String {
 }
 
 fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -> String {
-    if artifact.benchmark_id == "curve_stableswap_2coin"
-        && scenario.deployment_variant != DeploymentVariant::Standard
+    if matches!(
+        artifact.benchmark_id.as_str(),
+        "curve_stableswap_2coin" | "uniswap_v2_pair"
+    ) && scenario.deployment_variant != DeploymentVariant::Standard
     {
         format!(
             "deployArtifact{}({})",

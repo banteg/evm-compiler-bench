@@ -47,6 +47,7 @@ real_derived:
   source_derivation: "Solidity implementation is vendored upstream source; Vyper implementation is an idiomatic port for the covered pair paths"
   equivalence_scope:
     - external token0/token1/factory initialization
+    - pair deployment through the factory CREATE2 path
     - reserve and getReserves accounting
     - mint, burn, swap, skim, and sync state transitions using external ERC20 balances
     - output transfers to ERC20 tokens that return either bool or no data
@@ -59,6 +60,7 @@ real_derived:
   scenario_coverage:
     - initialize
     - mint_initial
+    - factory_create2_mint_initial
     - mint_subsequent
     - swap_fee_invariant
     - flash_swap_callback
@@ -85,10 +87,11 @@ real_derived:
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
-    - Vyper preserves behavior for covered paths but does not claim CREATE2 factory deployment behavior or unbounded callback calldata
+    - Vyper preserves behavior for covered paths but does not claim unbounded callback calldata
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including the MINIMUM_LIQUIDITY constant getter
+    - pair creation through a benchmark factory using CREATE2 and factory-owned initialize
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths
@@ -104,11 +107,10 @@ real_derived:
     - fee-on and fee-off kLast behavior
     - LP token metadata, allowance, and EIP-712 permit acceptance and reverts
   excluded_features:
-    - CREATE2 pair factory deployment path
     - truly unbounded flash-swap callback calldata length in the Vyper port
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
-  - "The scenarios cover pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
+  - "The scenarios cover factory CREATE2 pair deployment plus pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
 scenarios:
   - name: initialize
     call: "initialize(token0, token1)"
@@ -116,6 +118,9 @@ scenarios:
   - name: mint_initial
     call: "mint(address(this)) after token balances are sent to the pair"
     expected: "mints LP supply minus permanent minimum liquidity"
+  - name: factory_create2_mint_initial
+    call: "mint(address(this)) after the pair is created by a factory CREATE2 deployment"
+    expected: "factory deploys and initializes the pair before the initial mint path"
   - name: mint_subsequent
     call: "mint(address(this)) after an existing position and additional token balances"
     expected: "mints proportional LP shares"

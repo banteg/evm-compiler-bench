@@ -30,6 +30,16 @@ scenarios:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: factory_create2_mint_initial
+    deployment_variant: uniswap_create2
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(4_000_000))'
+    measured:
+      data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    expect_success: true
+    observers: *pair_observers
   - name: mint_subsequent
     state_access_profile: mixed
     setup:
