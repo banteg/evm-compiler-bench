@@ -42,6 +42,9 @@ enum Command {
         /// Restrict execution to one benchmark id.
         #[arg(long)]
         benchmark: Option<String>,
+        /// Restrict execution to one or more compiler profile ids.
+        #[arg(long)]
+        profile: Vec<String>,
         /// Do not read or write benchmark result caches.
         #[arg(long)]
         no_cache: bool,
@@ -54,6 +57,9 @@ enum Command {
         /// Restrict compilation to one benchmark id.
         #[arg(long)]
         benchmark: Option<String>,
+        /// Restrict compilation to one or more compiler profile ids.
+        #[arg(long)]
+        profile: Vec<String>,
         /// Do not read or write benchmark result caches.
         #[arg(long)]
         no_cache: bool,
@@ -81,6 +87,7 @@ fn main() -> Result<()> {
         Command::Run {
             offline,
             benchmark,
+            profile,
             no_cache,
         } => {
             eprintln!("pipeline: resolving toolchains");
@@ -92,7 +99,7 @@ fn main() -> Result<()> {
                 "pipeline: compiling {} benchmarks across profile matrix",
                 benchmarks.len()
             );
-            let compiled = compile_all(&root, &toolchains, &benchmarks, !no_cache)?;
+            let compiled = compile_all(&root, &toolchains, &benchmarks, &profile, !no_cache)?;
             eprintln!("pipeline: loading scenarios");
             let scenarios =
                 load_scenario_catalog(&root, benchmark.as_deref(), &generated.scenarios)?;
@@ -155,6 +162,7 @@ fn main() -> Result<()> {
         Command::Compile {
             offline,
             benchmark,
+            profile,
             no_cache,
         } => {
             eprintln!("pipeline: resolving toolchains");
@@ -166,7 +174,7 @@ fn main() -> Result<()> {
                 "pipeline: compiling {} benchmarks across profile matrix",
                 benchmarks.len()
             );
-            let compiled = compile_all(&root, &toolchains, &benchmarks, !no_cache)?;
+            let compiled = compile_all(&root, &toolchains, &benchmarks, &profile, !no_cache)?;
             println!(
                 "compiled {} artifacts with {} failures across {} profiles for EVM {}",
                 compiled.artifacts.len(),

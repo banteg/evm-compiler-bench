@@ -23,9 +23,10 @@ pub fn compile_all(
     root: &Path,
     toolchains: &Toolchains,
     benchmarks: &[Benchmark],
+    profile_filter: &[String],
     use_cache: bool,
 ) -> Result<CompileSet> {
-    let profiles = load_profiles(root)?;
+    let profiles = load_profiles(root, profile_filter)?;
     let total_attempts = benchmarks.len() * profiles.len();
     let mut progress = Progress::new("compile", total_attempts);
     let mut attempted = 0usize;
@@ -306,7 +307,7 @@ fn compile_cache_input(
     })
 }
 
-fn load_profiles(root: &Path) -> Result<Vec<CompilerProfile>> {
+fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerProfile>> {
     let mut profiles: Vec<CompilerProfile> = Vec::new();
     for entry in fs::read_dir(root.join("compiler-profiles"))? {
         let entry = entry?;
@@ -319,6 +320,31 @@ fn load_profiles(root: &Path) -> Result<Vec<CompilerProfile>> {
         profiles.push(no_metadata_profile(&base));
     }
     profiles.sort_by(|a, b| a.id.cmp(&b.id));
+    if !profile_filter.is_empty() {
+        let available = profiles
+            .iter()
+            .map(|profile| profile.id.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let requested = profile_filter
+            .iter()
+            .map(|profile| (profile.as_str(), ()))
+            .collect::<BTreeMap<_, _>>();
+        profiles.retain(|profile| requested.contains_key(profile.id.as_str()));
+        if profiles.len() != requested.len() {
+            let selected = profiles
+                .iter()
+                .map(|profile| (profile.id.as_str(), ()))
+                .collect::<BTreeMap<_, _>>();
+            let unknown = requested
+                .keys()
+                .filter(|profile| !selected.contains_key(**profile))
+                .copied()
+                .collect::<Vec<_>>()
+                .join(", ");
+            bail!("unknown compiler profile(s): {unknown}; available profiles: {available}");
+        }
+    }
     Ok(profiles)
 }
 

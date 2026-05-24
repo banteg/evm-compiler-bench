@@ -73,6 +73,13 @@ Run one benchmark while iterating:
 cargo run --release -- run --benchmark counter
 ```
 
+Run one benchmark on only a small unoptimized profile pair while iterating on
+parity:
+
+```sh
+cargo run --release -- run --benchmark yearn_vault_v3 --profile solc-latest-noopt --profile vyper-0.3.7-none --no-cache
+```
+
 Ignore result caches for a fresh run:
 
 ```sh
