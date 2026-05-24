@@ -253,6 +253,7 @@ real_derived:
     - max_withdraw_limit_module
     - withdraw_limit_module_reverts
     - permit_valid
+    - permit_after_chain_id_change
     - permit_before_initialize_valid
     - permit_invalid_reverts
   mock_assumptions:
@@ -286,7 +287,7 @@ real_derived:
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
     - deposit-limit and permission reverts
-    - valid EIP-712 permit acceptance before and after initialization plus invalid permit revert paths
+    - valid EIP-712 permit acceptance before and after initialization, after chain-id changes, plus invalid permit revert paths
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage beyond the covered deterministic and refund-mutating accountant paths
     - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, and withdrawal flows
@@ -662,6 +663,9 @@ scenarios:
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
+  - name: permit_after_chain_id_change
+    call: "permit with a harness-signed EIP-712 digest after the chain id changes"
+    expected: "uses the live chain id in the domain separator and accepts the updated signature"
   - name: permit_before_initialize_valid
     call: "permit with a harness-signed EIP-712 digest before initialize"
     expected: "sets allowance and increments the owner's nonce, matching upstream's ungated permit path"

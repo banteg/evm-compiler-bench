@@ -70,7 +70,7 @@ Status meanings:
 | `approve` | `approve` | mapped, covered | Covered directly. |
 | `transfer` | `transfer` | mapped, covered | Receiver zero/self rejection is mapped but not fully covered. |
 | `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |
-| `permit` | `permit` | mapped, covered | Valid, invalid, and pre-initialization permit paths covered; chain-id drift remains open. |
+| `permit` | `permit` | mapped, covered | Valid, invalid, pre-initialization, and post-chain-id-change permit paths are covered. |
 | `balanceOf` | `balanceOf` | mapped, covered | Vault-self locked-share branch covered through observers after reports. |
 | `totalSupply` | `totalSupply` | mapped, covered | Covered as observer. |
 | `totalAssets` | `totalAssets` | mapped, covered | Covered as observer. |
@@ -103,7 +103,7 @@ Status meanings:
 | `_transfer` | `_transfer` | mapped, covered | Receiver checks happen in external wrappers, with zero and vault receiver rejection covered. |
 | `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches plus zero/vault receiver guards are covered. |
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
-| `_permit` | `permit` plus `domain_separator` | mapped, covered | Chain-id drift remains open. |
+| `_permit` | `permit` plus `domain_separator` | mapped, covered | Post-chain-id-change signatures are covered. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
 | `_unlocked_shares` | `_unlockedShares` | mapped, covered | Partial-unlock plus subsequent loss/fee report is covered. |
 | `_total_supply` | `_effectiveSupply` | mapped, covered | Covered as observer. |
@@ -125,7 +125,7 @@ Status meanings:
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Third-party accountant refund state mutation, fee/refund clipping, loss/no-lock fee recalculation, and partial-unlock loss reports are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
-| `domain_separator` | `domain_separator` | mapped, covered | Chain-id drift remains open. |
+| `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 
 ## Open Checklist
 
@@ -138,5 +138,3 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Decide whether Vyper `String` and `DynArray` decoder timing/revert data are
   acceptable language-level approximations or need explicit non-equivalence
   callouts.
-- Decide whether EIP-712 chain-id/domain-separator drift belongs in the
-  benchmark scenario set.

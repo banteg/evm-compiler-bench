@@ -107,7 +107,7 @@ Immediate chips:
 | Upstream vault source | Exact source | `VaultV3.vy` is vendored at the pinned blob. |
 | Blueprint/minimal-proxy deployment | Exact source path | The upstream Vyper benchmark is deployed through the blueprint/clone path. |
 | ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, and zero/max-uint conversion boundaries are scenario-covered. |
-| ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, and invalid permits are covered. |
+| ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, permit after chain-id changes, and invalid permits are covered. |
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt clipping/rejection paths are covered. |
@@ -227,7 +227,7 @@ Exact now:
   rejection, reentrant accountant rejection, realized and unrealized loss paths,
   locked-profit zero reset, module acceptance/rejection, long-queue bounds,
   no-return/false-return asset handling, and permit before/after
-  initialization.
+  initialization plus after chain-id changes.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, plus limited `maxRedeem`, max-debt-below-current,
   shutdown pull-only, and actual redeem variance during debt decreases.

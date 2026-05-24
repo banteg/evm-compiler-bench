@@ -379,6 +379,7 @@ fn generate_test(
     out.push_str("    function prank(address sender) external;\n");
     out.push_str("    function deal(address account, uint256 newBalance) external;\n");
     out.push_str("    function warp(uint256 newTimestamp) external;\n");
+    out.push_str("    function chainId(uint256 newChainId) external;\n");
     out.push_str("    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\n");
     out.push_str("    function addr(uint256 privateKey) external returns (address);\n");
     out.push_str("    function recordLogs() external;\n");
@@ -1183,6 +1184,11 @@ fn all_helper_functions() -> &'static str {
 
     function benchWarp(uint256 secondsForward) external returns (bool) {
         vm.warp(block.timestamp + secondsForward);
+        return true;
+    }
+
+    function benchChainId(uint256 newChainId) external returns (bool) {
+        vm.chainId(newChainId);
         return true;
     }
 

@@ -1680,6 +1680,17 @@ scenarios:
       data: 'benchYearnPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
     observers: *yearn_observers
+  - name: permit_after_chain_id_change
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchChainId(uint256)", uint256(42_424_242))'
+    measured:
+      data: 'benchYearnPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers: *yearn_observers
   - name: permit_before_initialize_valid
     state_access_profile: cold
     setup:
