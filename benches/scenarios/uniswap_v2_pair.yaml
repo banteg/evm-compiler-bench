@@ -16,6 +16,9 @@ scenarios:
       - data: 'abi.encodeWithSignature("MINIMUM_LIQUIDITY()")'
       - data: 'abi.encodeWithSignature("nonces(address)", benchUniswapPermitOwner())'
       - data: 'abi.encodeWithSignature("allowance(address,address)", benchUniswapPermitOwner(), BOB)'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", BOB)'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", CAROL)'
+      - data: 'abi.encodeWithSignature("allowance(address,address)", address(this), BOB)'
       - data: 'abi.encodeWithSignature("price0CumulativeLast()")'
       - data: 'abi.encodeWithSignature("price1CumulativeLast()")'
       - data: 'abi.encodeWithSignature("kLast()")'
@@ -258,6 +261,58 @@ scenarios:
         data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(100_000), uint256(100_000))'
     measured:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    expect_success: true
+    observers: *pair_observers
+  - name: lp_transfer
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("transfer(address,uint256)", BOB, uint256(10_000))'
+    expect_success: true
+    observers: *pair_observers
+  - name: lp_approve
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, uint256(10_000))'
+    expect_success: true
+    observers: *pair_observers
+  - name: lp_transfer_from_finite_allowance
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, uint256(10_000))'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, uint256(4_000))'
+      sender: BOB
+    expect_success: true
+    observers: *pair_observers
+  - name: lp_transfer_from_infinite_allowance
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - data: 'abi.encodeWithSignature("approve(address,uint256)", BOB, type(uint256).max)'
+    measured:
+      data: 'abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, uint256(4_000))'
+      sender: BOB
     expect_success: true
     observers: *pair_observers
   - name: uninitialized_mint_reverts

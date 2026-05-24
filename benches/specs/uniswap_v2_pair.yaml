@@ -75,6 +75,10 @@ real_derived:
     - skim_no_return_tokens
     - fee_on_mint
     - fee_off_resets_k_last
+    - lp_transfer
+    - lp_approve
+    - lp_transfer_from_finite_allowance
+    - lp_transfer_from_infinite_allowance
     - uninitialized_mint_reverts
     - reinitialize_by_factory
     - non_factory_initialize_reverts
@@ -107,7 +111,7 @@ real_derived:
     - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
     - fee-on and fee-off kLast behavior
-    - LP token metadata, allowance, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
+    - LP token metadata, balances, direct transfers, approvals, finite and infinite allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - truly unbounded flash-swap callback calldata length in the Vyper port
@@ -168,6 +172,18 @@ scenarios:
   - name: fee_off_resets_k_last
     call: "feeTo cleared after fee-on liquidity"
     expected: "resets kLast"
+  - name: lp_transfer
+    call: "transfer LP shares to another account"
+    expected: "moves LP share balance and emits a normalized transfer log"
+  - name: lp_approve
+    call: "approve another account to spend LP shares"
+    expected: "sets allowance and emits a normalized approval log"
+  - name: lp_transfer_from_finite_allowance
+    call: "transferFrom LP shares through a finite allowance"
+    expected: "moves LP shares and decreases the allowance by the spent amount"
+  - name: lp_transfer_from_infinite_allowance
+    call: "transferFrom LP shares through a max uint256 allowance"
+    expected: "moves LP shares without decreasing the allowance"
   - name: uninitialized_mint_reverts
     call: "mint(address(this)) before initialize"
     expected: "reverts"
