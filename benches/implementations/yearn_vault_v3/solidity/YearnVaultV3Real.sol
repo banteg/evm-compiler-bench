@@ -1338,7 +1338,7 @@ contract YearnVaultV3Real {
         } else if (fullProfitUnlockDate_ != 0) {
             unlocked = _balanceOf[address(this)];
         }
-        return _min(unlocked, _balanceOf[address(this)]);
+        return unlocked;
     }
 
     function _convertToAssets(uint256 shares, bool roundUp) internal view returns (uint256) {

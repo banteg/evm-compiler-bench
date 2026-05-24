@@ -1,3 +1,4 @@
+mod baselines;
 mod cache;
 mod catalog;
 mod compiler;

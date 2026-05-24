@@ -452,7 +452,7 @@ contract CurveStableSwap2CoinReal {
 
     function get_virtual_price() external view returns (uint256) {
         if (totalSupply == 0) {
-            return 1e18;
+            revert();
         }
         uint256[2] memory rates = _storedRates();
         return _getDMem(rates, _balances()) * 1e18 / totalSupply;
@@ -879,8 +879,10 @@ contract CurveStableSwap2CoinReal {
         uint256 d = sum;
         uint256 ann = _A() * N_COINS;
         for (uint256 dIdx = 0; dIdx < 255; dIdx++) {
-            uint256 dP = d * d / (x0 * N_COINS);
-            dP = dP * d / (x1 * N_COINS);
+            uint256 dP = d;
+            dP = dP * d / x0;
+            dP = dP * d / x1;
+            dP /= N_COINS ** N_COINS;
             uint256 previousD = d;
             d = (ann * sum / A_PRECISION + dP * N_COINS) * d
                 / ((ann - A_PRECISION) * d / A_PRECISION + (N_COINS + 1) * dP);

@@ -1,4 +1,5 @@
 use crate::{
+    baselines::baseline_pairs,
     cache::{self, CacheLookup},
     models::{
         CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, DeploymentVariant,
@@ -12,8 +13,6 @@ use serde_json::json;
 use std::{collections::BTreeMap, fs, path::Path, process::Command};
 
 const FAILURE_DIR: &str = "../results/raw/failures";
-const SOL_BASELINE: &str = "solc-latest-legacy-runs200";
-const VYPER_BASELINE: &str = "vyper-latest-gas";
 const GAS_CACHE_SCHEMA: &str = "gas-v1";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 
@@ -429,7 +428,7 @@ fn generate_test(
     out.push_str("        vm.deal(CAROL, 1000000 ether);\n");
     out.push_str("        vm.warp(1);\n");
     out.push_str("    }\n\n");
-    out.push_str(helper_functions());
+    out.push_str(&helper_functions(artifacts));
     out.push_str(randomized_helper_functions());
 
     for (index, artifact) in artifacts.iter().enumerate() {
@@ -963,7 +962,44 @@ contract BenchYearnWithdrawLimitModule {
 "#
 }
 
-fn helper_functions() -> &'static str {
+fn helper_functions(artifacts: &[CompiledArtifact]) -> String {
+    let mut out = String::new();
+    let needs_curve = artifacts
+        .iter()
+        .any(|artifact| artifact.benchmark_id == "curve_stableswap_2coin");
+    let needs_uniswap = artifacts
+        .iter()
+        .any(|artifact| artifact.benchmark_id == "uniswap_v2_pair");
+    let needs_yearn = artifacts
+        .iter()
+        .any(|artifact| artifact.benchmark_id == "yearn_vault_v3");
+    let mut include = true;
+
+    for line in all_helper_functions().lines() {
+        let trimmed = line.trim();
+        if let Some(section) = trimmed.strip_prefix("// bench-cli:helpers begin ") {
+            include = match section {
+                "curve" => needs_curve,
+                "uniswap" => needs_uniswap,
+                "yearn" => needs_yearn,
+                _ => true,
+            };
+            continue;
+        }
+        if trimmed.starts_with("// bench-cli:helpers end") {
+            include = true;
+            continue;
+        }
+        if include {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+
+    out
+}
+
+fn all_helper_functions() -> &'static str {
     r#"
     function proofOne() internal pure returns (bytes32[] memory proof) {
         proof = new bytes32[](1);
@@ -1018,6 +1054,7 @@ fn helper_functions() -> &'static str {
         return true;
     }
 
+    // bench-cli:helpers begin curve
     function fee_receiver() external pure returns (address) {
         return address(0);
     }
@@ -1049,7 +1086,16 @@ fn helper_functions() -> &'static str {
     function dynamic_fee(int128 i, int128 j, address pool) external view returns (uint256) {
         (uint256 coinIn, uint256 coinOut) = benchCurveCoinPair(i, j);
         (,, uint256[2] memory xp) = benchCurveRatesBalancesXp(pool);
-        return benchCurveDynamicFeeXp(xp[coinIn], xp[coinOut], benchCurveUint(pool, "fee()"), benchCurveUint(pool, "offpeg_fee_multiplier()"));
+        return benchCurvePoolDynamicFee(pool, xp[coinIn], xp[coinOut]);
+    }
+
+    function benchCurvePoolDynamicFee(address pool, uint256 xpi, uint256 xpj) internal view returns (uint256) {
+        return benchCurveDynamicFeeXp(
+            xpi,
+            xpj,
+            benchCurveUint(pool, "fee()"),
+            benchCurveUint(pool, "offpeg_fee_multiplier()")
+        );
     }
 
     function benchCurveGetDy(int128 i, int128 j, uint256 dx, address pool) internal view returns (uint256) {
@@ -1061,7 +1107,7 @@ fn helper_functions() -> &'static str {
         uint256 x = xp[coinIn] + dx * rates[coinIn] / 1e18;
         uint256 y = benchCurveGetY(coinIn, coinOut, x, xp, amp, d);
         uint256 dy = xp[coinOut] - y - 1;
-        uint256 feeAmount = benchCurveDynamicFeeXp((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, benchCurveUint(pool, "fee()"), benchCurveUint(pool, "offpeg_fee_multiplier()")) * dy / 10_000_000_000;
+        uint256 feeAmount = benchCurvePoolDynamicFee(pool, (xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2) * dy / 10_000_000_000;
         return (dy - feeAmount) * 1e18 / rates[coinOut];
     }
 
@@ -1072,7 +1118,7 @@ fn helper_functions() -> &'static str {
         uint256 amp = benchCurveUint(pool, "A()") * 100;
         uint256 d = benchCurveGetD(xp, amp);
         uint256 dyWithFee = dy * rates[coinOut] / 1e18 + 1;
-        uint256 feeAmount = benchCurveDynamicFeeXp(xp[coinIn], xp[coinOut], benchCurveUint(pool, "fee()"), benchCurveUint(pool, "offpeg_fee_multiplier()"));
+        uint256 feeAmount = benchCurvePoolDynamicFee(pool, xp[coinIn], xp[coinOut]);
         uint256 y = xp[coinOut] - dyWithFee * 10_000_000_000 / (10_000_000_000 - feeAmount);
         uint256 x = benchCurveGetY(coinOut, coinIn, y, xp, amp, d);
         return (x - xp[coinIn]) * 1e18 / rates[coinIn];
@@ -1087,7 +1133,9 @@ fn helper_functions() -> &'static str {
         (uint256[2] memory rates, uint256[2] memory oldBalances, uint256[2] memory xp) = benchCurveRatesBalancesXp(pool);
         uint256 amp = benchCurveUint(pool, "A()") * 100;
         uint256 d0 = benchCurveGetD(xp, amp);
-        uint256[2] memory newBalances = oldBalances;
+        uint256[2] memory newBalances;
+        newBalances[0] = oldBalances[0];
+        newBalances[1] = oldBalances[1];
         for (uint256 i = 0; i < 2; i++) {
             if (isDeposit) {
                 newBalances[i] += amounts[i];
@@ -1169,8 +1217,10 @@ fn helper_functions() -> &'static str {
         uint256 d = sum;
         uint256 ann = amp * 2;
         for (uint256 i = 0; i < 255; i++) {
-            uint256 dP = d * d / (xp[0] * 2);
-            dP = dP * d / (xp[1] * 2);
+            uint256 dP = d;
+            dP = dP * d / xp[0];
+            dP = dP * d / xp[1];
+            dP /= 4;
             uint256 previousD = d;
             d = (ann * sum / 100 + dP * 2) * d / ((ann - 100) * d / 100 + 3 * dP);
             if (d > previousD) {
@@ -1198,8 +1248,8 @@ fn helper_functions() -> &'static str {
             s += currentX;
             c = c * d / (currentX * 2);
         }
-        c = c * d * 100 / (amp * 2);
-        uint256 b = s + d * 100 / amp;
+        c = c * d * 100 / (amp * 4);
+        uint256 b = s + d * 100 / (amp * 2);
         uint256 y = d;
         for (uint256 yIdx = 0; yIdx < 255; yIdx++) {
             uint256 previousY = y;
@@ -1212,7 +1262,9 @@ fn helper_functions() -> &'static str {
         }
         revert("curve y");
     }
+    // bench-cli:helpers end curve
 
+    // bench-cli:helpers begin yearn
     function protocol_fee_config() external view returns (uint16, address) {
         return (protocolFeeBps, protocolFeeRecipient);
     }
@@ -1222,7 +1274,9 @@ fn helper_functions() -> &'static str {
         protocolFeeRecipient = recipient;
         return true;
     }
+    // bench-cli:helpers end yearn
 
+    // bench-cli:helpers begin uniswap
     function benchUniswapInit(address target, bool feeOn) external returns (bool) {
         BenchERC20 token0 = new BenchERC20();
         BenchERC20 token1 = new BenchERC20();
@@ -1355,27 +1409,45 @@ fn helper_functions() -> &'static str {
     function benchUniswapPermitOwner() public returns (address) {
         return vm.addr(UNISWAP_PERMIT_KEY);
     }
+    // bench-cli:helpers end uniswap
 
+    function _benchDomainSeparator(address target) internal returns (bytes32) {
+        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
+        require(ok, "permit domain");
+        return abi.decode(rawDomain, (bytes32));
+    }
+
+    function _benchNonce(address target, address owner) internal returns (uint256) {
+        (bool ok, bytes memory rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
+        require(ok, "permit nonce");
+        return abi.decode(rawNonce, (uint256));
+    }
+
+    function _benchPermitDigest(
+        address target,
+        bytes32 typeHash,
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline
+    ) internal returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                _benchDomainSeparator(target),
+                keccak256(abi.encode(typeHash, owner, spender, value, _benchNonce(target, owner), deadline))
+            )
+        );
+    }
+
+    // bench-cli:helpers begin uniswap
     function benchUniswapPermitCalldata(address target, address spender, uint256 value, uint256 deadline)
         public
         returns (bytes memory)
     {
         address owner = benchUniswapPermitOwner();
-        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
-        require(ok, "uniswap domain");
-        bytes32 domainSeparator = abi.decode(rawDomain, (bytes32));
-        bytes memory rawNonce;
-        (ok, rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
-        require(ok, "uniswap nonce");
-        uint256 nonce = abi.decode(rawNonce, (uint256));
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                bytes1(0x19),
-                bytes1(0x01),
-                domainSeparator,
-                keccak256(abi.encode(UNISWAP_PERMIT_TYPE_HASH, owner, spender, value, nonce, deadline))
-            )
-        );
+        bytes32 digest = _benchPermitDigest(target, UNISWAP_PERMIT_TYPE_HASH, owner, spender, value, deadline);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(UNISWAP_PERMIT_KEY, digest);
         return abi.encodeWithSignature(
             "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
@@ -1388,7 +1460,9 @@ fn helper_functions() -> &'static str {
             s
         );
     }
+    // bench-cli:helpers end uniswap
 
+    // bench-cli:helpers begin curve
     function benchCurveInit(address target, uint256 amp, uint256 swapFee, uint256 adminFee)
         external
         returns (bool)
@@ -1443,21 +1517,7 @@ fn helper_functions() -> &'static str {
         returns (bytes memory)
     {
         address owner = benchCurvePermitOwner();
-        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
-        require(ok, "curve domain");
-        bytes32 domainSeparator = abi.decode(rawDomain, (bytes32));
-        bytes memory rawNonce;
-        (ok, rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
-        require(ok, "curve nonce");
-        uint256 nonce = abi.decode(rawNonce, (uint256));
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                bytes1(0x19),
-                bytes1(0x01),
-                domainSeparator,
-                keccak256(abi.encode(CURVE_PERMIT_TYPE_HASH, owner, spender, value, nonce, deadline))
-            )
-        );
+        bytes32 digest = _benchPermitDigest(target, CURVE_PERMIT_TYPE_HASH, owner, spender, value, deadline);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(CURVE_PERMIT_KEY, digest);
         return abi.encodeWithSignature(
             "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
@@ -1470,7 +1530,9 @@ fn helper_functions() -> &'static str {
             s
         );
     }
+    // bench-cli:helpers end curve
 
+    // bench-cli:helpers begin yearn
     function benchYearnInit(address target, uint256 limit, uint256 unlockTime, uint256 feeBps)
         external
         returns (bool)
@@ -1558,6 +1620,53 @@ fn helper_functions() -> &'static str {
         return address(yearnDeps[target].withdrawLimitModule);
     }
 
+    function benchYearnAssetId(address target) external view returns (uint256) {
+        return _benchYearnAddressId(target, _benchYearnAddress(target, "asset()"));
+    }
+
+    function benchYearnAccountantId(address target) external view returns (uint256) {
+        return _benchYearnAddressId(target, _benchYearnAddress(target, "accountant()"));
+    }
+
+    function benchYearnDepositLimitModuleId(address target) external view returns (uint256) {
+        return _benchYearnAddressId(target, _benchYearnAddress(target, "deposit_limit_module()"));
+    }
+
+    function benchYearnWithdrawLimitModuleId(address target) external view returns (uint256) {
+        return _benchYearnAddressId(target, _benchYearnAddress(target, "withdraw_limit_module()"));
+    }
+
+    function benchYearnDefaultQueueIds(address target) external view returns (bytes32) {
+        (bool ok, bytes memory raw) = target.staticcall(abi.encodeWithSignature("get_default_queue()"));
+        require(ok, "yearn queue observer");
+        address[] memory queue = abi.decode(raw, (address[]));
+        uint256[] memory ids = new uint256[](queue.length);
+        for (uint256 i = 0; i < queue.length; i++) {
+            ids[i] = _benchYearnAddressId(target, queue[i]);
+        }
+        return keccak256(abi.encode(ids));
+    }
+
+    function _benchYearnAddress(address target, string memory signature) internal view returns (address value) {
+        (bool ok, bytes memory raw) = target.staticcall(abi.encodeWithSignature(signature));
+        require(ok, "yearn address observer");
+        value = abi.decode(raw, (address));
+    }
+
+    function _benchYearnAddressId(address target, address value) internal view returns (uint256) {
+        YearnDeps storage deps = yearnDeps[target];
+        if (value == address(0)) return 0;
+        if (value == address(deps.asset)) return 1;
+        if (value == address(deps.strategy)) return 2;
+        if (value == address(deps.strategy2)) return 3;
+        if (value == address(deps.strategy3)) return 4;
+        if (value == address(deps.accountant)) return 5;
+        if (value == address(deps.reentrantAccountant)) return 6;
+        if (value == address(deps.depositLimitModule)) return 7;
+        if (value == address(deps.withdrawLimitModule)) return 8;
+        return uint256(uint160(value));
+    }
+
     function benchYearnPermitOwner() public returns (address) {
         return vm.addr(YEARN_PERMIT_KEY);
     }
@@ -1567,21 +1676,7 @@ fn helper_functions() -> &'static str {
         returns (bytes memory)
     {
         address owner = benchYearnPermitOwner();
-        (bool ok, bytes memory rawDomain) = target.call(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
-        require(ok, "yearn domain");
-        bytes32 domainSeparator = abi.decode(rawDomain, (bytes32));
-        bytes memory rawNonce;
-        (ok, rawNonce) = target.call(abi.encodeWithSignature("nonces(address)", owner));
-        require(ok, "yearn nonce");
-        uint256 nonce = abi.decode(rawNonce, (uint256));
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                bytes1(0x19),
-                bytes1(0x01),
-                domainSeparator,
-                keccak256(abi.encode(YEARN_PERMIT_TYPE_HASH, owner, spender, value, nonce, deadline))
-            )
-        );
+        bytes32 digest = _benchPermitDigest(target, YEARN_PERMIT_TYPE_HASH, owner, spender, value, deadline);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(YEARN_PERMIT_KEY, digest);
         return abi.encodeWithSignature(
             "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
@@ -1752,6 +1847,7 @@ fn helper_functions() -> &'static str {
             queue[i] = address(yearnDeps[target].strategy);
         }
     }
+    // bench-cli:helpers end yearn
 
     function _deploy(bytes memory code) internal returns (address target) {
         assembly {
@@ -1819,26 +1915,33 @@ fn helper_functions() -> &'static str {
         bool callSucceeded,
         bool scenarioStatusOk
     ) internal {
-        vm.writeLine(
-            GAS_JSONL_PATH,
-            string.concat(
-                "{\"benchmark_id\":\"", benchmarkId,
-                "\",\"implementation_id\":\"", implementationId,
-                "\",\"profile_id\":\"", profileId,
-                "\",\"scenario\":\"", scenario,
-                "\",\"state_access_profile\":\"", stateAccessProfile,
-                "\",\"metadata_mode\":\"", metadataMode,
-                "\",\"internal_create_gas\":", vm.toString(internalCreateGas),
-                ",\"harness_call_gas\":", vm.toString(harnessCallGas),
-                ",\"intrinsic_gas\":", vm.toString(intrinsicGas),
-                ",\"calldata_gas\":", vm.toString(calldataGas),
-                ",\"harness_estimated_tx_gas\":", vm.toString(harnessEstimatedTxGas),
-                ",\"expected_success\":", _bool(expectedSuccess),
-                ",\"call_succeeded\":", _bool(callSucceeded),
-                ",\"scenario_status_ok\":", _bool(scenarioStatusOk),
-                "}"
-            )
+        string memory line = string.concat(
+            "{\"benchmark_id\":\"", benchmarkId,
+            "\",\"implementation_id\":\"", implementationId,
+            "\",\"profile_id\":\"", profileId
         );
+        line = string.concat(
+            line,
+            "\",\"scenario\":\"", scenario,
+            "\",\"state_access_profile\":\"", stateAccessProfile,
+            "\",\"metadata_mode\":\"", metadataMode
+        );
+        line = string.concat(
+            line,
+            "\",\"internal_create_gas\":", vm.toString(internalCreateGas),
+            ",\"harness_call_gas\":", vm.toString(harnessCallGas),
+            ",\"intrinsic_gas\":", vm.toString(intrinsicGas),
+            ",\"calldata_gas\":", vm.toString(calldataGas)
+        );
+        line = string.concat(
+            line,
+            ",\"harness_estimated_tx_gas\":", vm.toString(harnessEstimatedTxGas),
+            ",\"expected_success\":", _bool(expectedSuccess),
+            ",\"call_succeeded\":", _bool(callSucceeded),
+            ",\"scenario_status_ok\":", _bool(scenarioStatusOk),
+            "}"
+        );
+        vm.writeLine(GAS_JSONL_PATH, line);
     }
 
 "#
@@ -2589,20 +2692,32 @@ fn write_diff_test(
     out.push_str("        (address vyperTarget,) = ");
     out.push_str(&deploy_call(vyper_idx, vyper, scenario));
     out.push_str(";\n");
+    out.push_str("        vm.warp(1);\n");
     write_setup(out, "solTarget", &scenario.setup, "setup");
-    write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "solTarget", &scenario.warmup, "warmup");
-    write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
     out.push_str("        (bool solOk, bytes32 solHash,) = _run(");
     out.push_str(call_destination(&scenario.measured, "solTarget"));
     out.push_str(", ");
     write_call_args(out, &scenario.measured, "solTarget");
     out.push_str(");\n");
+    out.push_str("        bytes32 solObserved = _observeAll_");
+    out.push_str(&sanitize(&solidity.benchmark_id));
+    out.push('_');
+    out.push_str(&sanitize(&scenario.name));
+    out.push_str("(solTarget);\n");
+    out.push_str("        vm.warp(1);\n");
+    write_setup(out, "vyperTarget", &scenario.setup, "setup");
+    write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
     out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(");
     out.push_str(call_destination(&scenario.measured, "vyperTarget"));
     out.push_str(", ");
     write_call_args(out, &scenario.measured, "vyperTarget");
     out.push_str(");\n");
+    out.push_str("        bytes32 vyperObserved = _observeAll_");
+    out.push_str(&sanitize(&vyper.benchmark_id));
+    out.push('_');
+    out.push_str(&sanitize(&scenario.name));
+    out.push_str("(vyperTarget);\n");
     out.push_str("        require(solOk == vyperOk, \"differential status mismatch\");\n");
     out.push_str("        require(solOk == ");
     out.push_str(if scenario.expect_success {
@@ -2614,15 +2729,9 @@ fn write_diff_test(
     out.push_str(
         "        if (solOk) require(solHash == vyperHash, \"differential return mismatch\");\n",
     );
-    out.push_str("        require(_observeAll_");
-    out.push_str(&sanitize(&solidity.benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&scenario.name));
-    out.push_str("(solTarget) == _observeAll_");
-    out.push_str(&sanitize(&vyper.benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&scenario.name));
-    out.push_str("(vyperTarget), \"differential observer mismatch\");\n");
+    out.push_str(
+        "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
+    );
     out.push_str("    }\n\n");
     write_observer_function(out, &solidity.benchmark_id, scenario);
 }
@@ -2734,8 +2843,10 @@ fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scen
     out.push_str("(address target) internal returns (bytes32 observed) {\n");
     out.push_str("        observed = bytes32(0);\n");
     for observer in &scenario.observers {
-        out.push_str("        observed = keccak256(abi.encode(observed, _observe(target, ");
-        out.push_str(&observer.data);
+        out.push_str("        observed = keccak256(abi.encode(observed, _observe(");
+        out.push_str(call_destination(observer, "target"));
+        out.push_str(", ");
+        out.push_str(&call_data(observer, "target"));
         out.push_str(")));\n");
     }
     out.push_str("    }\n\n");
@@ -2787,21 +2898,6 @@ fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -
     } else {
         format!("deployArtifact{}()", index)
     }
-}
-
-fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize, usize)> {
-    let mut pairs = BTreeMap::new();
-    for (index, artifact) in artifacts.iter().enumerate() {
-        if artifact.profile_id != SOL_BASELINE {
-            continue;
-        }
-        if let Some((vyper_idx, _)) = artifacts.iter().enumerate().find(|(_, other)| {
-            other.benchmark_id == artifact.benchmark_id && other.profile_id == VYPER_BASELINE
-        }) {
-            pairs.insert(artifact.benchmark_id.clone(), (index, vyper_idx));
-        }
-    }
-    pairs
 }
 
 fn constructor_args(benchmark_id: &str) -> Option<&'static str> {

@@ -181,6 +181,8 @@ real_derived:
     - deposit_limit_reverts
     - deposit_limit_module
     - deposit_limit_module_reverts
+    - withdraw_limit_module
+    - max_withdraw_limit_module
     - withdraw_limit_module_reverts
     - permit_valid
     - permit_before_initialize_valid
@@ -203,6 +205,7 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
+    - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
     - profit/loss report accounting, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - optional-return ERC20 asset handling
     - deposit-limit and permission reverts
@@ -370,6 +373,12 @@ scenarios:
   - name: deposit_limit_module_reverts
     call: "deposit above a custom deposit limit module limit"
     expected: "reverts"
+  - name: withdraw_limit_module
+    call: "withdraw below a custom withdraw limit module limit"
+    expected: "uses the module-provided limit and accepts an in-limit withdrawal"
+  - name: max_withdraw_limit_module
+    call: "maxWithdraw with a custom withdraw limit module"
+    expected: "returns the module-capped withdrawable amount"
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"

@@ -1,4 +1,5 @@
 use crate::{
+    baselines::baseline_pairs,
     models::{
         CompileFailure, CompileSet, CompiledArtifact, GasRecord, Language, Provenance,
         ScenarioFile, Toolchains,
@@ -726,20 +727,7 @@ fn row(
 }
 
 fn differential_benchmarks(compiled: &CompileSet) -> BTreeSet<String> {
-    let mut solidity = BTreeSet::new();
-    let mut vyper = BTreeSet::new();
-    for artifact in &compiled.artifacts {
-        match artifact.profile_id.as_str() {
-            SOL_CODEGEN_BASELINE => {
-                solidity.insert(artifact.benchmark_id.clone());
-            }
-            VYPER_GAS_CODEGEN => {
-                vyper.insert(artifact.benchmark_id.clone());
-            }
-            _ => {}
-        }
-    }
-    solidity.intersection(&vyper).cloned().collect()
+    baseline_pairs(&compiled.artifacts).into_keys().collect()
 }
 
 fn failure_row(failure: &CompileFailure) -> serde_json::Value {
