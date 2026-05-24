@@ -194,6 +194,7 @@ real_derived:
     - strategy_report_refund_allowance_clipped
     - strategy_report_accountant_mints_refund_during_report
     - strategy_report_accountant_reduces_allowance_during_report
+    - strategy_loss_report
     - strategy_loss_report_with_accountant_fee
     - strategy_gain_report_fee_exceeds_gain
     - strategy_report_fee_no_profit_lock
@@ -504,6 +505,9 @@ scenarios:
   - name: strategy_report_accountant_reduces_allowance_during_report
     call: "process_report with refund allowance reduced inside the accountant report hook"
     expected: "clips refunds to the post-hook accountant allowance before pulling assets"
+  - name: strategy_loss_report
+    call: "process_report with a strategy loss and no accountant fees or refunds"
+    expected: "records the loss and reduces strategy debt without fee/refund accounting noise"
   - name: strategy_loss_report_with_accountant_fee
     call: "process_report with a strategy loss and nonzero accountant fees"
     expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"
