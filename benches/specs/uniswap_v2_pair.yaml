@@ -71,12 +71,14 @@ real_derived:
     - flash_swap_reentrancy_reverts
     - burn
     - burn_no_return_tokens
+    - burn_false_return_token_reverts
     - swap_no_return_tokens
     - swap_false_return_token_reverts
     - sync
     - sync_timestamp_wrap
     - skim
     - skim_no_return_tokens
+    - skim_false_return_token_reverts
     - fee_on_mint
     - fee_off_resets_k_last
     - lp_transfer
@@ -95,6 +97,7 @@ real_derived:
   mock_assumptions:
     - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
+    - false-return ERC20 coverage uses harness tokens that update balances but explicitly return false
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
     - Vyper preserves behavior for covered paths but does not claim truly unbounded callback calldata
@@ -115,7 +118,7 @@ real_derived:
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
     - no-return token swap, burn, and skim transfer-out paths
-    - false-return token swap transfer-out rejection
+    - false-return token swap, burn, and skim transfer-out rejection
     - fee-on and fee-off kLast behavior
     - LP token metadata, balances, direct transfers, approvals, finite and infinite allowance transferFrom, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
@@ -166,6 +169,9 @@ scenarios:
   - name: burn_no_return_tokens
     call: "burn(address(this)) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data and burns staged LP"
+  - name: burn_false_return_token_reverts
+    call: "burn(address(this)) with an output token that returns false from transfer"
+    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: swap_no_return_tokens
     call: "swap(0, 100, address(this), empty bytes) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data on the output token and updates reserves"
@@ -184,6 +190,9 @@ scenarios:
   - name: skim_no_return_tokens
     call: "skim(address(this)) after token balance drift with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data while skimming balances above reserves"
+  - name: skim_false_return_token_reverts
+    call: "skim(address(this)) after token balance drift with an output token that returns false from transfer"
+    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: fee_on_mint
     call: "feeTo set, mint, sync, mint"
     expected: "updates kLast and mints protocol liquidity when rootK grows"

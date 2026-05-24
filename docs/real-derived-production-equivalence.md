@@ -151,7 +151,7 @@ Exact now:
 - Scenarios cover initial and subsequent mints, factory CREATE2 deployment,
   token0-input and upstream token1-input swap invariant checks, one-wei
   over-output K rejection, no-return token transfers, false-return transfer
-  rejection, flash callback repayment through callback data above the old
+  rejection across swap, burn, and skim, flash callback repayment through callback data above the old
   4 KiB port bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
