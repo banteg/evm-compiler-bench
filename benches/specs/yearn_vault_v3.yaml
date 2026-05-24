@@ -158,6 +158,7 @@ real_derived:
     - max_mint_vault_receiver
     - max_mint_unlimited
     - max_mint_limit_module
+    - max_mint_limit_module_after_gain
     - max_mint_unlimited_limit_module
     - update_debt_increase
     - update_debt_respects_minimum_idle
@@ -329,7 +330,7 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
+    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, non-1:1 maxMint conversion after gains, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report zero-effective clipped refund, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
@@ -442,6 +443,9 @@ scenarios:
   - name: max_mint_limit_module
     call: "maxMint(address(this)) with a deposit-limit module"
     expected: "uses the module-provided deposit limit and converts it to shares"
+  - name: max_mint_limit_module_after_gain
+    call: "maxMint(address(this)) with a deposit-limit module after a strategy gain report"
+    expected: "converts the module-provided asset limit to shares using the non-1:1 post-gain share price"
   - name: max_mint_unlimited_limit_module
     call: "maxMint(address(this)) with a deposit-limit module returning max uint256"
     expected: "returns max_value(uint256) through the upstream max-uint conversion path"
