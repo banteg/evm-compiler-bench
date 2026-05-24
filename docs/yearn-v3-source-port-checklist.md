@@ -46,7 +46,7 @@ Status meanings:
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Default direct-limit update, active-module rejection, active-module override clearing, and the direct deposit-limit equality boundary are covered. |
 | `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, reverting module calls, zero, finite, exact-limit, and max-uint deposit/max-view behavior, receiver-specific module returns through `maxDeposit`, `maxMint`, deposit execution, and mint execution, and zero/vault-receiver short-circuiting before module calls are covered; more unusual module return values remain open. |
 | `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, zero, finite, exact-limit, and max-uint withdraw/max-view behavior, owner-specific module returns through `maxWithdraw`, `maxRedeem`, withdraw execution, and redeem execution, withdraw rejection, and reverting module calls are covered; more unusual module return values remain open. |
-| `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | Debt increase clipping to preserve the configured idle reserve is covered. |
+| `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | Debt increase clipping and no-available-idle early return preserve the configured idle reserve. |
 | `setProfitMaxUnlockTime` | `setProfitMaxUnlockTime` | mapped, covered | Zero-reset branch with locked shares is now covered by `reset_profit_unlock_after_report`. |
 | `set_role` | `set_role` | mapped, covered | Solidity enforces role bit bounds explicitly because Vyper enum decoding does it before function body. |
 | `add_role` | `add_role` | mapped, covered | Same enum-bound approximation as `set_role`. |
@@ -63,7 +63,7 @@ Status meanings:
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
 | `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal and re-add after forced debt accounting. |
 | `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Covered for active-strategy update and inactive-strategy rejection. |
-| `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit`/`maxRedeem` limits, minimum-idle clipping, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
+| `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit`/`maxRedeem` limits, minimum-idle clipping and no-available-idle early return, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module, including post-shutdown debt pull. |
 | `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch is covered. |
 | `mint` | `mint` | mapped, covered | Covered directly and through preview observers. |
@@ -124,7 +124,7 @@ Status meanings:
 | `_redeem` | `_redeem`, `_withdrawFromQueue`, `_withdrawFromQueueStrategy` | mapped, covered | Strategy maxRedeem limit, zero-redeem fallthrough, zero-redeem after full unrealized loss, and partial/over strategy redeem returns are covered. |
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
-| `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, minimum-idle clipping, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
+| `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, minimum-idle clipping and no-available-idle early return, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, plain strategy loss, self-report gain/loss/refunds including zero-effective clipping, self-report idle gain with accountant fees/refunds, third-party accountant refund state mutation, fee/refund clipping including zero-effective refunds, gain plus clipped refund locking, gain that moves current debt above max debt, gain/fee equality, gain/fee/refund exact offset, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports with accountant effects, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
