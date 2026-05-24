@@ -976,6 +976,22 @@ contract BenchYearnAccountant {
         return true;
     }
 
+    function setClippedRefundReport(
+        address vault,
+        uint256 fees,
+        uint256 refunds,
+        uint256 mintedRefunds,
+        uint256 approvedRefunds
+    ) external returns (bool) {
+        totalFees = fees;
+        totalRefunds = refunds;
+        if (mintedRefunds > 0) {
+            asset.mint(address(this), mintedRefunds);
+        }
+        asset.approve(vault, approvedRefunds);
+        return true;
+    }
+
     function report(address, uint256, uint256) external returns (uint256 fees, uint256 refunds) {
         fees = totalFees;
         refunds = totalRefunds;
@@ -1952,6 +1968,21 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.accountant) != address(0), "yearn deps");
         deps.accountant.setReport(target, fees, refunds);
+        (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.accountant)));
+        require(ok, "yearn accountant");
+        return true;
+    }
+
+    function benchYearnConfigureClippedRefundAccountant(
+        address target,
+        uint256 fees,
+        uint256 refunds,
+        uint256 mintedRefunds,
+        uint256 approvedRefunds
+    ) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.accountant) != address(0), "yearn deps");
+        deps.accountant.setClippedRefundReport(target, fees, refunds, mintedRefunds, approvedRefunds);
         (bool ok,) = target.call(abi.encodeWithSignature("set_accountant(address)", address(deps.accountant)));
         require(ok, "yearn accountant");
         return true;

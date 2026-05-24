@@ -132,9 +132,8 @@ Status meanings:
 These items should be closed before flipping `yearn_vault_v3` to
 `production_equivalence: true`:
 
-- Add adversarial but ABI-valid accountant mocks for fee/refund clipping,
-  zero-return fees, excessive fees, and state changes outside the current
-  deterministic accountant.
+- Add adversarial but ABI-valid accountant mocks for state changes outside the
+  current deterministic accountant.
 - Add more adversarial strategy report value combinations beyond the covered
   current-debt-above-max-debt update path.
 - Decide whether Vyper `String` and `DynArray` decoder timing/revert data are

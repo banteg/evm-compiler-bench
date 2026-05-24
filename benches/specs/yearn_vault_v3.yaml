@@ -187,6 +187,9 @@ real_derived:
     - strategy_profit_report
     - self_report_airdrop
     - strategy_report_with_accountant
+    - strategy_report_zero_accountant
+    - strategy_report_refund_balance_clipped
+    - strategy_report_refund_allowance_clipped
     - strategy_report_excessive_accountant_fee_reverts
     - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
@@ -462,6 +465,15 @@ scenarios:
   - name: strategy_report_with_accountant
     call: "process_report with accountant fees/refunds and nonzero protocol fee config"
     expected: "accounts fees, refunds, protocol fee shares, and locked profit"
+  - name: strategy_report_zero_accountant
+    call: "process_report with an accountant that returns zero fees and zero refunds"
+    expected: "routes through the accountant hook without changing fee or refund accounting"
+  - name: strategy_report_refund_balance_clipped
+    call: "process_report with reported refunds above the accountant asset balance"
+    expected: "clips refunds to the accountant asset balance before pulling assets"
+  - name: strategy_report_refund_allowance_clipped
+    call: "process_report with reported refunds above the accountant asset allowance"
+    expected: "clips refunds to the accountant allowance before pulling assets"
   - name: strategy_report_excessive_accountant_fee_reverts
     call: "process_report with accountant fees greater than removable supply"
     expected: "reverts through the same checked ending-supply arithmetic as upstream Vyper"
