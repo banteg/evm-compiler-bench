@@ -188,6 +188,7 @@ real_derived:
     - strategy_profit_report
     - self_report_airdrop
     - self_report_idle_loss
+    - process_report_inactive_strategy_reverts
     - strategy_report_with_accountant
     - strategy_report_zero_accountant
     - strategy_report_refund_balance_clipped
@@ -487,6 +488,9 @@ scenarios:
   - name: self_report_idle_loss
     call: "process_report(address(this)) after vault-held idle assets are burned below recorded total idle"
     expected: "accounts the self-report loss branch and reduces total idle assets"
+  - name: process_report_inactive_strategy_reverts
+    call: "process_report with a non-vault strategy that has not been added"
+    expected: "reverts at the upstream inactive-strategy guard before reading strategy assets"
   - name: strategy_report_with_accountant
     call: "process_report with accountant fees/refunds and nonzero protocol fee config"
     expected: "accounts fees, refunds, protocol fee shares, and locked profit"
