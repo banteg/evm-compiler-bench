@@ -269,6 +269,7 @@ real_derived:
     - deposit_limit_module_max_uint_deposit
     - deposit_limit_module_receiver_specific
     - max_mint_limit_module_receiver_specific
+    - deposit_limit_module_zero_max_mint
     - deposit_limit_module_reverts
     - deposit_limit_module_call_reverts
     - withdraw_limit_module
@@ -278,6 +279,7 @@ real_derived:
     - max_redeem_limit_module_max_uint
     - withdraw_limit_module_owner_specific
     - max_redeem_limit_module_owner_specific
+    - withdraw_limit_module_zero_max_redeem
     - withdraw_limit_module_reverts
     - withdraw_limit_module_call_reverts
     - permit_valid
@@ -305,8 +307,8 @@ real_derived:
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - deposit-limit module finite and max-uint deposit acceptance, receiver-specific maxDeposit and maxMint returns, plus over-limit rejection
-    - withdraw-limit-module max-withdraw capping above and below balance, owner-specific maxWithdraw and maxRedeem returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
+    - deposit-limit module finite, zero-return, and max-uint deposit/max-view behavior, receiver-specific maxDeposit and maxMint returns, plus over-limit rejection
+    - withdraw-limit-module max-withdraw capping above and below balance, zero-return and owner-specific maxWithdraw/maxRedeem returns, finite and max-uint withdraw acceptance, module-call failure, and withdraw rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain with accountant fees/refunds, refunds, gain plus clipped refund locking, refund clipping after accountant state mutation, fees, net-positive and net-negative mixed loss/fee/refund reports, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -742,6 +744,9 @@ scenarios:
   - name: max_mint_limit_module_receiver_specific
     call: "maxMint(BOB) through a custom deposit limit module with a receiver-specific limit"
     expected: "passes the receiver argument through the shared max-deposit path before converting to shares"
+  - name: deposit_limit_module_zero_max_mint
+    call: "maxMint through a custom deposit limit module returning zero"
+    expected: "returns zero shares through the shared max-deposit module path"
   - name: deposit_limit_module_reverts
     call: "deposit above a custom deposit limit module limit"
     expected: "reverts"
@@ -769,6 +774,9 @@ scenarios:
   - name: max_redeem_limit_module_owner_specific
     call: "maxRedeem(BOB) through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument through the shared max-withdraw path before converting and capping redeemable shares"
+  - name: withdraw_limit_module_zero_max_redeem
+    call: "maxRedeem through a custom withdraw limit module returning zero"
+    expected: "returns zero shares through the shared max-withdraw module path"
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
