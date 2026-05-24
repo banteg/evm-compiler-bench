@@ -485,6 +485,17 @@ scenarios:
       data: 'benchCurvePermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
     observers: *curve_observers
+  - name: permit_erc1271_valid
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+    measured:
+      data: 'benchCurve1271PermitCalldata({target}, BOB, uint256(456), block.timestamp + 100000)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("nonces(address)", benchCurve1271PermitOwner())'
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchCurve1271PermitOwner(), BOB)'
   - name: permit_invalid_reverts
     state_access_profile: cold
     setup:

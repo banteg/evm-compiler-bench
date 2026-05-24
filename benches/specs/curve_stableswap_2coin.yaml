@@ -71,7 +71,7 @@ real_derived:
     - ERC20 tokens that return either bool or no data from transfer and transferFrom
     - imbalanced liquidity removal
     - admin amplification ramping, fee updates, moving-average window updates, and admin-fee withdrawal entrypoint
-    - EIP-712 LP-token permit for EOA signatures
+    - EIP-712 LP-token permit for EOA signatures and ERC1271 smart contract wallets
     - LP token accounting
     - deterministic standard-token dynamic-fee and admin-fee accounting
     - virtual price and observable balances
@@ -122,6 +122,7 @@ real_derived:
     - rebasing_exchange_received_reverts
     - erc4626_rate_exchange
     - permit_valid
+    - permit_erc1271_valid
     - permit_invalid_reverts
   mock_assumptions:
     - default benchmark scenarios deploy two standard 18-decimal ERC20 test coins with switchable optional return data
@@ -145,7 +146,7 @@ real_derived:
     - upstream exponential moving-average oracle decay for price and D oracle reads after elapsed time
     - constructor-driven stored rates, oracle rates, rebasing balance reads, ERC4626 conversion rates, and the rebasing exchange_received rejection path
     - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
-    - valid EIP-712 LP permit acceptance and invalid permit revert paths
+    - valid EIP-712 LP permit acceptance for EOA signatures and ERC1271 smart contract wallets, plus invalid permit revert paths
     - normalized event/log parity across the listed differential scenarios
     - slippage and invalid coin reverts
   excluded_features:
@@ -275,6 +276,9 @@ scenarios:
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets LP allowance and increments the owner's nonce"
+  - name: permit_erc1271_valid
+    call: "permit from a smart contract wallet whose isValidSignature returns the ERC1271 magic value for the EIP-712 digest"
+    expected: "sets LP allowance and increments the contract owner's nonce"
   - name: permit_invalid_reverts
     call: "permit with a zero signature"
     expected: "reverts"

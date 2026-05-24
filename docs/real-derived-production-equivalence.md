@@ -89,6 +89,8 @@ Exact now:
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path rather than only same-block oracle
   upkeep.
+- Permit scenarios now cover both EOA EIP-712 signatures and the upstream
+  ERC1271 smart-contract-wallet validation path.
 - The generated differential harness normalizes deployment-specific pool and
   coin addresses and compares event/log hashes for the listed scenarios.
 

@@ -416,6 +416,7 @@ fn generate_test(
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
     out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
     out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
+    out.push_str("    BenchERC1271Wallet internal curve1271Owner;\n");
     out.push_str("    BenchUniswapCreate2Factory internal uniswapCreate2Factory;\n");
     out.push_str("    address public feeTo;\n");
     out.push_str("    uint16 public protocolFeeBps;\n");
@@ -699,6 +700,19 @@ contract BenchCurveERC4626 is BenchERC20OptionalReturn {
 
     function convertToAssets(uint256 shares) external view returns (uint256) {
         return shares * assetsPerShare / 1e18;
+    }
+}
+
+contract BenchERC1271Wallet {
+    bytes4 internal constant MAGIC_VALUE = 0x1626ba7e;
+    bytes32 public validDigest;
+
+    function setValidDigest(bytes32 digest) external {
+        validDigest = digest;
+    }
+
+    function isValidSignature(bytes32 digest, bytes calldata) external view returns (bytes4) {
+        return digest == validDigest ? MAGIC_VALUE : bytes4(0);
     }
 }
 
@@ -1563,6 +1577,13 @@ fn all_helper_functions() -> &'static str {
         return vm.addr(CURVE_PERMIT_KEY);
     }
 
+    function benchCurve1271PermitOwner() public returns (address) {
+        if (address(curve1271Owner) == address(0)) {
+            curve1271Owner = new BenchERC1271Wallet();
+        }
+        return address(curve1271Owner);
+    }
+
     function benchCurvePermitCalldata(address target, address spender, uint256 value, uint256 deadline)
         public
         returns (bytes memory)
@@ -1579,6 +1600,25 @@ fn all_helper_functions() -> &'static str {
             v,
             r,
             s
+        );
+    }
+
+    function benchCurve1271PermitCalldata(address target, address spender, uint256 value, uint256 deadline)
+        public
+        returns (bytes memory)
+    {
+        address owner = benchCurve1271PermitOwner();
+        bytes32 digest = _benchPermitDigest(target, CURVE_PERMIT_TYPE_HASH, owner, spender, value, deadline);
+        curve1271Owner.setValidDigest(digest);
+        return abi.encodeWithSignature(
+            "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+            owner,
+            spender,
+            value,
+            deadline,
+            uint8(27),
+            bytes32(0),
+            bytes32(0)
         );
     }
     // bench-cli:helpers end curve
