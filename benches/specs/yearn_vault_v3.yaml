@@ -186,6 +186,7 @@ real_derived:
     - set_name_too_long_reverts
     - set_symbol_too_long_reverts
     - strategy_profit_report
+    - strategy_zero_report
     - self_report_airdrop
     - self_report_idle_loss
     - process_report_inactive_strategy_reverts
@@ -289,7 +290,7 @@ real_derived:
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss report accounting, self-report idle asset accrual and loss, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, self-report idle asset accrual and loss, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -482,6 +483,9 @@ scenarios:
   - name: strategy_profit_report
     call: "process_report after debt allocation and harnessed strategy profit"
     expected: "records gain, mints locked profit shares, and updates total assets"
+  - name: strategy_zero_report
+    call: "process_report after debt allocation with strategy assets equal to current debt"
+    expected: "updates last report without gain, loss, fees, refunds, or profit locking"
   - name: self_report_airdrop
     call: "process_report(address(this)) after assets are airdropped directly to the vault"
     expected: "accrues the airdropped asset balance into total idle assets and locked profit shares"
