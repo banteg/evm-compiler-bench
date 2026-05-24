@@ -82,6 +82,7 @@ real_derived:
     - add_initial_liquidity
     - add_initial_liquidity_after_donation
     - add_initial_liquidity_three_coin
+    - get_dy_three_coin
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
     - add_liquidity_too_many_amounts_reverts
@@ -135,6 +136,7 @@ real_derived:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
+    - factory-delegated three-coin quote views
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
     - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
@@ -171,6 +173,9 @@ scenarios:
   - name: add_initial_liquidity_three_coin
     call: "add_liquidity([1_000_000, 1_000_000, 1_000_000], 0, address(this)) on a three-coin deployment"
     expected: "mints initial LP shares using constructor-driven N_COINS rather than fixed two-coin math"
+  - name: get_dy_three_coin
+    call: "get_dy(0, 2, 25_000) after initial liquidity on a three-coin deployment"
+    expected: "routes through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: add_imbalanced_liquidity
     call: "add_liquidity([100_000, 300_000], 0, address(this)) after initial liquidity"
     expected: "mints proportional LP shares"
