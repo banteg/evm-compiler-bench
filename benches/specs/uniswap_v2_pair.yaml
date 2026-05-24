@@ -65,6 +65,8 @@ real_derived:
     - swap_fee_invariant
     - swap_token1_input
     - swap_token1_input_k_reverts
+    - swap_zero_output_reverts
+    - swap_insufficient_liquidity_reverts
     - flash_swap_callback
     - flash_swap_large_callback_data
     - flash_swap_8k_callback_data
@@ -114,7 +116,7 @@ real_derived:
     - first and subsequent mint paths
     - burn path with staged LP shares
     - constant-product swap fee invariant for both token0-input and token1-input paths
-    - production K-invariant rejection for one-wei over-output swaps
+    - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
     - non-empty flash-swap callback execution
     - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds, plus the current 65536-byte port boundary
     - flash-swap reentrancy guard rejection
@@ -156,6 +158,12 @@ scenarios:
   - name: swap_token1_input_k_reverts
     call: "swap(453305446940074566, 0, address(this), empty bytes) after token1 input is sent to the pair"
     expected: "rejects the upstream over-output case through the production K-invariant check"
+  - name: swap_zero_output_reverts
+    call: "swap(0, 0, address(this), empty bytes) after initialized liquidity"
+    expected: "reverts through the upstream insufficient-output guard"
+  - name: swap_insufficient_liquidity_reverts
+    call: "swap(0, reserve1, address(this), empty bytes) after initialized liquidity"
+    expected: "reverts through the upstream insufficient-liquidity guard"
   - name: flash_swap_callback
     call: "swap(0, 100, flash callee, non-empty callback data)"
     expected: "optimistically transfers output, invokes the callback, accepts repayment, and updates reserves"

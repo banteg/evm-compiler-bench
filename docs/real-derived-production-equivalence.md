@@ -65,7 +65,7 @@ layout.
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, and insufficient-allowance rejection are implemented and scenario-covered. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
 | Reserve packing and `getReserves` | Exact counterpart surface | Vyper packs `reserve0`, `reserve1`, and `blockTimestampLast` into the upstream bit layout; reserve overflow rejection is covered. |
-| Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, burn, invariant swap, drift, skim, sync, and timestamp wrap paths are covered. |
+| Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, burn, invariant swap, zero-output and insufficient-liquidity swap guards, drift, skim, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
@@ -150,8 +150,9 @@ Exact now:
   `default_return_value=True` transfer handling for no-return ERC20s while
   still rejecting explicit false-return transfers.
 - Scenarios cover initial and subsequent mints, factory CREATE2 deployment,
-  token0-input and upstream token1-input swap invariant checks, one-wei
-  over-output K rejection, no-return token transfers, false-return transfer
+  token0-input and upstream token1-input swap invariant checks, zero-output
+  and insufficient-liquidity swap guards, one-wei over-output K rejection,
+  no-return token transfers, false-return transfer
   rejection across swap, burn, and skim, flash callback repayment through callback data above the old
   4 KiB port bound and at the current 64 KiB bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP

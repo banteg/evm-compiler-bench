@@ -113,6 +113,30 @@ scenarios:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(453_305_446_940_074_566), uint256(0), address(this), bytes(""))'
     expect_success: false
     observers: *pair_observers
+  - name: swap_zero_output_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(0), address(this), bytes(""))'
+    expect_success: false
+    observers: *pair_observers
+  - name: swap_insufficient_liquidity_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(1_000_000), address(this), bytes(""))'
+    expect_success: false
+    observers: *pair_observers
   - name: flash_swap_callback
     state_access_profile: mixed
     setup:
