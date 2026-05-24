@@ -247,7 +247,11 @@ real_derived:
     - shutdown_vault
     - permission_revert
     - set_deposit_limit_default
+    - set_deposit_limit_using_module_reverts
+    - set_deposit_limit_override_module
     - set_deposit_limit_module_default
+    - set_deposit_limit_module_using_direct_limit_reverts
+    - set_deposit_limit_module_override_direct_limit
     - set_withdraw_limit_module
     - deposit_limit_reverts
     - deposit_limit_module
@@ -649,9 +653,21 @@ scenarios:
   - name: set_deposit_limit_default
     call: "set_deposit_limit(limit) using the Vyper default override=false overload"
     expected: "updates the direct deposit limit when no module is active"
+  - name: set_deposit_limit_using_module_reverts
+    call: "set_deposit_limit(limit) while a deposit-limit module is active"
+    expected: "reverts unless the override flag is set"
+  - name: set_deposit_limit_override_module
+    call: "set_deposit_limit(limit, true) while a deposit-limit module is active"
+    expected: "clears the active module and updates the direct deposit limit"
   - name: set_deposit_limit_module_default
     call: "set_deposit_limit_module(module) using the Vyper default override=false overload"
     expected: "sets the deposit limit module when the direct limit is already max uint256"
+  - name: set_deposit_limit_module_using_direct_limit_reverts
+    call: "set_deposit_limit_module(module) while a finite direct deposit limit is active"
+    expected: "reverts unless the override flag is set"
+  - name: set_deposit_limit_module_override_direct_limit
+    call: "set_deposit_limit_module(module, true) while a finite direct deposit limit is active"
+    expected: "resets the direct deposit limit to max uint256 and sets the module"
   - name: set_withdraw_limit_module
     call: "set_withdraw_limit_module(module)"
     expected: "updates the withdraw limit module through the withdraw-limit manager role"
