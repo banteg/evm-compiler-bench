@@ -150,6 +150,7 @@ pub enum DeploymentVariant {
     CurveRebasing,
     CurveErc4626,
     CurveThreeCoin,
+    CurveEightCoin,
     UniswapCreate2,
 }
 
@@ -161,6 +162,7 @@ impl DeploymentVariant {
             Self::CurveRebasing => "2",
             Self::CurveErc4626 => "3",
             Self::CurveThreeCoin => "4",
+            Self::CurveEightCoin => "5",
             Self::UniswapCreate2 => "1",
         }
     }

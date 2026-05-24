@@ -411,7 +411,7 @@ fn generate_test(
     out.push_str(
         "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
     );
-    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; BenchERC20OptionalReturn coin2; }\n");
+    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; BenchERC20OptionalReturn coin2; BenchERC20OptionalReturn coin3; BenchERC20OptionalReturn coin4; BenchERC20OptionalReturn coin5; BenchERC20OptionalReturn coin6; BenchERC20OptionalReturn coin7; }\n");
     out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnMutatingAccountant mutatingAccountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
     out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
     out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
@@ -1187,6 +1187,18 @@ fn all_helper_functions() -> &'static str {
         amounts[2] = amount2;
     }
 
+    function curveAmounts8(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4, uint256 amount5, uint256 amount6, uint256 amount7) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](8);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+        amounts[3] = amount3;
+        amounts[4] = amount4;
+        amounts[5] = amount5;
+        amounts[6] = amount6;
+        amounts[7] = amount7;
+    }
+
     function curveAmounts9(uint256 amount0, uint256 amount1, uint256 amount2) internal pure returns (uint256[] memory amounts) {
         amounts = new uint256[](9);
         amounts[0] = amount0;
@@ -1712,6 +1724,16 @@ fn all_helper_functions() -> &'static str {
             require(deps.coin1.transfer(target, amount), "curve transfer1");
         } else if (coinIndex == 2 && address(deps.coin2) != address(0)) {
             require(deps.coin2.transfer(target, amount), "curve transfer2");
+        } else if (coinIndex == 3 && address(deps.coin3) != address(0)) {
+            require(deps.coin3.transfer(target, amount), "curve transfer3");
+        } else if (coinIndex == 4 && address(deps.coin4) != address(0)) {
+            require(deps.coin4.transfer(target, amount), "curve transfer4");
+        } else if (coinIndex == 5 && address(deps.coin5) != address(0)) {
+            require(deps.coin5.transfer(target, amount), "curve transfer5");
+        } else if (coinIndex == 6 && address(deps.coin6) != address(0)) {
+            require(deps.coin6.transfer(target, amount), "curve transfer6");
+        } else if (coinIndex == 7 && address(deps.coin7) != address(0)) {
+            require(deps.coin7.transfer(target, amount), "curve transfer7");
         } else {
             revert("curve coin");
         }
@@ -1727,6 +1749,16 @@ fn all_helper_functions() -> &'static str {
             require(deps.coin1.mint(target, amount), "curve mint1");
         } else if (coinIndex == 2 && address(deps.coin2) != address(0)) {
             require(deps.coin2.mint(target, amount), "curve mint2");
+        } else if (coinIndex == 3 && address(deps.coin3) != address(0)) {
+            require(deps.coin3.mint(target, amount), "curve mint3");
+        } else if (coinIndex == 4 && address(deps.coin4) != address(0)) {
+            require(deps.coin4.mint(target, amount), "curve mint4");
+        } else if (coinIndex == 5 && address(deps.coin5) != address(0)) {
+            require(deps.coin5.mint(target, amount), "curve mint5");
+        } else if (coinIndex == 6 && address(deps.coin6) != address(0)) {
+            require(deps.coin6.mint(target, amount), "curve mint6");
+        } else if (coinIndex == 7 && address(deps.coin7) != address(0)) {
+            require(deps.coin7.mint(target, amount), "curve mint7");
         } else {
             revert("curve coin");
         }
@@ -1740,6 +1772,13 @@ fn all_helper_functions() -> &'static str {
         deps.coin1.setReturnData(enabled);
         if (address(deps.coin2) != address(0)) {
             deps.coin2.setReturnData(enabled);
+        }
+        if (address(deps.coin3) != address(0)) {
+            deps.coin3.setReturnData(enabled);
+            deps.coin4.setReturnData(enabled);
+            deps.coin5.setReturnData(enabled);
+            deps.coin6.setReturnData(enabled);
+            deps.coin7.setReturnData(enabled);
         }
         return true;
     }
@@ -2455,6 +2494,11 @@ fn all_helper_functions() -> &'static str {
         if (account == address(curve.coin0)) return 30;
         if (account == address(curve.coin1)) return 31;
         if (account == address(curve.coin2)) return 32;
+        if (account == address(curve.coin3)) return 33;
+        if (account == address(curve.coin4)) return 34;
+        if (account == address(curve.coin5)) return 35;
+        if (account == address(curve.coin6)) return 36;
+        if (account == address(curve.coin7)) return 37;
         YearnDeps storage yearn = yearnDeps[target];
         if (account == address(yearn.asset)) return 40;
         if (account == address(yearn.strategy)) return 41;
@@ -3115,6 +3159,11 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        BenchERC20OptionalReturn coin0;\n");
         out.push_str("        BenchERC20OptionalReturn coin1 = new BenchERC20OptionalReturn();\n");
         out.push_str("        BenchERC20OptionalReturn coin2;\n");
+        out.push_str("        BenchERC20OptionalReturn coin3;\n");
+        out.push_str("        BenchERC20OptionalReturn coin4;\n");
+        out.push_str("        BenchERC20OptionalReturn coin5;\n");
+        out.push_str("        BenchERC20OptionalReturn coin6;\n");
+        out.push_str("        BenchERC20OptionalReturn coin7;\n");
         out.push_str("        if (deploymentVariant == 3) {\n");
         out.push_str(
             "            BenchERC20OptionalReturn underlying0 = new BenchERC20OptionalReturn();\n",
@@ -3123,23 +3172,35 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else {\n");
         out.push_str("            coin0 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
-        out.push_str("        if (deploymentVariant == 4) {\n");
+        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5) {\n");
         out.push_str("            coin2 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
+        out.push_str("        if (deploymentVariant == 5) {\n");
+        out.push_str("            coin3 = new BenchERC20OptionalReturn();\n");
+        out.push_str("            coin4 = new BenchERC20OptionalReturn();\n");
+        out.push_str("            coin5 = new BenchERC20OptionalReturn();\n");
+        out.push_str("            coin6 = new BenchERC20OptionalReturn();\n");
+        out.push_str("            coin7 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        }\n");
         out.push_str(
-            "        uint256 nCoins = deploymentVariant == 4 ? uint256(3) : uint256(2);\n",
+            "        uint256 nCoins = deploymentVariant == 5 ? uint256(8) : deploymentVariant == 4 ? uint256(3) : uint256(2);\n",
         );
         out.push_str("        address[] memory coins = new address[](nCoins);\n");
         out.push_str("        coins[0] = address(coin0);\n");
         out.push_str("        coins[1] = address(coin1);\n");
-        out.push_str("        if (deploymentVariant == 4) {\n");
+        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5) {\n");
         out.push_str("            coins[2] = address(coin2);\n");
         out.push_str("        }\n");
+        out.push_str("        if (deploymentVariant == 5) {\n");
+        out.push_str("            coins[3] = address(coin3);\n");
+        out.push_str("            coins[4] = address(coin4);\n");
+        out.push_str("            coins[5] = address(coin5);\n");
+        out.push_str("            coins[6] = address(coin6);\n");
+        out.push_str("            coins[7] = address(coin7);\n");
+        out.push_str("        }\n");
         out.push_str("        uint256[] memory rates = new uint256[](nCoins);\n");
-        out.push_str("        rates[0] = 1e18;\n");
-        out.push_str("        rates[1] = 1e18;\n");
-        out.push_str("        if (deploymentVariant == 4) {\n");
-        out.push_str("            rates[2] = 1e18;\n");
+        out.push_str("        for (uint256 i = 0; i < nCoins; i++) {\n");
+        out.push_str("            rates[i] = 1e18;\n");
         out.push_str("        }\n");
         out.push_str("        uint8[] memory assetTypes = new uint8[](nCoins);\n");
         out.push_str("        bytes4[] memory methodIds = new bytes4[](nCoins);\n");
@@ -3154,7 +3215,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else if (deploymentVariant == 3) {\n");
         out.push_str("            assetTypes[0] = 3;\n");
         out.push_str("        } else {\n");
-        out.push_str("            require(deploymentVariant == 0 || deploymentVariant == 4, \"curve variant\");\n");
+        out.push_str("            require(deploymentVariant == 0 || deploymentVariant == 4 || deploymentVariant == 5, \"curve variant\");\n");
         out.push_str("        }\n");
         out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
     }
@@ -3194,12 +3255,24 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     }
     out.push_str("        deployGas = startGas - gasleft();\n");
     if artifact.benchmark_id == "curve_stableswap_2coin" {
-        out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1, coin2);\n");
+        out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1, coin2, coin3, coin4, coin5, coin6, coin7);\n");
         out.push_str("        coin0.mint(address(this), 1e30);\n");
         out.push_str("        coin1.mint(address(this), 1e30);\n");
         out.push_str("        if (address(coin2) != address(0)) {\n");
         out.push_str("            coin2.mint(address(this), 1e30);\n");
         out.push_str("            coin2.approve(target, type(uint256).max);\n");
+        out.push_str("        }\n");
+        out.push_str("        if (address(coin3) != address(0)) {\n");
+        out.push_str("            coin3.mint(address(this), 1e30);\n");
+        out.push_str("            coin3.approve(target, type(uint256).max);\n");
+        out.push_str("            coin4.mint(address(this), 1e30);\n");
+        out.push_str("            coin4.approve(target, type(uint256).max);\n");
+        out.push_str("            coin5.mint(address(this), 1e30);\n");
+        out.push_str("            coin5.approve(target, type(uint256).max);\n");
+        out.push_str("            coin6.mint(address(this), 1e30);\n");
+        out.push_str("            coin6.approve(target, type(uint256).max);\n");
+        out.push_str("            coin7.mint(address(this), 1e30);\n");
+        out.push_str("            coin7.approve(target, type(uint256).max);\n");
         out.push_str("        }\n");
         out.push_str("        coin0.approve(target, type(uint256).max);\n");
         out.push_str("        coin1.approve(target, type(uint256).max);\n");

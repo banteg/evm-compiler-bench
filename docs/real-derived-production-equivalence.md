@@ -34,7 +34,7 @@ layout.
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
 | `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[4096]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens, plus initial three-coin liquidity. | Solidity port has started moving to constructor-driven `N_COINS`, but non-two-coin coverage is not yet complete up to 8 coins; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
+| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens, plus three-coin and eight-coin standard-token coverage. | Solidity port has moved to constructor-driven `N_COINS` for the covered standard-token paths, but not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
@@ -87,7 +87,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus initial three-coin liquidity, quote, exchange, proportional withdrawal, imbalanced withdrawal, one-coin withdrawal, and oracle-update scenarios, but 8-coin coverage remains open. |
+| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus three-coin liquidity, quote, exchange, proportional withdrawal, imbalanced withdrawal, one-coin withdrawal, oracle-update scenarios, and eight-coin initial liquidity plus endpoint exchange coverage. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
@@ -181,14 +181,15 @@ Exact now:
 
 - The Vyper benchmark implementation is the pinned upstream
   `contracts/main/CurveStableSwapNG.vy`.
-- The Solidity port implements a matched two-coin pool API, including
-  add/remove liquidity, exchange, `exchange_received`, one-coin withdrawal,
-  amplification and fee admin controls, LP ERC20 accounting, permit, moving
-  averages, stored rates, and admin-fee accounting.
+- The Solidity port implements a matched constructor-driven pool API for the
+  covered paths, including add/remove liquidity, exchange, `exchange_received`,
+  one-coin withdrawal, amplification and fee admin controls, LP ERC20
+  accounting, permit, moving averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
-  donation-before-first-deposit handling, initial three-coin liquidity,
+  donation-before-first-deposit handling, initial three-coin and eight-coin liquidity,
   three-coin quote views, three-coin exchange, proportional three-coin
   withdrawal, imbalanced three-coin withdrawal, three-coin one-coin withdrawal,
+  eight-coin endpoint exchange,
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
   two-coin deployment.
@@ -205,9 +206,9 @@ Remaining:
 - Upstream `CurveStableSwapNG` is generic over `N_COINS` from constructor input
   up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and
   three-coin initial-liquidity, quote, exchange, proportional-withdrawal,
-  imbalanced-withdrawal, one-coin-withdrawal, and oracle-update scenarios, but
-  the non-two-coin surface has not been completed through 8-coin boundary
-  scenarios.
+  imbalanced-withdrawal, one-coin-withdrawal, oracle-update scenarios, and
+  eight-coin initial-liquidity plus endpoint-exchange coverage, but every NG
+  action has not been repeated at every possible constructor coin count.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.
@@ -216,10 +217,9 @@ Remaining:
 
 Suggested next chips:
 
-- Decide whether the target is the full NG contract or a production-equivalent
-  two-coin specialization. If it is full NG, replace the Solidity port's
-  fixed-size arrays and loops with constructor-driven `N_COINS` behavior.
-- Expand scenarios beyond two coins before claiming full NG equivalence.
+- Decide whether every NG action must be repeated at `N_COINS = 8`, or whether
+  the current three-coin surface plus eight-coin boundary checks are the desired
+  production-equivalence boundary for standard-token dynamic-N behavior.
 
 ## `yearn_vault_v3`
 
