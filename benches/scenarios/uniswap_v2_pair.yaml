@@ -323,6 +323,15 @@ scenarios:
       data: 'benchUniswapPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
     observers: *pair_observers
+  - name: permit_expired_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(100))'
+    measured:
+      data: 'abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)", benchUniswapPermitOwner(), BOB, uint256(123), block.timestamp - 1, uint8(27), bytes32(0), bytes32(0))'
+    expect_success: false
+    observers: *pair_observers
   - name: permit_invalid_reverts
     state_access_profile: cold
     measured:
