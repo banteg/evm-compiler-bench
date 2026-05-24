@@ -211,6 +211,7 @@ real_derived:
     - strategy_loss_report_with_fee_and_partial_refund
     - strategy_gain_report_fee_exceeds_gain
     - strategy_gain_report_fee_equals_gain
+    - strategy_gain_report_fee_refund_exact_offset
     - strategy_report_fee_no_profit_lock
     - strategy_loss_report_after_partial_unlock
     - strategy_report_excessive_accountant_fee_reverts
@@ -589,6 +590,9 @@ scenarios:
   - name: strategy_gain_report_fee_equals_gain
     call: "process_report with strategy gain and accountant fees exactly equal to the gain"
     expected: "charges accountant fees while taking the equality branch without net-loss fee recalculation"
+  - name: strategy_gain_report_fee_refund_exact_offset
+    call: "process_report with strategy gain, accountant fees, and refunds that exactly offset the fee-side amount"
+    expected: "pulls refunds while taking the equality branch without net-loss fee recalculation or net-positive refund locking"
   - name: strategy_report_fee_no_profit_lock
     call: "process_report with strategy gain, accountant fees, and profit locking disabled"
     expected: "charges accountant fees and recalculates reported fee assets through the no-lock branch"
