@@ -44,8 +44,8 @@ Status meanings:
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
 | `set_auto_allocate` | `set_auto_allocate` | mapped, covered | Covered with a default-queue strategy deposit. |
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Default direct-limit update, active-module rejection, and active-module override clearing are covered. |
-| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, reverting module calls, finite and max-uint deposit acceptance, max-uint view returns, and receiver-specific module returns are covered; more unusual module return values remain open. |
-| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, finite and max-uint withdraw acceptance, max-uint module returns through `maxRedeem`, owner-specific module returns, withdraw rejection, and reverting module calls are covered; more unusual module return values remain open. |
+| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, reverting module calls, finite and max-uint deposit acceptance, max-uint view returns, and receiver-specific module returns through `maxDeposit` and `maxMint` are covered; more unusual module return values remain open. |
+| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, finite and max-uint withdraw acceptance, max-uint module returns through `maxRedeem`, owner-specific module returns through `maxWithdraw` and `maxRedeem`, withdraw rejection, and reverting module calls are covered; more unusual module return values remain open. |
 | `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | More debt update interactions remain useful. |
 | `setProfitMaxUnlockTime` | `setProfitMaxUnlockTime` | mapped, covered | Zero-reset branch with locked shares is now covered by `reset_profit_unlock_after_report`. |
 | `set_role` | `set_role` | mapped, covered | Solidity enforces role bit bounds explicitly because Vyper enum decoding does it before function body. |
@@ -116,8 +116,8 @@ Status meanings:
 | `_erc20_safe_transfer_from` | `_safeTransferFromToken` | mapped, covered | No-return and false-return transferFrom paths are covered. |
 | `_erc20_safe_transfer` | `_safeTransferToken` | mapped, covered | No-return and false-return transfer paths are covered. |
 | `_issue_shares` | `_issueShares` | mapped, covered | Covered by deposit, reports, and fees. |
-| `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered. |
-| `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem and nonzero unrealized-loss queue break are covered. |
+| `_max_deposit` | `_maxDeposit` | mapped, covered | Module and receiver boundary cases are covered through both asset and share max views. |
+| `_max_withdraw` | `_maxWithdraw` | mapped, covered | Limited strategy redeem, module owner boundary cases through both asset and share max views, and nonzero unrealized-loss queue break are covered. |
 | `_deposit` | `_deposit` | mapped, covered | Auto-allocate and deposit-all entry paths are covered. |
 | `_assess_share_of_unrealised_losses` | `_assessShareOfUnrealisedLosses` | mapped, covered | Current-debt boundary branches are covered. |
 | `_withdraw_from_strategy` | `_withdrawFromStrategy` | mapped, covered | Partial and over-returning strategy redeems are covered. |

@@ -1877,6 +1877,17 @@ scenarios:
       data: 'abi.encodeWithSignature("maxDeposit(address)", BOB)'
     expect_success: true
     observers: *yearn_observers
+  - name: max_mint_limit_module_receiver_specific
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReceiverDepositLimitModule(address,uint256,address,uint256)", {target}, uint256(100_000), BOB, uint256(1_500))'
+    measured:
+      data: 'abi.encodeWithSignature("maxMint(address)", BOB)'
+    expect_success: true
+    observers: *yearn_observers
   - name: deposit_limit_module_reverts
     state_access_profile: mixed
     setup:
@@ -1969,6 +1980,18 @@ scenarios:
         data: 'abi.encodeWithSignature("benchYearnSetOwnerWithdrawLimitModule(address,uint256,address,uint256)", {target}, uint256(100_000), BOB, uint256(12_345))'
     measured:
       data: 'abi.encodeWithSignature("maxWithdraw(address)", BOB)'
+    expect_success: true
+    observers: *yearn_observers
+  - name: max_redeem_limit_module_owner_specific
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), BOB)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetOwnerWithdrawLimitModule(address,uint256,address,uint256)", {target}, uint256(100_000), BOB, uint256(12_345))'
+    measured:
+      data: 'abi.encodeWithSignature("maxRedeem(address)", BOB)'
     expect_success: true
     observers: *yearn_observers
   - name: withdraw_limit_module_reverts
