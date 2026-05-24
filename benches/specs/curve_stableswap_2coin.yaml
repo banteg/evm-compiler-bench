@@ -85,6 +85,7 @@ real_derived:
     - get_dy_three_coin
     - exchange_three_coin
     - remove_liquidity_three_coin
+    - remove_liquidity_imbalance_three_coin
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
     - add_liquidity_too_many_amounts_reverts
@@ -141,6 +142,7 @@ real_derived:
     - factory-delegated three-coin quote views
     - standard-token three-coin exchange path
     - proportional three-coin liquidity removal
+    - imbalanced three-coin liquidity removal with dynamic fees
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
     - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
@@ -186,6 +188,9 @@ scenarios:
   - name: remove_liquidity_three_coin
     call: "remove_liquidity(10_000, [0, 0, 0], address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers proportional balances for all constructor-sized coins"
+  - name: remove_liquidity_imbalance_three_coin
+    call: "remove_liquidity_imbalance([40_000, 10_000, 25_000], 100_000, address(this)) after initial liquidity on a three-coin deployment"
+    expected: "burns the required LP amount and applies dynamic fees across all constructor-sized coins"
   - name: add_imbalanced_liquidity
     call: "add_liquidity([100_000, 300_000], 0, address(this)) after initial liquidity"
     expected: "mints proportional LP shares"
