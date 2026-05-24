@@ -169,6 +169,7 @@ real_derived:
     - custom_queue_withdraw
     - set_default_queue
     - forced_default_queue_withdraw
+    - combined_management_sequence_withdraw
     - force_revoke_strategy
     - buy_debt
     - withdraw_long_queue_reverts
@@ -207,6 +208,7 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
     - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
+    - combined role, default-queue, debt, report, module, shutdown, and withdrawal sequence parity
     - profit/loss report accounting, self-report idle asset accrual, refunds, fees, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -214,7 +216,7 @@ real_derived:
     - valid EIP-712 permit acceptance before and after initialization plus invalid permit revert paths
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage
-    - sequence-level parity coverage for combined role, queue, debt, report, module, shutdown, and withdrawal flows
+    - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, and withdrawal flows
     - exhaustive revert-data and Vyper String/DynArray decoder-boundary parity audit outside the listed scenarios
     - exact storage layout compatibility in the Solidity port
 semantics:
@@ -341,6 +343,9 @@ scenarios:
   - name: forced_default_queue_withdraw
     call: "withdraw with a custom queue while use_default_queue is enabled"
     expected: "ignores the custom queue and uses the stored default queue"
+  - name: combined_management_sequence_withdraw
+    call: "withdraw after delegated strategy/queue changes, debt allocation, accountant/protocol-fee report, module changes, and shutdown"
+    expected: "preserves final observable state and withdraw behavior across the combined management sequence"
   - name: force_revoke_strategy
     call: "force_revoke_strategy(strategy)"
     expected: "force removes the strategy through the emergency role path"

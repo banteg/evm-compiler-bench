@@ -130,6 +130,9 @@ Exact now:
   excessive-fee rejection, reentrant accountant rejection, realized and
   unrealized loss paths, module acceptance/rejection, long-queue bounds, and
   permit before/after initialization.
+- The scenario set includes a combined management sequence that mutates
+  delegated roles, the default queue, debt, reporting, limit modules, shutdown
+  state, and then withdraws from the post-sequence vault state.
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
@@ -143,6 +146,8 @@ Remaining:
   strategy behavior is represented by deterministic harness mocks. The current
   scenarios cover important boundary paths but not exhaustive adversarial or
   unusual implementations behind those interfaces.
+- The current sequence coverage proves one representative combined management
+  ordering; other orderings and repeated transitions remain to be covered.
 - Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
   ABI behavior is approximated in Solidity with runtime checks; success/failure
   is covered, but decoder timing and revert data are not exact.
@@ -154,5 +159,5 @@ Suggested next chips:
 
 - Build a source-to-port checklist from every external and internal Yearn
   function, then close or scenario-cover each unchecked branch.
-- Add sequence tests that combine role changes, queue changes, debt changes,
-  reports, module changes, shutdown, and withdrawals in the same run.
+- Add more sequence tests for alternate role, queue, debt, report, module,
+  shutdown, and withdrawal orderings.
