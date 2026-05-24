@@ -110,7 +110,7 @@ Immediate chips:
 | ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, approvals, EIP-712 permit before/after initialization, and invalid permits are covered. |
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
 | Metadata setters | Approximate | Name and symbol setters plus Vyper string length failures are covered with Solidity runtime checks. |
-| Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, max debt, debt increase/decrease, max-loss defaults, strategy maxDeposit limits, and buy-debt paths are covered. |
+| Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, max debt, debt increase/decrease, max-loss defaults, strategy maxDeposit limits, and buy-debt clipping/rejection paths are covered. |
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, accountant fees/refunds, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, long-queue failures, strategy maxRedeem limits, and partial/over strategy redeems are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic mocks cover important accept/reject paths, but arbitrary third-party behavior is not exhaustive. |
@@ -231,6 +231,8 @@ Exact now:
   zero-redeem queue fallthrough.
 - Strategy withdrawal accounting now covers actual redeem returns below and
   above the vault-requested amount.
+- Buy-debt scenarios now cover over-current-debt clipping and zero-share
+  rejection.
 - First-class management scenarios now measure max-debt updates, additive role
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit

@@ -56,7 +56,7 @@ Status meanings:
 | `pricePerShare` | `pricePerShare` | mapped, covered | Covered as observer before and after reports. |
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
 | `process_report` | `process_report` | mapped, covered | More third-party accountant and strategy reporting variants remain open. |
-| `buy_debt` | `buy_debt` | mapped, covered | Edge cases for over-large amount and zero-share purchase remain open. |
+| `buy_debt` | `buy_debt` | mapped, covered | Over-current-debt clipping and zero-share rejection are covered. |
 | `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full behavior is not yet covered. |
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Non-forced active-debt revert should be scenario-covered. |
 | `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal; re-add after force revoke remains open. |
@@ -135,8 +135,7 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add adversarial but ABI-valid accountant mocks for fee/refund clipping,
   zero-return fees, excessive fees, and state changes outside the current
   deterministic accountant.
-- Add strategy mocks for zero-share debt purchase and report values that move
-  max debt below current debt.
+- Add strategy mocks for report values that move max debt below current debt.
 - Cover queue-full behavior, duplicate strategy queue behavior, non-forced
   debt revoke failure, re-add after revoke, and post-shutdown debt pull.
 - Cover ERC20 false-return asset behavior in addition to no-return behavior.

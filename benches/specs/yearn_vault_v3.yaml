@@ -188,6 +188,8 @@ real_derived:
     - repeated_management_transitions_redeem
     - force_revoke_strategy
     - buy_debt
+    - buy_debt_over_current_debt
+    - buy_debt_zero_shares_reverts
     - withdraw_long_queue_reverts
     - redeem_long_queue_reverts
     - max_withdraw_long_queue_reverts
@@ -232,6 +234,7 @@ real_derived:
     - strategy maxDeposit limiting and zero-deposit debt update behavior
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
     - partial and over-returning strategy redeem accounting during user withdrawals
+    - buy-debt current-debt clipping and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -423,6 +426,12 @@ scenarios:
   - name: buy_debt
     call: "buy_debt(strategy, 25_000) after debt allocation"
     expected: "repays strategy debt to idle and transfers the corresponding strategy shares to the debt purchaser"
+  - name: buy_debt_over_current_debt
+    call: "buy_debt(strategy, 100_000) when current strategy debt is only 50_000"
+    expected: "clips the purchase to current debt, repays all outstanding debt, and transfers all vault-held strategy shares"
+  - name: buy_debt_zero_shares_reverts
+    call: "buy_debt(strategy, 1) when the proportional strategy-share amount rounds to zero"
+    expected: "reverts with the upstream cannot-buy-zero guard before moving assets or debt"
   - name: withdraw_long_queue_reverts
     call: "withdraw with an 11-entry custom queue"
     expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
