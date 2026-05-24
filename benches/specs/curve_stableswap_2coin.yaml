@@ -86,6 +86,7 @@ real_derived:
     - get_dy_three_coin
     - exchange_three_coin
     - exchange_eight_coin_boundary
+    - exchange_received_three_coin
     - remove_liquidity_three_coin
     - remove_liquidity_imbalance_three_coin
     - calc_withdraw_one_coin_three_coin
@@ -148,6 +149,7 @@ real_derived:
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin quote views
     - standard-token three-coin exchange path
+    - standard-token three-coin exchange_received optimistic-transfer path
     - standard-token eight-coin endpoint exchange path
     - proportional three-coin liquidity removal
     - imbalanced three-coin liquidity removal with dynamic fees
@@ -201,6 +203,9 @@ scenarios:
   - name: exchange_eight_coin_boundary
     call: "exchange(0, 7, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint coin balances, fees, and the final price oracle slot at the MAX_COINS boundary"
+  - name: exchange_received_three_coin
+    call: "exchange_received(0, 2, 25_000, 0, address(this)) after direct token transfer to a three-coin deployment"
+    expected: "uses the optimistic incoming balance and updates constructor-sized accounting and oracle slots"
   - name: remove_liquidity_three_coin
     call: "remove_liquidity(10_000, [0, 0, 0], address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers proportional balances for all constructor-sized coins"

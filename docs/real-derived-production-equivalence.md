@@ -188,9 +188,10 @@ Exact now:
   one-coin withdrawal, amplification and fee admin controls, LP ERC20
   accounting, permit, moving averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
-  donation-before-first-deposit handling, initial three-coin and eight-coin liquidity,
-  three-coin quote views, three-coin exchange, proportional three-coin
-  withdrawal, imbalanced three-coin withdrawal, three-coin one-coin withdrawal,
+  donation-before-first-deposit handling, initial three-coin and eight-coin
+  liquidity, three-coin quote views, three-coin exchange and
+  `exchange_received`, proportional three-coin withdrawal, imbalanced three-coin
+  withdrawal, three-coin one-coin withdrawal,
   eight-coin endpoint exchange,
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
