@@ -44,8 +44,8 @@ Status meanings:
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
 | `set_auto_allocate` | `set_auto_allocate` | mapped, covered | Covered with a default-queue strategy deposit. |
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Default direct-limit update, active-module rejection, and active-module override clearing are covered. |
-| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, and direct-limit override reset are covered; unusual module behavior remains open. |
-| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Unusual module behavior remains open. |
+| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, and reverting module calls are covered; unusual module return values remain open. |
+| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping, withdraw rejection, and reverting module calls are covered; unusual module return values remain open. |
 | `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | More debt update interactions remain useful. |
 | `setProfitMaxUnlockTime` | `setProfitMaxUnlockTime` | mapped, covered | Zero-reset branch with locked shares is now covered by `reset_profit_unlock_after_report`. |
 | `set_role` | `set_role` | mapped, covered | Solidity enforces role bit bounds explicitly because Vyper enum decoding does it before function body. |

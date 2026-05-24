@@ -260,9 +260,11 @@ real_derived:
     - deposit_limit_reverts
     - deposit_limit_module
     - deposit_limit_module_reverts
+    - deposit_limit_module_call_reverts
     - withdraw_limit_module
     - max_withdraw_limit_module
     - withdraw_limit_module_reverts
+    - withdraw_limit_module_call_reverts
     - permit_valid
     - permit_after_chain_id_change
     - permit_before_initialize_valid
@@ -287,8 +289,8 @@ real_derived:
     - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
-    - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks
-    - withdraw-limit-module max-withdraw capping and withdraw acceptance/rejection paths
+    - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
+    - withdraw-limit-module max-withdraw capping, module-call failure, and withdraw acceptance/rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report idle asset accrual and loss, refunds, refund clipping after accountant state mutation, fees, fee recalculation when fees exceed gains, locked-profit shares, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting and zero-deposit debt update behavior
@@ -696,6 +698,9 @@ scenarios:
   - name: deposit_limit_module_reverts
     call: "deposit above a custom deposit limit module limit"
     expected: "reverts"
+  - name: deposit_limit_module_call_reverts
+    call: "maxDeposit through a custom deposit limit module that reverts"
+    expected: "bubbles the module failure instead of falling back to the direct deposit limit"
   - name: withdraw_limit_module
     call: "withdraw below a custom withdraw limit module limit"
     expected: "uses the module-provided limit and accepts an in-limit withdrawal"
@@ -705,6 +710,9 @@ scenarios:
   - name: withdraw_limit_module_reverts
     call: "withdraw above a custom withdraw limit module limit"
     expected: "reverts"
+  - name: withdraw_limit_module_call_reverts
+    call: "maxWithdraw through a custom withdraw limit module that reverts"
+    expected: "bubbles the module failure instead of falling back to balance-derived max withdraw"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"

@@ -1068,26 +1068,40 @@ contract BenchYearnReentrantAccountant {
 
 contract BenchYearnDepositLimitModule {
     uint256 public limit;
+    bool public shouldRevert;
 
     function setLimit(uint256 limit_) external returns (bool) {
         limit = limit_;
         return true;
     }
 
+    function setShouldRevert(bool shouldRevert_) external returns (bool) {
+        shouldRevert = shouldRevert_;
+        return true;
+    }
+
     function available_deposit_limit(address) external view returns (uint256) {
+        require(!shouldRevert, "deposit limit module");
         return limit;
     }
 }
 
 contract BenchYearnWithdrawLimitModule {
     uint256 public limit;
+    bool public shouldRevert;
 
     function setLimit(uint256 limit_) external returns (bool) {
         limit = limit_;
         return true;
     }
 
+    function setShouldRevert(bool shouldRevert_) external returns (bool) {
+        shouldRevert = shouldRevert_;
+        return true;
+    }
+
     function available_withdraw_limit(address, uint256, address[] calldata) external view returns (uint256) {
+        require(!shouldRevert, "withdraw limit module");
         return limit;
     }
 }
@@ -2099,6 +2113,17 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.depositLimitModule) != address(0), "yearn deps");
         deps.depositLimitModule.setLimit(limit);
+        deps.depositLimitModule.setShouldRevert(false);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_deposit_limit_module(address,bool)", address(deps.depositLimitModule), true));
+        require(ok, "yearn deposit module");
+        return true;
+    }
+
+    function benchYearnSetRevertingDepositLimitModule(address target) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.depositLimitModule) != address(0), "yearn deps");
+        deps.depositLimitModule.setShouldRevert(true);
         (bool ok,) =
             target.call(abi.encodeWithSignature("set_deposit_limit_module(address,bool)", address(deps.depositLimitModule), true));
         require(ok, "yearn deposit module");
@@ -2109,6 +2134,17 @@ fn all_helper_functions() -> &'static str {
         YearnDeps storage deps = yearnDeps[target];
         require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
         deps.withdrawLimitModule.setLimit(limit);
+        deps.withdrawLimitModule.setShouldRevert(false);
+        (bool ok,) =
+            target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
+        require(ok, "yearn withdraw module");
+        return true;
+    }
+
+    function benchYearnSetRevertingWithdrawLimitModule(address target) external returns (bool) {
+        YearnDeps storage deps = yearnDeps[target];
+        require(address(deps.withdrawLimitModule) != address(0), "yearn deps");
+        deps.withdrawLimitModule.setShouldRevert(true);
         (bool ok,) =
             target.call(abi.encodeWithSignature("set_withdraw_limit_module(address)", address(deps.withdrawLimitModule)));
         require(ok, "yearn withdraw module");
