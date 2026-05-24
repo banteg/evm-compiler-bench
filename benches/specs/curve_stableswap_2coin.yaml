@@ -89,6 +89,7 @@ real_derived:
     - calc_token_amount_eight_coin
     - exchange_three_coin
     - exchange_eight_coin_boundary
+    - exchange_received_eight_coin_boundary
     - exchange_received_three_coin
     - remove_liquidity_three_coin
     - remove_liquidity_eight_coin
@@ -160,6 +161,7 @@ real_derived:
     - standard-token three-coin exchange path
     - standard-token three-coin exchange_received optimistic-transfer path
     - standard-token eight-coin endpoint exchange path
+    - standard-token eight-coin endpoint exchange_received optimistic-transfer path
     - proportional three-coin liquidity removal
     - proportional eight-coin liquidity removal at MAX_COINS
     - eight-coin one-coin withdrawal at MAX_COINS
@@ -221,6 +223,9 @@ scenarios:
   - name: exchange_eight_coin_boundary
     call: "exchange(0, 7, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint coin balances, fees, and the final price oracle slot at the MAX_COINS boundary"
+  - name: exchange_received_eight_coin_boundary
+    call: "exchange_received(0, 7, 25_000, 0, address(this)) after direct token transfer to an eight-coin deployment"
+    expected: "uses the optimistic incoming balance and updates endpoint coin balances, fees, and the final price oracle slot at MAX_COINS"
   - name: exchange_received_three_coin
     call: "exchange_received(0, 2, 25_000, 0, address(this)) after direct token transfer to a three-coin deployment"
     expected: "uses the optimistic incoming balance and updates constructor-sized accounting and oracle slots"
