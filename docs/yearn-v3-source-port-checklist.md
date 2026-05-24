@@ -70,7 +70,7 @@ Status meanings:
 | `withdraw` | overloaded `withdraw` | mapped, covered | Long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
 | `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
 | `approve` | `approve` | mapped, covered | Covered directly. |
-| `transfer` | `transfer` | mapped, covered | Receiver zero/self rejection is mapped but not fully covered. |
+| `transfer` | `transfer` | mapped, covered | Receiver zero and vault-self rejection are covered. |
 | `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |
 | `permit` | `permit` | mapped, covered | Valid, expired, invalid, pre-initialization, and post-chain-id-change permit paths are covered. |
 | `balanceOf` | `balanceOf` | mapped, covered | Vault-self locked-share branch covered through observers after reports. |
@@ -83,7 +83,7 @@ Status meanings:
 | `previewMint` | `previewMint` | mapped, covered | Zero-shares and max-uint special cases are covered through the shared conversion path. |
 | `convertToAssets` | `convertToAssets` | mapped, covered | Zero-shares and max-uint special cases are covered. |
 | `maxDeposit` | `maxDeposit` | mapped, covered | Zero receiver and vault receiver branches are covered. |
-| `maxMint` | `maxMint` | mapped, covered | Zero receiver, unlimited deposit limit, and module-return paths are covered. |
+| `maxMint` | `maxMint` | mapped, covered | Zero receiver, vault receiver, unlimited deposit limit, and module-return paths are covered. |
 | `maxWithdraw` | overloaded `maxWithdraw` | mapped, covered | Limited strategy redeem and unrealized-loss queue-break behavior are covered. |
 | `maxRedeem` | overloaded `maxRedeem` | mapped, covered | Limited strategy redeem and unrealized-loss queue-break behavior are covered through the shared max-withdraw path. |
 | `previewWithdraw` | `previewWithdraw` | mapped, covered | Rounded-up conversion plus zero and max-uint branches are covered. |

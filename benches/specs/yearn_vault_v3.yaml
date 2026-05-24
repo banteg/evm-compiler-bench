@@ -155,6 +155,7 @@ real_derived:
     - max_deposit_zero_receiver
     - max_deposit_vault_receiver
     - max_mint_zero_receiver
+    - max_mint_vault_receiver
     - max_mint_unlimited
     - max_mint_limit_module
     - update_debt_increase
@@ -381,6 +382,9 @@ scenarios:
   - name: max_mint_zero_receiver
     call: "maxMint(empty(address))"
     expected: "returns zero through the same receiver guard and conversion path"
+  - name: max_mint_vault_receiver
+    call: "maxMint(vault)"
+    expected: "returns zero through the same vault-receiver guard and conversion path"
   - name: max_mint_unlimited
     call: "maxMint(address(this)) with unlimited deposit limit"
     expected: "returns max_value(uint256) through the upstream unlimited-deposit conversion path"

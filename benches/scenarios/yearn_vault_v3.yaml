@@ -338,6 +338,15 @@ scenarios:
       data: 'abi.encodeWithSignature("maxMint(address)", address(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: max_mint_vault_receiver
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("maxMint(address)", {target})'
+    expect_success: true
+    observers: *yearn_observers
   - name: max_mint_unlimited
     state_access_profile: warm
     setup:
