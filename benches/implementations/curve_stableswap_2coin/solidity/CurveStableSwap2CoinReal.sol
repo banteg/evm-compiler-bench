@@ -306,7 +306,6 @@ contract CurveStableSwap2CoinReal {
         internal
         returns (uint256 dy)
     {
-        require(receiver != address(0), "receiver");
         require(i >= 0 && j >= 0 && uint256(int256(i)) < N_COINS && uint256(int256(j)) < N_COINS && i != j, "coin");
         require(dx > 0, "dx");
         uint256 coinIn = uint256(int256(i));
