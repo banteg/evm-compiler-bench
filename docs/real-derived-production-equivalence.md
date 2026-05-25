@@ -209,7 +209,8 @@ Exact now:
   two-coin deployment.
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path for two-coin, three-coin, and
-  eight-coin deployments rather than only same-block oracle upkeep.
+  eight-coin endpoint/interior price slots rather than only same-block oracle
+  upkeep.
 - Permit scenarios now cover both EOA EIP-712 signatures and the upstream
   ERC1271 smart-contract-wallet validation path.
 - The generated differential harness normalizes deployment-specific pool and
@@ -235,7 +236,7 @@ Remaining:
   imbalanced-withdrawal, imbalanced-withdrawal slippage rejection,
   endpoint/interior one-coin-withdrawal, and
   endpoint/interior one-coin-withdrawal slippage rejection
-  coverage, plus eight-coin oracle-decay coverage, but every NG action has not
+  coverage, plus eight-coin endpoint/interior oracle-decay coverage, but every NG action has not
   been repeated at every possible
   constructor coin count.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626

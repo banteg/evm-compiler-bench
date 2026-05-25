@@ -1279,6 +1279,27 @@ scenarios:
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(6))'
       - data: 'abi.encodeWithSignature("ma_last_time()")'
+  - name: price_oracle_eight_coin_interior_after_time
+    deployment_variant: curve_eight_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts8(1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+      - data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(3), int128(5), uint256(25_000), uint256(0), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(866))'
+    measured:
+      data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(4))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(4))'
+      - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("ema_price(uint256)", uint256(4))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(4))'
+      - data: 'abi.encodeWithSignature("ma_last_time()")'
   - name: d_oracle_eight_coin_after_time
     deployment_variant: curve_eight_coin
     state_access_profile: warm

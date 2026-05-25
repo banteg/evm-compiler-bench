@@ -148,6 +148,7 @@ real_derived:
     - price_oracle_three_coin_after_time
     - d_oracle_three_coin_after_time
     - price_oracle_eight_coin_after_time
+    - price_oracle_eight_coin_interior_after_time
     - d_oracle_eight_coin_after_time
     - remove_liquidity
     - remove_liquidity_no_return_tokens
@@ -208,7 +209,7 @@ real_derived:
     - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced eight-coin liquidity removal slippage rejection at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees and slippage rejection
-    - eight-coin price and D oracle decay at MAX_COINS
+    - eight-coin endpoint and interior price oracle decay plus D oracle decay at MAX_COINS
     - three-coin one-coin withdrawal, slippage rejection, and quote paths
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
@@ -445,6 +446,9 @@ scenarios:
   - name: price_oracle_eight_coin_after_time
     call: "price_oracle(6) after an eight-coin endpoint exchange changes the final spot price slot and time advances by one averaging window"
     expected: "returns the exponentially decayed NG price oracle value at the upstream MAX_COINS boundary"
+  - name: price_oracle_eight_coin_interior_after_time
+    call: "price_oracle(4) after an eight-coin interior exchange changes an interior spot price slot and time advances by one averaging window"
+    expected: "returns the exponentially decayed NG price oracle value for an interior MAX_COINS price slot"
   - name: d_oracle_eight_coin_after_time
     call: "D_oracle() after eight-coin imbalanced liquidity changes D and time advances by one averaging window"
     expected: "returns the exponentially decayed NG D oracle value at the upstream MAX_COINS boundary"
