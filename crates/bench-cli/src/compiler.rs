@@ -824,11 +824,10 @@ fn solidity_pragma_for_toolchain(solc: &Toolchain) -> Result<String> {
             solc.version
         );
     };
-    let lower_patch = if major == 0 && minor == 4 { patch } else { 0 };
     let upper_major = if major == 0 { 0 } else { major + 1 };
     let upper_minor = if major == 0 { minor + 1 } else { 0 };
     Ok(format!(
-        "pragma solidity >={major}.{minor}.{lower_patch} <{upper_major}.{upper_minor}.0;"
+        "pragma solidity >={major}.{minor}.{patch} <{upper_major}.{upper_minor}.0;"
     ))
 }
 
@@ -1561,10 +1560,11 @@ fn bytecode_metrics(creation: &str, runtime: &str) -> Result<BytecodeMetrics> {
 #[cfg(test)]
 mod tests {
     use super::{
-        bytecode_metrics, source_fingerprint, transform_solidity_source, transform_vyper_source,
+        bytecode_metrics, solidity_pragma_for_toolchain, source_fingerprint,
+        transform_solidity_source, transform_vyper_source,
     };
-    use crate::models::Language;
-    use std::fs;
+    use crate::models::{Language, Toolchain};
+    use std::{collections::BTreeMap, fs, path::PathBuf};
 
     #[test]
     fn computes_bytecode_metrics() {
@@ -1618,6 +1618,30 @@ mod tests {
         let after = source_fingerprint(Language::Vyper, &main).unwrap();
 
         assert_eq!(before, after);
+    }
+
+    fn toolchain(name: &str, version: &str) -> Toolchain {
+        Toolchain {
+            name: name.to_string(),
+            version: version.to_string(),
+            binary_path: PathBuf::from(name),
+            binary_sha256: "sha256".to_string(),
+            download_source: "test".to_string(),
+            version_output: version.to_string(),
+            metadata: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn solidity_pragmas_use_resolved_compiler_patch() {
+        assert_eq!(
+            solidity_pragma_for_toolchain(&toolchain("solc", "0.8.35")).unwrap(),
+            "pragma solidity >=0.8.35 <0.9.0;"
+        );
+        assert_eq!(
+            solidity_pragma_for_toolchain(&toolchain("solc-0.5.16", "0.5.16")).unwrap(),
+            "pragma solidity >=0.5.16 <0.6.0;"
+        );
     }
 
     #[test]

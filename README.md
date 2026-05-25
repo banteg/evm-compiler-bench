@@ -190,11 +190,11 @@ just zip-design
   compiled artifact's side as `implementation_lane`. This keeps latest-syntax
   source rows from being mistaken for the benchmark comparison lane.
 - During compilation, profile-specific source variants rewrite version pragmas
-  and apply backward syntax rewrites where the older language version has
-  enough features. `source_profiles` records intended source-language coverage;
-  it may include historical compiler profiles, but those profiles compile
-  generated compatibility variants of the checked-in latest source rather than
-  the pinned upstream historical source.
+  to the resolved compiler patch range and apply backward syntax rewrites where
+  the older language version has enough features. `source_profiles` records
+  intended source-language coverage; it may include historical compiler
+  profiles, but those profiles compile generated compatibility variants of the
+  checked-in latest source rather than the pinned upstream historical source.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Production-equivalent specs and output rows
