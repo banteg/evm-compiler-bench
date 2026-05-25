@@ -163,6 +163,38 @@
               "excluded_features": { "minItems": 1 }
             }
           }
+        },
+        {
+          "if": {
+            "required": ["source_lane", "source_language"],
+            "properties": {
+              "source_lane": { "const": "latest_syntax_original" },
+              "source_language": { "const": "solidity" }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_profiles": {
+                "items": { "pattern": "^solc-latest" }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["source_lane", "source_language"],
+            "properties": {
+              "source_lane": { "const": "latest_syntax_original" },
+              "source_language": { "const": "vyper" }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_profiles": {
+                "items": { "pattern": "^vyper-latest" }
+              }
+            }
+          }
         }
       ]
     },
