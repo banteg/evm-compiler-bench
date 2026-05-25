@@ -114,6 +114,7 @@ real_derived:
     - exchange_received_three_coin_slippage_reverts
     - remove_liquidity_three_coin
     - remove_liquidity_three_coin_slippage_reverts
+    - remove_liquidity_five_coin
     - remove_liquidity_eight_coin
     - remove_liquidity_eight_coin_slippage_reverts
     - remove_one_coin_eight_coin
@@ -214,6 +215,7 @@ real_derived:
     - standard-token eight-coin endpoint and interior exchange slippage rejection
     - standard-token eight-coin endpoint and interior exchange_received optimistic-transfer paths and slippage rejection
     - proportional three-coin liquidity removal and slippage rejection
+    - proportional five-coin midpoint liquidity removal
     - proportional eight-coin liquidity removal and slippage rejection at MAX_COINS
     - eight-coin endpoint and interior one-coin withdrawal at MAX_COINS
     - eight-coin endpoint and interior one-coin withdrawal slippage rejection at MAX_COINS
@@ -335,6 +337,9 @@ scenarios:
   - name: remove_liquidity_three_coin_slippage_reverts
     call: "remove_liquidity(10_000, [1_000_000, 1_000_000, 1_000_000], address(this)) after initial liquidity on a three-coin deployment"
     expected: "reverts when any constructor-sized proportional withdrawal amount is below the requested minimum"
+  - name: remove_liquidity_five_coin
+    call: "remove_liquidity(10_000, [0 x 5], address(this)) after initial liquidity on a five-coin deployment"
+    expected: "burns LP shares and transfers proportional balances for a midpoint constructor-sized coin count"
   - name: remove_liquidity_eight_coin
     call: "remove_liquidity(10_000, [0 x 8], address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns LP shares and transfers proportional balances at the upstream MAX_COINS boundary"
