@@ -520,6 +520,7 @@ impl BenchmarkReportSummary {
 
 fn report_real_models(rows: &[serde_json::Value]) -> Vec<serde_json::Value> {
     let mut models = BTreeMap::<String, serde_json::Value>::new();
+    let mut seen_sources = BTreeSet::<String>::new();
     for row in rows {
         if str_at(row, "/suite").as_deref() != Some("real_derived") {
             continue;
@@ -532,9 +533,42 @@ fn report_real_models(rows: &[serde_json::Value]) -> Vec<serde_json::Value> {
                 benchmark_id.clone(),
                 json!({
                     "benchmark_id": benchmark_id,
-                    "provenance": row.pointer("/provenance").cloned().unwrap_or(serde_json::Value::Null)
+                    "provenance": row.pointer("/provenance").cloned().unwrap_or(serde_json::Value::Null),
+                    "compiled_sources": []
                 }),
             );
+        }
+        let source_path = str_at(row, "/source_path").unwrap_or_default();
+        let source_hash = str_at(row, "/source_hash").unwrap_or_default();
+        if source_path.is_empty() || source_hash.is_empty() {
+            continue;
+        }
+        let language = str_at(row, "/language").unwrap_or_default();
+        let implementation_id = str_at(row, "/implementation_id").unwrap_or_default();
+        let profile_id = str_at(row, "/profile_id").unwrap_or_default();
+        let source_variant = row
+            .pointer("/compiler/settings/sourceVariant")
+            .and_then(|value| value.as_str())
+            .unwrap_or("default");
+        let key = format!(
+            "{benchmark_id}\0{language}\0{implementation_id}\0{profile_id}\0{source_variant}\0{source_path}\0{source_hash}"
+        );
+        if !seen_sources.insert(key) {
+            continue;
+        }
+        if let Some(sources) = models
+            .get_mut(&benchmark_id)
+            .and_then(|model| model.get_mut("compiled_sources"))
+            .and_then(|sources| sources.as_array_mut())
+        {
+            sources.push(json!({
+                "language": language,
+                "profile_id": profile_id,
+                "implementation_id": implementation_id,
+                "source_variant": source_variant,
+                "source_path": source_path,
+                "source_hash": source_hash
+            }));
         }
     }
     models.into_values().collect()

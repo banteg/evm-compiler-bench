@@ -885,9 +885,9 @@ function RealDerivedProvenance() {
   if (!models.length) return null;
   return React.createElement('div', { className: 'card' },
     React.createElement('div', { className: 'card-head' },
-      React.createElement('div', null,
-        React.createElement('div', { className: 'card-title' }, 'Real-derived source lanes'),
-        React.createElement('div', { className: 'card-sub' }, 'Pinned upstream files are reference inputs; compiled rows use the active source and counterpart lanes.')
+        React.createElement('div', null,
+          React.createElement('div', { className: 'card-title' }, 'Real-derived source lanes'),
+          React.createElement('div', { className: 'card-sub' }, 'Pinned upstream files are reference inputs; compiled rows use materialized source variants for the active source and counterpart lanes.')
       )
     ),
     React.createElement('table', { className: 'tbl' },
@@ -896,6 +896,7 @@ function RealDerivedProvenance() {
           React.createElement('th', null, 'Benchmark'),
           React.createElement('th', null, 'Source lane'),
           React.createElement('th', null, 'Counterpart lane'),
+          React.createElement('th', null, 'Compiled sources'),
           React.createElement('th', null, 'Reference path'),
           React.createElement('th', { style: { textAlign: 'right' } }, 'Prod eq')
         )
@@ -904,10 +905,20 @@ function RealDerivedProvenance() {
         models.map(model => {
           const p = model.provenance || {};
           const referencePath = p.source_reference_path || p.source_path || 'n/a';
+          const compiledSources = model.compiled_sources || [];
+          const compiledTitle = compiledSources.length
+            ? compiledSources
+              .map(s => `${s.profile_id || 'profile'} · ${s.source_variant || 'default'} · ${s.source_path || 'n/a'} · ${s.source_hash || ''}`)
+              .join('\n')
+            : 'n/a';
+          const compiledLabel = compiledSources.length
+            ? `${compiledSources.length} source${compiledSources.length === 1 ? '' : 's'}`
+            : 'n/a';
           return React.createElement('tr', { key: model.benchmark_id },
             React.createElement('td', { className: 'scenario' }, model.benchmark_id),
             React.createElement('td', null, p.source_lane || 'n/a'),
             React.createElement('td', null, p.counterpart_lane || 'n/a'),
+            React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel),
             React.createElement('td', { className: 'path-cell', title: referencePath }, referencePath),
             React.createElement('td', { className: 'num' }, p.production_equivalence ? 'yes' : 'no')
           );
