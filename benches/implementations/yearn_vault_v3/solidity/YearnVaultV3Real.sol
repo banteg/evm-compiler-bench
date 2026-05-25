@@ -897,8 +897,10 @@ contract YearnVaultV3Real {
                 writeIndex++;
             }
         }
-        while (default_queue.length > writeIndex) {
-            default_queue.pop();
+        if (default_queue.length != writeIndex) {
+            assembly {
+                sstore(default_queue.slot, writeIndex)
+            }
         }
 
         emit StrategyChanged(strategy, STRATEGY_CHANGE_REVOKED);
