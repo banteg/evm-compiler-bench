@@ -687,6 +687,14 @@ fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<(
             path.display()
         );
     }
+    if provenance.comparison_lane == ComparisonLane::ProductionConformance
+        && provenance.source_lane != ComparisonLane::LatestSyntaxOriginal
+    {
+        bail!(
+            "{} production_conformance real-derived comparison_lane requires latest_syntax_original source_lane",
+            path.display()
+        );
+    }
     if provenance.comparison_lane == ComparisonLane::FixtureScopedPort {
         bail!(
             "{} fixture_scoped_port is a source/counterpart lane; use production_conformance or diagnostic_layout_matched for comparison_lane",
@@ -705,6 +713,11 @@ fn validate_source_profiles(
         .get("source_profiles")
         .and_then(|value| value.as_sequence())
         .with_context(|| format!("{} missing source_profiles", path.display()))?;
+    let latest_source_profile_prefix = match provenance.source_language {
+        crate::models::Language::Solidity => "solc-latest",
+        crate::models::Language::Vyper => "vyper-latest",
+    };
+    let mut has_latest_source_profile = false;
     for profile in profiles {
         let profile = profile
             .as_str()
@@ -720,6 +733,16 @@ fn validate_source_profiles(
                 provenance.source_language.as_str()
             );
         }
+        if profile.starts_with(latest_source_profile_prefix) {
+            has_latest_source_profile = true;
+        }
+    }
+    if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal && !has_latest_source_profile
+    {
+        bail!(
+            "{} latest_syntax_original source_lane requires at least one {latest_source_profile_prefix} source profile",
+            path.display()
+        );
     }
     Ok(())
 }
