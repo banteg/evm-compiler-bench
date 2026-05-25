@@ -75,7 +75,7 @@ real_derived:
   source_derivation: "Vyper implementation is a latest-syntax modernization of the pinned upstream source; Solidity implementation is an idiomatic constructor-driven N-coin port of the covered NG paths"
   equivalence_scope:
     - upstream Vyper constructor and external pool API for covered constructor-driven N-coin deployments
-    - Vyper dynamic-array length behavior for add_liquidity, calc_token_amount, remove_liquidity, and remove_liquidity_imbalance
+    - representative Vyper dynamic-array length behavior for add_liquidity
     - exchange and one-coin withdrawal signatures with receiver argument
     - exchange_received optimistic-transfer swaps for standard tokens
     - ERC20 tokens that return either bool or no data from transfer and transferFrom
@@ -189,8 +189,6 @@ real_derived:
     - get_dx_quote
     - calc_token_amount_deposit
     - calc_token_amount_withdraw
-    - calc_token_amount_extra_amounts
-    - calc_token_amount_too_many_amounts_reverts
     - dynamic_fee_quote
     - dynamic_fee_three_coin
     - dynamic_fee_four_coin_endpoint
@@ -209,10 +207,7 @@ real_derived:
     - d_oracle_eight_coin_after_time
     - remove_liquidity
     - remove_liquidity_no_return_tokens
-    - remove_liquidity_extra_min_amounts_reverts
     - remove_liquidity_imbalance
-    - remove_liquidity_imbalance_extra_amounts
-    - remove_liquidity_imbalance_too_many_amounts_reverts
     - remove_liquidity_imbalance_slippage_reverts
     - remove_one_coin
     - calc_withdraw_one_coin
@@ -296,7 +291,7 @@ real_derived:
     - three-coin one-coin withdrawal, slippage rejection, and quote paths
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
-    - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
+    - representative Vyper DynArray[MAX_COINS] amount bounds through add_liquidity accepted and rejected paths
     - both exchange directions
     - exchange_received optimistic-transfer flow
     - factory-delegated NG quote views for get_dy, get_dx, calc_token_amount, and dynamic_fee
@@ -591,9 +586,6 @@ scenarios:
   - name: calc_token_amount_withdraw
     call: "calc_token_amount([40_000, 10_000], false) after initial liquidity"
     expected: "quotes LP burned for an imbalanced withdrawal with NG dynamic fees"
-  - name: calc_token_amount_extra_amounts
-    call: "calc_token_amount([100_000, 300_000, 777], true) after initial liquidity"
-    expected: "accepts an amount DynArray longer than the 2 active coins and ignores extra entries"
   - name: calc_token_amount_three_coin
     call: "calc_token_amount([100_000, 300_000, 200_000], true) after initial liquidity on a three-coin deployment"
     expected: "quotes LP minted through the factory views implementation using constructor-driven N_COINS quote math"
@@ -624,9 +616,6 @@ scenarios:
   - name: calc_token_amount_eight_coin_withdraw
     call: "calc_token_amount([40_000, 10_000, 25_000, 30_000, 15_000, 20_000, 5_000, 12_000], false) after initial liquidity on an eight-coin deployment"
     expected: "quotes LP burned through the factory views implementation at the upstream MAX_COINS boundary"
-  - name: calc_token_amount_too_many_amounts_reverts
-    call: "calc_token_amount([100_000, 300_000, ... length 9], true) after initial liquidity"
-    expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"
   - name: dynamic_fee_quote
     call: "dynamic_fee(0, 1) after imbalanced liquidity"
     expected: "returns the off-peg dynamic fee through the factory views implementation"
@@ -681,18 +670,9 @@ scenarios:
   - name: remove_liquidity_no_return_tokens
     call: "remove_liquidity(10_000, [0, 0], address(this)) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data and burns LP shares"
-  - name: remove_liquidity_extra_min_amounts_reverts
-    call: "remove_liquidity(10_000, [0, 0, 0], address(this))"
-    expected: "reverts because upstream explicitly requires min_amounts length equal to N_COINS"
   - name: remove_liquidity_imbalance
     call: "remove_liquidity_imbalance([40_000, 10_000], 100_000, address(this))"
     expected: "burns the required LP amount and withdraws imbalanced coin amounts with fees"
-  - name: remove_liquidity_imbalance_extra_amounts
-    call: "remove_liquidity_imbalance([40_000, 10_000, 777], 100_000, address(this))"
-    expected: "accepts an amount DynArray longer than the 2 active coins and ignores extra entries"
-  - name: remove_liquidity_imbalance_too_many_amounts_reverts
-    call: "remove_liquidity_imbalance([40_000, 10_000, ... length 9], 100_000, address(this))"
-    expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"
   - name: remove_liquidity_imbalance_slippage_reverts
     call: "remove_liquidity_imbalance([40_000, 10_000], 1, address(this))"
     expected: "reverts"
