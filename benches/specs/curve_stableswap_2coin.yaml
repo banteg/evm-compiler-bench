@@ -102,7 +102,9 @@ real_derived:
     - exchange_received_three_coin
     - exchange_received_three_coin_slippage_reverts
     - remove_liquidity_three_coin
+    - remove_liquidity_three_coin_slippage_reverts
     - remove_liquidity_eight_coin
+    - remove_liquidity_eight_coin_slippage_reverts
     - remove_one_coin_eight_coin
     - remove_one_coin_eight_coin_slippage_reverts
     - remove_liquidity_imbalance_eight_coin
@@ -187,8 +189,8 @@ real_derived:
     - standard-token eight-coin endpoint exchange path
     - standard-token eight-coin endpoint exchange slippage rejection
     - standard-token eight-coin endpoint exchange_received optimistic-transfer path and slippage rejection
-    - proportional three-coin liquidity removal
-    - proportional eight-coin liquidity removal at MAX_COINS
+    - proportional three-coin liquidity removal and slippage rejection
+    - proportional eight-coin liquidity removal and slippage rejection at MAX_COINS
     - eight-coin one-coin withdrawal at MAX_COINS
     - eight-coin one-coin withdrawal slippage rejection at MAX_COINS
     - eight-coin one-coin withdrawal quote at MAX_COINS
@@ -282,9 +284,15 @@ scenarios:
   - name: remove_liquidity_three_coin
     call: "remove_liquidity(10_000, [0, 0, 0], address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers proportional balances for all constructor-sized coins"
+  - name: remove_liquidity_three_coin_slippage_reverts
+    call: "remove_liquidity(10_000, [1_000_000, 1_000_000, 1_000_000], address(this)) after initial liquidity on a three-coin deployment"
+    expected: "reverts when any constructor-sized proportional withdrawal amount is below the requested minimum"
   - name: remove_liquidity_eight_coin
     call: "remove_liquidity(10_000, [0 x 8], address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns LP shares and transfers proportional balances at the upstream MAX_COINS boundary"
+  - name: remove_liquidity_eight_coin_slippage_reverts
+    call: "remove_liquidity(10_000, [1_000_000 x 8], address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "reverts when any proportional withdrawal amount at MAX_COINS is below the requested minimum"
   - name: remove_one_coin_eight_coin
     call: "remove_liquidity_one_coin(10_000, 7, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns LP shares for one endpoint coin at the upstream MAX_COINS boundary"
