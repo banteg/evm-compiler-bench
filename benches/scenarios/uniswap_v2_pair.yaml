@@ -72,6 +72,70 @@ scenarios:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: factory_create2_state
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryState(address)", {target})'
+    expect_success: true
+    observers: *pair_observers
+  - name: factory_set_fee_to
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactorySetFeeTo(address,address)", {target}, BOB)'
+    expect_success: true
+    observers: *pair_observers
+  - name: factory_set_fee_to_forbidden_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactorySetFeeToFrom(address,address,address)", {target}, BOB, CAROL)'
+    expect_success: false
+    observers: *pair_observers
+  - name: factory_set_fee_to_setter
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactorySetFeeToSetter(address,address)", {target}, BOB)'
+    expect_success: true
+    observers: *pair_observers
+  - name: factory_set_fee_to_setter_forbidden_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactorySetFeeToSetterFrom(address,address,address)", {target}, BOB, CAROL)'
+    expect_success: false
+    observers: *pair_observers
+  - name: factory_duplicate_pair_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryDuplicatePair(address)", {target})'
+    expect_success: false
+    observers: *pair_observers
+  - name: factory_identical_pair_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryIdenticalPair(address)", {target})'
+    expect_success: false
+    observers: *pair_observers
+  - name: factory_zero_address_pair_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryZeroAddressPair(address)", {target})'
+    expect_success: false
+    observers: *pair_observers
   - name: mint_subsequent
     state_access_profile: mixed
     setup:

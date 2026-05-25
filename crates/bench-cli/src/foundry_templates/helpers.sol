@@ -532,6 +532,87 @@
         return true;
     }
 
+    function benchUniswapFactoryState(address target) public returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        require(factory.feeToSetter() == address(this), "factory setter");
+        uint256 pairCount = factory.allPairsLength();
+        require(pairCount > 0, "factory length");
+        bool foundPair = false;
+        for (uint256 i = 0; i < pairCount; i++) {
+            if (factory.allPairs(i) == target) {
+                foundPair = true;
+            }
+        }
+        require(foundPair, "factory allPairs");
+        require(factory.getPair(address(deps.token0), address(deps.token1)) == target, "factory pair");
+        require(factory.getPair(address(deps.token1), address(deps.token0)) == target, "factory pair reverse");
+        return true;
+    }
+
+    function benchUniswapFactorySetFeeTo(address target, address newFeeTo) external returns (bool) {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        factory.setFeeTo(newFeeTo);
+        require(factory.feeTo() == newFeeTo, "factory feeTo");
+        return true;
+    }
+
+    function benchUniswapFactorySetFeeToFrom(address target, address sender, address newFeeTo)
+        external
+        returns (bool)
+    {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        vm.prank(sender);
+        factory.setFeeTo(newFeeTo);
+        return true;
+    }
+
+    function benchUniswapFactorySetFeeToSetter(address target, address newFeeToSetter) external returns (bool) {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        factory.setFeeToSetter(newFeeToSetter);
+        require(factory.feeToSetter() == newFeeToSetter, "factory feeToSetter");
+        vm.prank(newFeeToSetter);
+        factory.setFeeToSetter(address(this));
+        require(factory.feeToSetter() == address(this), "factory feeToSetter reset");
+        return true;
+    }
+
+    function benchUniswapFactorySetFeeToSetterFrom(address target, address sender, address newFeeToSetter)
+        external
+        returns (bool)
+    {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        vm.prank(sender);
+        factory.setFeeToSetter(newFeeToSetter);
+        return true;
+    }
+
+    function benchUniswapFactoryDuplicatePair(address target) external returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        _uniswapCreate2Factory().deployPair(hex"00", bytes32(0), address(deps.token0), address(deps.token1));
+        return true;
+    }
+
+    function benchUniswapFactoryIdenticalPair(address target) external returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        _uniswapCreate2Factory().deployPair(hex"00", bytes32(0), address(deps.token0), address(deps.token0));
+        return true;
+    }
+
+    function benchUniswapFactoryZeroAddressPair(address target) external returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token1) != address(0), "pair deps");
+        _uniswapCreate2Factory().deployPair(hex"00", bytes32(0), address(0), address(deps.token1));
+        return true;
+    }
+
     function _uniswapCreate2Factory() internal returns (BenchUniswapCreate2Factory) {
         if (address(uniswapCreate2Factory) == address(0)) {
             uniswapCreate2Factory = new BenchUniswapCreate2Factory();
@@ -1563,4 +1644,3 @@
         );
         vm.writeLine(GAS_JSONL_PATH, line);
     }
-

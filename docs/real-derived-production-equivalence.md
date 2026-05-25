@@ -73,7 +73,7 @@ Every real-derived spec also declares a `comparison_lane`:
 | Surface | Status | Notes |
 | --- | --- | --- |
 | Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
-| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate and CREATE2 deployment path are covered; the full upstream factory contract is not the benchmark target. |
+| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs`, `feeTo`/`feeToSetter` authorization, and duplicate/invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
@@ -88,7 +88,7 @@ Every real-derived spec also declares a `comparison_lane`:
 Immediate chips:
 
 - Decide whether the benchmark remains pair-only or must include the full
-  upstream factory implementation.
+  upstream factory implementation beyond the covered fixture factory branches.
 - Complete the remaining ABI/revert audit for exact revert bytes and malformed calldata cases outside the current selector, fixed-argument, dynamic-tail, and permit truncation scenarios.
 
 ### `curve_stableswap_2coin`
