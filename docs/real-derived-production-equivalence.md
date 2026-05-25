@@ -82,7 +82,7 @@ Every real-derived spec also declares a `comparison_lane`:
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
-| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated fixed-argument calldata, malformed dynamic calldata tails, and truncated permit payloads. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
+| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token, malformed dynamic calldata tail, and truncated permit payloads. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
 | Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
@@ -191,9 +191,9 @@ Remaining:
   can share the same factory path.
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
-  by direct getter, permit, LP-token zero-recipient behavior plus
-  allowance/balance rejection, reserve, symmetric swap receiver guards, or
-  pair-action scenarios.
+  by the representative malformed calldata scenarios, direct getters, permit,
+  LP-token zero-recipient behavior plus allowance/balance rejection, reserve,
+  symmetric swap receiver guards, or pair-action scenarios.
 
 Suggested next chips:
 

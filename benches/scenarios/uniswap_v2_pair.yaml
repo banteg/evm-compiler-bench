@@ -800,10 +800,28 @@ scenarios:
       data: 'hex"deadbeef"'
     expect_success: false
     observers: *pair_observers
+  - name: initialize_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("initialize(address,address)")), abi.encode(address(0x1000)))'
+    expect_success: false
+    observers: *pair_observers
   - name: mint_truncated_calldata_reverts
     state_access_profile: cold
     measured:
       data: 'abi.encodePacked(bytes4(keccak256("mint(address)")), bytes12(0))'
+    expect_success: false
+    observers: *pair_observers
+  - name: skim_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("skim(address)")), bytes12(0))'
+    expect_success: false
+    observers: *pair_observers
+  - name: transfer_from_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("transferFrom(address,address,uint256)")), abi.encode(address(this), BOB))'
     expect_success: false
     observers: *pair_observers
   - name: swap_truncated_dynamic_tail_reverts
