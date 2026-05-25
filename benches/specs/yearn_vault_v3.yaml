@@ -319,6 +319,7 @@ real_derived:
     - withdraw_limit_module_call_reverts
     - redeem_limit_module_call_reverts
     - withdraw_limit_module_zero_owner_call_reverts
+    - redeem_limit_module_zero_owner_call_reverts
     - permit_valid
     - permit_after_chain_id_change
     - permit_before_initialize_valid
@@ -345,7 +346,7 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
-    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance owner calls, and withdraw/redeem rejection paths
+    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
     - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, fee recalculation when fees exceed gains even after pulling refunds and when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
@@ -931,6 +932,9 @@ scenarios:
   - name: withdraw_limit_module_zero_owner_call_reverts
     call: "maxWithdraw(empty(address)) through a custom withdraw limit module that reverts"
     expected: "calls the withdraw module before min-capping to the zero owner balance, so the module failure bubbles"
+  - name: redeem_limit_module_zero_owner_call_reverts
+    call: "maxRedeem(empty(address)) through a custom withdraw limit module that reverts"
+    expected: "calls the shared max-withdraw module path before min-capping to the zero owner share balance, so the module failure bubbles"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
