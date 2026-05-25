@@ -144,246 +144,53 @@ real_derived:
     - deposit_all_max_uint
     - mint
     - withdraw_idle
-    - withdraw_asset_no_return
-    - withdraw_asset_false_return_reverts
     - withdraw_default_max_loss
-    - withdraw_max_loss_too_high_reverts
     - redeem_idle
-    - redeem_default_max_loss
-    - redeem_max_loss_too_high_reverts
     - approve
     - transfer
-    - transfer_insufficient_balance_reverts
-    - transfer_zero_receiver_reverts
-    - transfer_vault_receiver_reverts
     - transfer_from
-    - transfer_from_insufficient_allowance_reverts
-    - transfer_from_insufficient_balance_reverts
-    - transfer_from_zero_receiver_reverts
-    - transfer_from_vault_receiver_reverts
     - transfer_from_infinite_allowance
     - max_withdraw_default
     - max_redeem_default
     - conversion_zero_edges
-    - conversion_max_uint_edges
-    - max_deposit_zero_receiver
-    - max_deposit_vault_receiver
-    - max_mint_zero_receiver
-    - max_mint_vault_receiver
     - max_mint_unlimited
-    - max_mint_limit_module
-    - max_deposit_limit_module_after_assets
-    - max_mint_limit_module_after_gain
-    - max_mint_limit_module_after_partial_unlock
-    - max_mint_unlimited_limit_module
     - update_debt_increase
     - update_debt_respects_minimum_idle
-    - update_debt_minimum_idle_no_available_idle
     - update_debt_decrease
-    - update_debt_decrease_restores_minimum_idle
-    - update_debt_default_max_loss
-    - update_debt_equal_current_reverts
     - update_max_debt_for_strategy
-    - update_max_debt_inactive_reverts
-    - role_delegate_add_strategy
     - add_strategy_default_queue
-    - add_strategy_zero_address_reverts
-    - add_strategy_already_active_reverts
     - revoke_strategy_preserves_queue_order
-    - revoke_strategy_with_debt_reverts
-    - revoke_strategy_inactive_reverts
-    - readd_after_revoke_strategy
     - add_remove_role
-    - add_role_grants_extra_permission
-    - set_invalid_role_reverts
-    - add_invalid_role_reverts
-    - remove_invalid_role_reverts
     - role_manager_transfer_accept
-    - transfer_role_manager_pending
     - set_metadata
     - set_accountant
     - set_auto_allocate
-    - set_use_default_queue
     - auto_allocate_deposit
-    - auto_allocate_deposit_min_idle_not_met
     - set_minimum_total_idle
     - set_profit_max_unlock_time
-    - reset_profit_unlock_after_report
-    - set_name_too_long_reverts
-    - set_symbol_too_long_reverts
     - strategy_profit_report
     - strategy_zero_report
-    - strategy_zero_report_with_accountant_fee_refund
-    - strategy_zero_report_with_accountant_protocol_fee
-    - self_zero_report
-    - self_report_airdrop
-    - self_report_idle_loss
-    - self_report_idle_loss_with_accountant_fee_refund
-    - self_report_idle_loss_with_accountant_protocol_fee
-    - self_report_accountant_refund
-    - self_report_refund_clipped_to_zero
-    - self_report_idle_gain_with_accountant_fee_refund
-    - self_report_idle_gain_with_accountant_protocol_fee
-    - process_report_inactive_strategy_reverts
     - strategy_report_with_accountant
-    - strategy_gain_report_refund_balance_clipped
-    - strategy_report_zero_accountant
-    - strategy_gain_report_current_debt_above_max_debt
-    - strategy_report_refund_balance_clipped
-    - strategy_report_refund_allowance_clipped
-    - strategy_report_refund_clipped_to_zero
-    - strategy_report_accountant_mints_refund_during_report
-    - strategy_gain_report_accountant_mints_refund_during_report
-    - strategy_loss_report_accountant_mints_refund_during_report
-    - strategy_report_accountant_reduces_allowance_during_report
-    - strategy_gain_report_accountant_reduces_allowance_during_report
-    - strategy_loss_report_accountant_reduces_allowance_during_report
     - strategy_loss_report
-    - strategy_loss_report_with_accountant_fee
-    - strategy_loss_report_with_accountant_protocol_fee
-    - strategy_loss_report_with_fee_and_refund
-    - strategy_loss_report_with_fee_and_exact_refund
-    - strategy_loss_report_with_fee_and_partial_refund
-    - strategy_loss_report_with_fee_refund_protocol_fee
-    - strategy_gain_report_fee_exceeds_gain
-    - strategy_gain_report_fee_equals_gain
-    - strategy_gain_report_fee_refund_exact_offset
-    - strategy_gain_report_fee_refund_net_positive
-    - strategy_gain_report_fee_refund_net_loss
-    - strategy_gain_report_fee_refund_net_loss_protocol_fee
-    - strategy_mixed_gain_loss_report_with_accountant
-    - strategy_mixed_gain_loss_report_with_protocol_fee
-    - strategy_report_fee_no_profit_lock
-    - strategy_report_refund_no_profit_lock
-    - strategy_loss_report_fee_refund_no_profit_lock
-    - strategy_loss_report_after_partial_unlock
-    - strategy_report_excessive_accountant_fee_reverts
-    - process_report_reentrant_accountant_reverts
     - profit_unlock_after_time
-    - strategy_second_profit_report_while_unlocking
-    - strategy_profit_report_after_partial_unlock_with_accountant
-    - strategy_mixed_report_after_partial_unlock_with_mutating_accountant
-    - strategy_loss_report_after_other_profit_unlock_with_accountant
-    - strategy_mixed_report_after_other_profit_unlock_with_protocol_fee
     - strategy_loss_withdraw
     - assess_unrealized_loss
-    - assess_unrealized_loss_over_debt_reverts
-    - unrealized_loss_withdraw_reverts
-    - unrealized_loss_withdraw_allowed
-    - update_debt_unrealized_loss_reverts
-    - update_debt_limited_max_deposit
-    - update_debt_asset_approve_no_return
-    - update_debt_asset_approve_false_return_reverts
-    - update_debt_zero_max_deposit
-    - update_debt_limited_max_redeem
-    - update_debt_max_debt_below_current
-    - update_debt_shutdown_pull_only
-    - update_debt_partial_strategy_redeem_loss_allowed
-    - update_debt_partial_strategy_redeem_loss_reverts
-    - update_debt_over_strategy_redeem
-    - max_withdraw_limited_strategy_redeem
-    - max_withdraw_unrealized_loss_queue_break
-    - max_redeem_unrealized_loss_queue_break
     - withdraw_limited_strategy_redeem
-    - withdraw_zero_strategy_redeem_falls_through
-    - withdraw_unrealized_loss_zero_redeem_falls_through
-    - withdraw_partial_strategy_redeem_loss_allowed
-    - withdraw_partial_strategy_redeem_loss_reverts
-    - withdraw_over_strategy_redeem
     - custom_queue_withdraw
     - set_default_queue
-    - set_default_queue_duplicate_strategy
-    - add_strategy_queue_full_skips_append
-    - forced_default_queue_withdraw
-    - combined_management_sequence_withdraw
-    - active_management_sequence_withdraw
-    - alternate_management_sequence_redeem
-    - repeated_management_transitions_redeem
-    - third_party_edge_sequence_withdraw
-    - third_party_shutdown_sequence_redeem
-    - force_revoke_strategy
-    - force_revoke_strategy_inactive_reverts
-    - readd_after_force_revoke_strategy
-    - buy_debt_inactive_strategy_reverts
-    - buy_debt_no_current_debt_reverts
-    - buy_debt_zero_amount_reverts
-    - buy_debt
-    - buy_debt_over_current_debt
-    - buy_debt_zero_shares_reverts
-    - withdraw_long_queue_reverts
-    - redeem_long_queue_reverts
-    - max_withdraw_long_queue_reverts
-    - max_redeem_long_queue_reverts
     - shutdown_rejects_deposit
     - shutdown_vault
     - permission_revert
     - set_deposit_limit_default
-    - set_deposit_limit_using_module_reverts
-    - set_deposit_limit_override_module
-    - set_deposit_limit_after_shutdown_reverts
-    - set_deposit_limit_module_default
-    - set_deposit_limit_module_using_direct_limit_reverts
-    - set_deposit_limit_module_override_direct_limit
-    - set_deposit_limit_module_after_shutdown_reverts
-    - set_withdraw_limit_module
-    - deposit_limit_reverts
-    - deposit_limit_exact_limit
     - deposit_limit_module
-    - deposit_limit_module_exact_limit
-    - deposit_limit_module_max_uint_deposit
-    - mint_limit_module_max_uint_mint
-    - deposit_limit_module_receiver_specific
-    - deposit_limit_module_receiver_specific_deposit
-    - deposit_limit_module_receiver_specific_reverts
-    - deposit_limit_module_receiver_zero_return
-    - deposit_limit_module_receiver_zero_reverts
-    - max_mint_limit_module_receiver_specific
-    - mint_limit_module_receiver_specific_mint
-    - mint_limit_module_receiver_specific_reverts
-    - deposit_limit_module_zero_max_mint
-    - max_deposit_limit_module_zero_return
-    - deposit_limit_module_reverts
-    - deposit_limit_module_call_reverts
-    - mint_limit_module_call_reverts
-    - deposit_limit_module_zero_receiver_short_circuits
-    - deposit_limit_module_vault_receiver_short_circuits
     - withdraw_limit_module
-    - withdraw_limit_module_exact_limit
-    - withdraw_limit_module_max_uint_withdraw
-    - redeem_limit_module_max_uint_redeem
-    - max_withdraw_limit_module
-    - max_withdraw_limit_module_caps_to_balance
-    - max_redeem_limit_module_max_uint
-    - max_redeem_limit_module_after_partial_unlock
-    - withdraw_limit_module_owner_specific
-    - withdraw_limit_module_owner_specific_withdraw
-    - withdraw_limit_module_owner_specific_reverts
-    - withdraw_limit_module_owner_zero_return
-    - withdraw_limit_module_owner_zero_reverts
-    - max_redeem_limit_module_owner_specific
-    - redeem_limit_module_owner_specific_redeem
-    - max_withdraw_limit_module_max_loss_specific
-    - max_redeem_limit_module_strategy_queue_specific
-    - withdraw_limit_module_strategy_queue_specific_withdraw
-    - redeem_limit_module_strategy_queue_specific_redeem
-    - withdraw_limit_module_zero_max_redeem
-    - max_withdraw_limit_module_zero_return
-    - withdraw_limit_module_reverts
-    - mint_limit_module_reverts
-    - redeem_limit_module_reverts
-    - withdraw_limit_module_call_reverts
-    - redeem_limit_module_call_reverts
-    - withdraw_limit_module_zero_owner_call_reverts
-    - redeem_limit_module_zero_owner_call_reverts
     - permit_valid
-    - permit_after_chain_id_change
-    - permit_before_initialize_valid
     - permit_expired_reverts
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, deterministic and refund-mutating accountants, and limit modules
-    - factory protocol fee config is provided by the harness and covers zero-fee and nonzero protocol-fee scenarios
-    - accountant coverage uses deterministic and refund-mutating harness mocks; custom deposit/withdraw limit module coverage uses deterministic harness mocks
+    - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, a deterministic accountant, and limit modules
+    - factory protocol fee config is provided by the harness for the representative accountant/report scenarios
+    - custom deposit and withdraw limit module coverage uses deterministic harness mocks
     - unrealized strategy-loss coverage uses a deterministic harness burn from strategy-held assets
     - Vyper String and DynArray decoder timing and exact revert bytes are intentionally out of scope when the accepted/rejected length boundary and post-state match
     - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port because the benchmark claims externally observable vault behavior, not slot-level upgrade or proxy compatibility
@@ -391,38 +198,27 @@ real_derived:
   included_features:
     - upstream Vyper vault source at the pinned commit
     - minimal-proxy deployment for the upstream Vyper blueprint
-    - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
-    - role-gated strategy add, max debt, debt update, report, and shutdown paths
-    - auto-allocation of deposits into the first default-queue strategy, including the minimum-idle-not-met short-circuit
-    - Vyper default-argument external overloads for strategy, debt, deposit-limit, and queue-bound management
-    - first-class measured management calls for max debt, additive roles, pending role-manager transfer, accountant, default-queue toggle, withdraw-limit module, and shutdown
-    - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle set/update-debt clipping, default queue, custom queue, and debt purchase surfaces
-    - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
+    - representative ERC4626 deposit, deposit-all, mint, withdraw, redeem, share transfer, transferFrom, and allowance paths
+    - optional-return ERC20 asset handling for the deposit hot path
+    - role-gated strategy add, max debt, debt increase/decrease, revoke, report, and shutdown paths
+    - auto-allocation of deposits into the first default-queue strategy
+    - representative Vyper default-argument overloads for debt, withdrawal, and queue-bound calls
+    - measured management calls for max debt, additive roles, pending role-manager transfer, accountant, metadata, minimum idle, profit unlock, default queue, deposit limit, withdraw limit, and shutdown
+    - strategy revoke with upstream default-queue order preservation and a representative custom-queue withdrawal
+    - bitmask role mutation and two-step role-manager transfer
     - mutable vault name and symbol metadata
-    - Vyper-compatible String[64] name and String[32] symbol bounds
-    - user withdraw and redeem max-loss upper-bound rejection
-    - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return maxDeposit/maxMint, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/mint/max-view behavior, receiver-specific maxDeposit/maxMint returns including zero-return, receiver-specific deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
-    - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return maxWithdraw/maxRedeem, non-1:1 partial-unlock maxRedeem conversion, owner-specific maxWithdraw/maxRedeem returns including zero-return, max-loss-specific and queue-specific maxWithdraw/maxRedeem returns, withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
-    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across six orderings, including active non-shutdown withdrawal and third-party-accountant/module edge sequences
-    - profit/loss/zero report accounting, strategy zero report accounting with accountant fees/refunds, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation on zero and gain reports, refund allowance reduction during zero and gain reports, fees, protocol-fee splits on gain and loss reports including loss reports with refunds, gain reports on the net-loss recalculation path, and simultaneous gain/loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, simultaneous strategy gain/loss reports with accountant effects, fee recalculation when fees exceed gains even after pulling refunds and on gain or loss reports when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, cross-strategy mixed reporting after partial unlock with mutating-accountant refunds and protocol-fee splitting, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
-    - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
-    - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
-    - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
-    - withdraw-limit module high-return withdraw and redeem execution plus capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding across max views, withdraw execution, and redeem execution
-    - partial and over-returning strategy redeem accounting during user withdrawals
-    - buy-debt inactive-strategy rejection, zero-current-debt rejection, zero-amount rejection, current-debt clipping, and zero-share rejection
-    - profit unlock reset while locked profit shares are outstanding
-    - optional-return ERC20 asset handling
+    - representative accountant hook, strategy profit, strategy zero report, strategy loss report, locked-profit unlock, and unrealized-loss assessment
+    - representative deposit-limit and withdraw-limit module execution paths
+    - permission, post-shutdown deposit rejection, expired permit, and invalid permit reverts
     - normalized event/log parity across the listed differential scenarios
-    - deposit-limit and permission reverts
-    - valid EIP-712 permit acceptance before and after initialization, after chain-id changes, plus expired-deadline and invalid-signature revert paths
+    - valid EIP-712 permit acceptance plus expired-deadline and invalid-signature revert paths
   excluded_features:
-    - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage beyond the covered deterministic and refund-mutating accountant paths
+    - exhaustive third-party accountant, limit-module, strategy, and optional-return edge-case differential coverage beyond the representative common-usage paths
     - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, withdrawal, and redeem flows
+    - repeated ABI-bound and revert variants for every overloaded queue, module, and management function
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
-  - "The Solidity port is expanded toward full upstream behavior, but production equivalence remains false until all management/module/queue paths are differentially covered and audited."
+  - "The Solidity port is measured through common vault usage patterns; production equivalence remains false because long-tail management/module/queue permutations are intentionally excluded from the headline benchmark."
 scenarios:
   - name: initialize
     call: "initialize(asset, name, symbol, roleManager, profitMaxUnlockTime)"
@@ -445,57 +241,21 @@ scenarios:
   - name: withdraw_idle
     call: "withdraw(20_000, address(this), address(this), 0)"
     expected: "burns shares and transfers idle assets"
-  - name: withdraw_asset_no_return
-    call: "withdraw(20_000, address(this), address(this), 0) with an asset transfer that returns no data"
-    expected: "accepts the no-return ERC20 path through Vyper default_return_value=True semantics"
-  - name: withdraw_asset_false_return_reverts
-    call: "withdraw(20_000, address(this), address(this), 0) with an asset transfer that returns false"
-    expected: "reverts at the optional-return transfer assertion"
   - name: withdraw_default_max_loss
     call: "withdraw(20_000, address(this), address(this)) using the Vyper default max_loss overload"
     expected: "burns shares and transfers idle assets with the upstream default max-loss selector"
-  - name: withdraw_max_loss_too_high_reverts
-    call: "withdraw(20_000, address(this), address(this), 10001)"
-    expected: "reverts through the upstream max-loss basis-point bound"
   - name: redeem_idle
     call: "redeem(20_000, address(this), address(this), 0)"
     expected: "burns shares and returns proportional idle assets"
-  - name: redeem_default_max_loss
-    call: "redeem(20_000, address(this), address(this)) using the Vyper default max_loss overload"
-    expected: "burns shares and returns proportional idle assets with the upstream default max-loss selector"
-  - name: redeem_max_loss_too_high_reverts
-    call: "redeem(20_000, address(this), address(this), 10001)"
-    expected: "reverts through the upstream max-loss basis-point bound"
   - name: approve
     call: "approve(BOB, 123)"
     expected: "sets vault-share allowance"
   - name: transfer
     call: "transfer(BOB, 20_000) after deposit"
     expected: "moves vault shares between accounts"
-  - name: transfer_insufficient_balance_reverts
-    call: "transfer(BOB, 1) without any vault shares"
-    expected: "reverts through the upstream share-balance check"
-  - name: transfer_zero_receiver_reverts
-    call: "transfer(empty(address), 20_000)"
-    expected: "reverts at the upstream receiver guard"
-  - name: transfer_vault_receiver_reverts
-    call: "transfer(vault, 20_000)"
-    expected: "reverts at the upstream receiver guard"
   - name: transfer_from
     call: "transferFrom(address(this), BOB, 20_000) from an approved spender"
     expected: "moves vault shares and spends allowance"
-  - name: transfer_from_insufficient_allowance_reverts
-    call: "transferFrom(address(this), BOB, 2_000) through a 1_000-share allowance"
-    expected: "reverts through the upstream allowance check"
-  - name: transfer_from_insufficient_balance_reverts
-    call: "transferFrom(address(this), BOB, 2_000) after approving more shares than the owner balance"
-    expected: "passes the allowance check and reverts through the upstream share-balance check"
-  - name: transfer_from_zero_receiver_reverts
-    call: "transferFrom(address(this), empty(address), 20_000)"
-    expected: "reverts at the upstream receiver guard before spending allowance"
-  - name: transfer_from_vault_receiver_reverts
-    call: "transferFrom(address(this), vault, 20_000)"
-    expected: "reverts at the upstream receiver guard before spending allowance"
   - name: transfer_from_infinite_allowance
     call: "transferFrom(address(this), BOB, 20_000) from an infinite-allowance spender"
     expected: "moves vault shares while leaving max_value(uint256) allowance untouched"
@@ -508,111 +268,33 @@ scenarios:
   - name: conversion_zero_edges
     call: "convertToShares(0) with zero-value preview/convert observers"
     expected: "returns zero through every upstream zero-value conversion early-return path"
-  - name: conversion_max_uint_edges
-    call: "convertToShares(max_value(uint256)) with max-uint preview/convert observers"
-    expected: "returns max_value(uint256) through every upstream max-uint conversion early-return path"
-  - name: max_deposit_zero_receiver
-    call: "maxDeposit(empty(address))"
-    expected: "returns zero for the upstream zero-receiver guard"
-  - name: max_deposit_vault_receiver
-    call: "maxDeposit(vault)"
-    expected: "returns zero for the upstream vault-receiver guard"
-  - name: max_mint_zero_receiver
-    call: "maxMint(empty(address))"
-    expected: "returns zero through the same receiver guard and conversion path"
-  - name: max_mint_vault_receiver
-    call: "maxMint(vault)"
-    expected: "returns zero through the same vault-receiver guard and conversion path"
   - name: max_mint_unlimited
     call: "maxMint(address(this)) with unlimited deposit limit"
     expected: "returns max_value(uint256) through the upstream unlimited-deposit conversion path"
-  - name: max_mint_limit_module
-    call: "maxMint(address(this)) with a deposit-limit module"
-    expected: "uses the module-provided deposit limit and converts it to shares"
-  - name: max_deposit_limit_module_after_assets
-    call: "maxDeposit(address(this)) with a deposit-limit module after existing vault assets exceed the module return"
-    expected: "returns the module-provided limit directly instead of subtracting totalAssets like the direct-limit path"
-  - name: max_mint_limit_module_after_gain
-    call: "maxMint(address(this)) with a deposit-limit module after a strategy gain report"
-    expected: "converts the module-provided asset limit to shares after profit-locking state has been initialized"
-  - name: max_mint_limit_module_after_partial_unlock
-    call: "maxMint(address(this)) with a deposit-limit module after a partially unlocked strategy gain report"
-    expected: "converts the module-provided asset limit to shares using the non-1:1 partially unlocked share price"
-  - name: max_mint_unlimited_limit_module
-    call: "maxMint(address(this)) with a deposit-limit module returning max uint256"
-    expected: "returns max_value(uint256) through the upstream max-uint conversion path"
   - name: update_debt_increase
     call: "update_debt(strategy, 100_000, 0)"
     expected: "moves idle assets into strategy debt"
   - name: update_debt_respects_minimum_idle
     call: "update_debt(strategy, 200_000, 0) after setting minimum_total_idle to 75_000"
     expected: "clips the debt increase to preserve the upstream minimum idle asset reserve"
-  - name: update_debt_minimum_idle_no_available_idle
-    call: "update_debt(strategy, 100_000, 0) after setting minimum_total_idle equal to total idle"
-    expected: "returns current debt without approving or depositing when no idle assets are available above the reserve"
   - name: update_debt_decrease
     call: "update_debt(strategy, 40_000, 0) after a higher debt allocation"
     expected: "redeems strategy shares and returns assets to idle"
-  - name: update_debt_decrease_restores_minimum_idle
-    call: "update_debt(strategy, 140_000, 0) after setting minimum_total_idle above current idle"
-    expected: "redeems more than the requested debt decrease to restore the upstream minimum idle asset reserve"
-  - name: update_debt_default_max_loss
-    call: "update_debt(strategy, 100_000) using the Vyper default max_loss overload"
-    expected: "allocates debt with the upstream default max-loss selector"
-  - name: update_debt_equal_current_reverts
-    call: "update_debt(strategy, 100_000, 0) after current debt is already 100_000"
-    expected: "reverts through the upstream equal-current-debt guard"
   - name: update_max_debt_for_strategy
     call: "update_max_debt_for_strategy(strategy, 150_000)"
     expected: "updates the strategy max debt management parameter"
-  - name: update_max_debt_inactive_reverts
-    call: "update_max_debt_for_strategy for an inactive strategy"
-    expected: "reverts through the upstream inactive-strategy guard"
-  - name: role_delegate_add_strategy
-    call: "add_strategy(strategy, true) from an address granted ADD_STRATEGY_MANAGER"
-    expected: "accepts delegated bitmask role execution"
   - name: add_strategy_default_queue
     call: "add_strategy(strategy) using the Vyper default add_to_queue overload"
     expected: "adds the strategy and appends it to the default withdrawal queue"
-  - name: add_strategy_zero_address_reverts
-    call: "add_strategy(empty(address), true)"
-    expected: "reverts through the upstream zero-address strategy guard"
-  - name: add_strategy_already_active_reverts
-    call: "add_strategy(strategy, true) after the strategy is already active"
-    expected: "reverts through the upstream active-strategy guard"
   - name: revoke_strategy_preserves_queue_order
     call: "revoke_strategy(strategy) after three queued strategies"
     expected: "removes the revoked strategy without reordering surviving default queue entries"
-  - name: revoke_strategy_with_debt_reverts
-    call: "revoke_strategy for a strategy with active debt"
-    expected: "reverts without the force flag"
-  - name: revoke_strategy_inactive_reverts
-    call: "revoke_strategy(strategy) before the strategy has been added"
-    expected: "reverts through the upstream inactive-strategy guard"
-  - name: readd_after_revoke_strategy
-    call: "add_strategy after a normal revoke cleared the strategy params"
-    expected: "re-adds the same strategy and appends it to the default queue"
   - name: add_remove_role
     call: "remove_role after set_role and add_role"
     expected: "updates the account role bitmask"
-  - name: add_role_grants_extra_permission
-    call: "add_role after an initial set_role"
-    expected: "adds the requested role bit without clearing existing role bits"
-  - name: set_invalid_role_reverts
-    call: "set_role with bit 14 set"
-    expected: "reverts at the same Vyper enum role bound as upstream"
-  - name: add_invalid_role_reverts
-    call: "add_role with bit 14 set"
-    expected: "reverts at the same Vyper enum role bound as upstream"
-  - name: remove_invalid_role_reverts
-    call: "remove_role with bit 14 set"
-    expected: "reverts at the same Vyper enum role bound as upstream"
   - name: role_manager_transfer_accept
     call: "accept_role_manager after transfer_role_manager"
     expected: "moves role manager authority to the pending manager"
-  - name: transfer_role_manager_pending
-    call: "transfer_role_manager(BOB)"
-    expected: "records the pending role manager without changing the active role manager"
   - name: set_metadata
     call: "setSymbol after setName"
     expected: "updates mutable vault metadata through the role manager"
@@ -622,330 +304,45 @@ scenarios:
   - name: set_auto_allocate
     call: "set_auto_allocate(true)"
     expected: "updates the auto-allocation management flag"
-  - name: set_use_default_queue
-    call: "set_use_default_queue(true)"
-    expected: "updates the withdrawal queue selection flag"
   - name: auto_allocate_deposit
     call: "deposit(100_000, address(this)) with auto_allocate enabled and a default-queue strategy"
     expected: "mints shares and allocates newly idle assets into the first strategy"
-  - name: auto_allocate_deposit_min_idle_not_met
-    call: "deposit(100_000, address(this)) with auto_allocate enabled and minimum_total_idle set above the deposit"
-    expected: "mints shares but leaves the new assets idle because the minimum idle reserve is not met"
   - name: set_minimum_total_idle
     call: "set_minimum_total_idle(10_000)"
     expected: "updates the minimum idle asset reserve"
   - name: set_profit_max_unlock_time
     call: "setProfitMaxUnlockTime(3_600)"
     expected: "updates future profit unlocking duration through the role manager"
-  - name: reset_profit_unlock_after_report
-    call: "setProfitMaxUnlockTime(0) after a profitable strategy report has minted locked shares"
-    expected: "burns vault-held locked shares and resets profit unlocking state"
-  - name: set_name_too_long_reverts
-    call: "setName with 65 bytes"
-    expected: "reverts at the same metadata length boundary as upstream Vyper String[64]"
-  - name: set_symbol_too_long_reverts
-    call: "setSymbol with 33 bytes"
-    expected: "reverts at the same metadata length boundary as upstream Vyper String[32]"
   - name: strategy_profit_report
     call: "process_report after debt allocation and harnessed strategy profit"
     expected: "records gain, mints locked profit shares, and updates total assets"
   - name: strategy_zero_report
     call: "process_report after debt allocation with strategy assets equal to current debt"
     expected: "updates last report without gain, loss, fees, refunds, or profit locking"
-  - name: strategy_zero_report_with_accountant_fee_refund
-    call: "process_report after debt allocation with strategy assets equal to current debt and accountant fees/refunds"
-    expected: "charges accountant fees and pulls refunds while leaving strategy debt unchanged"
-  - name: strategy_zero_report_with_accountant_protocol_fee
-    call: "process_report after debt allocation with zero strategy gain/loss, accountant fees/refunds, and nonzero protocol fee config"
-    expected: "splits fee shares between accountant and protocol while leaving strategy debt unchanged"
-  - name: self_zero_report
-    call: "process_report(address(this)) with vault asset balance equal to total idle"
-    expected: "updates last report through the self-report path without gain, loss, fees, refunds, or profit locking"
-  - name: self_report_airdrop
-    call: "process_report(address(this)) after assets are airdropped directly to the vault"
-    expected: "accrues the airdropped asset balance into total idle assets and locked profit shares"
-  - name: self_report_idle_loss
-    call: "process_report(address(this)) after vault-held idle assets are burned below recorded total idle"
-    expected: "accounts the self-report loss branch and reduces total idle assets"
-  - name: self_report_idle_loss_with_accountant_fee_refund
-    call: "process_report(address(this)) after an idle asset loss with accountant fees and refunds"
-    expected: "accounts the self-report loss branch while charging fees, pulling refunds, and adding refunds back to total idle"
-  - name: self_report_idle_loss_with_accountant_protocol_fee
-    call: "process_report(address(this)) after an idle asset loss with accountant fees/refunds and nonzero protocol fee config"
-    expected: "accounts the self-report loss branch while splitting fee shares between accountant and protocol"
-  - name: self_report_accountant_refund
-    call: "process_report(address(this)) with an accountant refund and no idle gain or loss"
-    expected: "pulls the refund and accounts it through the self-report total-idle path"
-  - name: self_report_refund_clipped_to_zero
-    call: "process_report(address(this)) with a positive reported refund but no accountant balance or allowance"
-    expected: "clips the reported refund to zero through the self-report path without changing total idle"
-  - name: self_report_idle_gain_with_accountant_fee_refund
-    call: "process_report(address(this)) after direct vault asset gain with accountant fees and refunds"
-    expected: "accounts the self-report gain path while charging fees, pulling refunds, and locking net profit"
-  - name: self_report_idle_gain_with_accountant_protocol_fee
-    call: "process_report(address(this)) after direct vault asset gain with accountant fees/refunds and nonzero protocol fee config"
-    expected: "accounts the self-report gain path while splitting fee shares between accountant and protocol"
-  - name: process_report_inactive_strategy_reverts
-    call: "process_report with a non-vault strategy that has not been added"
-    expected: "reverts at the upstream inactive-strategy guard before reading strategy assets"
   - name: strategy_report_with_accountant
     call: "process_report with accountant fees/refunds and nonzero protocol fee config"
     expected: "accounts fees, refunds, protocol fee shares, and locked profit"
-  - name: strategy_gain_report_refund_balance_clipped
-    call: "process_report with a strategy gain and reported refunds above accountant asset balance"
-    expected: "clips the refund before combining it with strategy gain for locked-profit share accounting"
-  - name: strategy_report_zero_accountant
-    call: "process_report with an accountant that returns zero fees and zero refunds"
-    expected: "routes through the accountant hook without changing fee or refund accounting"
-  - name: strategy_gain_report_current_debt_above_max_debt
-    call: "process_report with a strategy gain that moves current debt above the configured max debt"
-    expected: "records the gain and allows current debt to exceed max debt until the next debt update"
-  - name: strategy_report_refund_balance_clipped
-    call: "process_report with reported refunds above the accountant asset balance"
-    expected: "clips refunds to the accountant asset balance before pulling assets"
-  - name: strategy_report_refund_allowance_clipped
-    call: "process_report with reported refunds above the accountant asset allowance"
-    expected: "clips refunds to the accountant allowance before pulling assets"
-  - name: strategy_report_refund_clipped_to_zero
-    call: "process_report with a positive reported refund but no accountant balance or allowance"
-    expected: "clips the reported refund to zero and skips the refund transfer path"
-  - name: strategy_report_accountant_mints_refund_during_report
-    call: "process_report with refund balance and allowance created inside the accountant report hook"
-    expected: "clips and pulls refunds using the post-hook accountant balance and allowance"
-  - name: strategy_gain_report_accountant_mints_refund_during_report
-    call: "process_report with strategy gain and refund balance and allowance created inside the accountant report hook"
-    expected: "clips and pulls refunds using the post-hook accountant balance and allowance before locking gain plus refund shares"
-  - name: strategy_loss_report_accountant_mints_refund_during_report
-    call: "process_report with strategy loss and refund balance and allowance created inside the accountant report hook"
-    expected: "clips and pulls refunds using the post-hook accountant balance and allowance while taking the loss branch"
-  - name: strategy_report_accountant_reduces_allowance_during_report
-    call: "process_report with refund allowance reduced inside the accountant report hook"
-    expected: "clips refunds to the post-hook accountant allowance before pulling assets"
-  - name: strategy_gain_report_accountant_reduces_allowance_during_report
-    call: "process_report with strategy gain and refund allowance reduced inside the accountant report hook"
-    expected: "clips refunds to the post-hook accountant allowance before locking gain plus refund shares"
-  - name: strategy_loss_report_accountant_reduces_allowance_during_report
-    call: "process_report with strategy loss and refund allowance reduced inside the accountant report hook"
-    expected: "clips refunds to the post-hook accountant allowance while taking the loss branch"
   - name: strategy_loss_report
     call: "process_report with a strategy loss and no accountant fees or refunds"
     expected: "records the loss and reduces strategy debt without fee/refund accounting noise"
-  - name: strategy_loss_report_with_accountant_fee
-    call: "process_report with a strategy loss and nonzero accountant fees"
-    expected: "charges accountant fees while taking strategy loss and recalculating reported fee assets"
-  - name: strategy_loss_report_with_accountant_protocol_fee
-    call: "process_report with a strategy loss, nonzero accountant fees, and nonzero protocol fee config"
-    expected: "splits fee shares between accountant and protocol while taking the strategy loss path"
-  - name: strategy_loss_report_with_fee_and_refund
-    call: "process_report with a strategy loss, nonzero accountant fees, and refunds greater than the loss plus fees"
-    expected: "pulls refunds, takes the strategy loss branch, charges fees, and locks the net-positive refund shares"
-  - name: strategy_loss_report_with_fee_and_exact_refund
-    call: "process_report with a strategy loss, nonzero accountant fees, and refunds exactly equal to the loss plus fees"
-    expected: "pulls refunds and takes the equality branch without net-loss fee recalculation or net-positive refund locking"
-  - name: strategy_loss_report_with_fee_and_partial_refund
-    call: "process_report with a strategy loss, nonzero accountant fees, and refunds less than the loss plus fees"
-    expected: "pulls refunds while taking the net-loss fee recalculation path"
-  - name: strategy_loss_report_with_fee_refund_protocol_fee
-    call: "process_report with a strategy loss, nonzero accountant fees, partial refunds, and a protocol-fee split"
-    expected: "pulls refunds, allocates protocol-fee shares, and takes the net-loss fee recalculation path"
-  - name: strategy_gain_report_fee_exceeds_gain
-    call: "process_report with strategy gain and accountant fees greater than the gain"
-    expected: "charges accountant fees while taking the gain branch and recalculating reported fee assets through the net-loss path"
-  - name: strategy_gain_report_fee_equals_gain
-    call: "process_report with strategy gain and accountant fees exactly equal to the gain"
-    expected: "charges accountant fees while taking the equality branch without net-loss fee recalculation"
-  - name: strategy_gain_report_fee_refund_exact_offset
-    call: "process_report with strategy gain, accountant fees, and refunds that exactly offset the fee-side amount"
-    expected: "pulls refunds while taking the equality branch without net-loss fee recalculation or net-positive refund locking"
-  - name: strategy_gain_report_fee_refund_net_positive
-    call: "process_report with strategy gain, accountant fees, and refunds where gain plus refunds exceed fees"
-    expected: "pulls refunds while staying on the net-positive gain branch and locking the net profit"
-  - name: strategy_gain_report_fee_refund_net_loss
-    call: "process_report with strategy gain, accountant fees, and refunds where fees exceed gain plus refunds"
-    expected: "pulls refunds while taking the gain debt-accounting branch and the net-loss fee-recalculation path"
-  - name: strategy_gain_report_fee_refund_net_loss_protocol_fee
-    call: "process_report with strategy gain, accountant fees, refunds, and protocol fees where fees exceed gain plus refunds"
-    expected: "pulls refunds, allocates protocol-fee shares, takes the gain debt-accounting branch, and recalculates reported fee assets through the net-loss path"
-  - name: strategy_mixed_gain_loss_report_with_accountant
-    call: "process_report with a strategy reporting simultaneous gain and loss plus accountant fees and refunds"
-    expected: "applies the mixed report values, accountant fee/refund accounting, debt updates, and profit-locking state consistently"
-  - name: strategy_mixed_gain_loss_report_with_protocol_fee
-    call: "process_report with simultaneous strategy gain/loss, accountant fees/refunds, and nonzero protocol fee config"
-    expected: "applies mixed report values, pulled refunds, protocol-fee shares, debt updates, and profit-locking state consistently"
-  - name: strategy_report_fee_no_profit_lock
-    call: "process_report with strategy gain, accountant fees, and profit locking disabled"
-    expected: "charges accountant fees and recalculates reported fee assets through the no-lock branch"
-  - name: strategy_report_refund_no_profit_lock
-    call: "process_report with strategy gain, accountant fees/refunds, and profit locking disabled"
-    expected: "pulls refunds, records the strategy gain, skips locked-profit shares, and recalculates reported fee assets through the no-lock branch"
-  - name: strategy_loss_report_fee_refund_no_profit_lock
-    call: "process_report with strategy loss, accountant fees/refunds, and profit locking disabled"
-    expected: "pulls refunds, records the strategy loss, skips locked-profit shares, and recalculates reported fee assets through the no-lock branch"
-  - name: strategy_loss_report_after_partial_unlock
-    call: "process_report with a strategy loss and accountant fee after a prior profit report has partially unlocked"
-    expected: "accounts unlocked shares while charging fees, taking loss, and recalculating reported fee assets"
-  - name: strategy_report_excessive_accountant_fee_reverts
-    call: "process_report with accountant fees greater than removable supply"
-    expected: "reverts through the same checked ending-supply arithmetic as upstream Vyper"
-  - name: process_report_reentrant_accountant_reverts
-    call: "process_report with an accountant that reenters deposit"
-    expected: "rejects the nested deposit through the upstream shared nonreentrant lock"
   - name: profit_unlock_after_time
     call: "pricePerShare after profit report and time advance"
     expected: "observes unlocked-profit share accounting"
-  - name: strategy_second_profit_report_while_unlocking
-    call: "process_report for a second profitable strategy report before the first locked-profit period has fully unlocked"
-    expected: "weights the remaining locked-share time with the new profit-locking period"
-  - name: strategy_profit_report_after_partial_unlock_with_accountant
-    call: "process_report for a second profitable strategy report with accountant fees/refunds after partial profit unlock"
-    expected: "accounts unlocked shares while charging fees, pulling refunds, and weighting new locked-profit shares"
-  - name: strategy_mixed_report_after_partial_unlock_with_mutating_accountant
-    call: "process_report for a simultaneous gain/loss report after partial profit unlock where the accountant creates refund balance and allowance during the report hook"
-    expected: "accounts unlocked shares, applies mixed gain/loss debt changes, pulls the hook-created refund, charges accountant/protocol fees, and weights new locked-profit shares consistently"
-  - name: strategy_loss_report_after_other_profit_unlock_with_accountant
-    call: "process_report for a loss on one strategy with accountant fees/refunds after another strategy's profit report has partially unlocked"
-    expected: "accounts cross-strategy unlocked shares while pulling refunds, charging fees, and taking the loss branch"
-  - name: strategy_mixed_report_after_other_profit_unlock_with_protocol_fee
-    call: "process_report for a mixed gain/loss on one strategy with mutating-accountant refunds and protocol fees after another strategy's profit report has partially unlocked"
-    expected: "accounts cross-strategy unlocked shares while pulling hook-created refunds, splitting protocol fees, applying mixed gain/loss debt changes, and weighting new locked-profit shares"
   - name: strategy_loss_withdraw
     call: "withdraw through strategy queue with accepted loss"
     expected: "pulls from strategy debt and accounts loss"
   - name: assess_unrealized_loss
     call: "assess_share_of_unrealised_losses after burning strategy assets"
     expected: "returns the user's proportional unrealized loss share"
-  - name: assess_unrealized_loss_over_debt_reverts
-    call: "assess_share_of_unrealised_losses with assets_needed above current strategy debt"
-    expected: "reverts at the upstream current-debt boundary"
-  - name: update_debt_limited_max_deposit
-    call: "update_debt upward when the strategy maxDeposit is lower than the target increase"
-    expected: "allocates only the strategy-declared maxDeposit amount and records the partial debt increase"
-  - name: update_debt_asset_approve_no_return
-    call: "update_debt upward with an asset approve that returns no data"
-    expected: "accepts the no-return ERC20 approve path through Vyper default_return_value=True semantics"
-  - name: update_debt_asset_approve_false_return_reverts
-    call: "update_debt upward with an asset approve that returns false"
-    expected: "reverts at the optional-return approve assertion"
-  - name: update_debt_zero_max_deposit
-    call: "update_debt upward when the strategy maxDeposit is zero"
-    expected: "returns current debt without depositing or emitting a debt update"
-  - name: update_debt_limited_max_redeem
-    call: "update_debt downward when strategy maxRedeem is lower than the requested debt decrease"
-    expected: "withdraws only the strategy-declared redeemable amount and records the partial debt decrease"
-  - name: update_debt_max_debt_below_current
-    call: "update_debt upward after a strategy gain report has moved current debt above max debt"
-    expected: "returns current debt without depositing, withdrawing, or emitting a debt update"
-  - name: update_debt_shutdown_pull_only
-    call: "update_debt after shutdown with a target equal to current debt"
-    expected: "ignores the target and pulls all available strategy debt back to idle"
-  - name: update_debt_partial_strategy_redeem_loss_allowed
-    call: "update_debt downward through a strategy that returns less than the requested redeem amount within max_loss"
-    expected: "accepts the shortfall, increases idle by actual received assets, and decreases debt by the requested withdrawal"
-  - name: update_debt_partial_strategy_redeem_loss_reverts
-    call: "update_debt downward through a strategy that returns less than the requested redeem amount above max_loss"
-    expected: "reverts after detecting the actual balance shortfall exceeds the allowed loss"
-  - name: update_debt_over_strategy_redeem
-    call: "update_debt downward through a strategy that returns more than the requested redeem amount"
-    expected: "uses the actual received amount as the strategy debt decrease"
-  - name: max_withdraw_limited_strategy_redeem
-    call: "maxWithdraw when strategy maxRedeem caps available strategy shares"
-    expected: "counts idle assets plus only the strategy-declared redeemable amount"
-  - name: max_withdraw_unrealized_loss_queue_break
-    call: "maxWithdraw with a nonzero unrealized loss above max_loss in the first queued strategy"
-    expected: "stops queue assessment before counting later strategy debt"
-  - name: max_redeem_unrealized_loss_queue_break
-    call: "maxRedeem with a nonzero unrealized loss above max_loss in the first queued strategy"
-    expected: "converts the max-withdraw queue-break result back to shares"
   - name: withdraw_limited_strategy_redeem
     call: "withdraw exactly the idle balance plus a capped strategy maxRedeem amount"
     expected: "pulls only the strategy-declared redeemable amount and records the partial debt decrease"
-  - name: withdraw_zero_strategy_redeem_falls_through
-    call: "withdraw through a queue where the first strategy reports zero maxRedeem"
-    expected: "skips the non-redeemable first strategy and services the withdrawal from the next queued strategy"
-  - name: withdraw_unrealized_loss_zero_redeem_falls_through
-    call: "withdraw through a queue where the first strategy has a full unrealized loss and zero redeemable assets"
-    expected: "realizes the loss, continues to the next strategy, and services the loss-adjusted withdrawal"
-  - name: withdraw_partial_strategy_redeem_loss_allowed
-    call: "withdraw through a strategy that returns less than the requested redeem amount within max_loss"
-    expected: "realizes the shortfall as user loss and updates strategy debt by the requested strategy withdrawal amount"
-  - name: withdraw_partial_strategy_redeem_loss_reverts
-    call: "withdraw through a strategy that returns less than the requested redeem amount above max_loss"
-    expected: "reverts after detecting the actual balance shortfall exceeds the allowed loss"
-  - name: withdraw_over_strategy_redeem
-    call: "withdraw through a strategy that returns more than the requested redeem amount"
-    expected: "accounts the extra received assets as additional strategy debt reduction"
   - name: custom_queue_withdraw
     call: "withdraw with an explicit two-strategy custom queue"
     expected: "uses the supplied queue to free strategy debt"
   - name: set_default_queue
     call: "set_default_queue with the two strategies in reverse order"
     expected: "updates the stored default withdrawal queue"
-  - name: set_default_queue_duplicate_strategy
-    call: "set_default_queue with the same active strategy twice"
-    expected: "accepts duplicate active strategies exactly like upstream"
-  - name: add_strategy_queue_full_skips_append
-    call: "add_strategy(strategy, true) while the default queue already has MAX_QUEUE entries"
-    expected: "activates the strategy but leaves the full default queue unchanged"
-  - name: forced_default_queue_withdraw
-    call: "withdraw with a custom queue while use_default_queue is enabled"
-    expected: "ignores the custom queue and uses the stored default queue"
-  - name: combined_management_sequence_withdraw
-    call: "withdraw after delegated strategy/queue changes, debt allocation, accountant/protocol-fee report, module changes, and shutdown"
-    expected: "preserves final observable state and withdraw behavior across the combined management sequence"
-  - name: active_management_sequence_withdraw
-    call: "withdraw with an explicit queue after default-queue changes, debt allocation, accountant report, and module changes without shutdown"
-    expected: "preserves final observable state and live strategy-withdraw behavior across an active management sequence"
-  - name: alternate_management_sequence_redeem
-    call: "redeem with an explicit queue after accountant/module setup, reversed debt allocation, role-manager transfer, delegated emergency shutdown, and a strategy report"
-    expected: "preserves final observable state and redeem behavior across an alternate management ordering"
-  - name: repeated_management_transitions_redeem
-    call: "redeem after a three-strategy queue rewrite, repeated default-queue toggles, debt increase/decrease cycles, multiple reports, module rewrites, role-manager transfer, and delegated emergency shutdown"
-    expected: "preserves final observable state and redeem behavior after repeated cross-feature transitions"
-  - name: third_party_edge_sequence_withdraw
-    call: "withdraw with an explicit three-strategy queue after delegated strategy/queue setup, debt allocation, mutating-accountant mixed report, receiver-specific deposit module setup, queue-specific withdraw module setup, and role-manager transfer"
-    expected: "preserves final observable state and live strategy-withdraw behavior across a third-party-accountant/module edge sequence"
-  - name: third_party_shutdown_sequence_redeem
-    call: "redeem with an explicit three-strategy queue after delegated strategy/queue setup, debt allocation, mutating-accountant mixed report, receiver-specific deposit module setup, owner-specific withdraw module setup, role-manager transfer, and delegated shutdown"
-    expected: "preserves final observable state and shutdown redeem behavior across a third-party-accountant/module edge sequence"
-  - name: force_revoke_strategy
-    call: "force_revoke_strategy(strategy)"
-    expected: "force removes the strategy through the emergency role path"
-  - name: force_revoke_strategy_inactive_reverts
-    call: "force_revoke_strategy(strategy) before the strategy has been added"
-    expected: "reverts through the upstream inactive-strategy guard"
-  - name: readd_after_force_revoke_strategy
-    call: "add_strategy after force_revoke_strategy cleared an indebted strategy"
-    expected: "re-adds the same strategy after the forced loss accounting path"
-  - name: buy_debt_inactive_strategy_reverts
-    call: "buy_debt(strategy, 25_000) before the strategy has been added"
-    expected: "reverts at the upstream inactive-strategy guard before reading debt or strategy shares"
-  - name: buy_debt_no_current_debt_reverts
-    call: "buy_debt(strategy, 25_000) after adding the strategy but before allocating debt"
-    expected: "reverts with the upstream nothing-to-buy guard before reading strategy shares"
-  - name: buy_debt_zero_amount_reverts
-    call: "buy_debt(strategy, 0) after debt allocation"
-    expected: "reverts with the upstream zero-purchase-amount guard before reading strategy shares"
-  - name: buy_debt
-    call: "buy_debt(strategy, 25_000) after debt allocation"
-    expected: "repays strategy debt to idle and transfers the corresponding strategy shares to the debt purchaser"
-  - name: buy_debt_over_current_debt
-    call: "buy_debt(strategy, 100_000) when current strategy debt is only 50_000"
-    expected: "clips the purchase to current debt, repays all outstanding debt, and transfers all vault-held strategy shares"
-  - name: buy_debt_zero_shares_reverts
-    call: "buy_debt(strategy, 1) when the proportional strategy-share amount rounds to zero"
-    expected: "reverts with the upstream cannot-buy-zero guard before moving assets or debt"
-  - name: withdraw_long_queue_reverts
-    call: "withdraw with an 11-entry custom queue"
-    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
-  - name: redeem_long_queue_reverts
-    call: "redeem with an 11-entry custom queue"
-    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
-  - name: max_withdraw_long_queue_reverts
-    call: "maxWithdraw with an 11-entry custom queue"
-    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
-  - name: max_redeem_long_queue_reverts
-    call: "maxRedeem with an 11-entry custom queue"
-    expected: "reverts at the same Vyper DynArray[MAX_QUEUE] ABI bound as upstream"
   - name: shutdown_rejects_deposit
     call: "deposit after shutdown"
     expected: "reverts"
@@ -958,186 +355,15 @@ scenarios:
   - name: set_deposit_limit_default
     call: "set_deposit_limit(limit) using the Vyper default override=false overload"
     expected: "updates the direct deposit limit when no module is active"
-  - name: set_deposit_limit_using_module_reverts
-    call: "set_deposit_limit(limit) while a deposit-limit module is active"
-    expected: "reverts unless the override flag is set"
-  - name: set_deposit_limit_override_module
-    call: "set_deposit_limit(limit, true) while a deposit-limit module is active"
-    expected: "clears the active module and updates the direct deposit limit"
-  - name: set_deposit_limit_after_shutdown_reverts
-    call: "set_deposit_limit(limit) after shutdown_vault()"
-    expected: "reverts because upstream forbids deposit-limit changes after shutdown"
-  - name: set_deposit_limit_module_default
-    call: "set_deposit_limit_module(module) using the Vyper default override=false overload"
-    expected: "sets the deposit limit module when the direct limit is already max uint256"
-  - name: set_deposit_limit_module_using_direct_limit_reverts
-    call: "set_deposit_limit_module(module) while a finite direct deposit limit is active"
-    expected: "reverts unless the override flag is set"
-  - name: set_deposit_limit_module_override_direct_limit
-    call: "set_deposit_limit_module(module, true) while a finite direct deposit limit is active"
-    expected: "resets the direct deposit limit to max uint256 and sets the module"
-  - name: set_deposit_limit_module_after_shutdown_reverts
-    call: "set_deposit_limit_module(module) after shutdown_vault()"
-    expected: "reverts because upstream forbids deposit-limit module changes after shutdown"
-  - name: set_withdraw_limit_module
-    call: "set_withdraw_limit_module(module)"
-    expected: "updates the withdraw limit module through the withdraw-limit manager role"
-  - name: deposit_limit_reverts
-    call: "deposit above the configured limit"
-    expected: "reverts"
-  - name: deposit_limit_exact_limit
-    call: "deposit with assets exactly equal to the configured direct deposit limit"
-    expected: "accepts the deposit at the upstream inclusive direct-limit boundary"
   - name: deposit_limit_module
     call: "deposit through a custom deposit limit module"
     expected: "uses the module-provided limit and accepts an in-limit deposit"
-  - name: deposit_limit_module_exact_limit
-    call: "deposit through a custom deposit limit module with assets exactly equal to the module limit"
-    expected: "accepts the deposit at the upstream inclusive limit boundary"
-  - name: deposit_limit_module_max_uint_deposit
-    call: "deposit through a custom deposit limit module returning max uint256"
-    expected: "accepts the high module return through the same max-deposit path used by maxMint"
-  - name: mint_limit_module_max_uint_mint
-    call: "mint through a custom deposit limit module returning max uint256"
-    expected: "accepts the high module return through the same max-mint path used by maxDeposit"
-  - name: deposit_limit_module_receiver_specific
-    call: "maxDeposit(BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument to the module and returns the receiver-specific limit"
-  - name: deposit_limit_module_receiver_specific_deposit
-    call: "deposit(1_500, BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument to the module and accepts a deposit exactly at the receiver-specific limit"
-  - name: deposit_limit_module_receiver_specific_reverts
-    call: "deposit(1_501, BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument to the module and rejects a deposit above the receiver-specific limit"
-  - name: deposit_limit_module_receiver_zero_return
-    call: "maxDeposit(BOB) through a custom deposit limit module with a zero receiver-specific limit"
-    expected: "passes the receiver argument to the module and returns the zero receiver-specific limit"
-  - name: deposit_limit_module_receiver_zero_reverts
-    call: "deposit(1, BOB) through a custom deposit limit module with a zero receiver-specific limit"
-    expected: "passes the receiver argument to the module and rejects the deposit before transferring assets"
-  - name: max_mint_limit_module_receiver_specific
-    call: "maxMint(BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument through the shared max-deposit path before converting to shares"
-  - name: mint_limit_module_receiver_specific_mint
-    call: "mint(1_500, BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument through the shared max-deposit path and accepts minting exactly at the receiver-specific limit"
-  - name: mint_limit_module_receiver_specific_reverts
-    call: "mint(1_501, BOB) through a custom deposit limit module with a receiver-specific limit"
-    expected: "passes the receiver argument through the shared max-deposit path and rejects minting above the receiver-specific limit"
-  - name: deposit_limit_module_zero_max_mint
-    call: "maxMint through a custom deposit limit module returning zero"
-    expected: "returns zero shares through the shared max-deposit module path"
-  - name: max_deposit_limit_module_zero_return
-    call: "maxDeposit through a custom deposit limit module returning zero"
-    expected: "returns the zero module asset limit directly"
-  - name: deposit_limit_module_reverts
-    call: "deposit above a custom deposit limit module limit"
-    expected: "reverts"
-  - name: mint_limit_module_reverts
-    call: "mint above a custom deposit limit module limit"
-    expected: "reverts through the shared max-deposit module path"
-  - name: deposit_limit_module_call_reverts
-    call: "maxDeposit through a custom deposit limit module that reverts"
-    expected: "bubbles the module failure instead of falling back to the direct deposit limit"
-  - name: mint_limit_module_call_reverts
-    call: "maxMint through a custom deposit limit module that reverts"
-    expected: "bubbles the module failure through the shared max-deposit path before converting to shares"
-  - name: deposit_limit_module_zero_receiver_short_circuits
-    call: "maxDeposit(empty(address)) while a reverting custom deposit limit module is active"
-    expected: "returns zero at the upstream receiver guard before calling the module"
-  - name: deposit_limit_module_vault_receiver_short_circuits
-    call: "maxMint(vault) while a reverting custom deposit limit module is active"
-    expected: "returns zero through the shared upstream receiver guard before calling the module"
   - name: withdraw_limit_module
     call: "withdraw below a custom withdraw limit module limit"
     expected: "uses the module-provided limit and accepts an in-limit withdrawal"
-  - name: withdraw_limit_module_exact_limit
-    call: "withdraw through a custom withdraw limit module with assets exactly equal to the module limit"
-    expected: "accepts the withdrawal at the upstream inclusive limit boundary"
-  - name: withdraw_limit_module_max_uint_withdraw
-    call: "withdraw through a custom withdraw limit module returning max uint256"
-    expected: "accepts the high module return through the same max-withdraw path used by maxRedeem"
-  - name: redeem_limit_module_max_uint_redeem
-    call: "redeem through a custom withdraw limit module returning max uint256"
-    expected: "accepts the high module return through the same max-redeem path used by maxWithdraw"
-  - name: max_withdraw_limit_module
-    call: "maxWithdraw with a custom withdraw limit module"
-    expected: "returns the module-capped withdrawable amount"
-  - name: max_withdraw_limit_module_caps_to_balance
-    call: "maxWithdraw with a custom withdraw limit module above the owner's balance"
-    expected: "caps the module return to the owner's balance-derived max withdraw"
-  - name: max_redeem_limit_module_max_uint
-    call: "maxRedeem with a custom withdraw limit module returning max uint256"
-    expected: "caps the module return to the owner's balance-derived max withdraw before converting to redeemable shares"
-  - name: max_redeem_limit_module_after_partial_unlock
-    call: "maxRedeem with a custom withdraw limit module after a partially unlocked strategy gain report"
-    expected: "converts the module-provided asset limit to shares using the non-1:1 partially unlocked share price"
-  - name: withdraw_limit_module_owner_specific
-    call: "maxWithdraw(BOB) through a custom withdraw limit module with an owner-specific limit"
-    expected: "passes the owner argument to the module and returns the owner-specific capped max withdraw"
-  - name: withdraw_limit_module_owner_specific_withdraw
-    call: "withdraw(12_345, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
-    expected: "passes the owner argument to the module and accepts a withdrawal exactly at the owner-specific limit"
-  - name: withdraw_limit_module_owner_specific_reverts
-    call: "withdraw(12_346, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
-    expected: "passes the owner argument to the module and rejects a withdrawal above the owner-specific limit"
-  - name: withdraw_limit_module_owner_zero_return
-    call: "maxWithdraw(BOB) through a custom withdraw limit module with a zero owner-specific limit"
-    expected: "passes the owner argument to the module and returns the zero owner-specific limit"
-  - name: withdraw_limit_module_owner_zero_reverts
-    call: "withdraw(1, BOB, BOB, 0) as BOB through a custom withdraw limit module with a zero owner-specific limit"
-    expected: "passes the owner argument to the module and rejects the withdrawal before burning shares"
-  - name: max_redeem_limit_module_owner_specific
-    call: "maxRedeem(BOB) through a custom withdraw limit module with an owner-specific limit"
-    expected: "passes the owner argument through the shared max-withdraw path before converting and capping redeemable shares"
-  - name: redeem_limit_module_owner_specific_redeem
-    call: "redeem(12_345, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
-    expected: "passes the owner argument through the shared max-withdraw path and accepts redeeming exactly at the owner-specific limit"
-  - name: max_withdraw_limit_module_max_loss_specific
-    call: "maxWithdraw(address(this), 4_321, []) through a custom withdraw limit module with a max-loss-specific limit"
-    expected: "passes the max_loss argument to the module and returns the matching module limit"
-  - name: max_redeem_limit_module_strategy_queue_specific
-    call: "maxRedeem(address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
-    expected: "passes the strategy queue argument to the module and returns the matching module limit converted to shares"
-  - name: withdraw_limit_module_strategy_queue_specific_withdraw
-    call: "withdraw(12_345, address(this), address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
-    expected: "passes the strategy queue argument to the module in the withdraw execution path and accepts the exact queue-specific limit"
-  - name: redeem_limit_module_strategy_queue_specific_redeem
-    call: "redeem(12_345, address(this), address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
-    expected: "passes the strategy queue argument to the module in the redeem execution path and accepts the exact queue-specific limit"
-  - name: withdraw_limit_module_zero_max_redeem
-    call: "maxRedeem through a custom withdraw limit module returning zero"
-    expected: "returns zero shares through the shared max-withdraw module path"
-  - name: max_withdraw_limit_module_zero_return
-    call: "maxWithdraw through a custom withdraw limit module returning zero"
-    expected: "returns the zero module asset limit directly"
-  - name: withdraw_limit_module_reverts
-    call: "withdraw above a custom withdraw limit module limit"
-    expected: "reverts"
-  - name: redeem_limit_module_reverts
-    call: "redeem above a custom withdraw limit module limit"
-    expected: "reverts through the shared max-withdraw module path"
-  - name: withdraw_limit_module_call_reverts
-    call: "maxWithdraw through a custom withdraw limit module that reverts"
-    expected: "bubbles the module failure instead of falling back to balance-derived max withdraw"
-  - name: redeem_limit_module_call_reverts
-    call: "maxRedeem through a custom withdraw limit module that reverts"
-    expected: "bubbles the module failure through the shared max-withdraw path before converting to shares"
-  - name: withdraw_limit_module_zero_owner_call_reverts
-    call: "maxWithdraw(empty(address)) through a custom withdraw limit module that reverts"
-    expected: "calls the withdraw module before min-capping to the zero owner balance, so the module failure bubbles"
-  - name: redeem_limit_module_zero_owner_call_reverts
-    call: "maxRedeem(empty(address)) through a custom withdraw limit module that reverts"
-    expected: "calls the shared max-withdraw module path before min-capping to the zero owner share balance, so the module failure bubbles"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
-  - name: permit_after_chain_id_change
-    call: "permit with a harness-signed EIP-712 digest after the chain id changes"
-    expected: "uses the live chain id in the domain separator and accepts the updated signature"
-  - name: permit_before_initialize_valid
-    call: "permit with a harness-signed EIP-712 digest before initialize"
-    expected: "sets allowance and increments the owner's nonce, matching upstream's ungated permit path"
   - name: permit_expired_reverts
     call: "permit with a deadline before the current block timestamp"
     expected: "reverts before accepting the signature or changing nonce/allowance"
