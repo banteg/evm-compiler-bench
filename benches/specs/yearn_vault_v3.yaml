@@ -225,6 +225,7 @@ real_derived:
     - strategy_report_refund_clipped_to_zero
     - strategy_report_accountant_mints_refund_during_report
     - strategy_gain_report_accountant_mints_refund_during_report
+    - strategy_loss_report_accountant_mints_refund_during_report
     - strategy_report_accountant_reduces_allowance_during_report
     - strategy_loss_report
     - strategy_loss_report_with_accountant_fee
@@ -690,6 +691,9 @@ scenarios:
   - name: strategy_gain_report_accountant_mints_refund_during_report
     call: "process_report with strategy gain and refund balance and allowance created inside the accountant report hook"
     expected: "clips and pulls refunds using the post-hook accountant balance and allowance before locking gain plus refund shares"
+  - name: strategy_loss_report_accountant_mints_refund_during_report
+    call: "process_report with strategy loss and refund balance and allowance created inside the accountant report hook"
+    expected: "clips and pulls refunds using the post-hook accountant balance and allowance while taking the loss branch"
   - name: strategy_report_accountant_reduces_allowance_during_report
     call: "process_report with refund allowance reduced inside the accountant report hook"
     expected: "clips refunds to the post-hook accountant allowance before pulling assets"
