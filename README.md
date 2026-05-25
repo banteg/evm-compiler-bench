@@ -163,6 +163,10 @@ just zip-design
   harness dependencies. Real-derived specs distinguish `source_lane` from
   `counterpart_lane`; pinned upstream-historical sources are not treated as
   latest-stable shootout sources.
+- `cargo run --release -- validate` enforces latest-lane pragmas on checked-in
+  non-upstream benchmark sources and scale templates: Solidity uses
+  `pragma solidity ^0.8.35;` and Vyper uses
+  `# pragma version >=0.4.3,<0.5.0`.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Scoped or partial counterpart-language ports are

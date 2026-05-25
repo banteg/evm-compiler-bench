@@ -9,10 +9,14 @@ use anyhow::{Context, Result, bail};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
+    ffi::OsStr,
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::Command,
 };
+
+const LATEST_SOLIDITY_PRAGMA: &str = "pragma solidity ^0.8.35;";
+const LATEST_VYPER_PRAGMA: &str = "# pragma version >=0.4.3,<0.5.0";
 
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationSummary {
@@ -26,6 +30,7 @@ pub struct ValidationSummary {
 pub fn validate_all(root: &Path) -> Result<ValidationSummary> {
     let specs = validate_specs(root)?;
     let scenario_files = validate_scenarios(root)?;
+    validate_latest_source_pragmas(root)?;
     let (scale_config, _) = load_scale_config(root)?;
     let scale_families = scale_config.families.len();
     let generated_benchmarks = validate_generated_outputs_if_present(root, &scale_config)?;
@@ -120,6 +125,61 @@ fn validate_real_derived_scenario_coverage(
         );
     }
     Ok(())
+}
+
+fn validate_latest_source_pragmas(root: &Path) -> Result<()> {
+    let mut paths = Vec::new();
+    collect_source_files(&root.join("benches/implementations"), &mut paths)?;
+    collect_source_files(
+        &root.join("crates/bench-cli/src/scale_templates"),
+        &mut paths,
+    )?;
+
+    for path in paths {
+        if path_has_component(&path, "upstream") {
+            continue;
+        }
+        let source = fs::read_to_string(&path)
+            .with_context(|| format!("reading source pragma from {}", path.display()))?;
+        match path.extension().and_then(|ext| ext.to_str()) {
+            Some("sol") if !source.contains(LATEST_SOLIDITY_PRAGMA) => {
+                bail!(
+                    "{} latest-lane Solidity source must use `{LATEST_SOLIDITY_PRAGMA}`",
+                    path.display()
+                );
+            }
+            Some("vy") if !source.contains(LATEST_VYPER_PRAGMA) => {
+                bail!(
+                    "{} latest-lane Vyper source must use `{LATEST_VYPER_PRAGMA}`",
+                    path.display()
+                );
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn collect_source_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_source_files(&path, out)?;
+        } else if matches!(
+            path.extension().and_then(|ext| ext.to_str()),
+            Some("sol" | "vy")
+        ) {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn path_has_component(path: &Path, needle: &str) -> bool {
+    let needle = OsStr::new(needle);
+    path.components()
+        .any(|component| matches!(component, Component::Normal(part) if part == needle))
 }
 
 fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> Result<usize> {
