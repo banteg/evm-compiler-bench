@@ -199,9 +199,7 @@ contract UniswapV2ERC20 {
     ) external {
         require(deadline >= block.timestamp, "UniswapV2: EXPIRED");
         uint256 nonce = nonces[owner];
-        unchecked {
-            nonces[owner] = nonce + 1;
-        }
+        nonces[owner] = nonce.add(1);
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
