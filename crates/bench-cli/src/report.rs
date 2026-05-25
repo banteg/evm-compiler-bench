@@ -17,7 +17,7 @@ use std::{
     process::Command,
 };
 
-const SOL_CODEGEN_BASELINE: &str = "solc-latest-legacy-runs200";
+const SOL_CODEGEN_BASELINE: &str = "solc-latest-viair-runs10000";
 const SOL_VIAIR_CODEGEN: &str = "solc-latest-viair-runs200";
 const VYPER_GAS_CODEGEN: &str = "vyper-latest-gas";
 const VYPER_GAS_VENOM_CODEGEN: &str = "vyper-latest-gas-venom";

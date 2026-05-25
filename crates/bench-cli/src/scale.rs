@@ -547,7 +547,7 @@ fn loop_bound_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("LoopBound", n);
     let mut sol = solidity_header(&contract_name);
     sol.push_str(&format!(
-        "    function runLoop() external pure returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            total += i;\n        }}\n    }}\n}}\n"
+        "    function runLoop() external pure returns (uint256 total) {{\n        for (uint256 i = 0; i < {n};) {{\n            total += i;\n            unchecked {{ ++i; }}\n        }}\n    }}\n}}\n"
     ));
 
     let mut vy = vyper_header();
@@ -572,7 +572,7 @@ fn external_calls_family(n: u64) -> GeneratedSource {
     let mut sol = solidity_header(&contract_name);
     sol.push_str("    function ping(uint256) external pure {}\n\n");
     sol.push_str(&format!(
-        "    function callMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            (bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));\n            require(ok, \"ping\");\n            total += i;\n        }}\n    }}\n}}\n"
+        "    function callMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n};) {{\n            (bool ok,) = address(this).staticcall(abi.encodeWithSignature(\"ping(uint256)\", i));\n            require(ok, \"ping\");\n            total += i;\n            unchecked {{ ++i; }}\n        }}\n    }}\n}}\n"
     ));
 
     let mut vy = vyper_header();
@@ -601,7 +601,7 @@ fn events_family(n: u64) -> GeneratedSource {
     let mut sol = solidity_header(&contract_name);
     sol.push_str("    event Tick(uint256 indexed index, uint256 value);\n\n");
     sol.push_str(&format!(
-        "    function emitMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            emit Tick(i, i + 1);\n            total += i + 1;\n        }}\n    }}\n}}\n"
+        "    function emitMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n};) {{\n            emit Tick(i, i + 1);\n            total += i + 1;\n            unchecked {{ ++i; }}\n        }}\n    }}\n}}\n"
     ));
 
     let mut vy = vyper_header();

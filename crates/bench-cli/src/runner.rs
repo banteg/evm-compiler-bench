@@ -12,7 +12,7 @@ use serde_json::json;
 use std::{collections::BTreeMap, fs, path::Path, process::Command};
 
 const FAILURE_DIR: &str = "../results/raw/failures";
-const SOL_BASELINE: &str = "solc-latest-legacy-runs200";
+const SOL_BASELINE: &str = "solc-latest-viair-runs10000";
 const VYPER_BASELINE: &str = "vyper-latest-gas";
 const GAS_CACHE_SCHEMA: &str = "gas-v1";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;

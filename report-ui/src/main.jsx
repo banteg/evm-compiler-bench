@@ -96,6 +96,7 @@ const SUITES = Bench.SUITES;
 const METRICS = Bench.METRICS;
 const SOL_LEGACY = 'solc-latest-legacy-runs200';
 const SOL_VIAIR = 'solc-latest-viair-runs200';
+const SOL_VIAIR_HIGH = 'solc-latest-viair-runs10000';
 const SOL_NOOPT = 'solc-latest-noopt';
 const SOL_0426_LEGACY = 'solc-0.4.26-legacy-runs200';
 const VYPER_0310_GAS = 'vyper-0.3.10-gas';
@@ -114,8 +115,8 @@ function buildHeadlines() {
   };
 
   return {
-    stableSolVsVyperGas: v(SOL_LEGACY, VYPER_GAS, M),
-    stableSolVsVyperSize: v(SOL_LEGACY, VYPER_GAS, S),
+    stableSolVsVyperGas: v(SOL_VIAIR_HIGH, VYPER_GAS, M),
+    stableSolVsVyperSize: v(SOL_VIAIR_HIGH, VYPER_GAS, S),
     solVsVyperVenomGas: v(SOL_VIAIR, VYPER_GAS_VENOM, M),
     solVsVyperVenomSize: v(SOL_VIAIR, VYPER_GAS_VENOM, S),
     venomGas:        v(VYPER_GAS, VYPER_GAS_VENOM, M),
@@ -164,9 +165,11 @@ function Hero() {
   const gen = new Date(Bench.D.generated_at);
   const solcLegacy = Bench.profileLabel(SOL_LEGACY);
   const solcViaIR = Bench.profileLabel(SOL_VIAIR);
+  const solcViaIRHigh = Bench.profileLabel(SOL_VIAIR_HIGH);
   const vyperGas = Bench.profileLabel(VYPER_GAS);
   const vyperVenom = Bench.profileLabel(VYPER_GAS_VENOM);
   const absDelta = ratio => `${Math.abs((ratio - 1) * 100).toFixed(1)}%`;
+  const directionWord = ratio => ratio < 1 ? 'lower' : 'higher';
 
   return React.createElement('section', { className: 'shell hero' },
     React.createElement('div', { className: 'hero-eyebrow' },
@@ -181,7 +184,7 @@ function Hero() {
     React.createElement('p', { className: 'hero-lede' },
       'Across ',
       React.createElement('strong', null, s.ok_rows.toLocaleString()),
-      ` successful scenario measurements, ${vyperGas} is ${absDelta(HEADLINES.stableSolVsVyperGas.geomean)} lower runtime gas than ${solcLegacy}. Against ${solcViaIR}, ${vyperVenom} is ${absDelta(HEADLINES.solVsVyperVenomGas.geomean)} lower gas and ${absDelta(HEADLINES.solVsVyperVenomSize.geomean)} smaller runtime bytecode. Explore the comprehensive breakdown below.`
+      ` successful scenario measurements, ${vyperGas} is ${absDelta(HEADLINES.stableSolVsVyperGas.geomean)} ${directionWord(HEADLINES.stableSolVsVyperGas.geomean)} runtime gas than ${solcViaIRHigh}. Against ${solcViaIR}, ${vyperVenom} is ${absDelta(HEADLINES.solVsVyperVenomGas.geomean)} ${directionWord(HEADLINES.solVsVyperVenomGas.geomean)} gas and ${absDelta(HEADLINES.solVsVyperVenomSize.geomean)} ${directionWord(HEADLINES.solVsVyperVenomSize.geomean) === 'lower' ? 'smaller' : 'larger'} runtime bytecode. Explore the comprehensive breakdown below.`
     ),
 
     React.createElement('div', { className: 'hero-strip' },
@@ -219,6 +222,7 @@ function Hero() {
 function FindingsGrid() {
   const solcLegacy = Bench.profileLabel(SOL_LEGACY);
   const solcViaIR = Bench.profileLabel(SOL_VIAIR);
+  const solcViaIRHigh = Bench.profileLabel(SOL_VIAIR_HIGH);
   const solcNoopt = Bench.profileLabel(SOL_NOOPT);
   const vyperGas = Bench.profileLabel(VYPER_GAS);
   const vyperVenom = Bench.profileLabel(VYPER_GAS_VENOM);
@@ -226,10 +230,10 @@ function FindingsGrid() {
     {
       tag: 'Finding 01',
       span: 4,
-      headline: 'Vyper gas beats solc legacy on runtime gas.',
-      body: `Comparing stable, optimizer-enabled profiles, Vyper 0.4.3 is noticeably more efficient, using 9.6% less runtime gas than solc 0.8.35 legacy.`,
+      headline: 'Vyper gas vs solc viaIR at high optimization.',
+      body: `Comparing each compiler at its strongest stable optimizer mode — Vyper ${vyperGas} against solc ${solcViaIRHigh} (via_ir + optimizer_runs = 10,000) — over comparable scenarios.`,
       stat: HEADLINES.stableSolVsVyperGas.geomean,
-      statLabel: 'runtime gas (Vyper gas vs solc legacy)',
+      statLabel: 'runtime gas (Vyper gas vs solc viaIR runs=10000)',
       altStat: HEADLINES.stableSolVsVyperSize.geomean,
       altLabel: 'runtime bytes',
       count: HEADLINES.stableSolVsVyperGas.count,
