@@ -257,6 +257,32 @@ scenarios:
       - data: 'abi.encodeWithSignature("D_oracle()")'
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: exchange_three_coin_slippage_reverts
+    deployment_variant: curve_three_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(2), uint256(25_000), uint256(1_000_000), address(this))'
+    expect_success: false
+    observers:
+      - data: 'abi.encodeWithSignature("balances(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("balances(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("balances(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("D_oracle()")'
+      - data: 'abi.encodeWithSignature("get_virtual_price()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: exchange_eight_coin_slippage_reverts
     deployment_variant: curve_eight_coin
     state_access_profile: warm
