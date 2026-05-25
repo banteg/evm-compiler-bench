@@ -92,7 +92,7 @@ Immediate chips:
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
 | Dynamic/off-peg fees and admin fees | Exact counterpart surface | Fee quotes, exchange accounting, and admin-fee withdrawal are covered. |
-| Admin controls | Exact counterpart surface | Ramp, stop-ramp, fee updates, moving-average windows, and admin gating are covered. |
+| Admin controls | Exact counterpart surface | Ramp, stop-ramp, fee updates, moving-average windows, public admin-fee withdrawal, and non-admin rejection for factory-admin-gated setters are covered. |
 | LP token and permit | Exact counterpart surface | EOA and ERC1271 permit success plus invalid permit failure are covered. |
 | Factory and views dependencies | Fixture-exact | Both implementations call the benchmark-provided factory/views fixture. |
 | `StableSwapViews` call topology in Solidity | Exact counterpart surface for quote views | The Solidity port now mirrors upstream by routing `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` through `factory.views_implementation()`. |

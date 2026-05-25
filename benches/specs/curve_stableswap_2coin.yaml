@@ -142,11 +142,14 @@ real_derived:
     - invalid_coin_reverts
     - ramp_a
     - ramp_a_too_soon_reverts
+    - ramp_a_non_admin_reverts
     - stop_ramp_a
+    - stop_ramp_a_non_admin_reverts
     - set_new_fee
     - set_new_fee_non_admin_reverts
     - set_ma_exp_time
     - set_ma_exp_time_zero_reverts
+    - set_ma_exp_time_non_admin_reverts
     - withdraw_admin_fees
     - oracle_rate_exchange
     - rebasing_balance_exchange
@@ -401,9 +404,15 @@ scenarios:
   - name: ramp_a_too_soon_reverts
     call: "ramp_A(300, block.timestamp + MIN_RAMP_TIME) before the initial ramp delay"
     expected: "reverts"
+  - name: ramp_a_non_admin_reverts
+    call: "ramp_A(300, block.timestamp + MIN_RAMP_TIME) from a non-admin address after the initial ramp delay"
+    expected: "reverts through the upstream factory-admin guard"
   - name: stop_ramp_a
     call: "stop_ramp_A() during an active amplification ramp"
     expected: "pins current amplification and clears the active ramp window"
+  - name: stop_ramp_a_non_admin_reverts
+    call: "stop_ramp_A() from a non-admin address during an active amplification ramp"
+    expected: "reverts through the upstream factory-admin guard"
   - name: set_new_fee
     call: "set_new_fee(5_000_000, 30_000_000_000)"
     expected: "updates swap fee and off-peg fee multiplier from the admin"
@@ -416,6 +425,9 @@ scenarios:
   - name: set_ma_exp_time_zero_reverts
     call: "set_ma_exp_time(0, 70_000)"
     expected: "reverts"
+  - name: set_ma_exp_time_non_admin_reverts
+    call: "set_ma_exp_time(1_000, 70_000) from a non-admin address"
+    expected: "reverts through the upstream factory-admin guard"
   - name: withdraw_admin_fees
     call: "withdraw_admin_fees() after an exchange accrues admin fees"
     expected: "executes the public admin-fee withdrawal entrypoint"
