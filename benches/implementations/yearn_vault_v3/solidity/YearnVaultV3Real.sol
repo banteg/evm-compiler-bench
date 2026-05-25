@@ -132,7 +132,7 @@ contract YearnVaultV3Real {
     uint256 internal full_profit_unlock_date;
     uint256 internal profit_unlocking_rate;
     uint256 internal last_profit_update;
-    bool internal unlocked;
+    uint256 internal nonreentrant_lock;
 
     mapping(address => uint256) public nonces;
 
@@ -170,15 +170,14 @@ contract YearnVaultV3Real {
     event Shutdown();
 
     modifier nonReentrant() {
-        require(unlocked, "reentrant call");
-        unlocked = false;
+        require(nonreentrant_lock != 2, "reentrant call");
+        nonreentrant_lock = 2;
         _;
-        unlocked = true;
+        nonreentrant_lock = 3;
     }
 
     constructor() {
         asset = address(this);
-        unlocked = true;
     }
 
     function initialize(
@@ -202,7 +201,6 @@ contract YearnVaultV3Real {
         name = name_;
         symbol = symbol_;
         role_manager = roleManager_;
-        unlocked = true;
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
