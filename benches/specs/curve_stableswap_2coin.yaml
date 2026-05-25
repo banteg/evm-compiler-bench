@@ -93,6 +93,7 @@ real_derived:
     - get_dx_three_coin
     - get_dx_five_coin_midpoint
     - get_dx_eight_coin
+    - get_dx_eight_coin_interior
     - calc_token_amount_three_coin
     - calc_token_amount_three_coin_withdraw
     - calc_token_amount_five_coin
@@ -212,7 +213,7 @@ real_derived:
     - factory-delegated five-coin midpoint get_dx quote
     - factory-delegated five-coin calc_token_amount deposit and withdraw quotes
     - factory-delegated eight-coin get_dy quote at MAX_COINS
-    - factory-delegated eight-coin get_dx quote at MAX_COINS
+    - factory-delegated eight-coin endpoint and interior get_dx quotes at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
     - factory-delegated five-coin midpoint dynamic_fee quote
     - factory-delegated eight-coin endpoint and interior dynamic_fee quotes at MAX_COINS
@@ -308,6 +309,9 @@ scenarios:
   - name: get_dx_eight_coin
     call: "get_dx(0, 7, 20_000) after initial liquidity on an eight-coin deployment"
     expected: "quotes required input through the benchmark views implementation at the upstream MAX_COINS boundary"
+  - name: get_dx_eight_coin_interior
+    call: "get_dx(3, 5, 20_000) after initial liquidity on an eight-coin deployment"
+    expected: "quotes required input for an interior pair through the benchmark views implementation at the upstream MAX_COINS boundary"
   - name: exchange_three_coin
     call: "exchange(0, 2, 25_000, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates all constructor-sized accounting and oracle slots after a non-two-coin swap"
