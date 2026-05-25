@@ -280,6 +280,30 @@ interface BenchUniswapPairLike {
     function initialize(address token0, address token1) external;
 }
 
+interface BenchUniswapFactoryLike {
+    function feeTo() external view returns (address);
+    function feeToSetter() external view returns (address);
+    function getPair(address token0, address token1) external view returns (address);
+    function allPairs(uint256 index) external view returns (address);
+    function allPairsLength() external view returns (uint256);
+}
+
+contract BenchUniswapFactoryPair {
+    address public factory;
+    address public token0;
+    address public token1;
+
+    constructor() {
+        factory = msg.sender;
+    }
+
+    function initialize(address token0_, address token1_) external {
+        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        token0 = token0_;
+        token1 = token1_;
+    }
+}
+
 contract BenchUniswapCreate2Factory {
     address public feeTo;
     address public feeToSetter;

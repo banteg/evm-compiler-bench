@@ -1,0 +1,124 @@
+id: uniswap_v2_factory
+title: Real-Derived Uniswap V2 Factory Benchmark
+abi:
+  - "createPair(address,address) returns (address)"
+  - "getPair(address,address) returns (address)"
+  - "allPairs(uint256) returns (address)"
+  - "allPairsLength() returns (uint256)"
+  - "setFeeTo(address)"
+  - "setFeeToSetter(address)"
+  - "feeTo() returns (address)"
+  - "feeToSetter() returns (address)"
+real_derived:
+  suite: real_derived
+  model_kind: real_derived_model
+  comparison_lane: production_conformance
+  source_lane: latest_syntax_original
+  counterpart_lane: latest_idiomatic
+  upstream_project: Uniswap V2 Core
+  repository_url: "https://github.com/Uniswap/v2-core"
+  source_commit: "6a9e7c97860676e0992f22a49665760444c1cdf5"
+  source_path: "contracts/UniswapV2Factory.sol"
+  source_language: solidity
+  source_compiler: solc
+  source_profiles:
+    - solc-latest-legacy-runs200
+    - solc-latest-noopt
+    - solc-latest-viair-runs200
+    - solc-0.5.16-legacy-runs200
+    - solc-0.5.16-noopt
+  source_contract: UniswapV2Factory
+  source_blob: "a66ad8247b88cbd4e547b0f9dee8fceede51a358"
+  upstream_license: GPL-3.0-or-later
+  checked_at: "2026-05-26"
+  production_equivalence: false
+  api_compatibility: "both implementations cover the upstream Uniswap V2 Factory ABI; pair initcode is supplied as a constructor fixture so factory rows compare factory logic directly across languages"
+  storage_layout_compatibility: false
+  external_token_semantics: "shared_factory_pair_initcode_fixture"
+  source_derivation: "Solidity and Vyper implementations are idiomatic ports of the upstream factory behavior, with pair creation code injected at construction to keep the benchmark independent from the pair artifact"
+  equivalence_scope:
+    - feeTo and feeToSetter state
+    - authorized and forbidden fee recipient updates
+    - authorized and forbidden feeToSetter transfer
+    - token ordering for pair creation
+    - CREATE2 deployment with keccak256(token0, token1) salt
+    - factory-owned pair initialization
+    - bidirectional getPair storage
+    - allPairs tracking and out-of-bounds getter behavior
+    - duplicate, reverse duplicate, identical-token, and zero-address pair creation rejection
+  scenario_coverage:
+    - fee_to_getter
+    - set_fee_to
+    - set_fee_to_forbidden_reverts
+    - set_fee_to_setter
+    - set_fee_to_setter_forbidden_reverts
+    - old_setter_after_transfer_forbidden_reverts
+    - create_pair
+    - create_pair_reverse_order
+    - duplicate_pair_reverts
+    - reverse_duplicate_pair_reverts
+    - identical_pair_reverts
+    - zero_address_pair_reverts
+    - all_pairs_out_of_bounds_reverts
+  mock_assumptions:
+    - pair initcode is a shared benchmark fixture with a factory-only initialize(address,address) surface
+    - pair contract behavior after initialization is covered by the separate Uniswap V2 Pair benchmark
+  included_features:
+    - upstream factory ABI surface
+    - feeTo and feeToSetter getters
+    - feeTo and feeToSetter authorization guards
+    - token sorting and zero-address rejection
+    - CREATE2 pair deployment with deterministic salt
+    - pair initialization through the factory
+    - bidirectional getPair mapping
+    - allPairs index tracking and bounds rejection
+    - PairCreated event parity
+  excluded_features:
+    - embedding the full pair contract source inside the factory artifact
+    - post-initialization pair mint, burn, swap, LP-token, permit, and reserve behavior
+semantics:
+  - "Benchmarks the Uniswap V2 Factory control plane separately from the Pair state machine."
+  - "The Pair benchmark covers pair behavior; this Factory benchmark uses shared initcode to isolate factory CREATE2, bookkeeping, and authority logic."
+scenarios:
+  - name: fee_to_getter
+    call: "feeTo()"
+    expected: "returns the unset fee recipient"
+  - name: set_fee_to
+    call: "setFeeTo(BOB)"
+    expected: "accepts the authorized fee recipient update"
+  - name: set_fee_to_forbidden_reverts
+    call: "setFeeTo(CAROL) from BOB"
+    expected: "reverts through the upstream FORBIDDEN guard"
+  - name: set_fee_to_setter
+    call: "setFeeToSetter(BOB)"
+    expected: "accepts the authorized feeToSetter transfer"
+  - name: set_fee_to_setter_forbidden_reverts
+    call: "setFeeToSetter(CAROL) from BOB"
+    expected: "reverts through the upstream FORBIDDEN guard"
+  - name: old_setter_after_transfer_forbidden_reverts
+    call: "setFeeTo(BOB) after feeToSetter authority is transferred to CAROL"
+    expected: "reverts because the original setter no longer controls feeTo"
+  - name: create_pair
+    call: "createPair(BOB, CAROL)"
+    expected: "deploys and initializes a pair, stores bidirectional getPair mappings, and appends allPairs"
+  - name: create_pair_reverse_order
+    call: "createPair(CAROL, BOB)"
+    expected: "normalizes token ordering before deployment and storage"
+  - name: duplicate_pair_reverts
+    call: "createPair(BOB, CAROL) after an existing pair"
+    expected: "reverts through the upstream PAIR_EXISTS guard"
+  - name: reverse_duplicate_pair_reverts
+    call: "createPair(CAROL, BOB) after an existing pair"
+    expected: "reverts through the bidirectional PAIR_EXISTS guard"
+  - name: identical_pair_reverts
+    call: "createPair(BOB, BOB)"
+    expected: "reverts through the upstream IDENTICAL_ADDRESSES guard"
+  - name: zero_address_pair_reverts
+    call: "createPair(address(0), BOB)"
+    expected: "reverts through the upstream ZERO_ADDRESS guard"
+  - name: all_pairs_out_of_bounds_reverts
+    call: "allPairs(allPairsLength()) after one created pair"
+    expected: "reverts at the public array-equivalent bounds check"
+implementations:
+  solidity: "benches/implementations/uniswap_v2_factory/solidity/latest/UniswapV2FactoryReal.sol"
+  vyper: "benches/implementations/uniswap_v2_factory/vyper/UniswapV2FactoryReal.vy"

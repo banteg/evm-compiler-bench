@@ -522,9 +522,12 @@ fn helper_functions(artifacts: &[CompiledArtifact]) -> String {
     let needs_curve = artifacts
         .iter()
         .any(|artifact| artifact.benchmark_id == "curve_stableswap_2coin");
-    let needs_uniswap = artifacts
-        .iter()
-        .any(|artifact| artifact.benchmark_id == "uniswap_v2_pair");
+    let needs_uniswap = artifacts.iter().any(|artifact| {
+        matches!(
+            artifact.benchmark_id.as_str(),
+            "uniswap_v2_factory" | "uniswap_v2_pair"
+        )
+    });
     let needs_yearn = artifacts
         .iter()
         .any(|artifact| artifact.benchmark_id == "yearn_vault_v3");
@@ -865,9 +868,11 @@ fn write_diff_test(
         "false"
     });
     out.push_str(", \"differential unexpected status\");\n");
-    out.push_str(
-        "        if (solOk) require(solHash == vyperHash, \"differential return mismatch\");\n",
-    );
+    if scenario.compare_return {
+        out.push_str(
+            "        if (solOk) require(solHash == vyperHash, \"differential return mismatch\");\n",
+        );
+    }
     out.push_str(
         "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
     );

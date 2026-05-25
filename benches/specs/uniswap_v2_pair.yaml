@@ -73,17 +73,6 @@ real_derived:
     - mint_initial
     - mint_initial_below_minimum_liquidity_reverts
     - factory_create2_mint_initial
-    - factory_create2_state
-    - factory_set_fee_to
-    - factory_set_fee_to_forbidden_reverts
-    - factory_set_fee_to_setter
-    - factory_set_fee_to_setter_forbidden_reverts
-    - factory_old_setter_after_transfer_forbidden_reverts
-    - factory_all_pairs_out_of_bounds_reverts
-    - factory_duplicate_pair_reverts
-    - factory_reverse_duplicate_pair_reverts
-    - factory_identical_pair_reverts
-    - factory_zero_address_pair_reverts
     - mint_subsequent
     - mint_zero_receiver
     - swap_fee_invariant
@@ -161,7 +150,7 @@ real_derived:
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
-    - pair creation through a benchmark factory using CREATE2, upstream token sorting and same-order/reverse-order duplicate guards, bidirectional getPair storage, allPairs tracking and out-of-bounds getter behavior, factory-owned initialize, and feeTo/feeToSetter authorization guards including old-setter rejection after authority transfer
+    - pair creation through a benchmark factory using CREATE2 to exercise factory-owned initialize before pair minting
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
@@ -182,7 +171,7 @@ real_derived:
     - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token balance/allowance/nonce reads, LP-token approve/transfer/transferFrom, malformed swap head, missing dynamic calldata tail, short and overlapping dynamic calldata payloads, and truncated permit payloads including signature-tail truncation
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
-    - upstream UniswapV2Factory createPair behavior is represented by a benchmark factory helper constructed with the active pair bytecode so both language artifacts can be deployed through the same CREATE2 path
+    - factory control-plane scenarios such as feeToSetter authorization, pair duplicate guards, getPair bookkeeping, and allPairs bounds are covered by the separate Uniswap V2 Factory benchmark
     - exhaustive revert-data parity and ABI-boundary audit outside the listed representative malformed calldata scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
@@ -203,39 +192,6 @@ scenarios:
   - name: factory_create2_mint_initial
     call: "mint(address(this)) after the pair is created by a factory CREATE2 deployment"
     expected: "factory deploys and initializes the pair before the initial mint path"
-  - name: factory_create2_state
-    call: "factory fixture state after CREATE2 pair deployment"
-    expected: "records feeToSetter, allPairs, and bidirectional getPair mappings for the deployed pair"
-  - name: factory_set_fee_to
-    call: "factory setFeeTo from feeToSetter"
-    expected: "accepts the authorized fee recipient update"
-  - name: factory_set_fee_to_forbidden_reverts
-    call: "factory setFeeTo from a non-feeToSetter sender"
-    expected: "reverts through the upstream FORBIDDEN guard"
-  - name: factory_set_fee_to_setter
-    call: "factory setFeeToSetter from feeToSetter"
-    expected: "accepts the authorized feeToSetter transfer"
-  - name: factory_set_fee_to_setter_forbidden_reverts
-    call: "factory setFeeToSetter from a non-feeToSetter sender"
-    expected: "reverts through the upstream FORBIDDEN guard"
-  - name: factory_old_setter_after_transfer_forbidden_reverts
-    call: "factory setFeeTo after feeToSetter authority has been transferred away from the original setter"
-    expected: "reverts through the upstream FORBIDDEN guard because the original setter no longer controls feeTo"
-  - name: factory_all_pairs_out_of_bounds_reverts
-    call: "factory allPairs(allPairsLength()) after CREATE2 pair deployment"
-    expected: "reverts at the upstream public array getter bounds check"
-  - name: factory_duplicate_pair_reverts
-    call: "factory createPair with an existing token pair"
-    expected: "reverts through the upstream PAIR_EXISTS guard"
-  - name: factory_reverse_duplicate_pair_reverts
-    call: "factory createPair with an existing token pair in reverse token order"
-    expected: "reverts through the upstream PAIR_EXISTS guard because getPair is stored bidirectionally"
-  - name: factory_identical_pair_reverts
-    call: "factory createPair with identical token addresses"
-    expected: "reverts through the upstream IDENTICAL_ADDRESSES guard"
-  - name: factory_zero_address_pair_reverts
-    call: "factory createPair with a zero token address"
-    expected: "reverts through the upstream ZERO_ADDRESS guard"
   - name: mint_subsequent
     call: "mint(address(this)) after an existing position and additional token balances"
     expected: "mints proportional LP shares"

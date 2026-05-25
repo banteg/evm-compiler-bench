@@ -290,8 +290,14 @@ pub struct Scenario {
     pub warmup: Vec<CallSpec>,
     pub measured: CallSpec,
     pub expect_success: bool,
+    #[serde(default = "default_compare_return")]
+    pub compare_return: bool,
     #[serde(default)]
     pub observers: Vec<CallSpec>,
+}
+
+fn default_compare_return() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

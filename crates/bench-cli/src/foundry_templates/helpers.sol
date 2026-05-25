@@ -674,6 +674,37 @@
         return factory;
     }
 
+    function benchUniswapFactoryStateHash(address target, address tokenA, address tokenB)
+        external
+        view
+        returns (bytes32)
+    {
+        BenchUniswapFactoryLike factory = BenchUniswapFactoryLike(target);
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        address pair = factory.getPair(token0, token1);
+        address reversePair = factory.getPair(token1, token0);
+        uint256 pairCount = factory.allPairsLength();
+        bool firstPairMatches = false;
+        bytes32 pairCodehash = bytes32(0);
+        if (pairCount > 0) {
+            firstPairMatches = factory.allPairs(0) == pair;
+        }
+        if (pair != address(0)) {
+            pairCodehash = pair.codehash;
+        }
+        return keccak256(
+            abi.encode(
+                factory.feeTo(),
+                factory.feeToSetter(),
+                pairCount,
+                pair != address(0),
+                pair == reversePair,
+                firstPairMatches,
+                pairCodehash
+            )
+        );
+    }
+
     function benchUniswapPermitOwner() public returns (address) {
         return vm.addr(UNISWAP_PERMIT_KEY);
     }

@@ -13,6 +13,9 @@ pub fn constructor_args(benchmark_id: &str) -> Option<&'static str> {
     match benchmark_id {
         "counter" => Some("abi.encode(uint256(3))"),
         "erc20_minimal" => Some("abi.encode(uint256(1000 ether))"),
+        "uniswap_v2_factory" => {
+            Some("abi.encode(type(BenchUniswapFactoryPair).creationCode, address(this))")
+        }
         _ => None,
     }
 }

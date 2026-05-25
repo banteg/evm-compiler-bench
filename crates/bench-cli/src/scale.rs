@@ -708,6 +708,7 @@ fn scenario(
         warmup,
         measured,
         expect_success,
+        compare_return: true,
         observers,
     }
 }
