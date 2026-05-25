@@ -20,7 +20,19 @@
     "started_at": { "type": "string", "format": "date-time" },
     "evm_version": { "type": "string" },
     "toolchains": { "type": "array", "items": { "type": "object" } },
-    "profiles": { "type": "array", "items": { "type": "object" } },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "language", "compiler", "source_variant"],
+        "properties": {
+          "id": { "type": "string" },
+          "language": { "enum": ["solidity", "vyper"] },
+          "compiler": { "type": "string" },
+          "source_variant": { "type": "string" }
+        }
+      }
+    },
     "scale_generator": {
       "type": "object",
       "required": ["version", "config_hash", "parameter_name", "values", "benchmarks"],

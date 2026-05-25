@@ -488,9 +488,24 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
                 manifest_path.display()
             );
         }
+        validate_manifest_profiles(&value, &manifest_path)?;
         validate_real_derived_manifest(&value, &manifest_path)?;
     }
     Ok(rows)
+}
+
+fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
+    let profiles = value
+        .pointer("/profiles")
+        .and_then(|value| value.as_array())
+        .with_context(|| format!("{} profiles must be an array", path.display()))?;
+    for profile in profiles {
+        for pointer in ["/id", "/language", "/compiler", "/source_variant"] {
+            require_string_pointer(profile, pointer, path)?;
+        }
+        require_enum(profile, "/language", &["solidity", "vyper"], path)?;
+    }
+    Ok(())
 }
 
 fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
@@ -1372,6 +1387,33 @@ mod tests {
             super::validate_real_derived_excluded_features(&contradictory_incomplete, path)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn requires_manifest_profiles_to_report_effective_source_variant() {
+        let path = Path::new("results/normalized/run-manifest.json");
+        let manifest = json!({
+            "profiles": [
+                {
+                    "id": "solc-latest-noopt",
+                    "language": "solidity",
+                    "compiler": "solc",
+                    "source_variant": "latest"
+                }
+            ]
+        });
+        let missing_variant = json!({
+            "profiles": [
+                {
+                    "id": "solc-latest-noopt",
+                    "language": "solidity",
+                    "compiler": "solc"
+                }
+            ]
+        });
+
+        super::validate_manifest_profiles(&manifest, path).unwrap();
+        assert!(super::validate_manifest_profiles(&missing_variant, path).is_err());
     }
 
     #[test]

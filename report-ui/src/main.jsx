@@ -909,7 +909,7 @@ function RealDerivedProvenance() {
           const compiledSources = model.compiled_sources || [];
           const compiledTitle = compiledSources.length
             ? compiledSources
-              .map(s => `${s.profile_id || 'profile'} · ${s.source_variant || 'default'} · ${s.source_path || 'n/a'} · ${s.source_hash || ''}`)
+              .map(s => `${s.profile_id || 'profile'} · ${s.source_variant || 'latest'} · ${s.source_path || 'n/a'} · ${s.source_hash || ''}`)
               .join('\n')
             : 'n/a';
           const compiledLabel = compiledSources.length
