@@ -101,6 +101,7 @@ real_derived:
     - non_factory_initialize_reverts
     - invalid_swap_reverts
     - swap_to_token_reverts
+    - swap_to_token1_reverts
     - permit_valid
     - permit_after_chain_id_change
     - permit_expired_reverts
@@ -271,6 +272,9 @@ scenarios:
   - name: swap_to_token_reverts
     call: "swap output to token0 address"
     expected: "reverts"
+  - name: swap_to_token1_reverts
+    call: "swap output to token1 address"
+    expected: "reverts through the symmetric upstream INVALID_TO guard"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"

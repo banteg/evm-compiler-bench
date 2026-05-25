@@ -176,7 +176,8 @@ Remaining:
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
   by direct getter, permit, LP-token zero-recipient behavior plus
-  allowance/balance rejection, reserve, or pair-action scenarios.
+  allowance/balance rejection, reserve, symmetric swap receiver guards, or
+  pair-action scenarios.
 
 Suggested next chips:
 

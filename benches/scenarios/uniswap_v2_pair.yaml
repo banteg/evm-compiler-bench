@@ -606,6 +606,20 @@ scenarios:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapToken0({target}), bytes(""))'
     expect_success: false
     observers: *pair_observers
+  - name: swap_to_token1_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(200), uint256(0))'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapToken1({target}), bytes(""))'
+    expect_success: false
+    observers: *pair_observers
   - name: permit_valid
     state_access_profile: mixed
     measured:
