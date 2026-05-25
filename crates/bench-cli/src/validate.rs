@@ -614,7 +614,7 @@ fn validate_real_derived_spec(
     require_yaml_string(real, "source_compiler", path, &provenance.source_compiler)?;
     require_sequence(real, "source_profiles", path)?;
     validate_real_derived_lanes(path, provenance)?;
-    validate_source_profiles(path, real, provenance)?;
+    validate_source_profiles(root, path, real, provenance)?;
     require_yaml_bool(
         real,
         "production_equivalence",
@@ -705,10 +705,12 @@ fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<(
 }
 
 fn validate_source_profiles(
+    root: &Path,
     path: &Path,
     real: &serde_yaml::Value,
     provenance: &Provenance,
 ) -> Result<()> {
+    let profile_languages = compiler_profile_languages(root)?;
     let profiles = real
         .get("source_profiles")
         .and_then(|value| value.as_sequence())
@@ -733,6 +735,20 @@ fn validate_source_profiles(
                 provenance.source_language.as_str()
             );
         }
+        let Some(profile_language) = profile_languages.get(profile) else {
+            bail!(
+                "{} source profile {profile} does not match any compiler profile",
+                path.display()
+            );
+        };
+        if *profile_language != provenance.source_language {
+            bail!(
+                "{} source profile {profile} has language {}, expected {}",
+                path.display(),
+                profile_language.as_str(),
+                provenance.source_language.as_str()
+            );
+        }
         if profile.starts_with(latest_source_profile_prefix) {
             has_latest_source_profile = true;
         }
@@ -745,6 +761,26 @@ fn validate_source_profiles(
         );
     }
     Ok(())
+}
+
+fn compiler_profile_languages(root: &Path) -> Result<BTreeMap<String, crate::models::Language>> {
+    let mut profiles = BTreeMap::new();
+    for entry in fs::read_dir(root.join("compiler-profiles"))? {
+        let path = entry?.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("toml") {
+            continue;
+        }
+        let text = fs::read_to_string(&path)?;
+        let profile: crate::models::CompilerProfile =
+            toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        if profiles
+            .insert(profile.id.clone(), profile.language)
+            .is_some()
+        {
+            bail!("duplicate compiler profile id {}", profile.id);
+        }
+    }
+    Ok(profiles)
 }
 
 fn validate_source_blob(
