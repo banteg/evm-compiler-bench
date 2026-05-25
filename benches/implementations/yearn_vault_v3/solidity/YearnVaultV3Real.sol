@@ -169,11 +169,6 @@ contract YearnVaultV3Real {
     event DebtPurchased(address indexed strategy, uint256 amount);
     event Shutdown();
 
-    modifier ready() {
-        require(asset != address(0) && asset != address(this), "not initialized");
-        _;
-    }
-
     modifier nonReentrant() {
         require(unlocked, "reentrant call");
         unlocked = false;
@@ -250,7 +245,7 @@ contract YearnVaultV3Real {
         return true;
     }
 
-    function deposit(uint256 assets, address receiver) external ready nonReentrant returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) external nonReentrant returns (uint256 shares) {
         uint256 amount = assets;
         if (amount == type(uint256).max) {
             amount = YearnBenchERC20(asset).balanceOf(msg.sender);
@@ -259,14 +254,13 @@ contract YearnVaultV3Real {
         _deposit(receiver, amount, shares);
     }
 
-    function mint(uint256 shares, address receiver) external ready nonReentrant returns (uint256 assets) {
+    function mint(uint256 shares, address receiver) external nonReentrant returns (uint256 assets) {
         assets = _convertToAssets(shares, true);
         _deposit(receiver, assets, shares);
     }
 
     function withdraw(uint256 assets, address receiver, address owner)
         external
-        ready
         nonReentrant
         returns (uint256 shares)
     {
@@ -276,7 +270,6 @@ contract YearnVaultV3Real {
 
     function withdraw(uint256 assets, address receiver, address owner, uint256 maxLoss)
         external
-        ready
         nonReentrant
         returns (uint256 shares)
     {
@@ -286,7 +279,6 @@ contract YearnVaultV3Real {
 
     function withdraw(uint256 assets, address receiver, address owner, uint256 maxLoss, address[] calldata strategies_)
         external
-        ready
         nonReentrant
         returns (uint256 shares)
     {
@@ -296,7 +288,6 @@ contract YearnVaultV3Real {
 
     function redeem(uint256 shares, address receiver, address owner)
         external
-        ready
         nonReentrant
         returns (uint256 assets)
     {
@@ -306,7 +297,6 @@ contract YearnVaultV3Real {
 
     function redeem(uint256 shares, address receiver, address owner, uint256 maxLoss)
         external
-        ready
         nonReentrant
         returns (uint256 assets)
     {
@@ -316,7 +306,6 @@ contract YearnVaultV3Real {
 
     function redeem(uint256 shares, address receiver, address owner, uint256 maxLoss, address[] calldata strategies_)
         external
-        ready
         nonReentrant
         returns (uint256 assets)
     {
@@ -324,25 +313,25 @@ contract YearnVaultV3Real {
         assets = _redeem(msg.sender, receiver, owner, _convertToAssets(shares, false), shares, maxLoss, strategies_);
     }
 
-    function setName(string calldata newName) external ready {
+    function setName(string calldata newName) external {
         require(msg.sender == role_manager, "not allowed");
         require(bytes(newName).length <= 64, "name too long");
         name = newName;
     }
 
-    function setSymbol(string calldata newSymbol) external ready {
+    function setSymbol(string calldata newSymbol) external {
         require(msg.sender == role_manager, "not allowed");
         require(bytes(newSymbol).length <= 32, "symbol too long");
         symbol = newSymbol;
     }
 
-    function set_accountant(address newAccountant) external ready {
+    function set_accountant(address newAccountant) external {
         _enforceRole(msg.sender, ACCOUNTANT_MANAGER);
         accountant = newAccountant;
         emit UpdateAccountant(newAccountant);
     }
 
-    function set_default_queue(address[] calldata newDefaultQueue) external ready {
+    function set_default_queue(address[] calldata newDefaultQueue) external {
         _enforceRole(msg.sender, QUEUE_MANAGER);
         require(newDefaultQueue.length <= MAX_QUEUE, "queue too long");
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
@@ -352,31 +341,31 @@ contract YearnVaultV3Real {
         emit UpdateDefaultQueue(newDefaultQueue);
     }
 
-    function set_use_default_queue(bool useDefaultQueue) external ready {
+    function set_use_default_queue(bool useDefaultQueue) external {
         _enforceRole(msg.sender, QUEUE_MANAGER);
         use_default_queue = useDefaultQueue;
         emit UpdateUseDefaultQueue(useDefaultQueue);
     }
 
-    function set_auto_allocate(bool autoAllocate) external ready {
+    function set_auto_allocate(bool autoAllocate) external {
         _enforceRole(msg.sender, DEBT_MANAGER);
         auto_allocate = autoAllocate;
         emit UpdateAutoAllocate(autoAllocate);
     }
 
-    function set_deposit_limit(uint256 newDepositLimit) external ready {
+    function set_deposit_limit(uint256 newDepositLimit) external {
         _setDepositLimit(newDepositLimit, false);
     }
 
-    function set_deposit_limit(uint256 newDepositLimit, bool overrideModule) external ready {
+    function set_deposit_limit(uint256 newDepositLimit, bool overrideModule) external {
         _setDepositLimit(newDepositLimit, overrideModule);
     }
 
-    function set_deposit_limit_module(address depositLimitModule) external ready {
+    function set_deposit_limit_module(address depositLimitModule) external {
         _setDepositLimitModule(depositLimitModule, false);
     }
 
-    function set_deposit_limit_module(address depositLimitModule, bool overrideLimit) external ready {
+    function set_deposit_limit_module(address depositLimitModule, bool overrideLimit) external {
         _setDepositLimitModule(depositLimitModule, overrideLimit);
     }
 
@@ -410,19 +399,19 @@ contract YearnVaultV3Real {
         emit UpdateDepositLimitModule(depositLimitModule);
     }
 
-    function set_withdraw_limit_module(address withdrawLimitModule) external ready {
+    function set_withdraw_limit_module(address withdrawLimitModule) external {
         _enforceRole(msg.sender, WITHDRAW_LIMIT_MANAGER);
         withdraw_limit_module = withdrawLimitModule;
         emit UpdateWithdrawLimitModule(withdrawLimitModule);
     }
 
-    function set_minimum_total_idle(uint256 minimumTotalIdle) external ready {
+    function set_minimum_total_idle(uint256 minimumTotalIdle) external {
         _enforceRole(msg.sender, MINIMUM_IDLE_MANAGER);
         minimum_total_idle = minimumTotalIdle;
         emit UpdateMinimumTotalIdle(minimumTotalIdle);
     }
 
-    function setProfitMaxUnlockTime(uint256 newProfitMaxUnlockTime) external ready {
+    function setProfitMaxUnlockTime(uint256 newProfitMaxUnlockTime) external {
         _enforceRole(msg.sender, PROFIT_UNLOCK_MANAGER);
         require(newProfitMaxUnlockTime <= 31_556_952, "profit unlock time too long");
         if (newProfitMaxUnlockTime == 0) {
@@ -437,14 +426,14 @@ contract YearnVaultV3Real {
         emit UpdateProfitMaxUnlockTime(newProfitMaxUnlockTime);
     }
 
-    function set_role(address account, uint256 role) external ready {
+    function set_role(address account, uint256 role) external {
         require(msg.sender == role_manager, "not allowed");
         require(role <= ALL_ROLES, "invalid role");
         roles[account] = role;
         emit RoleSet(account, role);
     }
 
-    function add_role(address account, uint256 role) external ready {
+    function add_role(address account, uint256 role) external {
         require(msg.sender == role_manager, "not allowed");
         require(role <= ALL_ROLES, "invalid role");
         uint256 newRoles = roles[account] | role;
@@ -452,7 +441,7 @@ contract YearnVaultV3Real {
         emit RoleSet(account, newRoles);
     }
 
-    function remove_role(address account, uint256 role) external ready {
+    function remove_role(address account, uint256 role) external {
         require(msg.sender == role_manager, "not allowed");
         require(role <= ALL_ROLES, "invalid role");
         uint256 newRoles = roles[account] & ~role;
@@ -460,25 +449,25 @@ contract YearnVaultV3Real {
         emit RoleSet(account, newRoles);
     }
 
-    function transfer_role_manager(address newRoleManager) external ready {
+    function transfer_role_manager(address newRoleManager) external {
         require(msg.sender == role_manager, "not allowed");
         future_role_manager = newRoleManager;
         emit UpdateFutureRoleManager(newRoleManager);
     }
 
-    function accept_role_manager() external ready {
+    function accept_role_manager() external {
         require(msg.sender == future_role_manager, "not allowed");
         role_manager = msg.sender;
         future_role_manager = address(0);
         emit UpdateRoleManager(msg.sender);
     }
 
-    function process_report(address strategy) external ready nonReentrant returns (uint256 gain, uint256 loss) {
+    function process_report(address strategy) external nonReentrant returns (uint256 gain, uint256 loss) {
         _enforceRole(msg.sender, REPORTING_MANAGER);
         return _processReport(strategy);
     }
 
-    function buy_debt(address strategy, uint256 amount) external ready nonReentrant {
+    function buy_debt(address strategy, uint256 amount) external nonReentrant {
         _enforceRole(msg.sender, DEBT_PURCHASER);
         StrategyParams storage params = _strategies[strategy];
         require(params.activation != 0, "not active");
@@ -504,41 +493,40 @@ contract YearnVaultV3Real {
         emit DebtPurchased(strategy, amount_);
     }
 
-    function add_strategy(address newStrategy) external ready {
+    function add_strategy(address newStrategy) external {
         _enforceRole(msg.sender, ADD_STRATEGY_MANAGER);
         _addStrategy(newStrategy, true);
     }
 
-    function add_strategy(address newStrategy, bool addToQueue) external ready {
+    function add_strategy(address newStrategy, bool addToQueue) external {
         _enforceRole(msg.sender, ADD_STRATEGY_MANAGER);
         _addStrategy(newStrategy, addToQueue);
     }
 
-    function revoke_strategy(address strategy) external ready {
+    function revoke_strategy(address strategy) external {
         _enforceRole(msg.sender, REVOKE_STRATEGY_MANAGER);
         _revokeStrategy(strategy, false);
     }
 
-    function force_revoke_strategy(address strategy) external ready {
+    function force_revoke_strategy(address strategy) external {
         _enforceRole(msg.sender, FORCE_REVOKE_MANAGER);
         _revokeStrategy(strategy, true);
     }
 
-    function update_max_debt_for_strategy(address strategy, uint256 newMaxDebt) external ready {
+    function update_max_debt_for_strategy(address strategy, uint256 newMaxDebt) external {
         _enforceRole(msg.sender, MAX_DEBT_MANAGER);
         require(_strategies[strategy].activation != 0, "inactive strategy");
         _strategies[strategy].maxDebt = newMaxDebt;
         emit UpdatedMaxDebtForStrategy(msg.sender, strategy, newMaxDebt);
     }
 
-    function update_debt(address strategy, uint256 targetDebt) external ready nonReentrant returns (uint256) {
+    function update_debt(address strategy, uint256 targetDebt) external nonReentrant returns (uint256) {
         _enforceRole(msg.sender, DEBT_MANAGER);
         return _updateDebt(strategy, targetDebt, MAX_BPS);
     }
 
     function update_debt(address strategy, uint256 targetDebt, uint256 maxLoss)
         external
-        ready
         nonReentrant
         returns (uint256)
     {
@@ -546,7 +534,7 @@ contract YearnVaultV3Real {
         return _updateDebt(strategy, targetDebt, maxLoss);
     }
 
-    function shutdown_vault() external ready {
+    function shutdown_vault() external {
         _enforceRole(msg.sender, EMERGENCY_MANAGER);
         require(!shutdown, "shutdown");
         shutdown = true;
