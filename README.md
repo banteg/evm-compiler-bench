@@ -150,6 +150,11 @@ just zip-design
   hand-written assembly or mechanically de-optimized ports. Language-native
   advantages such as Solidity storage packing and Vyper dispatch codegen are
   part of the comparison.
+- Generated scale families are also high-level source stress tests. If a
+  compiler profile cannot lower a generated high-level shape, such as a
+  many-argument Solidity ABI function under legacy non-via-IR codegen, the
+  missing row remains a compile failure rather than being replaced with
+  assembly or calldata parsing that changes what the family measures.
 - Stripped runtime bytecode is used for bytecode comparisons so appended
   compiler metadata does not dominate code-size deltas.
 - Missing compile rows are excluded from pairwise ratios; they are still shown
