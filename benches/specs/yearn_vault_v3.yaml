@@ -276,6 +276,7 @@ real_derived:
     - add_strategy_queue_full_skips_append
     - forced_default_queue_withdraw
     - combined_management_sequence_withdraw
+    - active_management_sequence_withdraw
     - alternate_management_sequence_redeem
     - repeated_management_transitions_redeem
     - force_revoke_strategy
@@ -371,7 +372,7 @@ real_derived:
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return maxDeposit/maxMint, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return maxWithdraw/maxRedeem, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
-    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
+    - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across four orderings, including active non-shutdown withdrawal
     - profit/loss/zero report accounting, strategy zero report accounting with accountant fees/refunds, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, fee recalculation when fees exceed gains even after pulling refunds and when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
@@ -827,6 +828,9 @@ scenarios:
   - name: combined_management_sequence_withdraw
     call: "withdraw after delegated strategy/queue changes, debt allocation, accountant/protocol-fee report, module changes, and shutdown"
     expected: "preserves final observable state and withdraw behavior across the combined management sequence"
+  - name: active_management_sequence_withdraw
+    call: "withdraw with an explicit queue after default-queue changes, debt allocation, accountant report, and module changes without shutdown"
+    expected: "preserves final observable state and live strategy-withdraw behavior across an active management sequence"
   - name: alternate_management_sequence_redeem
     call: "redeem with an explicit queue after accountant/module setup, reversed debt allocation, role-manager transfer, delegated emergency shutdown, and a strategy report"
     expected: "preserves final observable state and redeem behavior across an alternate management ordering"

@@ -2027,6 +2027,33 @@ scenarios:
       data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(150_000), address(this), address(this), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: active_management_sequence_withdraw
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(10), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(300_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy2({target}), true)'
+      - data: 'benchYearnSetDefaultQueueCalldata({target}, true)'
+      - data: 'abi.encodeWithSignature("set_use_default_queue(bool)", false)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy2({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(100_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy2({target}), uint256(80_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnConfigureAccountant(address,uint256,uint256)", {target}, uint256(500), uint256(250))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReportFor(address,address,uint256,uint256)", {target}, benchYearnStrategy({target}), uint256(5_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetDepositLimitModule(address,uint256)", {target}, uint256(400_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetWithdrawLimitModule(address,uint256)", {target}, uint256(200_000))'
+    measured:
+      data: 'benchYearnWithdrawQueueCalldata({target}, uint256(150_000), address(this), address(this), uint256(0), false)'
+    expect_success: true
+    observers: *yearn_observers
   - name: alternate_management_sequence_redeem
     state_access_profile: mixed
     setup:
