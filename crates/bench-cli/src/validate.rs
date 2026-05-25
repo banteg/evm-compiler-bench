@@ -924,10 +924,14 @@ fn validate_source_language_implementation(
     };
     let implementation_path = Path::new(implementation);
 
-    if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal {
+    if matches!(
+        provenance.source_lane,
+        ComparisonLane::LatestSyntaxOriginal | ComparisonLane::LatestIdiomatic
+    ) {
+        let source_lane = provenance.source_lane.as_str();
         if path_has_component(implementation_path, "upstream") {
             bail!(
-                "{} latest_syntax_original source-language implementation must not compile from upstream reference path {}",
+                "{} {source_lane} source-language implementation must not compile from upstream reference path {}",
                 path.display(),
                 implementation
             );
@@ -936,7 +940,7 @@ fn validate_source_language_implementation(
         let upstream_reference = provenance.upstream_reference_path(&benchmark.id);
         if implementation_path == upstream_reference {
             bail!(
-                "{} latest_syntax_original source-language implementation must be distinct from upstream reference path {}",
+                "{} {source_lane} source-language implementation must be distinct from upstream reference path {}",
                 path.display(),
                 upstream_reference.display()
             );
@@ -951,14 +955,14 @@ fn validate_source_language_implementation(
         match provenance.source_language {
             crate::models::Language::Solidity if !source.contains(LATEST_SOLIDITY_PRAGMA) => {
                 bail!(
-                    "{} latest_syntax_original Solidity implementation {} must use `{LATEST_SOLIDITY_PRAGMA}`",
+                    "{} {source_lane} Solidity implementation {} must use `{LATEST_SOLIDITY_PRAGMA}`",
                     path.display(),
                     implementation
                 );
             }
             crate::models::Language::Vyper if !source.contains(LATEST_VYPER_PRAGMA) => {
                 bail!(
-                    "{} latest_syntax_original Vyper implementation {} must use `{LATEST_VYPER_PRAGMA}`",
+                    "{} {source_lane} Vyper implementation {} must use `{LATEST_VYPER_PRAGMA}`",
                     path.display(),
                     implementation
                 );
@@ -1979,7 +1983,7 @@ source_profiles:
     }
 
     #[test]
-    fn rejects_latest_syntax_original_compiled_from_upstream_reference() {
+    fn rejects_latest_source_lanes_compiled_from_upstream_reference() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
             .nth(2)
@@ -1988,11 +1992,25 @@ source_profiles:
             .into_iter()
             .find(|benchmark| benchmark.id == "uniswap_v2_pair")
             .unwrap();
-        let provenance = benchmark.provenance.clone().unwrap();
+        let mut provenance = benchmark.provenance.clone().unwrap();
         benchmark.solidity_path =
             "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
                 .to_string();
 
+        let err = super::validate_source_language_implementation(
+            root,
+            Path::new("benches/specs/uniswap_v2_pair.yaml"),
+            &benchmark,
+            &provenance,
+        )
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("must not compile from upstream reference path")
+        );
+
+        provenance.source_lane = crate::models::ComparisonLane::LatestIdiomatic;
         let err = super::validate_source_language_implementation(
             root,
             Path::new("benches/specs/uniswap_v2_pair.yaml"),
