@@ -326,6 +326,7 @@ real_derived:
     - withdraw_limit_module
     - withdraw_limit_module_exact_limit
     - withdraw_limit_module_max_uint_withdraw
+    - redeem_limit_module_max_uint_redeem
     - max_withdraw_limit_module
     - max_withdraw_limit_module_caps_to_balance
     - max_redeem_limit_module_max_uint
@@ -381,7 +382,7 @@ real_derived:
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
-    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding across max views, withdraw execution, and redeem execution
+    - withdraw-limit module high-return withdraw and redeem execution plus capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding across max views, withdraw execution, and redeem execution
     - partial and over-returning strategy redeem accounting during user withdrawals
     - buy-debt inactive-strategy rejection, zero-current-debt rejection, zero-amount rejection, current-debt clipping, and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
@@ -984,6 +985,9 @@ scenarios:
   - name: withdraw_limit_module_max_uint_withdraw
     call: "withdraw through a custom withdraw limit module returning max uint256"
     expected: "accepts the high module return through the same max-withdraw path used by maxRedeem"
+  - name: redeem_limit_module_max_uint_redeem
+    call: "redeem through a custom withdraw limit module returning max uint256"
+    expected: "accepts the high module return through the same max-redeem path used by maxWithdraw"
   - name: max_withdraw_limit_module
     call: "maxWithdraw with a custom withdraw limit module"
     expected: "returns the module-capped withdrawable amount"
