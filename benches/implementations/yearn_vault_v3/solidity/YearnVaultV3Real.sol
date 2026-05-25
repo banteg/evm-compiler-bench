@@ -130,9 +130,12 @@ contract YearnVaultV3Real {
     address public role_manager;
     address public future_role_manager;
 
-    string public name;
-    string public symbol;
+    uint256 internal name_length;
+    bytes32[2] internal name_storage;
+    uint256 internal symbol_length;
+    bytes32 internal symbol_storage;
     bool internal shutdown;
+    uint248 private __shutdown_padding;
     uint256 internal profit_max_unlock_time;
     uint256 internal full_profit_unlock_date;
     uint256 internal profit_unlocking_rate;
@@ -202,8 +205,8 @@ contract YearnVaultV3Real {
         decimals = YearnBenchERC20(asset_).decimals();
         factory = msg.sender;
         profit_max_unlock_time = profitMaxUnlockTime_;
-        name = name_;
-        symbol = symbol_;
+        _setName(name_);
+        _setSymbol(symbol_);
         role_manager = roleManager_;
     }
 
@@ -318,13 +321,13 @@ contract YearnVaultV3Real {
     function setName(string calldata newName) external {
         require(msg.sender == role_manager, "not allowed");
         require(bytes(newName).length <= 64, "name too long");
-        name = newName;
+        _setName(newName);
     }
 
     function setSymbol(string calldata newSymbol) external {
         require(msg.sender == role_manager, "not allowed");
         require(bytes(newSymbol).length <= 32, "symbol too long");
-        symbol = newSymbol;
+        _setSymbol(newSymbol);
     }
 
     function set_accountant(address newAccountant) external {
@@ -676,6 +679,23 @@ contract YearnVaultV3Real {
 
     function apiVersion() external pure returns (string memory) {
         return API_VERSION;
+    }
+
+    function name() external view returns (string memory) {
+        string memory value = new string(name_length);
+        assembly {
+            mstore(add(value, 32), sload(name_storage.slot))
+            mstore(add(value, 64), sload(add(name_storage.slot, 1)))
+        }
+        return value;
+    }
+
+    function symbol() external view returns (string memory) {
+        string memory value = new string(symbol_length);
+        assembly {
+            mstore(add(value, 32), sload(symbol_storage.slot))
+        }
+        return value;
     }
 
     function assess_share_of_unrealised_losses(address strategy, uint256 assetsNeeded) external view returns (uint256) {
@@ -1278,6 +1298,29 @@ contract YearnVaultV3Real {
             return strategies_;
         }
         queue = _copyDefaultQueue();
+    }
+
+    function _setName(string calldata newName) internal {
+        bytes calldata raw = bytes(newName);
+        name_length = raw.length;
+        bytes32 word0;
+        bytes32 word1;
+        assembly {
+            word0 := calldataload(raw.offset)
+            word1 := calldataload(add(raw.offset, 32))
+        }
+        name_storage[0] = word0;
+        name_storage[1] = word1;
+    }
+
+    function _setSymbol(string calldata newSymbol) internal {
+        bytes calldata raw = bytes(newSymbol);
+        symbol_length = raw.length;
+        bytes32 word0;
+        assembly {
+            word0 := calldataload(raw.offset)
+        }
+        symbol_storage = word0;
     }
 
     function _copyDefaultQueue() internal view returns (address[] memory queue) {
