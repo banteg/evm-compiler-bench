@@ -98,7 +98,9 @@ real_derived:
     - exchange_three_coin_slippage_reverts
     - exchange_eight_coin_slippage_reverts
     - exchange_received_eight_coin_boundary
+    - exchange_received_eight_coin_slippage_reverts
     - exchange_received_three_coin
+    - exchange_received_three_coin_slippage_reverts
     - remove_liquidity_three_coin
     - remove_liquidity_eight_coin
     - remove_one_coin_eight_coin
@@ -181,10 +183,10 @@ real_derived:
     - standard-token three-coin imbalanced add-liquidity path
     - standard-token eight-coin imbalanced add-liquidity path at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
-    - standard-token three-coin exchange_received optimistic-transfer path
+    - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
     - standard-token eight-coin endpoint exchange path
     - standard-token eight-coin endpoint exchange slippage rejection
-    - standard-token eight-coin endpoint exchange_received optimistic-transfer path
+    - standard-token eight-coin endpoint exchange_received optimistic-transfer path and slippage rejection
     - proportional three-coin liquidity removal
     - proportional eight-coin liquidity removal at MAX_COINS
     - eight-coin one-coin withdrawal at MAX_COINS
@@ -268,9 +270,15 @@ scenarios:
   - name: exchange_received_eight_coin_boundary
     call: "exchange_received(0, 7, 25_000, 0, address(this)) after direct token transfer to an eight-coin deployment"
     expected: "uses the optimistic incoming balance and updates endpoint coin balances, fees, and the final price oracle slot at MAX_COINS"
+  - name: exchange_received_eight_coin_slippage_reverts
+    call: "exchange_received(0, 7, 25_000, 1_000_000, address(this)) after direct token transfer to an eight-coin deployment"
+    expected: "reverts when the optimistic-transfer output at the upstream MAX_COINS boundary is below min_dy"
   - name: exchange_received_three_coin
     call: "exchange_received(0, 2, 25_000, 0, address(this)) after direct token transfer to a three-coin deployment"
     expected: "uses the optimistic incoming balance and updates constructor-sized accounting and oracle slots"
+  - name: exchange_received_three_coin_slippage_reverts
+    call: "exchange_received(0, 2, 25_000, 1_000_000, address(this)) after direct token transfer to a three-coin deployment"
+    expected: "reverts when the constructor-sized optimistic-transfer output is below min_dy"
   - name: remove_liquidity_three_coin
     call: "remove_liquidity(10_000, [0, 0, 0], address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers proportional balances for all constructor-sized coins"
