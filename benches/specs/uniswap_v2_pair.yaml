@@ -66,6 +66,7 @@ real_derived:
     - mint_subsequent
     - mint_zero_receiver
     - swap_fee_invariant
+    - swap_dual_output
     - swap_token0_input
     - swap_token0_input_k_reverts
     - swap_token1_input
@@ -124,7 +125,7 @@ real_derived:
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
     - burn path with staged LP shares and no-staged-liquidity rejection
-    - constant-product swap fee invariant for both token0-input and token1-input paths, including upstream exact-price fixtures and one-wei-over K rejections
+    - constant-product swap fee invariant for both token0-input and token1-input paths, including dual-output swaps, upstream exact-price fixtures, and one-wei-over K rejections
     - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
     - non-empty flash-swap callback execution
     - flash-swap callback data above the old 1024-byte and 4096-byte Vyper port bounds, plus the current 65536-byte port boundary
@@ -170,6 +171,9 @@ scenarios:
   - name: swap_fee_invariant
     call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
+  - name: swap_dual_output
+    call: "swap(100, 100, address(this), empty bytes) after token0 input is sent to the pair"
+    expected: "permits simultaneous token0 and token1 output when the adjusted constant-product invariant is satisfied"
   - name: swap_token0_input
     call: "swap(0, 1662497915624478906, address(this), empty bytes) after token0 input is sent to the pair"
     expected: "matches the upstream token0-input swap fixture and updates reserves while preserving the adjusted invariant"
