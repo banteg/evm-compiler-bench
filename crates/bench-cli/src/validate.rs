@@ -688,7 +688,20 @@ fn validate_report_model(
         require_json_pointer(value, pointer, path)?;
     }
     validate_report_methodology(value, path)?;
-    validate_report_real_derived_models(value, provenance_by_id, path)?;
+    let manifest = value
+        .pointer("/manifest")
+        .with_context(|| format!("{} missing report manifest", path.display()))?;
+    validate_manifest_profiles(manifest, path)?;
+    validate_real_derived_manifest(manifest, path)?;
+    validate_real_derived_manifest_matches_catalog(manifest, provenance_by_id, path)?;
+    let manifest_sources = real_derived_manifest_source_set(manifest, path)?;
+    let model_sources = validate_report_real_derived_models(value, provenance_by_id, path)?;
+    if manifest_sources != model_sources {
+        bail!(
+            "{} report real_derived_models compiled_sources do not match embedded manifest source_variants",
+            path.display()
+        );
+    }
     Ok(())
 }
 
@@ -754,11 +767,12 @@ fn validate_report_real_derived_models(
     value: &Value,
     provenance_by_id: &BTreeMap<String, Provenance>,
     path: &Path,
-) -> Result<()> {
+) -> Result<BTreeSet<String>> {
     let models = value
         .pointer("/real_derived_models")
         .and_then(|value| value.as_array())
         .with_context(|| format!("{} real_derived_models must be an array", path.display()))?;
+    let mut all_sources = BTreeSet::new();
     for model in models {
         let benchmark_id = string_at(model, "/benchmark_id", path)?;
         let Some(provenance) = provenance_by_id.get(benchmark_id) else {
@@ -800,9 +814,16 @@ fn validate_report_real_derived_models(
             require_enum(source, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             validate_real_derived_source_variant_path(source, path)?;
             validate_real_derived_unique_compiled_source(source, &mut seen_sources, path)?;
+            let key = real_derived_source_key(benchmark_id, source, path)?;
+            if !all_sources.insert(key) {
+                bail!(
+                    "{} duplicate report compiled source across real-derived models for benchmark {benchmark_id}",
+                    path.display()
+                );
+            }
         }
     }
-    Ok(())
+    Ok(all_sources)
 }
 
 fn validate_real_derived_unique_compiled_source(
@@ -828,6 +849,54 @@ fn validate_real_derived_unique_compiled_source(
         );
     }
     Ok(())
+}
+
+fn real_derived_manifest_source_set(value: &Value, path: &Path) -> Result<BTreeSet<String>> {
+    let benchmarks = value
+        .pointer("/real_derived/benchmarks")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} real_derived.benchmarks must be an array",
+                path.display()
+            )
+        })?;
+    let mut sources = BTreeSet::new();
+    for benchmark in benchmarks {
+        let benchmark_id = string_at(benchmark, "/benchmark_id", path)?;
+        let variants = benchmark
+            .pointer("/source_variants")
+            .and_then(|value| value.as_array())
+            .with_context(|| {
+                format!(
+                    "{} real_derived benchmark {benchmark_id} missing source_variants",
+                    path.display()
+                )
+            })?;
+        for variant in variants {
+            let key = real_derived_source_key(benchmark_id, variant, path)?;
+            if !sources.insert(key) {
+                bail!(
+                    "{} duplicate manifest source variant across real-derived models for benchmark {benchmark_id}",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(sources)
+}
+
+fn real_derived_source_key(benchmark_id: &str, source: &Value, path: &Path) -> Result<String> {
+    Ok([
+        benchmark_id,
+        string_at(source, "/language", path)?,
+        string_at(source, "/implementation_id", path)?,
+        string_at(source, "/profile_id", path)?,
+        string_at(source, "/source_variant", path)?,
+        string_at(source, "/source_path", path)?,
+        string_at(source, "/source_hash", path)?,
+    ]
+    .join("\0"))
 }
 
 fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
@@ -2784,6 +2853,46 @@ source_profiles:
                     }
                 ]
             },
+            "manifest": {
+                "profiles": [
+                    {
+                        "id": "solc-latest-noopt",
+                        "language": "solidity",
+                        "compiler": "solc",
+                        "source_variant": "latest"
+                    }
+                ],
+                "real_derived": {
+                    "benchmarks": [
+                        {
+                            "benchmark_id": "uniswap_v2_pair",
+                            "comparison_lane": "production_conformance",
+                            "source_lane": "latest_syntax_original",
+                            "counterpart_lane": "fixture_scoped_port",
+                            "source_language": "solidity",
+                            "source_profiles": &provenance.source_profiles,
+                            "source_path": &provenance.source_path,
+                            "source_reference_path": provenance
+                                .upstream_reference_path("uniswap_v2_pair")
+                                .to_string_lossy(),
+                            "source_blob": provenance.source_blob.as_deref().unwrap(),
+                            "production_equivalence": false,
+                            "excluded_features": ["factory fixture"],
+                            "source_variants": [
+                                {
+                                    "language": "solidity",
+                                    "implementation_id": "solidity/handwritten/v1",
+                                    "profile_id": "solc-latest-noopt",
+                                    "source_variant": "latest",
+                                    "source_path": "target/bench-source-variants/solc-latest-noopt/Pair.sol",
+                                    "source_hash": "abc",
+                                    "compile_status": "ok"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
             "real_derived_models": [
                 {
                     "benchmark_id": "uniswap_v2_pair",
@@ -2818,6 +2927,15 @@ source_profiles:
             .remove("methodology");
         assert!(
             super::validate_report_model(&missing_methodology, &provenance_by_id, path).is_err()
+        );
+
+        let mut mismatched_compiled_source = report_model.clone();
+        *mismatched_compiled_source
+            .pointer_mut("/real_derived_models/0/compiled_sources/0/source_hash")
+            .unwrap() = json!("def");
+        assert!(
+            super::validate_report_model(&mismatched_compiled_source, &provenance_by_id, path)
+                .is_err()
         );
 
         *report_model
