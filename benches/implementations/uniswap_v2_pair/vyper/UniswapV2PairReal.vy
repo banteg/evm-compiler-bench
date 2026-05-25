@@ -73,22 +73,22 @@ def __init__():
     self.unlocked = True
 
 @external
-@pure
+@view
 def name() -> String[10]:
     return "Uniswap V2"
 
 @external
-@pure
+@view
 def symbol() -> String[6]:
     return "UNI-V2"
 
 @external
-@pure
+@view
 def decimals() -> uint8:
     return 18
 
 @external
-@pure
+@view
 def PERMIT_TYPEHASH() -> bytes32:
     return PERMIT_TYPEHASH_VALUE
 
