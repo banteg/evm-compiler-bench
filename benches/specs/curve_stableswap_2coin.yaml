@@ -200,6 +200,7 @@ real_derived:
     - factory/admin/fee receiver hooks and the delegated NG views implementation are provided by the generated harness
     - oracle, rebasing, and ERC4626 coverage uses deterministic harness coins, rate oracles, and vault-share rates
     - Solidity port uses constructor-driven N_COINS for covered standard-token scenarios and is not a line-for-line NG translation
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port because the benchmark claims externally observable pool behavior, not slot-level upgrade or proxy compatibility
   included_features:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
@@ -258,7 +259,6 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
     - slippage and invalid coin reverts
   excluded_features:
-    - exact storage layout compatibility in the Solidity port
     - exhaustive dynamic N-coin scenario coverage for every pool action at every N_COINS value
     - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
     - exhaustive revert-data and Vyper DynArray decoder-boundary parity audit outside the listed scenarios

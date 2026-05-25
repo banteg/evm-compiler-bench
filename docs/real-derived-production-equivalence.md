@@ -98,7 +98,7 @@ Immediate chips:
 | Factory and views dependencies | Fixture-exact | Both implementations call the benchmark-provided factory/views fixture. |
 | `StableSwapViews` call topology in Solidity | Exact counterpart surface for quote views | The Solidity port now mirrors upstream by routing `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` through `factory.views_implementation()`. |
 | Vyper `DynArray[MAX_COINS]` ABI bounds | Approximate | Too-long arrays and ignored extra entries are covered, but Solidity enforces this with runtime checks, not Vyper decoder behavior. |
-| Storage layout | Approximate | The Solidity port is idiomatic and not storage-layout-compatible. |
+| Storage layout | Tracked separately | The Solidity port is idiomatic and not storage-layout-compatible; this is outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
@@ -246,6 +246,10 @@ Remaining:
   deployments.
 - Solidity runtime length checks approximate Vyper `DynArray` decoder bounds;
   revert data and decoder timing are not exact.
+- Exact storage layout compatibility is intentionally false for the Solidity
+  port. That is acceptable for an idiomatic source comparison because the
+  benchmark claims externally observable pool behavior, not slot-level upgrade
+  or proxy compatibility.
 
 Suggested next chips:
 
