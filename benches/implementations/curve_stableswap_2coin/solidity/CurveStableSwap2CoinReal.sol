@@ -574,12 +574,13 @@ contract CurveStableSwap2CoinReal {
                 keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline))
             )
         );
-        address recovered = ecrecover(digest, v, r, s);
-        if (recovered != owner) {
+        if (owner.code.length > 0) {
             bytes memory signature = abi.encodePacked(r, s, bytes1(v));
             (bool ok, bytes memory result) =
                 owner.staticcall(abi.encodeWithSignature("isValidSignature(bytes32,bytes)", digest, signature));
             require(ok && result.length >= 32 && abi.decode(result, (bytes32)) == ERC1271_MAGIC_VALUE, "signature");
+        } else {
+            require(ecrecover(digest, v, r, s) == owner, "signature");
         }
         allowance[owner][spender] = value;
         nonces[owner] = nonce + 1;
