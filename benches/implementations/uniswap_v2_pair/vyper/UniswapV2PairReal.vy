@@ -16,13 +16,13 @@ DOMAIN_TYPEHASH: constant(bytes32) = keccak256("EIP712Domain(string name,string 
 NAME_HASH: constant(bytes32) = keccak256("Uniswap V2")
 VERSION_HASH: constant(bytes32) = keccak256("1")
 PERMIT_TYPEHASH_VALUE: constant(bytes32) = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9
-RESERVE_MASK: constant(uint256) = 5192296858534827628530496329220095
-TIMESTAMP_MASK: constant(uint256) = 4294967295
 
 factory: public(address)
 token0: public(address)
 token1: public(address)
-reserve_packed: uint256
+reserve0: uint112
+reserve1: uint112
+blockTimestampLast: uint32
 price0CumulativeLast: public(uint256)
 price1CumulativeLast: public(uint256)
 kLast: public(uint256)
@@ -138,15 +138,13 @@ def transferFrom(owner: address, receiver: address, amount: uint256) -> bool:
 @external
 @view
 def getReserves() -> (uint112, uint112, uint32):
-    packed_reserves: uint256 = self.reserve_packed
-    return self._unpack_reserve0(packed_reserves), self._unpack_reserve1(packed_reserves), self._unpack_block_timestamp(packed_reserves)
+    return self.reserve0, self.reserve1, self.blockTimestampLast
 
 @external
 def mint(receiver: address) -> uint256:
     self._lock()
-    packed_reserves: uint256 = self.reserve_packed
-    old_reserve0: uint112 = self._unpack_reserve0(packed_reserves)
-    old_reserve1: uint112 = self._unpack_reserve1(packed_reserves)
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
     balance0_: uint256 = self._balance(self.token0)
     balance1_: uint256 = self._balance(self.token1)
     amount0: uint256 = balance0_ - convert(old_reserve0, uint256)
@@ -174,9 +172,8 @@ def mint(receiver: address) -> uint256:
 @external
 def burn(receiver: address) -> (uint256, uint256):
     self._lock()
-    packed_reserves: uint256 = self.reserve_packed
-    old_reserve0: uint112 = self._unpack_reserve0(packed_reserves)
-    old_reserve1: uint112 = self._unpack_reserve1(packed_reserves)
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
     token0_: address = self.token0
     token1_: address = self.token1
     balance0_: uint256 = self._balance(token0_)
@@ -203,9 +200,8 @@ def burn(receiver: address) -> (uint256, uint256):
 def swap(amount0Out: uint256, amount1Out: uint256, receiver: address, data: Bytes[65536]):
     self._lock()
     assert amount0Out > 0 or amount1Out > 0, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT"
-    packed_reserves: uint256 = self.reserve_packed
-    old_reserve0: uint112 = self._unpack_reserve0(packed_reserves)
-    old_reserve1: uint112 = self._unpack_reserve1(packed_reserves)
+    old_reserve0: uint112 = self.reserve0
+    old_reserve1: uint112 = self.reserve1
     assert amount0Out < convert(old_reserve0, uint256) and amount1Out < convert(old_reserve1, uint256), "UniswapV2: INSUFFICIENT_LIQUIDITY"
     token0_: address = self.token0
     token1_: address = self.token1
@@ -241,20 +237,18 @@ def skim(receiver: address):
     self._lock()
     token0_: address = self.token0
     token1_: address = self.token1
-    packed_reserves: uint256 = self.reserve_packed
-    self._safe_transfer(token0_, receiver, self._balance(token0_) - convert(self._unpack_reserve0(packed_reserves), uint256))
-    self._safe_transfer(token1_, receiver, self._balance(token1_) - convert(self._unpack_reserve1(packed_reserves), uint256))
+    self._safe_transfer(token0_, receiver, self._balance(token0_) - convert(self.reserve0, uint256))
+    self._safe_transfer(token1_, receiver, self._balance(token1_) - convert(self.reserve1, uint256))
     self._unlock()
 
 @external
 def sync():
     self._lock()
-    packed_reserves: uint256 = self.reserve_packed
     self._update(
         self._balance(self.token0),
         self._balance(self.token1),
-        self._unpack_reserve0(packed_reserves),
-        self._unpack_reserve1(packed_reserves),
+        self.reserve0,
+        self.reserve1,
     )
     self._unlock()
 
@@ -297,30 +291,10 @@ def _burn(owner: address, amount: uint256):
     log Transfer(sender=owner, receiver=empty(address), amount=amount)
 
 @internal
-@pure
-def _unpack_reserve0(packed_reserves: uint256) -> uint112:
-    return convert(packed_reserves & RESERVE_MASK, uint112)
-
-@internal
-@pure
-def _unpack_reserve1(packed_reserves: uint256) -> uint112:
-    return convert((packed_reserves >> 112) & RESERVE_MASK, uint112)
-
-@internal
-@pure
-def _unpack_block_timestamp(packed_reserves: uint256) -> uint32:
-    return convert((packed_reserves >> 224) & TIMESTAMP_MASK, uint32)
-
-@internal
-@pure
-def _pack_reserves(reserve0_: uint112, reserve1_: uint112, block_timestamp: uint32) -> uint256:
-    return convert(reserve0_, uint256) | (convert(reserve1_, uint256) << 112) | (convert(block_timestamp, uint256) << 224)
-
-@internal
 def _update(balance0_: uint256, balance1_: uint256, old_reserve0: uint112, old_reserve1: uint112):
     assert balance0_ <= convert(max_value(uint112), uint256) and balance1_ <= convert(max_value(uint112), uint256), "UniswapV2: OVERFLOW"
     block_timestamp: uint32 = convert(block.timestamp % 2**32, uint32)
-    last_timestamp: uint32 = self._unpack_block_timestamp(self.reserve_packed)
+    last_timestamp: uint32 = self.blockTimestampLast
     time_elapsed: uint32 = 0
     if block_timestamp >= last_timestamp:
         time_elapsed = block_timestamp - last_timestamp
@@ -339,7 +313,9 @@ def _update(balance0_: uint256, balance1_: uint256, old_reserve0: uint112, old_r
         self.price1CumulativeLast = unsafe_add(self.price1CumulativeLast, price1_increment)
     new_reserve0: uint112 = convert(balance0_, uint112)
     new_reserve1: uint112 = convert(balance1_, uint112)
-    self.reserve_packed = self._pack_reserves(new_reserve0, new_reserve1, block_timestamp)
+    self.reserve0 = new_reserve0
+    self.reserve1 = new_reserve1
+    self.blockTimestampLast = block_timestamp
     log Sync(reserve0=new_reserve0, reserve1=new_reserve1)
 
 @internal

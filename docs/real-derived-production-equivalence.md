@@ -98,13 +98,13 @@ as provenance/reference inputs.
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
-| Reserve packing and `getReserves` | Exact counterpart surface | Vyper packs `reserve0`, `reserve1`, and `blockTimestampLast` into the upstream bit layout; reserve overflow rejection is covered. |
+| Reserve accounting and `getReserves` | Exact counterpart surface | Vyper uses native `uint112` reserve fields plus a native `uint32` timestamp field; reserve overflow rejection and timestamp wrap behavior are covered. |
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, upstream zero-recipient LP mint behavior, initial mint below `MINIMUM_LIQUIDITY` rejection, burn including zero-recipient output transfers and no-staged-LP burn rejection, invariant and dual-output swaps, zero-output and insufficient-liquidity swap guards, drift, skim including zero-recipient transfers, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
 | Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head, missing/short/overlapping dynamic calldata tails, and truncated permit payloads including signature-tail truncation. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
-| Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
+| Storage layout | Tracked separately | The Vyper port uses idiomatic storage rather than matching the upstream packed reserve word. Externally observable uint112/uint32 reserve semantics are preserved, while slot layout remains outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
@@ -178,14 +178,14 @@ Exact now:
 - The Vyper port implements the matched pair API: initialization, reserves,
   mint, burn, swap, skim, sync, fee-on `kLast`, cumulative prices, LP ERC20
   accounting, and permit.
-- The Vyper port uses packed reserves with the upstream bit layout, including
-  the upstream uint112 reserve overflow guard, and
+- The Vyper port uses native uint112 reserve fields and a native uint32
+  timestamp field, preserving the upstream reserve overflow guard, and
   `default_return_value=True` transfer handling for no-return ERC20s while
   still rejecting explicit false-return transfers.
 - Exact storage layout compatibility is intentionally false for the rest of the
   Vyper port. That is acceptable for an idiomatic source comparison because the
-  benchmark claims externally observable pair behavior, while preserving the
-  packed reserve word where upstream behavior depends on uint112/uint32 bounds.
+  benchmark claims externally observable pair behavior, while preserving
+  uint112/uint32 reserve bounds in idiomatic storage.
 - Scenarios cover initial and subsequent mints, initial mint rejection below
   `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
   factory CREATE2 deployment, same-order and reverse-order duplicate factory

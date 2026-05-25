@@ -155,7 +155,7 @@ real_derived:
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
     - Vyper preserves callback behavior through its idiomatic 65536-byte source bound; that bound is treated as an accepted language-level semantic boundary
-    - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior; the upstream packed reserve word is preserved where pair behavior depends on uint112/uint32 reserve semantics
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior; native uint112/uint32 reserve fields preserve the externally observable reserve overflow and timestamp wrap semantics
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
@@ -172,7 +172,7 @@ real_derived:
     - sync and skim balance drift paths, including zero-recipient skim transfers
     - upstream uint112 reserve overflow rejection
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
-    - packed reserve0/reserve1/blockTimestampLast storage word using the upstream bit layout
+    - native uint112 reserve0/reserve1 fields and uint32 blockTimestampLast semantics
     - no-return token swap, burn, and skim transfer-out paths
     - false-return token swap, burn, and skim transfer-out rejection
     - fee-on and fee-off kLast behavior
