@@ -81,12 +81,18 @@
               "repository_url",
               "source_commit",
               "source_path",
+              "source_reference_path",
               "source_language",
               "source_compiler",
               "source_profiles",
               "source_contract",
+              "source_blob",
+              "upstream_license",
+              "checked_at",
               "model_kind",
               "comparison_lane",
+              "source_lane",
+              "counterpart_lane",
               "production_equivalence",
               "api_compatibility",
               "storage_layout_compatibility",
@@ -104,6 +110,7 @@
               "repository_url": { "type": "string" },
               "source_commit": { "type": "string" },
               "source_path": { "type": "string" },
+              "source_reference_path": { "type": "string" },
               "source_language": { "enum": ["solidity", "vyper"] },
               "source_compiler": { "type": "string" },
               "source_profiles": {
@@ -117,6 +124,26 @@
               "checked_at": { "type": "string" },
               "model_kind": { "type": "string" },
               "comparison_lane": {
+                "enum": [
+                  "upstream_exact_historical",
+                  "latest_syntax_original",
+                  "latest_idiomatic",
+                  "production_conformance",
+                  "diagnostic_layout_matched",
+                  "fixture_scoped_port"
+                ]
+              },
+              "source_lane": {
+                "enum": [
+                  "upstream_exact_historical",
+                  "latest_syntax_original",
+                  "latest_idiomatic",
+                  "production_conformance",
+                  "diagnostic_layout_matched",
+                  "fixture_scoped_port"
+                ]
+              },
+              "counterpart_lane": {
                 "enum": [
                   "upstream_exact_historical",
                   "latest_syntax_original",

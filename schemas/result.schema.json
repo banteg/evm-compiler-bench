@@ -15,6 +15,7 @@
     "provenance",
     "language",
     "compiler",
+    "cache",
     "source_hash",
     "compile",
     "bytecode",
@@ -41,11 +42,42 @@
     },
     "provenance": {
       "type": ["object", "null"],
+      "required": [
+        "upstream_project",
+        "repository_url",
+        "source_commit",
+        "source_path",
+        "source_reference_path",
+        "source_language",
+        "source_compiler",
+        "source_profiles",
+        "source_contract",
+        "source_blob",
+        "upstream_license",
+        "checked_at",
+        "model_kind",
+        "comparison_lane",
+        "source_lane",
+        "counterpart_lane",
+        "production_equivalence",
+        "api_compatibility",
+        "storage_layout_compatibility",
+        "external_token_semantics",
+        "source_derivation",
+        "port_language",
+        "port_version",
+        "equivalence_scope",
+        "scenario_coverage",
+        "mock_assumptions",
+        "included_features",
+        "excluded_features"
+      ],
       "properties": {
         "upstream_project": { "type": "string" },
         "repository_url": { "type": "string" },
         "source_commit": { "type": "string" },
         "source_path": { "type": "string" },
+        "source_reference_path": { "type": "string" },
         "source_language": { "enum": ["solidity", "vyper"] },
         "source_compiler": { "type": "string" },
         "source_profiles": {
@@ -57,6 +89,7 @@
         "source_blob": { "type": ["string", "null"] },
         "upstream_license": { "type": "string" },
         "checked_at": { "type": "string" },
+        "model_kind": { "type": "string" },
         "comparison_lane": {
           "enum": [
             "upstream_exact_historical",
@@ -67,11 +100,38 @@
             "fixture_scoped_port"
           ]
         },
+        "source_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_syntax_original",
+            "latest_idiomatic",
+            "production_conformance",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
+        "counterpart_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_syntax_original",
+            "latest_idiomatic",
+            "production_conformance",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
+        "production_equivalence": { "type": "boolean" },
+        "api_compatibility": { "type": "string" },
+        "storage_layout_compatibility": { "type": "boolean" },
+        "external_token_semantics": { "type": "string" },
+        "source_derivation": { "type": "string" },
         "port_language": { "enum": ["solidity", "vyper"] },
         "port_version": { "type": "string" },
         "equivalence_scope": { "type": "array", "items": { "type": "string" } },
         "scenario_coverage": { "type": "array", "items": { "type": "string" } },
-        "mock_assumptions": { "type": "array", "items": { "type": "string" } }
+        "mock_assumptions": { "type": "array", "items": { "type": "string" } },
+        "included_features": { "type": "array", "items": { "type": "string" } },
+        "excluded_features": { "type": "array", "items": { "type": "string" } }
       }
     },
     "language": { "enum": ["solidity", "vyper"] },
@@ -88,6 +148,30 @@
           "properties": {
             "evmVersion": { "type": "string" },
             "metadataMode": { "enum": ["on", "off"] }
+          }
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "required": ["compile", "gas"],
+      "properties": {
+        "compile": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": {
+              "enum": ["hit", "miss", "stale", "refreshed", "disabled"]
+            }
+          }
+        },
+        "gas": {
+          "type": ["object", "null"],
+          "required": ["status"],
+          "properties": {
+            "status": {
+              "enum": ["hit", "miss", "stale", "refreshed", "disabled"]
+            }
           }
         }
       }
@@ -156,13 +240,13 @@
         "scenario_status_ok"
       ],
       "properties": {
-        "scenario_status_check": { "enum": ["pass", "fail", "not_applicable"] },
+        "scenario_status_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "golden_behavior_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
         "baseline_differential_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "profile_behavior_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
         "observer_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "return_data_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
-        "log_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
+        "log_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "randomized_differential_check": { "enum": ["pass", "fail", "not_applicable"] },
         "property_tests": { "enum": ["pass", "fail", "not_applicable"] },
         "properties": { "type": "array", "items": { "type": "string" } },

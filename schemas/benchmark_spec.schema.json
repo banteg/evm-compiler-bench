@@ -35,6 +35,8 @@
         "suite",
         "model_kind",
         "comparison_lane",
+        "source_lane",
+        "counterpart_lane",
         "upstream_project",
         "repository_url",
         "source_commit",
@@ -43,6 +45,9 @@
         "source_compiler",
         "source_profiles",
         "source_contract",
+        "source_blob",
+        "upstream_license",
+        "checked_at",
         "production_equivalence",
         "api_compatibility",
         "storage_layout_compatibility",
@@ -58,6 +63,26 @@
         "suite": { "const": "real_derived" },
         "model_kind": { "type": "string" },
         "comparison_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_syntax_original",
+            "latest_idiomatic",
+            "production_conformance",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
+        "source_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_syntax_original",
+            "latest_idiomatic",
+            "production_conformance",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
+        "counterpart_lane": {
           "enum": [
             "upstream_exact_historical",
             "latest_syntax_original",
