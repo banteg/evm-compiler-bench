@@ -137,4 +137,4 @@ These items should be closed before flipping `yearn_vault_v3` to
 - Add any remaining adversarial strategy report value combinations beyond the
   covered current-debt-above-max-debt, net-positive/exact-offset/net-negative mixed loss/fee/refund,
   gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive, and gain-with-refund fee-recalculation,
-  net-loss with refund/protocol-fee splits, simultaneous gain/loss with accountant effects and protocol-fee splitting, gain and loss no-profit-lock refund reports, self-report, same-strategy and cross-strategy partial-unlock with accountant effects, and accountant-mutation paths.
+  net-loss with refund/protocol-fee splits, simultaneous gain/loss with accountant effects and protocol-fee splitting, gain and loss no-profit-lock refund reports, self-report, same-strategy and cross-strategy partial-unlock with accountant effects, accountant-mutation paths, and same-strategy partial-unlock mixed reports with hook-created refunds.

@@ -1642,6 +1642,28 @@ scenarios:
       data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
     expect_success: true
     observers: *yearn_observers
+  - name: strategy_mixed_report_after_partial_unlock_with_mutating_accountant
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(10), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(240_000), address(this))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(170_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(120_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReport(address,uint256,uint256)", {target}, uint256(12_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(5))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReport(address,uint256,uint256)", {target}, uint256(4_000), uint256(1_500))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnConfigureMutatingAccountant(address,uint256,uint256,uint256,uint256,uint256,uint256)", {target}, uint256(1_200), uint256(900), uint256(0), uint256(0), uint256(900), uint256(900))'
+    measured:
+      data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy({target}))'
+    expect_success: true
+    observers: *yearn_observers
   - name: strategy_loss_report_after_other_profit_unlock_with_accountant
     state_access_profile: mixed
     setup:

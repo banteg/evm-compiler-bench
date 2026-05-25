@@ -360,9 +360,10 @@ Remaining:
   refund-mutating harness mocks; deposit-limit module, withdraw-limit module,
   and strategy behavior is represented by deterministic harness mocks. The
   current scenarios cover important boundary paths, share-based over-limit
-  rejection, and receiver/owner
-  short-circuits, but not exhaustive adversarial or unusual implementations
-  behind those interfaces.
+  rejection, receiver/owner short-circuits, and a partial-unlock mixed report
+  where the accountant creates refund balance and allowance during the report
+  hook, but not exhaustive adversarial or unusual implementations behind those
+  interfaces.
 - The current sequence coverage proves five representative combined management
   orderings, including active non-shutdown withdrawal and repeated transitions
   across queues, debt, reports, modules, and role-manager handoff. Third-party

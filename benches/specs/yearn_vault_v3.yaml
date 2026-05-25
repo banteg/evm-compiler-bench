@@ -258,6 +258,7 @@ real_derived:
     - profit_unlock_after_time
     - strategy_second_profit_report_while_unlocking
     - strategy_profit_report_after_partial_unlock_with_accountant
+    - strategy_mixed_report_after_partial_unlock_with_mutating_accountant
     - strategy_loss_report_after_other_profit_unlock_with_accountant
     - strategy_loss_withdraw
     - assess_unrealized_loss
@@ -782,6 +783,9 @@ scenarios:
   - name: strategy_profit_report_after_partial_unlock_with_accountant
     call: "process_report for a second profitable strategy report with accountant fees/refunds after partial profit unlock"
     expected: "accounts unlocked shares while charging fees, pulling refunds, and weighting new locked-profit shares"
+  - name: strategy_mixed_report_after_partial_unlock_with_mutating_accountant
+    call: "process_report for a simultaneous gain/loss report after partial profit unlock where the accountant creates refund balance and allowance during the report hook"
+    expected: "accounts unlocked shares, applies mixed gain/loss debt changes, pulls the hook-created refund, charges accountant/protocol fees, and weights new locked-profit shares consistently"
   - name: strategy_loss_report_after_other_profit_unlock_with_accountant
     call: "process_report for a loss on one strategy with accountant fees/refunds after another strategy's profit report has partially unlocked"
     expected: "accounts cross-strategy unlocked shares while pulling refunds, charging fees, and taking the loss branch"
