@@ -149,11 +149,15 @@ real_derived:
     - remove_liquidity_imbalance_five_coin_slippage_reverts
     - remove_liquidity_imbalance_seven_coin
     - calc_withdraw_one_coin_three_coin
+    - calc_withdraw_one_coin_four_coin
     - calc_withdraw_one_coin_five_coin
+    - calc_withdraw_one_coin_seven_coin
     - calc_withdraw_one_coin_eight_coin
     - calc_withdraw_one_coin_eight_coin_interior
     - remove_one_coin_three_coin
+    - remove_one_coin_four_coin
     - remove_one_coin_five_coin
+    - remove_one_coin_seven_coin
     - remove_one_coin_five_coin_slippage_reverts
     - remove_one_coin_three_coin_slippage_reverts
     - add_imbalanced_liquidity
@@ -225,10 +229,10 @@ real_derived:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
-    - constructor-initialized four-coin setup plus endpoint get_dy quote coverage
+    - constructor-initialized four-coin setup plus endpoint get_dy, one-coin withdrawal quote, and one-coin withdrawal coverage
     - constructor-initialized five-coin midpoint pool setup
     - constructor-initialized six-coin midpoint exchange and calc_token_amount deposit/withdraw quote coverage
-    - constructor-initialized seven-coin proportional and imbalanced withdrawal plus dynamic_fee quote coverage
+    - constructor-initialized seven-coin proportional, imbalanced, and one-coin withdrawal plus one-coin withdrawal quote and dynamic_fee quote coverage
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated four-coin endpoint get_dy quote
@@ -259,6 +263,8 @@ real_derived:
     - eight-coin endpoint and interior one-coin withdrawal slippage rejection at MAX_COINS
     - eight-coin endpoint and interior one-coin withdrawal quote at MAX_COINS
     - five-coin midpoint one-coin withdrawal, slippage rejection, and quote paths
+    - four-coin endpoint one-coin withdrawal and quote paths
+    - seven-coin midpoint one-coin withdrawal and quote paths
     - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced eight-coin liquidity removal slippage rejection at MAX_COINS
     - imbalanced five-coin midpoint liquidity removal with dynamic fees and slippage rejection
@@ -452,9 +458,15 @@ scenarios:
   - name: calc_withdraw_one_coin_three_coin
     call: "calc_withdraw_one_coin(10_000, 2) after initial liquidity on a three-coin deployment"
     expected: "quotes a single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
+  - name: calc_withdraw_one_coin_four_coin
+    call: "calc_withdraw_one_coin(10_000, 3) after initial liquidity on a four-coin deployment"
+    expected: "quotes an endpoint single-coin withdrawal for an intermediate constructor-sized deployment"
   - name: calc_withdraw_one_coin_five_coin
     call: "calc_withdraw_one_coin(10_000, 3) after initial liquidity on a five-coin deployment"
     expected: "quotes a midpoint single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
+  - name: calc_withdraw_one_coin_seven_coin
+    call: "calc_withdraw_one_coin(10_000, 4) after initial liquidity on a seven-coin deployment"
+    expected: "quotes a midpoint single-coin withdrawal for another intermediate constructor-sized deployment"
   - name: calc_withdraw_one_coin_eight_coin
     call: "calc_withdraw_one_coin(10_000, 7) after initial liquidity on an eight-coin deployment"
     expected: "quotes an endpoint single-coin withdrawal at the upstream MAX_COINS boundary"
@@ -464,9 +476,15 @@ scenarios:
   - name: remove_one_coin_three_coin
     call: "remove_liquidity_one_coin(10_000, 2, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers the selected coin while updating constructor-sized fee and oracle accounting"
+  - name: remove_one_coin_four_coin
+    call: "remove_liquidity_one_coin(10_000, 3, 0, address(this)) after initial liquidity on a four-coin deployment"
+    expected: "burns LP shares and transfers an endpoint coin through an intermediate constructor-sized deployment"
   - name: remove_one_coin_five_coin
     call: "remove_liquidity_one_coin(10_000, 3, 0, address(this)) after initial liquidity on a five-coin deployment"
     expected: "burns LP shares for a midpoint selected coin while updating constructor-sized fee and oracle accounting"
+  - name: remove_one_coin_seven_coin
+    call: "remove_liquidity_one_coin(10_000, 4, 0, address(this)) after initial liquidity on a seven-coin deployment"
+    expected: "burns LP shares and transfers a midpoint coin through another intermediate constructor-sized deployment"
   - name: remove_one_coin_five_coin_slippage_reverts
     call: "remove_liquidity_one_coin(10_000, 3, 1_000_000, address(this)) after initial liquidity on a five-coin deployment"
     expected: "reverts when the midpoint five-coin withdrawal amount is below min_amount"
