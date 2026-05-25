@@ -359,8 +359,7 @@ contract CurveStableSwap2CoinReal {
         internal
         returns (uint256[] memory amounts)
     {
-        require(receiver != address(0), "receiver");
-        require(lpAmount > 0 && balanceOf[msg.sender] >= lpAmount, "lp");
+        require(lpAmount > 0, "lp");
         require(minAmounts.length == N_COINS, "amount length");
         uint256 supply = totalSupply;
         uint256[] memory currentBalances = _balances();
@@ -399,7 +398,6 @@ contract CurveStableSwap2CoinReal {
         returns (uint256 burnAmount)
     {
         _checkDynArrayAmountLength(amounts.length);
-        require(receiver != address(0), "receiver");
         uint256[] memory oldBalances = _balances();
         uint256[] memory rates = _storedRates();
         uint256 d0 = _getDMem(rates, oldBalances);
@@ -454,10 +452,9 @@ contract CurveStableSwap2CoinReal {
         internal
         returns (uint256 userAmount)
     {
-        require(receiver != address(0), "receiver");
         require(i >= 0 && uint256(int256(i)) < N_COINS, "coin");
         uint256 coinIndex = uint256(int256(i));
-        require(lpAmount > 0 && balanceOf[msg.sender] >= lpAmount, "lp");
+        require(lpAmount > 0, "lp");
         uint256 feeAmount;
         uint256[] memory xp;
         uint256 amp;
