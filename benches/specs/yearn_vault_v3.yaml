@@ -311,6 +311,7 @@ real_derived:
     - deposit_limit_module
     - deposit_limit_module_exact_limit
     - deposit_limit_module_max_uint_deposit
+    - mint_limit_module_max_uint_mint
     - deposit_limit_module_receiver_specific
     - deposit_limit_module_receiver_specific_deposit
     - max_mint_limit_module_receiver_specific
@@ -373,7 +374,7 @@ real_derived:
     - Vyper-compatible String[64] name and String[32] symbol bounds
     - user withdraw and redeem max-loss upper-bound rejection
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
-    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return maxDeposit/maxMint, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
+    - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return maxDeposit/maxMint, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/mint/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return maxWithdraw/maxRedeem, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across four orderings, including active non-shutdown withdrawal
     - profit/loss/zero report accounting, strategy zero report accounting with accountant fees/refunds, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports including loss reports with refunds, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, fee recalculation when fees exceed gains even after pulling refunds and on gain or loss reports when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
@@ -935,6 +936,9 @@ scenarios:
   - name: deposit_limit_module_max_uint_deposit
     call: "deposit through a custom deposit limit module returning max uint256"
     expected: "accepts the high module return through the same max-deposit path used by maxMint"
+  - name: mint_limit_module_max_uint_mint
+    call: "mint through a custom deposit limit module returning max uint256"
+    expected: "accepts the high module return through the same max-mint path used by maxDeposit"
   - name: deposit_limit_module_receiver_specific
     call: "maxDeposit(BOB) through a custom deposit limit module with a receiver-specific limit"
     expected: "passes the receiver argument to the module and returns the receiver-specific limit"

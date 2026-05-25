@@ -2496,6 +2496,17 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: mint_limit_module_max_uint_mint
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetDepositLimitModule(address,uint256)", {target}, type(uint256).max)'
+    measured:
+      data: 'abi.encodeWithSignature("mint(uint256,address)", uint256(100_000), address(this))'
+    expect_success: true
+    observers: *yearn_observers
   - name: deposit_limit_module_receiver_specific
     state_access_profile: warm
     setup:
