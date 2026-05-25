@@ -2252,6 +2252,52 @@ scenarios:
       data: 'benchYearnRedeemTripleQueueCalldata({target}, uint256(220_000), address(this), address(this), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: third_party_edge_sequence_withdraw
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(10), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(360_000), address(this))'
+      - data: 'abi.encodeWithSignature("set_role(address,uint256)", BOB, uint256(1))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy2({target}), true)'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy3({target}), true)'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("add_role(address,uint256)", BOB, uint256(16))'
+      - data: 'benchYearnSetDefaultQueueCalldata({target}, true)'
+        sender: BOB
+      - data: 'benchYearnSetTripleDefaultQueueCalldata({target})'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("set_use_default_queue(bool)", true)'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("set_use_default_queue(bool)", false)'
+        sender: BOB
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(140_000))'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy2({target}), uint256(140_000))'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy3({target}), uint256(140_000))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy({target}), uint256(90_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy2({target}), uint256(80_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("update_debt(address,uint256,uint256)", benchYearnStrategy3({target}), uint256(60_000), uint256(0))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnConfigureMutatingAccountant(address,uint256,uint256,uint256,uint256,uint256,uint256)", {target}, uint256(700), uint256(600), uint256(0), uint256(0), uint256(600), uint256(600))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReportFor(address,address,uint256,uint256)", {target}, benchYearnStrategy2({target}), uint256(4_000), uint256(2_000))'
+      - data: 'abi.encodeWithSignature("process_report(address)", benchYearnStrategy2({target}))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReceiverDepositLimitModule(address,uint256,address,uint256)", {target}, uint256(500_000), BOB, uint256(25_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetStrategyQueueWithdrawLimitModule(address,uint256,uint256)", {target}, uint256(250_000), uint256(190_000))'
+      - data: 'abi.encodeWithSignature("transfer_role_manager(address)", CAROL)'
+      - data: 'abi.encodeWithSignature("accept_role_manager()")'
+        sender: CAROL
+      - data: 'abi.encodeWithSignature("add_role(address,uint256)", BOB, uint256(8192))'
+        sender: CAROL
+    measured:
+      data: 'benchYearnWithdrawTripleQueueCalldata({target}, uint256(170_000), address(this), address(this), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
   - name: force_revoke_strategy
     state_access_profile: mixed
     setup:

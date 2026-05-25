@@ -130,7 +130,7 @@ Immediate chips:
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, accountant fees/refunds and protocol-fee splits on zero strategy reports, gain plus clipped refund locking, gain that moves current debt above max debt, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive locking, gain-with-refund net-loss fee recalculation, simultaneous strategy gain/loss with accountant effects, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation on zero, gain, and loss reports, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, no-lock refund reports, same-strategy partial-unlock profit/loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
 | Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, duplicate entries, full-queue append skipping, long-queue failures, strategy maxRedeem limits, zero-redeem after full unrealized loss, and partial/over strategy redeems are covered. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject and exact-limit paths, zero and high-return deposit/withdraw/redeem execution and capping, high-return deposit-limit module execution through both deposit and mint, active-module maxDeposit after existing vault assets, receiver/owner-specific asset/share max-view returns, max-loss-specific and queue-specific withdraw module argument forwarding through max views and execution paths, receiver-specific deposit and mint execution/rejection, owner-specific withdraw execution and rejection, post-gain and non-1:1 partial-unlock `maxMint`/`maxRedeem` conversion, exact-limit deposit/mint/withdraw/redeem execution, deposit/mint/withdraw/redeem over-limit rejection, zero/vault-receiver short-circuiting before deposit-module calls, and reverting deposit/withdraw-module calls across asset and share max views including zero-balance owners, but arbitrary third-party behavior is not exhaustive. Direct deposit-limit equality is covered outside the module path. |
-| Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover four management orderings, including active non-shutdown withdrawal and a three-strategy repeated-transition path; more adversarial third-party behavior remains. |
+| Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover five management orderings, including active non-shutdown withdrawal, a three-strategy repeated-transition path, and a mutating-accountant/module edge path; more adversarial third-party behavior remains. |
 | Vyper `String` and `DynArray` bounds | Exact counterpart surface, audit pending | Accepted and rejected lengths are covered at the semantic boundary; exact decoder timing and revert bytes are intentionally out of scope unless source behavior depends on them. |
 | Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
 | Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
@@ -323,13 +323,16 @@ Exact now:
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
   limit module.
-- The scenario set includes four combined management sequences that mutate
+- The scenario set includes five combined management sequences that mutate
   delegated roles, role-manager authority, the default/custom queue, debt,
   reporting, limit modules, shutdown state, and then withdraw or redeem from the
   post-sequence vault state. They include an active non-shutdown withdrawal path
   plus a three-strategy queue rewrite, repeated default-queue toggles, debt
   increase/decrease cycles, multiple reports, repeated module updates, and
-  delegated emergency shutdown.
+  delegated emergency shutdown. One path also combines a mutating-accountant
+  mixed report with receiver-specific deposit-module state, queue-specific
+  withdraw-module state, role-manager handoff, and live explicit-queue
+  withdrawal.
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
@@ -347,10 +350,11 @@ Remaining:
   rejection, and receiver/owner
   short-circuits, but not exhaustive adversarial or unusual implementations
   behind those interfaces.
-- The current sequence coverage proves four representative combined management
+- The current sequence coverage proves five representative combined management
   orderings, including active non-shutdown withdrawal and repeated transitions
   across queues, debt, reports, modules, and role-manager handoff. Third-party
-  edge cases remain to be covered.
+  edge cases now include one mutating-accountant/module sequence, but exhaustive
+  adversarial implementations remain out of scope.
 - Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
   success/failure boundaries are covered. The Solidity port uses runtime
   checks rather than Vyper decoder rejection, which is acceptable under the
