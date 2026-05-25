@@ -320,6 +320,7 @@ real_derived:
     - deposit_limit_module_receiver_specific_reverts
     - max_mint_limit_module_receiver_specific
     - mint_limit_module_receiver_specific_mint
+    - mint_limit_module_receiver_specific_reverts
     - deposit_limit_module_zero_max_mint
     - max_deposit_limit_module_zero_return
     - deposit_limit_module_reverts
@@ -969,6 +970,9 @@ scenarios:
   - name: mint_limit_module_receiver_specific_mint
     call: "mint(1_500, BOB) through a custom deposit limit module with a receiver-specific limit"
     expected: "passes the receiver argument through the shared max-deposit path and accepts minting exactly at the receiver-specific limit"
+  - name: mint_limit_module_receiver_specific_reverts
+    call: "mint(1_501, BOB) through a custom deposit limit module with a receiver-specific limit"
+    expected: "passes the receiver argument through the shared max-deposit path and rejects minting above the receiver-specific limit"
   - name: deposit_limit_module_zero_max_mint
     call: "maxMint through a custom deposit limit module returning zero"
     expected: "returns zero shares through the shared max-deposit module path"

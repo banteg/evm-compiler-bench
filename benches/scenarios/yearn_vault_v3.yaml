@@ -2615,6 +2615,17 @@ scenarios:
       data: 'abi.encodeWithSignature("mint(uint256,address)", uint256(1_500), BOB)'
     expect_success: true
     observers: *yearn_observers
+  - name: mint_limit_module_receiver_specific_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReceiverDepositLimitModule(address,uint256,address,uint256)", {target}, uint256(100_000), BOB, uint256(1_500))'
+    measured:
+      data: 'abi.encodeWithSignature("mint(uint256,address)", uint256(1_501), BOB)'
+    expect_success: false
+    observers: *yearn_observers
   - name: deposit_limit_module_zero_max_mint
     state_access_profile: warm
     setup:
