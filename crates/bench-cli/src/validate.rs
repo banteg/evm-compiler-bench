@@ -1090,6 +1090,8 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/external_token_semantics",
                 "/provenance/source_derivation",
                 "/provenance/implementation_lane",
+                "/provenance/source_lane",
+                "/provenance/counterpart_lane",
                 "/provenance/port_language",
                 "/provenance/port_version",
                 "/provenance/source_reference_path",
@@ -1111,19 +1113,25 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 ],
                 path,
             )?;
-            require_enum(
-                row,
+            for pointer in [
                 "/provenance/implementation_lane",
-                &[
-                    "upstream_exact_historical",
-                    "latest_syntax_original",
-                    "latest_idiomatic",
-                    "production_conformance",
-                    "diagnostic_layout_matched",
-                    "fixture_scoped_port",
-                ],
-                path,
-            )?;
+                "/provenance/source_lane",
+                "/provenance/counterpart_lane",
+            ] {
+                require_enum(
+                    row,
+                    pointer,
+                    &[
+                        "upstream_exact_historical",
+                        "latest_syntax_original",
+                        "latest_idiomatic",
+                        "production_conformance",
+                        "diagnostic_layout_matched",
+                        "fixture_scoped_port",
+                    ],
+                    path,
+                )?;
+            }
             require_enum(
                 row,
                 "/provenance/source_language",
@@ -1154,10 +1162,92 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                     );
                 }
             }
+            validate_real_derived_row_lanes(row, path)?;
+            validate_real_derived_row_source_profiles(row, path)?;
             validate_real_derived_excluded_features(row, path)?;
         }
         Some(other) => bail!("{} unsupported suite {other}", path.display()),
         None => bail!("{} missing suite", path.display()),
+    }
+    Ok(())
+}
+
+fn validate_real_derived_row_lanes(row: &Value, path: &Path) -> Result<()> {
+    let comparison_lane = string_at(row, "/provenance/comparison_lane", path)?;
+    let source_lane = string_at(row, "/provenance/source_lane", path)?;
+    let implementation_lane = string_at(row, "/provenance/implementation_lane", path)?;
+    let source_language = string_at(row, "/provenance/source_language", path)?;
+    let port_language = string_at(row, "/provenance/port_language", path)?;
+
+    if comparison_lane == "production_conformance" && source_lane != "latest_syntax_original" {
+        bail!(
+            "{} production_conformance real-derived row requires latest_syntax_original source_lane",
+            path.display()
+        );
+    }
+    if comparison_lane == "latest_idiomatic" && source_lane != "latest_idiomatic" {
+        bail!(
+            "{} latest_idiomatic real-derived row requires latest_idiomatic source_lane",
+            path.display()
+        );
+    }
+    if source_lane == "fixture_scoped_port" || source_lane == "diagnostic_layout_matched" {
+        bail!(
+            "{} real-derived row source_lane must identify an original source lane",
+            path.display()
+        );
+    }
+
+    let expected_implementation_lane = if port_language == source_language {
+        source_lane
+    } else {
+        string_at(row, "/provenance/counterpart_lane", path)?
+    };
+    if implementation_lane != expected_implementation_lane {
+        bail!(
+            "{} real-derived row implementation_lane {implementation_lane} does not match language side {expected_implementation_lane}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result<()> {
+    let source_lane = string_at(row, "/provenance/source_lane", path)?;
+    if source_lane != "latest_syntax_original" {
+        return Ok(());
+    }
+    let source_language = string_at(row, "/provenance/source_language", path)?;
+    let expected_prefix = match source_language {
+        "solidity" => "solc-latest",
+        "vyper" => "vyper-latest",
+        other => bail!(
+            "{} unsupported real-derived source_language {other}",
+            path.display()
+        ),
+    };
+    let profiles = row
+        .pointer("/provenance/source_profiles")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /provenance/source_profiles must be a string array",
+                path.display()
+            )
+        })?;
+    for profile in profiles {
+        let profile = profile.as_str().with_context(|| {
+            format!(
+                "{} JSON pointer /provenance/source_profiles must be a string array",
+                path.display()
+            )
+        })?;
+        if !profile.starts_with(expected_prefix) {
+            bail!(
+                "{} latest_syntax_original row requires source profile {profile} to use {expected_prefix} prefix",
+                path.display()
+            );
+        }
     }
     Ok(())
 }
@@ -1200,6 +1290,13 @@ fn validate_real_derived_excluded_features(row: &Value, path: &Path) -> Result<(
         );
     }
     Ok(())
+}
+
+fn string_at<'a>(value: &'a Value, pointer: &str, path: &Path) -> Result<&'a str> {
+    value
+        .pointer(pointer)
+        .and_then(|value| value.as_str())
+        .with_context(|| format!("{} JSON pointer {pointer} must be a string", path.display()))
 }
 
 fn require_sequence(value: &serde_yaml::Value, key: &str, path: &Path) -> Result<()> {
@@ -1386,6 +1483,84 @@ mod tests {
             super::validate_real_derived_excluded_features(&contradictory_incomplete, path)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn validates_real_derived_row_lane_consistency() {
+        let path = Path::new("results/normalized/results.json");
+        let row = json!({
+            "provenance": {
+                "comparison_lane": "production_conformance",
+                "source_lane": "latest_syntax_original",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "latest_syntax_original",
+                "source_language": "solidity",
+                "port_language": "solidity"
+            }
+        });
+        let counterpart_row = json!({
+            "provenance": {
+                "comparison_lane": "production_conformance",
+                "source_lane": "latest_syntax_original",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "fixture_scoped_port",
+                "source_language": "solidity",
+                "port_language": "vyper"
+            }
+        });
+        let stale_row = json!({
+            "provenance": {
+                "comparison_lane": "production_conformance",
+                "source_lane": "latest_syntax_original",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "production_conformance",
+                "source_language": "solidity",
+                "port_language": "vyper"
+            }
+        });
+        let historical_source = json!({
+            "provenance": {
+                "comparison_lane": "production_conformance",
+                "source_lane": "upstream_exact_historical",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "upstream_exact_historical",
+                "source_language": "solidity",
+                "port_language": "solidity"
+            }
+        });
+
+        super::validate_real_derived_row_lanes(&row, path).unwrap();
+        super::validate_real_derived_row_lanes(&counterpart_row, path).unwrap();
+        assert!(super::validate_real_derived_row_lanes(&stale_row, path).is_err());
+        assert!(super::validate_real_derived_row_lanes(&historical_source, path).is_err());
+    }
+
+    #[test]
+    fn rejects_historical_profiles_in_latest_syntax_original_rows() {
+        let path = Path::new("results/normalized/results.json");
+        let row = json!({
+            "provenance": {
+                "source_lane": "latest_syntax_original",
+                "source_language": "vyper",
+                "source_profiles": [
+                    "vyper-latest-gas",
+                    "vyper-latest-none"
+                ]
+            }
+        });
+        let stale_row = json!({
+            "provenance": {
+                "source_lane": "latest_syntax_original",
+                "source_language": "vyper",
+                "source_profiles": [
+                    "vyper-latest-gas",
+                    "vyper-0.3.10-gas"
+                ]
+            }
+        });
+
+        super::validate_real_derived_row_source_profiles(&row, path).unwrap();
+        assert!(super::validate_real_derived_row_source_profiles(&stale_row, path).is_err());
     }
 
     #[test]
