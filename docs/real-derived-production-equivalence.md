@@ -183,7 +183,7 @@ Exact now:
   port bound and at the current 64 KiB bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP
   transfer/allowance failures, raw ABI-boundary rejection for representative
-  pair actions, LP-token balance/allowance/spend calls, swap head, missing
+  pair actions, LP-token balance/allowance/nonce/spend calls, swap head, missing
   dynamic tail, short dynamic payload calldata, and permit payloads, and permit
   success/failure.
 - The generated differential harness normalizes deployment-specific addresses
