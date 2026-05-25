@@ -152,9 +152,9 @@ Exact now:
   still rejecting explicit false-return transfers.
 - Scenarios cover initial and subsequent mints, initial mint rejection below
   `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
-  factory CREATE2 deployment, token0-input and upstream
-  token1-input swap invariant checks, zero-output and insufficient-liquidity
-  swap guards, one-wei over-output K rejection, no-staged-LP burn rejection,
+  factory CREATE2 deployment, exact upstream token0-input and token1-input
+  swap invariant checks, zero-output and insufficient-liquidity swap guards,
+  one-wei over-output K rejection for each input side, no-staged-LP burn rejection,
   no-return token transfers, false-return transfer rejection across swap, burn,
   and skim, flash callback repayment through callback data above the old 4 KiB
   port bound and at the current 64 KiB bound, flash reentrancy rejection,

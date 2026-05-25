@@ -106,6 +106,42 @@ scenarios:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), address(this), bytes(""))'
     expect_success: true
     observers: *pair_observers
+  - name: swap_token0_input
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(5_000_000_000_000_000_000), uint256(10_000_000_000_000_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000_000_000_000_000), uint256(0))'
+    warmup:
+      - data: 'abi.encodeWithSignature("getReserves()")'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(1_662_497_915_624_478_906), address(this), bytes(""))'
+    expect_success: true
+    observers: *pair_observers
+  - name: swap_token0_input_k_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(5_000_000_000_000_000_000), uint256(10_000_000_000_000_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(30))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000_000_000_000_000), uint256(0))'
+    warmup:
+      - data: 'abi.encodeWithSignature("getReserves()")'
+    measured:
+      data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(1_662_497_915_624_478_907), address(this), bytes(""))'
+    expect_success: false
+    observers: *pair_observers
   - name: swap_token1_input
     state_access_profile: mixed
     setup:
