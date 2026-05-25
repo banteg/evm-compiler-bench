@@ -12,6 +12,7 @@ use std::{
     collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
+    process,
 };
 
 pub const SCALE_GENERATOR_VERSION: &str = "scale-v1";
@@ -101,10 +102,6 @@ struct GeneratedSource {
 pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result<GeneratedSuite> {
     let (config, config_hash) = load_scale_config(root)?;
     let generated_root = root.join(GENERATED_ROOT);
-    if generated_root.exists() {
-        fs::remove_dir_all(&generated_root)
-            .with_context(|| format!("removing {}", generated_root.display()))?;
-    }
     ensure_dir(&generated_root)?;
 
     let mut benchmarks = Vec::new();
@@ -754,7 +751,14 @@ fn write_file(path: &Path, contents: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         ensure_dir(parent)?;
     }
-    fs::write(path, contents).with_context(|| format!("writing {}", path.display()))
+    let file_name = path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .context("generated file path must have a UTF-8 file name")?;
+    let temp = path.with_file_name(format!(".{file_name}.{}.tmp", process::id()));
+    fs::write(&temp, contents).with_context(|| format!("writing {}", temp.display()))?;
+    fs::rename(&temp, path)
+        .with_context(|| format!("moving {} to {}", temp.display(), path.display()))
 }
 
 fn rel(root: &Path, path: &Path) -> Result<String> {
