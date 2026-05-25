@@ -205,6 +205,7 @@ real_derived:
     - strategy_profit_report
     - strategy_zero_report
     - strategy_zero_report_with_accountant_fee_refund
+    - strategy_zero_report_with_accountant_protocol_fee
     - self_zero_report
     - self_report_airdrop
     - self_report_idle_loss
@@ -618,6 +619,9 @@ scenarios:
   - name: strategy_zero_report_with_accountant_fee_refund
     call: "process_report after debt allocation with strategy assets equal to current debt and accountant fees/refunds"
     expected: "charges accountant fees and pulls refunds while leaving strategy debt unchanged"
+  - name: strategy_zero_report_with_accountant_protocol_fee
+    call: "process_report after debt allocation with zero strategy gain/loss, accountant fees/refunds, and nonzero protocol fee config"
+    expected: "splits fee shares between accountant and protocol while leaving strategy debt unchanged"
   - name: self_zero_report
     call: "process_report(address(this)) with vault asset balance equal to total idle"
     expected: "updates last report through the self-report path without gain, loss, fees, refunds, or profit locking"
