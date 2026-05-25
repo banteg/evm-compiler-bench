@@ -465,6 +465,7 @@ fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> R
 fn validate_outputs_if_present(root: &Path) -> Result<usize> {
     let results_path = root.join("results/normalized/results.json");
     let manifest_path = root.join("results/normalized/run-manifest.json");
+    let real_derived_provenance = real_derived_provenance_by_id();
     let mut rows = 0;
     if results_path.exists() {
         let value: Value = serde_json::from_str(&fs::read_to_string(&results_path)?)
@@ -580,6 +581,11 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             }
             require_bool_pointer(row, "/correctness/scenario_status_ok", &results_path)?;
             validate_suite_metadata(row, &results_path)?;
+            validate_real_derived_row_matches_catalog(
+                row,
+                &real_derived_provenance,
+                &results_path,
+            )?;
             rows += 1;
         }
     }
@@ -627,8 +633,24 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
         }
         validate_manifest_profiles(&value, &manifest_path)?;
         validate_real_derived_manifest(&value, &manifest_path)?;
+        validate_real_derived_manifest_matches_catalog(
+            &value,
+            &real_derived_provenance,
+            &manifest_path,
+        )?;
     }
     Ok(rows)
+}
+
+fn real_derived_provenance_by_id() -> BTreeMap<String, Provenance> {
+    checked_in_benchmarks()
+        .into_iter()
+        .filter_map(|benchmark| {
+            benchmark
+                .provenance
+                .map(|provenance| (benchmark.id, provenance))
+        })
+        .collect()
 }
 
 fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
@@ -739,6 +761,59 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn validate_real_derived_manifest_matches_catalog(
+    value: &Value,
+    provenance_by_id: &BTreeMap<String, Provenance>,
+    path: &Path,
+) -> Result<()> {
+    let benchmarks = value
+        .pointer("/real_derived/benchmarks")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} real_derived.benchmarks must be an array",
+                path.display()
+            )
+        })?;
+    for benchmark in benchmarks {
+        let benchmark_id = string_at(benchmark, "/benchmark_id", path)?;
+        let Some(provenance) = provenance_by_id.get(benchmark_id) else {
+            bail!(
+                "{} real-derived manifest references unknown benchmark {benchmark_id}",
+                path.display()
+            );
+        };
+        validate_real_derived_provenance_fields(benchmark, benchmark_id, provenance, path)?;
+    }
+    Ok(())
+}
+
+fn validate_real_derived_provenance_fields(
+    value: &Value,
+    benchmark_id: &str,
+    provenance: &Provenance,
+    path: &Path,
+) -> Result<()> {
+    let source_blob = provenance
+        .source_blob
+        .as_deref()
+        .with_context(|| format!("real-derived benchmark {benchmark_id} missing source_blob"))?;
+    require_string_value(value, "/source_path", &provenance.source_path, path)?;
+    let source_reference_path = provenance
+        .upstream_reference_path(benchmark_id)
+        .to_string_lossy()
+        .into_owned();
+    require_string_value(
+        value,
+        "/source_reference_path",
+        &source_reference_path,
+        path,
+    )?;
+    require_string_value(value, "/source_blob", source_blob, path)?;
+    require_string_array_value(value, "/source_profiles", &provenance.source_profiles, path)?;
+    Ok(())
+}
+
 fn manifest_profile_metadata(
     value: &Value,
     path: &Path,
@@ -837,7 +912,6 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
             path.display()
         );
     }
-    let source_lane = string_at(benchmark, "/source_lane", path)?;
     let source_language = string_at(benchmark, "/source_language", path)?;
     let expected_language_prefix = match source_language {
         "solidity" => "solc",
@@ -846,11 +920,6 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
             "{} unsupported real-derived source_language {other}",
             path.display()
         ),
-    };
-    let latest_prefix = match source_language {
-        "solidity" => "solc-latest",
-        "vyper" => "vyper-latest",
-        _ => unreachable!(),
     };
     for profile in profiles {
         let profile = profile.as_str().with_context(|| {
@@ -862,14 +931,6 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
         if !profile.starts_with(expected_language_prefix) {
             bail!(
                 "{} real-derived manifest source profile {profile} must match source language {source_language}",
-                path.display()
-            );
-        }
-        if matches!(source_lane, "latest_syntax_original" | "latest_idiomatic")
-            && !profile.starts_with(latest_prefix)
-        {
-            bail!(
-                "{} {source_lane} manifest entry requires source profile {profile} to use {latest_prefix} prefix",
                 path.display()
             );
         }
@@ -1616,6 +1677,51 @@ fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result
     validate_real_derived_source_profile_language(source_language, profiles, path, "row")
 }
 
+fn validate_real_derived_row_matches_catalog(
+    row: &Value,
+    provenance_by_id: &BTreeMap<String, Provenance>,
+    path: &Path,
+) -> Result<()> {
+    if row.pointer("/suite").and_then(|value| value.as_str()) != Some("real_derived") {
+        return Ok(());
+    }
+    let benchmark_id = string_at(row, "/benchmark_id", path)?;
+    let Some(provenance) = provenance_by_id.get(benchmark_id) else {
+        bail!(
+            "{} real-derived row references unknown benchmark {benchmark_id}",
+            path.display()
+        );
+    };
+    let source_blob = provenance
+        .source_blob
+        .as_deref()
+        .with_context(|| format!("real-derived benchmark {benchmark_id} missing source_blob"))?;
+    require_string_value(
+        row,
+        "/provenance/source_path",
+        &provenance.source_path,
+        path,
+    )?;
+    let source_reference_path = provenance
+        .upstream_reference_path(benchmark_id)
+        .to_string_lossy()
+        .into_owned();
+    require_string_value(
+        row,
+        "/provenance/source_reference_path",
+        &source_reference_path,
+        path,
+    )?;
+    require_string_value(row, "/provenance/source_blob", source_blob, path)?;
+    require_string_array_value(
+        row,
+        "/provenance/source_profiles",
+        &provenance.source_profiles,
+        path,
+    )?;
+    Ok(())
+}
+
 fn validate_real_derived_excluded_features(row: &Value, path: &Path) -> Result<()> {
     let production_equivalence = row
         .pointer("/provenance/production_equivalence")
@@ -1725,6 +1831,54 @@ fn require_string_pointer(value: &Value, pointer: &str, path: &Path) -> Result<(
         .is_some_and(|value| value.is_string())
     {
         bail!("{} JSON pointer {pointer} must be a string", path.display());
+    }
+    Ok(())
+}
+
+fn require_string_value(value: &Value, pointer: &str, expected: &str, path: &Path) -> Result<()> {
+    let actual = string_at(value, pointer, path)?;
+    if actual != expected {
+        bail!(
+            "{} JSON pointer {pointer} has value {actual}, expected {expected}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn require_string_array_value(
+    value: &Value,
+    pointer: &str,
+    expected: &[String],
+    path: &Path,
+) -> Result<()> {
+    let actual = value
+        .pointer(pointer)
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer {pointer} must be a string array",
+                path.display()
+            )
+        })?;
+    let actual: Result<Vec<_>> = actual
+        .iter()
+        .map(|item| {
+            item.as_str().with_context(|| {
+                format!(
+                    "{} JSON pointer {pointer} must be a string array",
+                    path.display()
+                )
+            })
+        })
+        .collect();
+    let actual = actual?;
+    let expected: Vec<_> = expected.iter().map(String::as_str).collect();
+    if actual != expected {
+        bail!(
+            "{} JSON pointer {pointer} has value {actual:?}, expected {expected:?}",
+            path.display()
+        );
     }
     Ok(())
 }
@@ -1993,20 +2147,14 @@ mod tests {
                 ]
             }
         });
-        let mut stale_profile = manifest.clone();
-        *stale_profile
+        let mut compatibility_profile = manifest.clone();
+        *compatibility_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
             .unwrap() = json!("solc-0.5.16-noopt");
-        let mut stale_latest_idiomatic_profile = manifest.clone();
-        *stale_latest_idiomatic_profile
-            .pointer_mut("/real_derived/benchmarks/0/comparison_lane")
-            .unwrap() = json!("latest_idiomatic");
-        *stale_latest_idiomatic_profile
-            .pointer_mut("/real_derived/benchmarks/0/source_lane")
-            .unwrap() = json!("latest_idiomatic");
-        *stale_latest_idiomatic_profile
+        let mut wrong_language_profile = manifest.clone();
+        *wrong_language_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
-            .unwrap() = json!("solc-0.5.16-noopt");
+            .unwrap() = json!("vyper-latest-none");
         let mut stale_lane = manifest.clone();
         *stale_lane
             .pointer_mut("/real_derived/benchmarks/0/source_lane")
@@ -2037,10 +2185,8 @@ mod tests {
             .unwrap() = json!("solidity-experimental");
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
-        assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
-        assert!(
-            super::validate_real_derived_manifest(&stale_latest_idiomatic_profile, path).is_err()
-        );
+        super::validate_real_derived_manifest(&compatibility_profile, path).unwrap();
+        assert!(super::validate_real_derived_manifest(&wrong_language_profile, path).is_err());
         assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&comparison_as_source_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&contradictory_equivalence, path).is_err());
@@ -2165,6 +2311,45 @@ source_profiles:
             &provenance,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn rejects_stale_real_derived_output_provenance() {
+        let path = Path::new("results/normalized/run-manifest.json");
+        let provenance_by_id = super::real_derived_provenance_by_id();
+        let provenance = provenance_by_id.get("uniswap_v2_pair").unwrap();
+        let mut manifest = json!({
+            "real_derived": {
+                "benchmarks": [
+                    {
+                        "benchmark_id": "uniswap_v2_pair",
+                        "source_path": &provenance.source_path,
+                        "source_reference_path": provenance
+                            .upstream_reference_path("uniswap_v2_pair")
+                            .to_string_lossy(),
+                        "source_blob": provenance.source_blob.as_deref().unwrap(),
+                        "source_profiles": &provenance.source_profiles
+                    }
+                ]
+            }
+        });
+
+        super::validate_real_derived_manifest_matches_catalog(&manifest, &provenance_by_id, path)
+            .unwrap();
+        manifest
+            .pointer_mut("/real_derived/benchmarks/0/source_profiles")
+            .unwrap()
+            .as_array_mut()
+            .unwrap()
+            .pop();
+        assert!(
+            super::validate_real_derived_manifest_matches_catalog(
+                &manifest,
+                &provenance_by_id,
+                path
+            )
+            .is_err()
+        );
     }
 
     #[test]
