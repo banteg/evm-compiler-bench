@@ -176,10 +176,11 @@
         "metadata": { "type": "object" },
         "settings": {
           "type": "object",
-          "required": ["evmVersion", "metadataMode"],
+          "required": ["evmVersion", "metadataMode", "sourceVariant"],
           "properties": {
             "evmVersion": { "type": "string" },
-            "metadataMode": { "enum": ["on", "off"] }
+            "metadataMode": { "enum": ["on", "off"] },
+            "sourceVariant": { "type": "string" }
           }
         }
       }

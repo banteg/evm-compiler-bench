@@ -361,6 +361,7 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             require_json_pointer(row, "/compiler/metadata", &results_path)?;
             require_json_pointer(row, "/compiler/settings", &results_path)?;
             require_json_pointer(row, "/compiler/settings/metadataMode", &results_path)?;
+            require_json_pointer(row, "/compiler/settings/sourceVariant", &results_path)?;
             require_json_pointer(row, "/cache/compile/status", &results_path)?;
             require_json_pointer(row, "/compile/status", &results_path)?;
             require_json_pointer(row, "/source_path", &results_path)?;
@@ -964,6 +965,7 @@ fn git_blob_hash(path: &Path) -> Result<String> {
 }
 
 fn validate_row_status(row: &Value, path: &Path) -> Result<()> {
+    require_string_pointer(row, "/compiler/settings/sourceVariant", path)?;
     match row.pointer("/status").and_then(|value| value.as_str()) {
         Some("ok") => {
             require_enum(row, "/compile/status", &["ok"], path)?;
@@ -1414,6 +1416,51 @@ mod tests {
 
         super::validate_manifest_profiles(&manifest, path).unwrap();
         assert!(super::validate_manifest_profiles(&missing_variant, path).is_err());
+    }
+
+    #[test]
+    fn requires_result_rows_to_report_effective_source_variant() {
+        let path = Path::new("results/normalized/results.json");
+        let row = json!({
+            "status": "ok",
+            "compile": { "status": "ok" },
+            "bytecode": { "runtime_bytes": 1 },
+            "gas": {
+                "scenario": "noop",
+                "evm_fork": "prague",
+                "state_access_profile": "cold",
+                "metadata_mode": "off",
+                "internal_create_gas": 0,
+                "harness_call_gas": 0,
+                "intrinsic_gas": 21000,
+                "calldata_gas": 0,
+                "harness_estimated_tx_gas": 21000,
+                "expected_success": true,
+                "call_succeeded": true,
+                "scenario_status_ok": true,
+                "measurement_scope": "foundry_internal_call_harness",
+                "total_tx_gas": null
+            },
+            "cache": {
+                "gas": { "status": "disabled" }
+            },
+            "compiler": {
+                "settings": {
+                    "metadataMode": "off",
+                    "sourceVariant": "latest"
+                }
+            }
+        });
+        let mut missing_variant = row.clone();
+        missing_variant
+            .pointer_mut("/compiler/settings")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove("sourceVariant");
+
+        super::validate_row_status(&row, path).unwrap();
+        assert!(super::validate_row_status(&missing_variant, path).is_err());
     }
 
     #[test]
