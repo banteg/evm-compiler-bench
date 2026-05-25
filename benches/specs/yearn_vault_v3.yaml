@@ -100,6 +100,10 @@ real_derived:
   source_commit: "104a2b233bc6d43ba40720d68355b04d2dc31795"
   source_path: "contracts/VaultV3.vy"
   source_language: vyper
+  source_compiler: vyper-0.3.7
+  source_profiles:
+    - vyper-0.3.7-default
+    - vyper-0.3.7-none
   source_contract: VaultV3
   source_blob: "97f4a60dd2485c6400f994e46b442d0424716eed"
   upstream_license: GNU AGPLv3

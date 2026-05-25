@@ -37,6 +37,10 @@ real_derived:
   source_commit: "6a9e7c97860676e0992f22a49665760444c1cdf5"
   source_path: "contracts/UniswapV2Pair.sol"
   source_language: solidity
+  source_compiler: solc-0.5.16
+  source_profiles:
+    - solc-0.5.16-legacy-runs200
+    - solc-0.5.16-noopt
   source_contract: UniswapV2Pair
   source_blob: "f87a1db262fba132862eae377d8cdaef74c79f97"
   upstream_license: GPL-3.0-or-later

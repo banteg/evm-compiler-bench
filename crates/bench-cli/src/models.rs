@@ -47,6 +47,9 @@ pub struct Provenance {
     pub source_commit: String,
     pub source_path: String,
     pub source_language: Language,
+    pub source_compiler: String,
+    #[serde(default)]
+    pub source_profiles: Vec<String>,
     pub source_contract: String,
     #[serde(default)]
     pub source_blob: Option<String>,
@@ -80,6 +83,16 @@ impl ComparisonLane {
             Self::LatestIdiomatic => "latest_idiomatic",
             Self::DiagnosticLayoutMatched => "diagnostic_layout_matched",
             Self::FixtureScopedPort => "fixture_scoped_port",
+        }
+    }
+}
+
+impl Provenance {
+    pub fn lane_for_language(&self, language: Language) -> ComparisonLane {
+        if language == self.source_language {
+            ComparisonLane::UpstreamExactHistorical
+        } else {
+            self.comparison_lane
         }
     }
 }

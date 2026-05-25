@@ -40,6 +40,8 @@
         "source_commit",
         "source_path",
         "source_language",
+        "source_compiler",
+        "source_profiles",
         "source_contract",
         "production_equivalence",
         "api_compatibility",
@@ -68,6 +70,12 @@
         "source_commit": { "type": "string" },
         "source_path": { "type": "string" },
         "source_language": { "enum": ["solidity", "vyper"] },
+        "source_compiler": { "type": "string" },
+        "source_profiles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
         "source_contract": { "type": "string" },
         "source_blob": { "type": "string" },
         "upstream_license": { "type": "string" },

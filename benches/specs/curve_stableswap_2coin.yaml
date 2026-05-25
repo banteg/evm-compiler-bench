@@ -55,6 +55,9 @@ real_derived:
   source_commit: "2abe778f40206a6c0fd108a0a53ad3266cbedeee"
   source_path: "contracts/main/CurveStableSwapNG.vy"
   source_language: vyper
+  source_compiler: vyper-0.3.10
+  source_profiles:
+    - vyper-0.3.10-codesize
   source_contract: CurveStableSwapNG
   source_blob: "f192932a22958735acad4ca24c977cc4e058f1aa"
   upstream_license: "Curve copyright notice; upstream file says all rights reserved"

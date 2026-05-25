@@ -1,9 +1,9 @@
 use crate::{
     cache::{self, CacheLookup},
     models::{
-        Benchmark, BytecodeMetrics, CacheInfo, CommandStats, CompileFailure, CompileMetrics,
-        CompileSet, CompiledArtifact, CompilerProfile, Language, MetadataMode, Toolchain,
-        Toolchains,
+        Benchmark, BytecodeMetrics, CacheInfo, CommandStats, ComparisonLane, CompileFailure,
+        CompileMetrics, CompileSet, CompiledArtifact, CompilerProfile, Language, MetadataMode,
+        Toolchain, Toolchains,
     },
     util::{Progress, byte_len, require_success, run_measured, sha256_bytes, stripped_cbor_len},
 };
@@ -27,9 +27,14 @@ pub fn compile_all(
     use_cache: bool,
 ) -> Result<CompileSet> {
     let profiles = load_profiles(root, profile_filter)?;
-    let total_attempts = benchmarks.len() * profiles.len();
+    let total_attempts = benchmarks
+        .iter()
+        .flat_map(|benchmark| profiles.iter().map(move |profile| (benchmark, profile)))
+        .filter(|(benchmark, profile)| profile_applies_to_benchmark(benchmark, profile))
+        .count();
     let mut progress = Progress::new("compile", total_attempts);
     let mut attempted = 0usize;
+    let mut skipped = 0usize;
     let mut cache_hits = 0usize;
     let mut cache_misses = 0usize;
     let mut cache_stale = 0usize;
@@ -38,6 +43,10 @@ pub fn compile_all(
     let mut failures = Vec::new();
     for benchmark in benchmarks {
         for profile in &profiles {
+            if !profile_applies_to_benchmark(benchmark, profile) {
+                skipped += 1;
+                continue;
+            }
             attempted += 1;
             let toolchain = toolchain_for_profile(toolchains, profile)?;
             let evm_version = effective_evm_version(profile, toolchains);
@@ -142,9 +151,10 @@ pub fn compile_all(
         }
     }
     progress.finish(format!(
-        "done: {} artifacts, {} failures; cache hit={}, miss={}, stale={}, disabled={}",
+        "done: {} artifacts, {} failures, {} skipped; cache hit={}, miss={}, stale={}, disabled={}",
         artifacts.len(),
         failures.len(),
+        skipped,
         cache_hits,
         cache_misses,
         cache_stale,
@@ -155,6 +165,22 @@ pub fn compile_all(
         artifacts,
         failures,
     })
+}
+
+fn profile_applies_to_benchmark(benchmark: &Benchmark, profile: &CompilerProfile) -> bool {
+    let Some(provenance) = &benchmark.provenance else {
+        return true;
+    };
+    if provenance.lane_for_language(profile.language) != ComparisonLane::UpstreamExactHistorical {
+        return true;
+    }
+    if provenance.source_profiles.is_empty() {
+        return profile.compiler == provenance.source_compiler;
+    }
+    provenance
+        .source_profiles
+        .iter()
+        .any(|source_profile| source_profile == &profile.id)
 }
 
 #[derive(Debug, Deserialize, Serialize)]

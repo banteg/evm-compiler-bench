@@ -517,6 +517,8 @@ fn validate_real_derived_spec(
         path,
         provenance.source_language.as_str(),
     )?;
+    require_yaml_string(real, "source_compiler", path, &provenance.source_compiler)?;
+    require_sequence(real, "source_profiles", path)?;
     require_yaml_bool(
         real,
         "production_equivalence",
@@ -745,6 +747,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/source_commit",
                 "/provenance/source_path",
                 "/provenance/source_language",
+                "/provenance/source_compiler",
                 "/provenance/source_contract",
                 "/provenance/upstream_license",
                 "/provenance/checked_at",
@@ -785,6 +788,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/equivalence_scope",
                 "/provenance/scenario_coverage",
                 "/provenance/mock_assumptions",
+                "/provenance/source_profiles",
                 "/provenance/included_features",
                 "/provenance/excluded_features",
             ] {
