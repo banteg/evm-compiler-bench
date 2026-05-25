@@ -186,10 +186,11 @@ just zip-design
   it does not pin real-derived originals to a historical compiler.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
-  upstream contract's behavior. Scoped or partial counterpart-language ports are
-  diagnostic comparators only and must not be read as production gas or deploy
-  size claims for the upstream protocols. The current parity inventory lives in
-  `docs/real-derived-production-equivalence.md`.
+  upstream contract's behavior. Production-equivalent specs and output rows
+  must have empty `excluded_features`; scoped or partial counterpart-language
+  ports must keep concrete exclusions and must not be read as production gas or
+  deploy size claims for the upstream protocols. The current parity inventory
+  lives in `docs/real-derived-production-equivalence.md`.
 - For idiomatic cross-language ports, production equivalence is about
   externally observable contract behavior: ABI shape, success or revert,
   accounting state, events, and external calls. Exact language-level decoder

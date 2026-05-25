@@ -1055,7 +1055,6 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/mock_assumptions",
                 "/provenance/source_profiles",
                 "/provenance/included_features",
-                "/provenance/excluded_features",
             ] {
                 if !row.pointer(pointer).is_some_and(|value| {
                     value.as_array().is_some_and(|items| {
@@ -1068,9 +1067,50 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                     );
                 }
             }
+            validate_real_derived_excluded_features(row, path)?;
         }
         Some(other) => bail!("{} unsupported suite {other}", path.display()),
         None => bail!("{} missing suite", path.display()),
+    }
+    Ok(())
+}
+
+fn validate_real_derived_excluded_features(row: &Value, path: &Path) -> Result<()> {
+    let production_equivalence = row
+        .pointer("/provenance/production_equivalence")
+        .and_then(|value| value.as_bool())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /provenance/production_equivalence must be a boolean",
+                path.display()
+            )
+        })?;
+    let excluded_features = row
+        .pointer("/provenance/excluded_features")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /provenance/excluded_features must be a string array",
+                path.display()
+            )
+        })?;
+    if !excluded_features.iter().all(|item| item.is_string()) {
+        bail!(
+            "{} JSON pointer /provenance/excluded_features must be a string array",
+            path.display()
+        );
+    }
+    if production_equivalence && !excluded_features.is_empty() {
+        bail!(
+            "{} production-equivalent real-derived row must not list excluded_features",
+            path.display()
+        );
+    }
+    if !production_equivalence && excluded_features.is_empty() {
+        bail!(
+            "{} non-production-equivalent real-derived row must explain excluded_features",
+            path.display()
+        );
     }
     Ok(())
 }
@@ -1203,6 +1243,7 @@ fn yaml_files(dir: &Path) -> Result<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use std::path::Path;
 
     #[test]
@@ -1219,5 +1260,44 @@ mod tests {
         let generated_count = super::validate_generated_outputs_if_present(root, &config).unwrap();
         let expected_generated_count = config.families.len() * config.values.len();
         assert!(generated_count == 0 || generated_count == expected_generated_count);
+    }
+
+    #[test]
+    fn validates_real_derived_excluded_feature_invariant() {
+        let path = Path::new("results/normalized/results.json");
+        let complete = json!({
+            "provenance": {
+                "production_equivalence": true,
+                "excluded_features": []
+            }
+        });
+        let incomplete = json!({
+            "provenance": {
+                "production_equivalence": false,
+                "excluded_features": ["factory fixture"]
+            }
+        });
+        let contradictory_complete = json!({
+            "provenance": {
+                "production_equivalence": true,
+                "excluded_features": ["factory fixture"]
+            }
+        });
+        let contradictory_incomplete = json!({
+            "provenance": {
+                "production_equivalence": false,
+                "excluded_features": []
+            }
+        });
+
+        super::validate_real_derived_excluded_features(&complete, path).unwrap();
+        super::validate_real_derived_excluded_features(&incomplete, path).unwrap();
+        assert!(
+            super::validate_real_derived_excluded_features(&contradictory_complete, path).is_err()
+        );
+        assert!(
+            super::validate_real_derived_excluded_features(&contradictory_incomplete, path)
+                .is_err()
+        );
     }
 }

@@ -189,7 +189,27 @@
                   }
                 }
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": ["production_equivalence"],
+                  "properties": {
+                    "production_equivalence": { "const": true }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "excluded_features": { "maxItems": 0 }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "excluded_features": { "minItems": 1 }
+                  }
+                }
+              }
+            ]
           }
         }
       }

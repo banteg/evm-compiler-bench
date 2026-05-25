@@ -19,7 +19,8 @@ are true:
 
 - The port is an idiomatic implementation of the upstream contract's full
   externally observable behavior, not a scenario-scoped subset.
-- The spec has no `excluded_features`.
+- The spec, normalized output provenance, and run manifest have no
+  `excluded_features`.
 - ABI shape, access control, accounting, external-call behavior, token return
   handling, events, and intended success/revert behavior have been audited.
 - Language-level ABI decoder timing and exact revert bytes are not required to
