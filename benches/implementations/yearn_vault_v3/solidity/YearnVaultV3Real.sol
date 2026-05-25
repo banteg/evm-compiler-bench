@@ -345,11 +345,10 @@ contract YearnVaultV3Real {
     function set_default_queue(address[] calldata newDefaultQueue) external ready {
         _enforceRole(msg.sender, QUEUE_MANAGER);
         require(newDefaultQueue.length <= MAX_QUEUE, "queue too long");
-        delete default_queue;
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
             require(_strategies[newDefaultQueue[i]].activation != 0, "!inactive");
-            default_queue.push(newDefaultQueue[i]);
         }
+        default_queue = newDefaultQueue;
         emit UpdateDefaultQueue(newDefaultQueue);
     }
 
