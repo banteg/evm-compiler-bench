@@ -222,7 +222,6 @@ contract CurveStableSwap2CoinReal {
     {
         require(receiver != address(0), "receiver");
         _checkDynArrayAmountLength(amounts.length);
-        require(amounts[0] > 0 || amounts[1] > 0, "amount");
         uint256[] memory oldBalances = _balances();
         uint256[] memory rates = _storedRates();
         uint256 supply = totalSupply;
@@ -255,7 +254,7 @@ contract CurveStableSwap2CoinReal {
             d1 = _getDMem(rates, newBalances);
             minted = supply * (d1 - d0) / d0;
         }
-        require(minted >= minMintAmount && minted > 0, "slippage");
+        require(minted >= minMintAmount, "slippage");
         _mint(receiver, minted);
         emit AddLiquidity(msg.sender, amounts, fees, d1, totalSupply);
         if (supply == 0) {
