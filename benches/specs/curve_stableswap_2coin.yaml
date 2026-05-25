@@ -142,6 +142,7 @@ real_derived:
     - dynamic_fee_quote
     - dynamic_fee_three_coin
     - dynamic_fee_eight_coin
+    - dynamic_fee_eight_coin_interior
     - price_oracle_after_time
     - d_oracle_after_time
     - price_oracle_three_coin_after_time
@@ -191,7 +192,7 @@ real_derived:
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
-    - factory-delegated eight-coin dynamic_fee quote at MAX_COINS
+    - factory-delegated eight-coin endpoint and interior dynamic_fee quotes at MAX_COINS
     - standard-token three-coin imbalanced add-liquidity path and slippage rejection
     - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
@@ -426,6 +427,9 @@ scenarios:
   - name: dynamic_fee_eight_coin
     call: "dynamic_fee(0, 7) after imbalanced liquidity on an eight-coin deployment"
     expected: "returns the endpoint off-peg dynamic fee through the factory views implementation at the upstream MAX_COINS boundary"
+  - name: dynamic_fee_eight_coin_interior
+    call: "dynamic_fee(3, 5) after imbalanced liquidity on an eight-coin deployment"
+    expected: "returns an interior off-peg dynamic fee through the factory views implementation in a MAX_COINS deployment"
   - name: price_oracle_after_time
     call: "price_oracle(0) after an exchange changes the spot price and time advances by one averaging window"
     expected: "returns the exponentially decayed NG price oracle value"
