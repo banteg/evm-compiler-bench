@@ -433,78 +433,12 @@ fn generate_test(
     if artifacts.is_empty() {
         bail!("no compiled artifacts for Foundry runner");
     }
-    let mut out = String::new();
-    out.push_str("// SPDX-License-Identifier: MIT\n");
-    out.push_str("pragma solidity ^0.8.20;\n\n");
-    out.push_str(support_contracts());
-    out.push_str("interface Vm {\n");
-    out.push_str("    struct Log { bytes32[] topics; bytes data; address emitter; }\n");
-    out.push_str("    function createDir(string calldata path, bool recursive) external;\n");
-    out.push_str("    function writeFile(string calldata path, string calldata data) external;\n");
-    out.push_str("    function writeLine(string calldata path, string calldata data) external;\n");
-    out.push_str("    function toString(uint256 value) external pure returns (string memory);\n");
-    out.push_str("    function prank(address sender) external;\n");
-    out.push_str("    function deal(address account, uint256 newBalance) external;\n");
-    out.push_str("    function warp(uint256 newTimestamp) external;\n");
-    out.push_str("    function chainId(uint256 newChainId) external;\n");
-    out.push_str("    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);\n");
-    out.push_str("    function addr(uint256 privateKey) external returns (address);\n");
-    out.push_str("    function recordLogs() external;\n");
-    out.push_str("    function getRecordedLogs() external returns (Log[] memory entries);\n");
-    out.push_str("}\n\n");
-    out.push_str("contract ");
-    out.push_str(contract_name);
-    out.push_str(" {\n");
-    out.push_str(
-        "    Vm constant vm = Vm(address(uint160(uint256(keccak256(\"hevm cheat code\")))));\n",
-    );
-    out.push_str("    string constant GAS_JSONL_PATH = \"");
-    out.push_str(gas_jsonl);
-    out.push_str("\";\n");
-    out.push_str("    address constant BOB = address(0xB0B);\n");
-    out.push_str("    address constant CAROL = address(0xCAFe);\n");
-    out.push_str("    address constant IMPLEMENTATION = address(0x1000000000000000000000000000000000000001);\n");
-    out.push_str("    bytes32 constant SALT = keccak256(\"evm-compiler-bench\");\n");
-    out.push_str("    bytes32 constant LEAF = keccak256(\"leaf\");\n");
-    out.push_str("    bytes32 constant SIBLING = keccak256(\"sibling\");\n");
-    out.push_str("    bytes32 constant ROOT = LEAF < SIBLING ? keccak256(abi.encodePacked(LEAF, SIBLING)) : keccak256(abi.encodePacked(SIBLING, LEAF));\n\n");
-    out.push_str("    uint256 constant UNISWAP_PERMIT_KEY = 0xB0BA;\n");
-    out.push_str("    bytes32 constant UNISWAP_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
-    out.push_str("    uint256 constant CURVE_PERMIT_KEY = 0xC0FFEE;\n");
-    out.push_str("    bytes32 constant CURVE_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
-    out.push_str("    uint256 constant YEARN_PERMIT_KEY = 0xA11CE;\n");
-    out.push_str("    bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256(\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\");\n\n");
-    out.push_str("    struct PairDeps { BenchERC20 token0; BenchERC20 token1; BenchUniswapFlashCallee flashCallee; BenchUniswapReentrantCallee reentrantCallee; }\n");
-    out.push_str(
-        "    struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }\n",
-    );
-    out.push_str("    struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; BenchERC20OptionalReturn coin2; BenchERC20OptionalReturn coin3; BenchERC20OptionalReturn coin4; BenchERC20OptionalReturn coin5; BenchERC20OptionalReturn coin6; BenchERC20OptionalReturn coin7; }\n");
-    out.push_str("    struct YearnDeps { BenchERC20 asset; BenchYearnStrategy strategy; BenchYearnStrategy strategy2; BenchYearnStrategy strategy3; BenchYearnAccountant accountant; BenchYearnMutatingAccountant mutatingAccountant; BenchYearnReentrantAccountant reentrantAccountant; BenchYearnDepositLimitModule depositLimitModule; BenchYearnWithdrawLimitModule withdrawLimitModule; }\n");
-    out.push_str("    mapping(address => PairDeps) internal pairDeps;\n");
-    out.push_str("    mapping(address => NoReturnPairDeps) internal noReturnPairDeps;\n");
-    out.push_str("    mapping(address => CurveDeps) internal curveDeps;\n");
-    out.push_str("    mapping(address => YearnDeps) internal yearnDeps;\n");
-    out.push_str("    BenchERC1271Wallet internal curve1271Owner;\n");
-    out.push_str("    BenchUniswapCreate2Factory internal uniswapCreate2Factory;\n");
-    out.push_str("    address public feeTo;\n");
-    out.push_str("    uint16 public protocolFeeBps;\n");
-    out.push_str("    address public protocolFeeRecipient;\n\n");
-    out.push_str("    receive() external payable {}\n\n");
-    out.push_str("    function setUp() public {\n");
-    out.push_str("        vm.writeFile(GAS_JSONL_PATH, \"\");\n");
-    out.push_str("        vm.createDir(\"");
-    out.push_str(FAILURE_DIR);
-    out.push_str("\", true);\n");
-    out.push_str("        vm.deal(address(this), 1000000 ether);\n");
-    out.push_str("        vm.deal(BOB, 1000000 ether);\n");
-    out.push_str("        vm.deal(CAROL, 1000000 ether);\n");
-    out.push_str("        vm.warp(1);\n");
-    out.push_str("    }\n\n");
-    out.push_str(&helper_functions(artifacts));
-    out.push_str(randomized_helper_functions());
+    let mut body = String::new();
+    body.push_str(&helper_functions(artifacts));
+    body.push_str(randomized_helper_functions());
 
     for (index, artifact) in artifacts.iter().enumerate() {
-        write_deploy_function(&mut out, index, artifact);
+        write_deploy_function(&mut body, index, artifact);
     }
 
     for (index, artifact) in artifacts.iter().enumerate() {
@@ -517,7 +451,7 @@ fn generate_test(
                 scenario.state_access_profile.as_str(),
             );
             if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
-                write_gas_test(&mut out, index, artifact, scenario);
+                write_gas_test(&mut body, index, artifact, scenario);
             }
         }
     }
@@ -527,7 +461,7 @@ fn generate_test(
         for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
             for scenario in &scenarios.get(benchmark_id)?.scenarios {
                 write_diff_test(
-                    &mut out,
+                    &mut body,
                     benchmark_id,
                     *solidity_idx,
                     *vyper_idx,
@@ -546,7 +480,7 @@ fn generate_test(
             let scenario_file = scenarios.get(benchmark_id)?;
             if let Some(randomized) = &scenario_file.randomized {
                 write_randomized_diff_test(
-                    &mut out,
+                    &mut body,
                     benchmark_id,
                     *solidity_idx,
                     *vyper_idx,
@@ -555,7 +489,7 @@ fn generate_test(
             }
             for property in &scenario_file.properties {
                 write_property_test(
-                    &mut out,
+                    &mut body,
                     benchmark_id,
                     *solidity_idx,
                     *vyper_idx,
@@ -566,8 +500,16 @@ fn generate_test(
         }
     }
 
-    out.push_str("}\n");
-    Ok(out)
+    Ok(render_generated_shard(contract_name, gas_jsonl, &body))
+}
+
+fn render_generated_shard(contract_name: &str, gas_jsonl: &str, body: &str) -> String {
+    include_str!("foundry_templates/generated_shard.sol")
+        .replace("{{SUPPORT_CONTRACTS}}", support_contracts())
+        .replace("{{CONTRACT_NAME}}", contract_name)
+        .replace("{{GAS_JSONL_PATH}}", gas_jsonl)
+        .replace("{{FAILURE_DIR}}", FAILURE_DIR)
+        .replace("{{CONTRACT_BODY}}", body)
 }
 
 fn support_contracts() -> &'static str {
