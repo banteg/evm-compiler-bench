@@ -177,7 +177,9 @@ just zip-design
   pinned historical file. New result provenance includes
   `source_reference_path` to make that distinction explicit, and normalized
   result rows include `source_path` plus `source_hash` for the materialized
-  source variant actually compiled for the row.
+  source variant actually compiled for the row. The run manifest also records
+  per-benchmark `source_variants` with profile, variant, path, hash, and
+  compile status.
 - During compilation, profile-specific source variants rewrite version pragmas
   and apply backward syntax rewrites where the older language version has
   enough features. `source_profiles` records intended source-language coverage;

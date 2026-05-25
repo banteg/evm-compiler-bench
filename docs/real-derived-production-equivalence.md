@@ -6,9 +6,11 @@ This is the work queue for flipping any real-derived benchmark to
 `production_equivalence: true`. For `latest_syntax_original` benchmarks, the
 checked-in implementation path is the modernized source-language original.
 Normalized result rows expose the materialized `source_path` and `source_hash`
-that were compiled for each profile-specific source variant, while provenance
-fields `source_path`, `source_reference_path`, and `source_blob` identify the
-vendored upstream reference under the implementation's `upstream/` directory.
+that were compiled for each profile-specific source variant. The run manifest
+records per-benchmark `source_variants` with profile, source variant, path,
+hash, and compile status, while provenance fields `source_path`,
+`source_reference_path`, and `source_blob` identify the vendored upstream
+reference under the implementation's `upstream/` directory.
 `cargo run --release -- validate` enforces the reference blob without treating
 that historical source as the compiled comparison artifact.
 

@@ -515,6 +515,36 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             require_string_pointer(benchmark, pointer, path)?;
         }
         require_bool_pointer(benchmark, "/production_equivalence", path)?;
+        let variants = benchmark
+            .get("source_variants")
+            .and_then(|value| value.as_array())
+            .with_context(|| {
+                format!(
+                    "{} real_derived benchmark missing source_variants",
+                    path.display()
+                )
+            })?;
+        if variants.is_empty() {
+            bail!(
+                "{} real_derived benchmark source_variants must not be empty",
+                path.display()
+            );
+        }
+        for variant in variants {
+            for pointer in [
+                "/language",
+                "/implementation_id",
+                "/profile_id",
+                "/source_variant",
+                "/source_path",
+                "/source_hash",
+                "/compile_status",
+            ] {
+                require_string_pointer(variant, pointer, path)?;
+            }
+            require_enum(variant, "/language", &["solidity", "vyper"], path)?;
+            require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
+        }
     }
     Ok(())
 }

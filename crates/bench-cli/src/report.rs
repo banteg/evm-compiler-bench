@@ -183,7 +183,7 @@ pub fn write_outputs(
             "benchmarks": scale_manifest.benchmarks.clone()
         },
         "real_derived": {
-            "benchmarks": real_derived_manifest(compiled)
+            "benchmarks": real_derived_manifest(root, compiled)
         },
         "environment": environment_manifest(root),
         "artifacts": compiled.artifacts.len(),
@@ -847,23 +847,106 @@ fn report_path(root: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
-fn real_derived_manifest(compiled: &CompileSet) -> Vec<serde_json::Value> {
+fn real_derived_manifest(root: &Path, compiled: &CompileSet) -> Vec<serde_json::Value> {
     let mut benchmarks = BTreeMap::new();
+    let mut seen_variants = BTreeSet::new();
     for artifact in &compiled.artifacts {
         if let Some(provenance) = &artifact.provenance {
-            benchmarks
+            let benchmark = benchmarks
                 .entry(artifact.benchmark_id.clone())
                 .or_insert_with(|| provenance_manifest_value(&artifact.benchmark_id, provenance));
+            add_source_variant_to_manifest(
+                root,
+                benchmark,
+                &mut seen_variants,
+                SourceVariantManifestEntry {
+                    benchmark_id: &artifact.benchmark_id,
+                    implementation_id: &artifact.implementation_id,
+                    language: artifact.language,
+                    profile_id: &artifact.profile_id,
+                    source_path: &artifact.source_path,
+                    source_hash: &artifact.source_hash,
+                    compiler_settings: &artifact.compiler_settings,
+                    compile_status: "ok",
+                },
+            );
         }
     }
     for failure in &compiled.failures {
         if let Some(provenance) = &failure.provenance {
-            benchmarks
+            let benchmark = benchmarks
                 .entry(failure.benchmark_id.clone())
                 .or_insert_with(|| provenance_manifest_value(&failure.benchmark_id, provenance));
+            add_source_variant_to_manifest(
+                root,
+                benchmark,
+                &mut seen_variants,
+                SourceVariantManifestEntry {
+                    benchmark_id: &failure.benchmark_id,
+                    implementation_id: &failure.implementation_id,
+                    language: failure.language,
+                    profile_id: &failure.profile_id,
+                    source_path: &failure.source_path,
+                    source_hash: &failure.source_hash,
+                    compiler_settings: &failure.compiler_settings,
+                    compile_status: "compile_error",
+                },
+            );
         }
     }
     benchmarks.into_values().collect()
+}
+
+struct SourceVariantManifestEntry<'a> {
+    benchmark_id: &'a str,
+    implementation_id: &'a str,
+    language: Language,
+    profile_id: &'a str,
+    source_path: &'a Path,
+    source_hash: &'a str,
+    compiler_settings: &'a serde_json::Value,
+    compile_status: &'a str,
+}
+
+fn add_source_variant_to_manifest(
+    root: &Path,
+    benchmark: &mut serde_json::Value,
+    seen_variants: &mut BTreeSet<String>,
+    entry: SourceVariantManifestEntry<'_>,
+) {
+    let source_path = report_path(root, entry.source_path);
+    let source_variant = entry
+        .compiler_settings
+        .get("sourceVariant")
+        .and_then(|value| value.as_str())
+        .unwrap_or("default");
+    let key = format!(
+        "{}\0{}\0{}\0{}\0{}\0{}\0{}",
+        entry.benchmark_id,
+        entry.language.as_str(),
+        entry.implementation_id,
+        entry.profile_id,
+        source_variant,
+        source_path,
+        entry.source_hash
+    );
+    if !seen_variants.insert(key) {
+        return;
+    }
+    if let Some(variants) = benchmark
+        .get_mut("source_variants")
+        .and_then(|value| value.as_array_mut())
+    {
+        variants.push(json!({
+            "language": entry.language.as_str(),
+            "implementation_id": entry.implementation_id,
+            "profile_id": entry.profile_id,
+            "source_variant": source_variant,
+            "source_path": source_path,
+            "source_hash": entry.source_hash,
+            "compile_status": entry.compile_status
+        }));
+    }
 }
 
 fn provenance_manifest_value(benchmark_id: &str, provenance: &Provenance) -> serde_json::Value {
@@ -899,6 +982,7 @@ fn provenance_manifest_value(benchmark_id: &str, provenance: &Provenance) -> ser
         "mock_assumptions": &provenance.mock_assumptions,
         "included_features": &provenance.included_features,
         "excluded_features": &provenance.excluded_features,
+        "source_variants": [],
     })
 }
 
