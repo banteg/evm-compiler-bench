@@ -81,7 +81,7 @@ historical upstream source as latest-idiomatic.
 | Surface | Status | Notes |
 | --- | --- | --- |
 | Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
-| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs`, `feeTo`/`feeToSetter` authorization, and duplicate/invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
+| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs`, `feeTo`/`feeToSetter` authorization, same-order and reverse-order duplicate-pair guards, and invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
@@ -174,7 +174,8 @@ Exact now:
   packed reserve word where upstream behavior depends on uint112/uint32 bounds.
 - Scenarios cover initial and subsequent mints, initial mint rejection below
   `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
-  factory CREATE2 deployment, exact upstream token0-input and token1-input
+  factory CREATE2 deployment, same-order and reverse-order duplicate factory
+  guards, exact upstream token0-input and token1-input
   swap invariant checks, zero-output and insufficient-liquidity swap guards,
   one-wei over-output K rejection for each input side, no-staged-LP burn rejection,
   no-return token transfers, false-return transfer rejection across swap, burn,
@@ -195,7 +196,7 @@ Remaining:
   bound. This is an accepted idiomatic language-level semantic boundary for the
   primary port, not a reason to introduce a low-level emulation variant.
 - The benchmark CREATE2 fixture now mirrors upstream token sorting,
-  zero/identical/duplicate-pair guards, bidirectional `getPair` storage,
+  zero/identical/same-order and reverse-order duplicate-pair guards, bidirectional `getPair` storage,
   `allPairs`, `PairCreated`, `feeTo`, and `feeToSetter` authorization, but its
   external deployment hook remains bytecode-injected so both language artifacts
   can share the same factory path.

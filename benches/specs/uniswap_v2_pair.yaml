@@ -76,6 +76,7 @@ real_derived:
     - factory_set_fee_to_setter
     - factory_set_fee_to_setter_forbidden_reverts
     - factory_duplicate_pair_reverts
+    - factory_reverse_duplicate_pair_reverts
     - factory_identical_pair_reverts
     - factory_zero_address_pair_reverts
     - mint_subsequent
@@ -149,7 +150,7 @@ real_derived:
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
-    - pair creation through a benchmark factory using CREATE2, upstream token sorting and duplicate guards, bidirectional getPair storage, allPairs tracking, factory-owned initialize, and feeTo/feeToSetter authorization guards
+    - pair creation through a benchmark factory using CREATE2, upstream token sorting and same-order/reverse-order duplicate guards, bidirectional getPair storage, allPairs tracking, factory-owned initialize, and feeTo/feeToSetter authorization guards
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
@@ -210,6 +211,9 @@ scenarios:
   - name: factory_duplicate_pair_reverts
     call: "factory deployPair with an existing token pair"
     expected: "reverts through the upstream PAIR_EXISTS guard"
+  - name: factory_reverse_duplicate_pair_reverts
+    call: "factory deployPair with an existing token pair in reverse token order"
+    expected: "reverts through the upstream PAIR_EXISTS guard because getPair is stored bidirectionally"
   - name: factory_identical_pair_reverts
     call: "factory deployPair with identical token addresses"
     expected: "reverts through the upstream IDENTICAL_ADDRESSES guard"

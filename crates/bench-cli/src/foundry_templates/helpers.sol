@@ -628,6 +628,13 @@
         return true;
     }
 
+    function benchUniswapFactoryReverseDuplicatePair(address target) external returns (bool) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        _uniswapCreate2Factory().deployPair(hex"00", bytes32(0), address(deps.token1), address(deps.token0));
+        return true;
+    }
+
     function benchUniswapFactoryIdenticalPair(address target) external returns (bool) {
         PairDeps storage deps = pairDeps[target];
         require(address(deps.token0) != address(0), "pair deps");
