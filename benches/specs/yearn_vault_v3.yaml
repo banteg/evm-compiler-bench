@@ -296,6 +296,7 @@ real_derived:
     - deposit_limit_module_zero_max_mint
     - deposit_limit_module_reverts
     - deposit_limit_module_call_reverts
+    - mint_limit_module_call_reverts
     - deposit_limit_module_zero_receiver_short_circuits
     - deposit_limit_module_vault_receiver_short_circuits
     - withdraw_limit_module
@@ -316,6 +317,7 @@ real_derived:
     - mint_limit_module_reverts
     - redeem_limit_module_reverts
     - withdraw_limit_module_call_reverts
+    - redeem_limit_module_call_reverts
     - withdraw_limit_module_zero_owner_call_reverts
     - permit_valid
     - permit_after_chain_id_change
@@ -863,6 +865,9 @@ scenarios:
   - name: deposit_limit_module_call_reverts
     call: "maxDeposit through a custom deposit limit module that reverts"
     expected: "bubbles the module failure instead of falling back to the direct deposit limit"
+  - name: mint_limit_module_call_reverts
+    call: "maxMint through a custom deposit limit module that reverts"
+    expected: "bubbles the module failure through the shared max-deposit path before converting to shares"
   - name: deposit_limit_module_zero_receiver_short_circuits
     call: "maxDeposit(empty(address)) while a reverting custom deposit limit module is active"
     expected: "returns zero at the upstream receiver guard before calling the module"
@@ -920,6 +925,9 @@ scenarios:
   - name: withdraw_limit_module_call_reverts
     call: "maxWithdraw through a custom withdraw limit module that reverts"
     expected: "bubbles the module failure instead of falling back to balance-derived max withdraw"
+  - name: redeem_limit_module_call_reverts
+    call: "maxRedeem through a custom withdraw limit module that reverts"
+    expected: "bubbles the module failure through the shared max-withdraw path before converting to shares"
   - name: withdraw_limit_module_zero_owner_call_reverts
     call: "maxWithdraw(empty(address)) through a custom withdraw limit module that reverts"
     expected: "calls the withdraw module before min-capping to the zero owner balance, so the module failure bubbles"
