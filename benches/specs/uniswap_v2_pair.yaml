@@ -134,6 +134,7 @@ real_derived:
     - transfer_from_truncated_calldata_reverts
     - swap_truncated_head_reverts
     - swap_truncated_dynamic_tail_reverts
+    - swap_short_dynamic_tail_reverts
     - permit_truncated_calldata_reverts
     - permit_valid
     - permit_after_chain_id_change
@@ -168,7 +169,7 @@ real_derived:
     - false-return token swap, burn, and skim transfer-out rejection
     - fee-on and fee-off kLast behavior
     - LP token metadata, balances, direct transfers including upstream zero-recipient transfers, insufficient-balance transfer rejection, approvals, finite/infinite/insufficient allowance transferFrom, zero-recipient transferFrom behavior, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
-    - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head and dynamic calldata tail, and truncated permit payloads
+    - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head, missing dynamic calldata tail, short dynamic calldata payload, and truncated permit payloads
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - upstream UniswapV2Factory createPair ABI is represented by a bytecode-injected deployPair harness hook so both language artifacts can be deployed through the same CREATE2 path
@@ -385,6 +386,9 @@ scenarios:
   - name: swap_truncated_dynamic_tail_reverts
     call: "raw swap(uint256,uint256,address,bytes) calldata whose bytes tail offset has no length word"
     expected: "reverts before swap state changes at the ABI boundary"
+  - name: swap_short_dynamic_tail_reverts
+    call: "raw swap(uint256,uint256,address,bytes) calldata whose bytes tail declares 32 bytes but only supplies 16"
+    expected: "reverts before swap callback or state changes at the ABI boundary"
   - name: permit_truncated_calldata_reverts
     call: "raw permit calldata with only the first three encoded arguments"
     expected: "reverts before accepting the signature or changing nonce/allowance"
