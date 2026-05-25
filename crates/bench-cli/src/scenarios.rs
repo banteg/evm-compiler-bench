@@ -239,7 +239,10 @@ mod tests {
                 setup: vec![],
                 warmup: vec![],
                 measured: CallSpec {
-                    data: "abi.encodeWithSignature(\"value()\")".to_string(),
+                    data: Some("abi.encodeWithSignature(\"value()\")".to_string()),
+                    data_expr: None,
+                    function_signature: None,
+                    args: Vec::new(),
                     sender: None,
                     value: "0".to_string(),
                     destination: CallDestination::Target,

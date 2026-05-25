@@ -16,6 +16,20 @@ use std::{
 
 pub const SCALE_GENERATOR_VERSION: &str = "scale-v1";
 const GENERATED_ROOT: &str = "target/bench-generated";
+const DISPATCH_SOL_TEMPLATE: &str = include_str!("scale_templates/dispatch.sol");
+const DISPATCH_VY_TEMPLATE: &str = include_str!("scale_templates/dispatch.vy");
+const STORAGE_SLOTS_SOL_TEMPLATE: &str = include_str!("scale_templates/storage_slots.sol");
+const STORAGE_SLOTS_VY_TEMPLATE: &str = include_str!("scale_templates/storage_slots.vy");
+const MAPPING_DEPTH_SOL_TEMPLATE: &str = include_str!("scale_templates/mapping_depth.sol");
+const MAPPING_DEPTH_VY_TEMPLATE: &str = include_str!("scale_templates/mapping_depth.vy");
+const ABI_ARGS_SOL_TEMPLATE: &str = include_str!("scale_templates/abi_args.sol");
+const ABI_ARGS_VY_TEMPLATE: &str = include_str!("scale_templates/abi_args.vy");
+const LOOP_BOUND_SOL_TEMPLATE: &str = include_str!("scale_templates/loop_bound.sol");
+const LOOP_BOUND_VY_TEMPLATE: &str = include_str!("scale_templates/loop_bound.vy");
+const EXTERNAL_CALLS_SOL_TEMPLATE: &str = include_str!("scale_templates/external_calls.sol");
+const EXTERNAL_CALLS_VY_TEMPLATE: &str = include_str!("scale_templates/external_calls.vy");
+const EVENTS_SOL_TEMPLATE: &str = include_str!("scale_templates/events.sol");
+const EVENTS_VY_TEMPLATE: &str = include_str!("scale_templates/events.vy");
 const EXPECTED_FAMILIES: [&str; 7] = [
     "dispatch_N",
     "storage_slots_N",
@@ -288,24 +302,24 @@ fn generate_family(family_id: &str, n: u64) -> Result<GeneratedSource> {
 
 fn dispatch_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("Dispatch", n);
-    let mut sol = solidity_header(&contract_name);
-    sol.push_str("    uint256 public sink;\n\n");
-    sol.push_str("    function setSink(uint256 value) external returns (uint256) {\n        sink = value;\n        return value;\n    }\n\n");
-    for i in 0..n {
-        sol.push_str(&format!(
-            "    function f{i:03}() external pure returns (uint256) {{ return {i}; }}\n"
-        ));
-    }
-    sol.push_str("}\n");
-
-    let mut vy = vyper_header();
-    vy.push_str("sink: public(uint256)\n\n");
-    vy.push_str("@external\ndef setSink(new_value: uint256) -> uint256:\n    self.sink = new_value\n    return new_value\n\n");
-    for i in 0..n {
-        vy.push_str(&format!(
-            "@external\n@pure\ndef f{i:03}() -> uint256:\n    return {i}\n"
-        ));
-    }
+    let sol_functions = (0..n)
+        .map(|i| {
+            format!("    function f{i:03}() external pure returns (uint256) {{ return {i}; }}")
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy_functions = (0..n)
+        .map(|i| format!("@external\n@pure\ndef f{i:03}() -> uint256:\n    return {i}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol = render_template(
+        DISPATCH_SOL_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("FUNCTIONS", &sol_functions),
+        ],
+    );
+    let vy = render_template(DISPATCH_VY_TEMPLATE, &[("FUNCTIONS", &vy_functions)]);
 
     let mut scenarios = vec![scenario(
         "first_selector",
@@ -355,39 +369,48 @@ fn dispatch_family(n: u64) -> GeneratedSource {
 
 fn storage_slots_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("StorageSlots", n);
-    let mut sol = solidity_header(&contract_name);
-    for i in 0..n {
-        sol.push_str(&format!("    uint256 public slot{i:03};\n"));
-    }
-    sol.push_str("\n    function writeAll(uint256 seed) external returns (uint256 total) {\n");
-    for i in 0..n {
-        sol.push_str(&format!(
-            "        slot{i:03} = seed + {i};\n        total += slot{i:03};\n"
-        ));
-    }
-    sol.push_str("    }\n\n    function readAll() external view returns (uint256 total) {\n");
-    for i in 0..n {
-        sol.push_str(&format!("        total += slot{i:03};\n"));
-    }
-    sol.push_str("    }\n}\n");
-
-    let mut vy = vyper_header();
-    for i in 0..n {
-        vy.push_str(&format!("slot{i:03}: public(uint256)\n"));
-    }
-    vy.push_str("\n@external\ndef writeAll(seed: uint256) -> uint256:\n    total: uint256 = 0\n");
-    for i in 0..n {
-        vy.push_str(&format!(
-            "    self.slot{i:03} = seed + {i}\n    total += self.slot{i:03}\n"
-        ));
-    }
-    vy.push_str(
-        "    return total\n\n@external\n@view\ndef readAll() -> uint256:\n    total: uint256 = 0\n",
+    let sol_slots = (0..n)
+        .map(|i| format!("    uint256 public slot{i:03};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol_writes = (0..n)
+        .map(|i| format!("        slot{i:03} = seed + {i};\n        total += slot{i:03};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol_reads = (0..n)
+        .map(|i| format!("        total += slot{i:03};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol = render_template(
+        STORAGE_SLOTS_SOL_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("SLOTS", &sol_slots),
+            ("WRITE_BODY", &sol_writes),
+            ("READ_BODY", &sol_reads),
+        ],
     );
-    for i in 0..n {
-        vy.push_str(&format!("    total += self.slot{i:03}\n"));
-    }
-    vy.push_str("    return total\n");
+
+    let vy_slots = (0..n)
+        .map(|i| format!("slot{i:03}: public(uint256)"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy_writes = (0..n)
+        .map(|i| format!("    self.slot{i:03} = seed + {i}\n    total += self.slot{i:03}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy_reads = (0..n)
+        .map(|i| format!("    total += self.slot{i:03}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy = render_template(
+        STORAGE_SLOTS_VY_TEMPLATE,
+        &[
+            ("SLOTS", &vy_slots),
+            ("WRITE_BODY", &vy_writes),
+            ("READ_BODY", &vy_reads),
+        ],
+    );
 
     GeneratedSource {
         contract_name,
@@ -406,43 +429,58 @@ fn storage_slots_family(n: u64) -> GeneratedSource {
 
 fn mapping_depth_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("MappingDepth", n);
-    let mut sol = solidity_header(&contract_name);
-    for i in 0..n {
-        sol.push_str(&format!(
-            "    mapping(uint256 => uint256) public link{i:03};\n"
-        ));
-    }
-    sol.push_str("\n    function writeChain(uint256 seed) external returns (uint256 current) {\n        current = seed;\n");
-    for i in 0..n {
-        sol.push_str(&format!(
-            "        link{i:03}[current] = current + {add};\n        current = link{i:03}[current];\n",
-            add = i + 1
-        ));
-    }
-    sol.push_str("    }\n\n    function readChain(uint256 seed) external view returns (uint256 current) {\n        current = seed;\n");
-    for i in 0..n {
-        sol.push_str(&format!("        current = link{i:03}[current];\n"));
-    }
-    sol.push_str("    }\n}\n");
-
-    let mut vy = vyper_header();
-    for i in 0..n {
-        vy.push_str(&format!("link{i:03}: public(HashMap[uint256, uint256])\n"));
-    }
-    vy.push_str(
-        "\n@external\ndef writeChain(seed: uint256) -> uint256:\n    current: uint256 = seed\n",
+    let sol_links = (0..n)
+        .map(|i| format!("    mapping(uint256 => uint256) public link{i:03};"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol_writes = (0..n)
+        .map(|i| {
+            format!(
+                "        link{i:03}[current] = current + {add};\n        current = link{i:03}[current];",
+                add = i + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol_reads = (0..n)
+        .map(|i| format!("        current = link{i:03}[current];"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let sol = render_template(
+        MAPPING_DEPTH_SOL_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("LINKS", &sol_links),
+            ("WRITE_BODY", &sol_writes),
+            ("READ_BODY", &sol_reads),
+        ],
     );
-    for i in 0..n {
-        vy.push_str(&format!(
-            "    self.link{i:03}[current] = current + {add}\n    current = self.link{i:03}[current]\n",
-            add = i + 1
-        ));
-    }
-    vy.push_str("    return current\n\n@external\n@view\ndef readChain(seed: uint256) -> uint256:\n    current: uint256 = seed\n");
-    for i in 0..n {
-        vy.push_str(&format!("    current = self.link{i:03}[current]\n"));
-    }
-    vy.push_str("    return current\n");
+
+    let vy_links = (0..n)
+        .map(|i| format!("link{i:03}: public(HashMap[uint256, uint256])"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy_writes = (0..n)
+        .map(|i| {
+            format!(
+                "    self.link{i:03}[current] = current + {add}\n    current = self.link{i:03}[current]",
+                add = i + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy_reads = (0..n)
+        .map(|i| format!("    current = self.link{i:03}[current]"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let vy = render_template(
+        MAPPING_DEPTH_VY_TEMPLATE,
+        &[
+            ("LINKS", &vy_links),
+            ("WRITE_BODY", &vy_writes),
+            ("READ_BODY", &vy_reads),
+        ],
+    );
 
     GeneratedSource {
         contract_name,
@@ -506,12 +544,15 @@ fn abi_args_family(n: u64) -> GeneratedSource {
         .map(|i| format!("a{i:03}"))
         .collect::<Vec<_>>()
         .join(" + ");
-    let mut sol = solidity_header(&contract_name);
-    sol.push_str(&format!(
-        "    function sum({sol_params}) external pure returns (uint256 out) {{\n        return {sol_sum};\n    }}\n}}\n"
-    ));
+    let sol = render_template(
+        ABI_ARGS_SOL_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("PARAMS", &sol_params),
+            ("SUM", &sol_sum),
+        ],
+    );
 
-    let mut vy = vyper_header();
     let params = (0..n)
         .map(|i| format!("a{i:03}: uint256"))
         .collect::<Vec<_>>()
@@ -520,9 +561,7 @@ fn abi_args_family(n: u64) -> GeneratedSource {
         .map(|i| format!("a{i:03}"))
         .collect::<Vec<_>>()
         .join(" + ");
-    vy.push_str(&format!(
-        "@external\n@pure\ndef sum({params}) -> uint256:\n    return {sum}\n"
-    ));
+    let vy = render_template(ABI_ARGS_VY_TEMPLATE, &[("PARAMS", &params), ("SUM", &sum)]);
 
     GeneratedSource {
         contract_name,
@@ -548,15 +587,12 @@ fn abi_args_family(n: u64) -> GeneratedSource {
 
 fn loop_bound_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("LoopBound", n);
-    let mut sol = solidity_header(&contract_name);
-    sol.push_str(&format!(
-        "    function runLoop() external pure returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            total += i;\n        }}\n    }}\n}}\n"
-    ));
-
-    let mut vy = vyper_header();
-    vy.push_str(&format!(
-        "@external\n@pure\ndef runLoop() -> uint256:\n    total: uint256 = 0\n    for i: uint256 in range({n}):\n        total += i\n    return total\n"
-    ));
+    let n = n.to_string();
+    let sol = render_template(
+        LOOP_BOUND_SOL_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
+    let vy = render_template(LOOP_BOUND_VY_TEMPLATE, &[("N", &n)]);
 
     GeneratedSource {
         contract_name,
@@ -572,17 +608,12 @@ fn loop_bound_family(n: u64) -> GeneratedSource {
 
 fn external_calls_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("ExternalCalls", n);
-    let mut sol = solidity_header(&contract_name);
-    sol.push_str("    function ping(uint256) external pure {}\n\n");
-    sol.push_str(&format!(
-        "    function callMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n            require(ok);\n            total += i;\n        }}\n    }}\n}}\n"
-    ));
-
-    let mut vy = vyper_header();
-    vy.push_str("@external\n@view\ndef ping(x: uint256):\n    pass\n\n");
-    vy.push_str(&format!(
-        "@external\ndef callMany() -> uint256:\n    total: uint256 = 0\n    for i: uint256 in range({n}):\n        raw_call(self, concat(method_id(\"ping(uint256)\"), abi_encode(i)), max_outsize=0, is_static_call=True)\n        total += i\n    return total\n"
-    ));
+    let n = n.to_string();
+    let sol = render_template(
+        EXTERNAL_CALLS_SOL_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
+    let vy = render_template(EXTERNAL_CALLS_VY_TEMPLATE, &[("N", &n)]);
 
     GeneratedSource {
         contract_name,
@@ -601,17 +632,12 @@ fn external_calls_family(n: u64) -> GeneratedSource {
 
 fn events_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("Events", n);
-    let mut sol = solidity_header(&contract_name);
-    sol.push_str("    event Tick(uint256 indexed index, uint256 value);\n\n");
-    sol.push_str(&format!(
-        "    function emitMany() external returns (uint256 total) {{\n        for (uint256 i = 0; i < {n}; i++) {{\n            emit Tick(i, i + 1);\n            total += i + 1;\n        }}\n    }}\n}}\n"
-    ));
-
-    let mut vy = vyper_header();
-    vy.push_str("event Tick:\n    index: indexed(uint256)\n    value: uint256\n\n");
-    vy.push_str(&format!(
-        "@external\ndef emitMany() -> uint256:\n    total: uint256 = 0\n    for i: uint256 in range({n}):\n        log Tick(index=i, value=i + 1)\n        total += i + 1\n    return total\n"
-    ));
+    let n = n.to_string();
+    let sol = render_template(
+        EVENTS_SOL_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
+    let vy = render_template(EVENTS_VY_TEMPLATE, &[("N", &n)]);
 
     GeneratedSource {
         contract_name,
@@ -701,14 +727,12 @@ fn call(data: impl Into<String>) -> CallSpec {
     }
 }
 
-fn solidity_header(contract_name: &str) -> String {
-    format!(
-        "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract {contract_name} {{\n"
-    )
-}
-
-fn vyper_header() -> String {
-    "# pragma version >=0.4.3,<0.6.0\n\n".to_string()
+fn render_template(template: &str, replacements: &[(&str, &str)]) -> String {
+    let mut rendered = template.to_string();
+    for (key, value) in replacements {
+        rendered = rendered.replace(&format!("{{{{{key}}}}}"), value);
+    }
+    rendered
 }
 
 fn contract_name(stem: &str, n: u64) -> String {
