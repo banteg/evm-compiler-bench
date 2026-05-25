@@ -614,7 +614,10 @@ fn validate_real_derived_manifest_lanes(benchmark: &Value, path: &Path) -> Resul
             path.display()
         );
     }
-    if source_lane == "fixture_scoped_port" || source_lane == "diagnostic_layout_matched" {
+    if matches!(
+        source_lane,
+        "production_conformance" | "fixture_scoped_port" | "diagnostic_layout_matched"
+    ) {
         bail!(
             "{} real-derived manifest source_lane must identify an original source lane",
             path.display()
@@ -873,7 +876,9 @@ fn validate_real_derived_spec(
 fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<()> {
     if matches!(
         provenance.source_lane,
-        ComparisonLane::FixtureScopedPort | ComparisonLane::DiagnosticLayoutMatched
+        ComparisonLane::ProductionConformance
+            | ComparisonLane::FixtureScopedPort
+            | ComparisonLane::DiagnosticLayoutMatched
     ) {
         bail!(
             "{} real-derived source_lane must identify an original source lane",
@@ -1343,7 +1348,10 @@ fn validate_real_derived_row_lanes(row: &Value, path: &Path) -> Result<()> {
             path.display()
         );
     }
-    if source_lane == "fixture_scoped_port" || source_lane == "diagnostic_layout_matched" {
+    if matches!(
+        source_lane,
+        "production_conformance" | "fixture_scoped_port" | "diagnostic_layout_matched"
+    ) {
         bail!(
             "{} real-derived row source_lane must identify an original source lane",
             path.display()
@@ -1680,11 +1688,22 @@ mod tests {
                 "port_language": "solidity"
             }
         });
+        let comparison_as_source_lane = json!({
+            "provenance": {
+                "comparison_lane": "latest_idiomatic",
+                "source_lane": "production_conformance",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "production_conformance",
+                "source_language": "solidity",
+                "port_language": "solidity"
+            }
+        });
 
         super::validate_real_derived_row_lanes(&row, path).unwrap();
         super::validate_real_derived_row_lanes(&counterpart_row, path).unwrap();
         assert!(super::validate_real_derived_row_lanes(&stale_row, path).is_err());
         assert!(super::validate_real_derived_row_lanes(&historical_source, path).is_err());
+        assert!(super::validate_real_derived_row_lanes(&comparison_as_source_lane, path).is_err());
     }
 
     #[test]
@@ -1756,6 +1775,10 @@ mod tests {
         *stale_lane
             .pointer_mut("/real_derived/benchmarks/0/source_lane")
             .unwrap() = json!("upstream_exact_historical");
+        let mut comparison_as_source_lane = manifest.clone();
+        *comparison_as_source_lane
+            .pointer_mut("/real_derived/benchmarks/0/source_lane")
+            .unwrap() = json!("production_conformance");
         let mut contradictory_equivalence = manifest.clone();
         *contradictory_equivalence
             .pointer_mut("/real_derived/benchmarks/0/production_equivalence")
@@ -1764,6 +1787,7 @@ mod tests {
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
         assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
+        assert!(super::validate_real_derived_manifest(&comparison_as_source_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&contradictory_equivalence, path).is_err());
     }
 
