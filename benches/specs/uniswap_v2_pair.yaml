@@ -75,6 +75,8 @@ real_derived:
     - factory_set_fee_to_forbidden_reverts
     - factory_set_fee_to_setter
     - factory_set_fee_to_setter_forbidden_reverts
+    - factory_old_setter_after_transfer_forbidden_reverts
+    - factory_all_pairs_out_of_bounds_reverts
     - factory_duplicate_pair_reverts
     - factory_reverse_duplicate_pair_reverts
     - factory_identical_pair_reverts
@@ -151,7 +153,7 @@ real_derived:
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
-    - pair creation through a benchmark factory using CREATE2, upstream token sorting and same-order/reverse-order duplicate guards, bidirectional getPair storage, allPairs tracking, factory-owned initialize, and feeTo/feeToSetter authorization guards
+    - pair creation through a benchmark factory using CREATE2, upstream token sorting and same-order/reverse-order duplicate guards, bidirectional getPair storage, allPairs tracking and out-of-bounds getter behavior, factory-owned initialize, and feeTo/feeToSetter authorization guards including old-setter rejection after authority transfer
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
@@ -173,7 +175,7 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - upstream UniswapV2Factory createPair ABI is represented by a bytecode-injected deployPair harness hook so both language artifacts can be deployed through the same CREATE2 path
-    - exhaustive factory-management scenarios beyond feeTo, feeToSetter authorization, pair mapping, allPairs tracking, pair creation, and invalid-pair guards are not yet covered
+    - exhaustive factory-management scenarios beyond feeTo, feeToSetter authorization including post-transfer old-setter rejection, pair mapping, allPairs tracking and bounds, pair creation, and invalid-pair guards are not yet covered
     - exhaustive revert-data parity and ABI-boundary audit outside the listed representative malformed calldata scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
@@ -209,6 +211,12 @@ scenarios:
   - name: factory_set_fee_to_setter_forbidden_reverts
     call: "factory setFeeToSetter from a non-feeToSetter sender"
     expected: "reverts through the upstream FORBIDDEN guard"
+  - name: factory_old_setter_after_transfer_forbidden_reverts
+    call: "factory setFeeTo after feeToSetter authority has been transferred away from the original setter"
+    expected: "reverts through the upstream FORBIDDEN guard because the original setter no longer controls feeTo"
+  - name: factory_all_pairs_out_of_bounds_reverts
+    call: "factory allPairs(allPairsLength()) after CREATE2 pair deployment"
+    expected: "reverts at the upstream public array getter bounds check"
   - name: factory_duplicate_pair_reverts
     call: "factory deployPair with an existing token pair"
     expected: "reverts through the upstream PAIR_EXISTS guard"

@@ -81,7 +81,7 @@ historical upstream source as latest-idiomatic.
 | Surface | Status | Notes |
 | --- | --- | --- |
 | Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
-| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs`, `feeTo`/`feeToSetter` authorization, same-order and reverse-order duplicate-pair guards, and invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
+| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs` tracking and public getter bounds, `feeTo`/`feeToSetter` authorization including old-setter rejection after authority transfer, same-order and reverse-order duplicate-pair guards, and invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
@@ -198,9 +198,10 @@ Remaining:
   primary port, not a reason to introduce a low-level emulation variant.
 - The benchmark CREATE2 fixture now mirrors upstream token sorting,
   zero/identical/same-order and reverse-order duplicate-pair guards, bidirectional `getPair` storage,
-  `allPairs`, `PairCreated`, `feeTo`, and `feeToSetter` authorization, but its
-  external deployment hook remains bytecode-injected so both language artifacts
-  can share the same factory path.
+  `allPairs` tracking and public getter bounds, `PairCreated`, `feeTo`, and
+  `feeToSetter` authorization including post-transfer old-setter rejection, but
+  its external deployment hook remains bytecode-injected so both language
+  artifacts can share the same factory path.
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
   by the representative malformed calldata scenarios, direct getters, permit,
@@ -209,8 +210,9 @@ Remaining:
 
 Suggested next chips:
 
-- Add direct factory-management scenarios if we want to retire the remaining
-  factory fixture caveat entirely.
+- Decide whether the remaining bytecode-injected `createPair` deployment hook
+  is acceptable as the factory boundary, or whether this benchmark needs a
+  first-class full factory artifact before retiring the fixture caveat entirely.
 
 ## `curve_stableswap_2coin`
 

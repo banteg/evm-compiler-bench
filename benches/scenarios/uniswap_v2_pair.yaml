@@ -112,6 +112,22 @@ scenarios:
       data: 'abi.encodeWithSignature("benchUniswapFactorySetFeeToSetterFrom(address,address,address)", {target}, BOB, CAROL)'
     expect_success: false
     observers: *pair_observers
+  - name: factory_old_setter_after_transfer_forbidden_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryOldSetterAfterTransfer(address,address,address)", {target}, BOB, CAROL)'
+    expect_success: false
+    observers: *pair_observers
+  - name: factory_all_pairs_out_of_bounds_reverts
+    deployment_variant: uniswap_create2
+    state_access_profile: warm
+    measured:
+      destination: harness
+      data: 'abi.encodeWithSignature("benchUniswapFactoryAllPairsOutOfBounds(address)", {target})'
+    expect_success: false
+    observers: *pair_observers
   - name: factory_duplicate_pair_reverts
     deployment_variant: uniswap_create2
     state_access_profile: warm

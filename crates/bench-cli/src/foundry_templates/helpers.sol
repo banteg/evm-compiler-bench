@@ -621,6 +621,25 @@
         return true;
     }
 
+    function benchUniswapFactoryOldSetterAfterTransfer(address target, address newFeeToSetter, address newFeeTo)
+        external
+        returns (bool)
+    {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        factory.setFeeToSetter(newFeeToSetter);
+        require(factory.feeToSetter() == newFeeToSetter, "factory feeToSetter");
+        factory.setFeeTo(newFeeTo);
+        return true;
+    }
+
+    function benchUniswapFactoryAllPairsOutOfBounds(address target) external returns (bool) {
+        benchUniswapFactoryState(target);
+        BenchUniswapCreate2Factory factory = _uniswapCreate2Factory();
+        factory.allPairs(factory.allPairsLength());
+        return true;
+    }
+
     function benchUniswapFactoryDuplicatePair(address target) external returns (bool) {
         PairDeps storage deps = pairDeps[target];
         require(address(deps.token0) != address(0), "pair deps");
