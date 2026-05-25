@@ -465,6 +465,7 @@ fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> R
 fn validate_outputs_if_present(root: &Path) -> Result<usize> {
     let results_path = root.join("results/normalized/results.json");
     let manifest_path = root.join("results/normalized/run-manifest.json");
+    let report_model_path = root.join("results/normalized/report-model.json");
     let real_derived_provenance = real_derived_provenance_by_id();
     let mut rows = 0;
     if results_path.exists() {
@@ -639,6 +640,11 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             &manifest_path,
         )?;
     }
+    if report_model_path.exists() {
+        let value: Value = serde_json::from_str(&fs::read_to_string(&report_model_path)?)
+            .with_context(|| format!("parsing {}", report_model_path.display()))?;
+        validate_report_model(&value, &real_derived_provenance, &report_model_path)?;
+    }
     Ok(rows)
 }
 
@@ -651,6 +657,165 @@ fn real_derived_provenance_by_id() -> BTreeMap<String, Provenance> {
                 .map(|provenance| (benchmark.id, provenance))
         })
         .collect()
+}
+
+fn validate_report_model(
+    value: &Value,
+    provenance_by_id: &BTreeMap<String, Provenance>,
+    path: &Path,
+) -> Result<()> {
+    for pointer in [
+        "/schema_version",
+        "/generated_at",
+        "/methodology",
+        "/methodology/source_model",
+        "/methodology/notes",
+        "/real_derived_models",
+        "/rows",
+    ] {
+        require_json_pointer(value, pointer, path)?;
+    }
+    validate_report_methodology(value, path)?;
+    validate_report_real_derived_models(value, provenance_by_id, path)?;
+    Ok(())
+}
+
+fn validate_report_methodology(value: &Value, path: &Path) -> Result<()> {
+    require_string_value(
+        value,
+        "/methodology/source_model/compiled_source_root",
+        "target/bench-source-variants/<profile_id>/",
+        path,
+    )?;
+    let real_derived = string_at(value, "/methodology/source_model/real_derived", path)?;
+    if !real_derived.contains("latest-syntax source-language originals")
+        || !real_derived.contains("provenance references")
+        || !real_derived.contains("not compiled headline artifacts")
+    {
+        bail!(
+            "{} methodology real_derived source model must describe latest-syntax originals and provenance-only upstream references",
+            path.display()
+        );
+    }
+    let compatibility = string_at(
+        value,
+        "/methodology/source_model/compatibility_variants",
+        path,
+    )?;
+    if !compatibility.contains("generated variants of the checked-in latest source")
+        || !compatibility.contains("resolved compiler patch range")
+    {
+        bail!(
+            "{} methodology compatibility source model must describe generated latest-source variants and exact compiler patch pragmas",
+            path.display()
+        );
+    }
+    let notes = value
+        .pointer("/methodology/notes")
+        .and_then(|value| value.as_array())
+        .with_context(|| format!("{} methodology.notes must be an array", path.display()))?;
+    if notes.is_empty() {
+        bail!("{} methodology.notes must not be empty", path.display());
+    }
+    let mut tags = BTreeSet::new();
+    for note in notes {
+        for pointer in ["/tag", "/title", "/body"] {
+            require_string_pointer(note, pointer, path)?;
+        }
+        let tag = string_at(note, "/tag", path)?;
+        if !tags.insert(tag.to_string()) {
+            bail!("{} duplicate methodology note tag {tag}", path.display());
+        }
+    }
+    for required in ["F", "G"] {
+        if !tags.contains(required) {
+            bail!(
+                "{} methodology must include note {required} for real-derived source policy",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_report_real_derived_models(
+    value: &Value,
+    provenance_by_id: &BTreeMap<String, Provenance>,
+    path: &Path,
+) -> Result<()> {
+    let models = value
+        .pointer("/real_derived_models")
+        .and_then(|value| value.as_array())
+        .with_context(|| format!("{} real_derived_models must be an array", path.display()))?;
+    for model in models {
+        let benchmark_id = string_at(model, "/benchmark_id", path)?;
+        let Some(provenance) = provenance_by_id.get(benchmark_id) else {
+            bail!(
+                "{} report model references unknown real-derived benchmark {benchmark_id}",
+                path.display()
+            );
+        };
+        let report_provenance = model.pointer("/provenance").with_context(|| {
+            format!(
+                "{} report model benchmark {benchmark_id} missing provenance",
+                path.display()
+            )
+        })?;
+        validate_real_derived_provenance_fields(report_provenance, benchmark_id, provenance, path)?;
+
+        let compiled_sources = model
+            .pointer("/compiled_sources")
+            .and_then(|value| value.as_array())
+            .with_context(|| {
+                format!(
+                    "{} report model benchmark {benchmark_id} missing compiled_sources",
+                    path.display()
+                )
+            })?;
+        let mut seen_sources = BTreeSet::new();
+        for source in compiled_sources {
+            for pointer in [
+                "/language",
+                "/implementation_id",
+                "/profile_id",
+                "/source_variant",
+                "/source_path",
+                "/source_hash",
+            ] {
+                require_string_pointer(source, pointer, path)?;
+            }
+            require_enum(source, "/language", &["solidity", "vyper"], path)?;
+            require_enum(source, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
+            validate_real_derived_source_variant_path(source, path)?;
+            validate_real_derived_unique_compiled_source(source, &mut seen_sources, path)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_real_derived_unique_compiled_source(
+    source: &Value,
+    seen_sources: &mut BTreeSet<String>,
+    path: &Path,
+) -> Result<()> {
+    let key = [
+        string_at(source, "/language", path)?,
+        string_at(source, "/implementation_id", path)?,
+        string_at(source, "/profile_id", path)?,
+        string_at(source, "/source_variant", path)?,
+        string_at(source, "/source_path", path)?,
+        string_at(source, "/source_hash", path)?,
+    ]
+    .join("\0");
+    if !seen_sources.insert(key) {
+        bail!(
+            "{} duplicate report compiled source for profile {} path {}",
+            path.display(),
+            string_at(source, "/profile_id", path)?,
+            string_at(source, "/source_path", path)?
+        );
+    }
+    Ok(())
 }
 
 fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
@@ -2565,6 +2730,77 @@ source_profiles:
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn validates_report_model_source_methodology_and_compiled_sources() {
+        let path = Path::new("results/normalized/report-model.json");
+        let provenance_by_id = super::real_derived_provenance_by_id();
+        let provenance = provenance_by_id.get("uniswap_v2_pair").unwrap();
+        let mut report_model = json!({
+            "schema_version": 1,
+            "generated_at": "2026-05-25T00:00:00Z",
+            "methodology": {
+                "source_model": {
+                    "real_derived": "Production-conformance rows use latest-syntax source-language originals plus counterpart-language ports. Pinned upstream files are provenance references, not compiled headline artifacts.",
+                    "compatibility_variants": "Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range before supported backward syntax rewrites are applied.",
+                    "compiled_source_root": "target/bench-source-variants/<profile_id>/"
+                },
+                "notes": [
+                    {
+                        "tag": "F",
+                        "title": "Real-derived provenance",
+                        "body": "Production-conformance rows use latest-syntax originals plus counterpart-language ports."
+                    },
+                    {
+                        "tag": "G",
+                        "title": "Compatibility source variants",
+                        "body": "Older source-language profiles compile generated variants of the checked-in latest source."
+                    }
+                ]
+            },
+            "real_derived_models": [
+                {
+                    "benchmark_id": "uniswap_v2_pair",
+                    "provenance": {
+                        "source_path": &provenance.source_path,
+                        "source_reference_path": provenance
+                            .upstream_reference_path("uniswap_v2_pair")
+                            .to_string_lossy(),
+                        "source_blob": provenance.source_blob.as_deref().unwrap(),
+                        "source_profiles": &provenance.source_profiles
+                    },
+                    "compiled_sources": [
+                        {
+                            "language": "solidity",
+                            "implementation_id": "solidity/handwritten/v1",
+                            "profile_id": "solc-latest-noopt",
+                            "source_variant": "latest",
+                            "source_path": "target/bench-source-variants/solc-latest-noopt/Pair.sol",
+                            "source_hash": "abc"
+                        }
+                    ]
+                }
+            ],
+            "rows": []
+        });
+        super::validate_report_model(&report_model, &provenance_by_id, path).unwrap();
+
+        let mut missing_methodology = report_model.clone();
+        missing_methodology
+            .as_object_mut()
+            .unwrap()
+            .remove("methodology");
+        assert!(
+            super::validate_report_model(&missing_methodology, &provenance_by_id, path).is_err()
+        );
+
+        *report_model
+            .pointer_mut("/real_derived_models/0/compiled_sources/0/source_path")
+            .unwrap() = json!(
+            "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
+        );
+        assert!(super::validate_report_model(&report_model, &provenance_by_id, path).is_err());
     }
 
     #[test]
