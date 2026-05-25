@@ -830,10 +830,22 @@ scenarios:
       data: 'abi.encodePacked(bytes4(keccak256("approve(address,uint256)")), abi.encode(BOB))'
     expect_success: false
     observers: *pair_observers
+  - name: transfer_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("transfer(address,uint256)")), abi.encode(BOB))'
+    expect_success: false
+    observers: *pair_observers
   - name: transfer_from_truncated_calldata_reverts
     state_access_profile: cold
     measured:
       data: 'abi.encodePacked(bytes4(keccak256("transferFrom(address,address,uint256)")), abi.encode(address(this), BOB))'
+    expect_success: false
+    observers: *pair_observers
+  - name: swap_truncated_head_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this)))'
     expect_success: false
     observers: *pair_observers
   - name: swap_truncated_dynamic_tail_reverts

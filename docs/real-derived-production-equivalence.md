@@ -90,7 +90,7 @@ historical upstream source as latest-idiomatic.
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
-| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transferFrom, malformed dynamic calldata tail, and truncated permit payloads. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
+| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head and dynamic calldata tail, and truncated permit payloads. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
 | Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
@@ -182,8 +182,8 @@ Exact now:
   port bound and at the current 64 KiB bound, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP
   transfer/allowance failures, raw ABI-boundary rejection for representative
-  pair actions, LP-token allowance/spend calls, dynamic calldata, and permit
-  payloads, and permit success/failure.
+  pair actions, LP-token balance/allowance/spend calls, swap head and dynamic
+  calldata, and permit payloads, and permit success/failure.
 - The generated differential harness normalizes deployment-specific addresses
   and compares event/log hashes for the listed scenarios.
 
