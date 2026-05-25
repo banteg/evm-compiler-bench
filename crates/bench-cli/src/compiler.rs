@@ -262,8 +262,7 @@ fn compile_cache_input(
     evm_version: &str,
 ) -> Result<CompileCacheInput> {
     let source_path = source_path_for_profile(root, benchmark, profile)?;
-    let source = fs::read(&source_path)?;
-    let source_hash = sha256_bytes(&source);
+    let source = source_fingerprint(profile.language, &source_path)?;
     let compiler_settings = match profile.language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
         Language::Vyper => vyper_compiler_settings(profile, evm_version),
@@ -292,10 +291,7 @@ fn compile_cache_input(
             "metadata": toolchain.metadata,
         },
         "compiler_settings": compiler_settings,
-        "source": {
-            "path": source_path.display().to_string(),
-            "hash": source_hash,
-        },
+        "source": source,
         "compile_sample_count": compile_sample_count(),
     });
     let key = cache::key_for(&fingerprint)?;
@@ -305,6 +301,39 @@ fn compile_cache_input(
         logical_id,
         fingerprint,
     })
+}
+
+fn source_fingerprint(language: Language, source_path: &Path) -> Result<serde_json::Value> {
+    match language {
+        Language::Solidity => solidity_source_bundle_fingerprint(source_path),
+        Language::Vyper => {
+            let source = fs::read(source_path)?;
+            Ok(json!({
+                "path": source_path.display().to_string(),
+                "hash": sha256_bytes(&source),
+            }))
+        }
+    }
+}
+
+fn solidity_source_bundle_fingerprint(source_path: &Path) -> Result<serde_json::Value> {
+    let source_root = source_path.parent().context("solidity source parent")?;
+    let mut bundle = Vec::new();
+    for path in solidity_files(source_root)? {
+        let key = path
+            .strip_prefix(source_root)?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let source = fs::read(&path)?;
+        bundle.push(json!({
+            "path": key,
+            "hash": sha256_bytes(&source),
+        }));
+    }
+    Ok(json!({
+        "path": source_path.display().to_string(),
+        "bundle": bundle,
+    }))
 }
 
 fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerProfile>> {
@@ -1355,7 +1384,11 @@ fn bytecode_metrics(creation: &str, runtime: &str) -> Result<BytecodeMetrics> {
 
 #[cfg(test)]
 mod tests {
-    use super::{bytecode_metrics, transform_solidity_source, transform_vyper_source};
+    use super::{
+        bytecode_metrics, source_fingerprint, transform_solidity_source, transform_vyper_source,
+    };
+    use crate::models::Language;
+    use std::fs;
 
     #[test]
     fn computes_bytecode_metrics() {
@@ -1363,6 +1396,52 @@ mod tests {
         assert_eq!(metrics.creation_bytes, 5);
         assert_eq!(metrics.runtime_bytes, 4);
         assert_eq!(metrics.code_deposit_gas, 800);
+    }
+
+    #[test]
+    fn solidity_fingerprint_includes_import_bundle() {
+        let dir = tempfile::tempdir().unwrap();
+        let main = dir.path().join("Main.sol");
+        let lib_dir = dir.path().join("lib");
+        fs::create_dir(&lib_dir).unwrap();
+        fs::write(
+            &main,
+            "pragma solidity ^0.8.30; import './lib/Lib.sol'; contract Main {}",
+        )
+        .unwrap();
+        fs::write(
+            lib_dir.join("Lib.sol"),
+            "library Lib { function f() internal {} }",
+        )
+        .unwrap();
+
+        let before = source_fingerprint(Language::Solidity, &main).unwrap();
+        fs::write(
+            lib_dir.join("Lib.sol"),
+            "library Lib { function g() internal {} }",
+        )
+        .unwrap();
+        let after = source_fingerprint(Language::Solidity, &main).unwrap();
+
+        assert_ne!(before, after);
+    }
+
+    #[test]
+    fn vyper_fingerprint_uses_single_source_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let main = dir.path().join("Main.vy");
+        fs::write(&main, "# pragma version >=0.4.3,<0.6.0\n").unwrap();
+        fs::write(
+            dir.path().join("Other.vy"),
+            "# pragma version >=0.4.3,<0.6.0\n",
+        )
+        .unwrap();
+
+        let before = source_fingerprint(Language::Vyper, &main).unwrap();
+        fs::write(dir.path().join("Other.vy"), "# changed\n").unwrap();
+        let after = source_fingerprint(Language::Vyper, &main).unwrap();
+
+        assert_eq!(before, after);
     }
 
     #[test]
