@@ -116,8 +116,8 @@ def permit(owner: address, spender: address, amount: uint256, deadline: uint256,
         )
     )
     recovered: address = ecrecover(digest, convert(v, uint256), convert(r, uint256), convert(s, uint256))
-    assert recovered != empty(address) and recovered == owner, "UniswapV2: INVALID_SIGNATURE"
     self.nonces[owner] = nonce + 1
+    assert recovered != empty(address) and recovered == owner, "UniswapV2: INVALID_SIGNATURE"
     self.allowance[owner][spender] = amount
     log Approval(owner=owner, spender=spender, amount=amount)
 
