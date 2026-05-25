@@ -210,6 +210,7 @@ real_derived:
     - self_report_airdrop
     - self_report_idle_loss
     - self_report_idle_loss_with_accountant_fee_refund
+    - self_report_idle_loss_with_accountant_protocol_fee
     - self_report_accountant_refund
     - self_report_refund_clipped_to_zero
     - self_report_idle_gain_with_accountant_fee_refund
@@ -637,6 +638,9 @@ scenarios:
   - name: self_report_idle_loss_with_accountant_fee_refund
     call: "process_report(address(this)) after an idle asset loss with accountant fees and refunds"
     expected: "accounts the self-report loss branch while charging fees, pulling refunds, and adding refunds back to total idle"
+  - name: self_report_idle_loss_with_accountant_protocol_fee
+    call: "process_report(address(this)) after an idle asset loss with accountant fees/refunds and nonzero protocol fee config"
+    expected: "accounts the self-report loss branch while splitting fee shares between accountant and protocol"
   - name: self_report_accountant_refund
     call: "process_report(address(this)) with an accountant refund and no idle gain or loss"
     expected: "pulls the refund and accounts it through the self-report total-idle path"
