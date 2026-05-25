@@ -71,7 +71,7 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
         Benchmark::real_derived(
             "uniswap_v2_pair",
             "UniswapV2Pair",
-            "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol",
+            "benches/implementations/uniswap_v2_pair/solidity/latest/UniswapV2PairReal.sol",
             "benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy",
             provenance_from_spec(include_str!("../../../benches/specs/uniswap_v2_pair.yaml")),
         ),

@@ -703,6 +703,9 @@ fn validate_source_blob(
     benchmark: &Benchmark,
     provenance: &Provenance,
 ) -> Result<()> {
+    if provenance.source_lane != ComparisonLane::UpstreamExactHistorical {
+        return Ok(());
+    }
     let Some(expected_blob) = provenance.source_blob.as_deref() else {
         return Ok(());
     };

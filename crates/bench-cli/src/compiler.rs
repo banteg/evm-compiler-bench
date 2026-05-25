@@ -831,6 +831,7 @@ fn solidity_pragma_for_toolchain(solc: &Toolchain) -> Result<String> {
 fn rewrite_solidity_pre_08(source: &str) -> String {
     let source = remove_numeric_separators(source);
     source
+        .replace("unchecked {", "{")
         .replace("10_000_000_000", "10000000000")
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")

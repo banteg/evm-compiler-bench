@@ -51,18 +51,17 @@ Every real-derived spec also declares lane metadata:
 `source_lane` is the checked-in source-language original side,
 `counterpart_lane` is the cross-language port side, and `comparison_lane` is the
 benchmark-level lane used by legacy report consumers. Current real-derived
-specs use
-`comparison_lane: production_conformance`,
-`source_lane: upstream_exact_historical`, and
-`counterpart_lane: fixture_scoped_port`; the target state is
-`source_lane: latest_syntax_original` with pinned upstream files retained only
-as provenance/reference inputs.
+specs use `comparison_lane: production_conformance` and
+`counterpart_lane: fixture_scoped_port`. The target source side is
+`source_lane: latest_syntax_original`, with pinned upstream files retained only
+as provenance/reference inputs; benchmarks still marked
+`upstream_exact_historical` have not been modernized yet.
 
 ## Summary
 
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
+| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
@@ -89,7 +88,7 @@ as provenance/reference inputs.
 
 | Surface | Status | Notes |
 | --- | --- | --- |
-| Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
+| Pair source-language original | Latest-syntax original | `UniswapV2PairReal.sol` is a latest-syntax Solidity modernization of the pinned upstream pair source; the pinned upstream file remains provenance/reference input only. |
 | Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs` tracking and public getter bounds, `feeTo`/`feeToSetter` authorization including old-setter rejection after authority transfer, same-order and reverse-order duplicate-pair guards, and invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
@@ -166,10 +165,11 @@ Immediate chips:
 
 Exact now:
 
-- The Solidity benchmark implementation is the pinned upstream
+- The Solidity benchmark implementation is `UniswapV2PairReal.sol`, a
+  latest-syntax modernization of the pinned upstream
   `contracts/UniswapV2Pair.sol`.
-- Supporting upstream Solidity sources for ERC20, factory, interfaces, and
-  libraries are vendored next to the pair source.
+- The pinned upstream Solidity sources for ERC20, factory, interfaces, and
+  libraries remain vendored as provenance/reference inputs.
 - The Vyper port implements the matched pair API: initialization, reserves,
   mint, burn, swap, skim, sync, fee-on `kLast`, cumulative prices, LP ERC20
   accounting, and permit.
