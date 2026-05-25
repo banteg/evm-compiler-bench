@@ -156,6 +156,16 @@ scenarios:
       data: 'abi.encodeWithSignature("withdraw(uint256,address,address)", uint256(20_000), address(this), address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: withdraw_max_loss_too_high_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("withdraw(uint256,address,address,uint256)", uint256(20_000), address(this), address(this), uint256(10_001))'
+    expect_success: false
+    observers: *yearn_observers
   - name: redeem_idle
     state_access_profile: mixed
     setup:
@@ -175,6 +185,16 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("redeem(uint256,address,address)", uint256(20_000), address(this), address(this))'
     expect_success: true
+    observers: *yearn_observers
+  - name: redeem_max_loss_too_high_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("redeem(uint256,address,address,uint256)", uint256(20_000), address(this), address(this), uint256(10_001))'
+    expect_success: false
     observers: *yearn_observers
   - name: approve
     state_access_profile: warm

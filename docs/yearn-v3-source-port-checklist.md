@@ -67,8 +67,8 @@ Status meanings:
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module, including post-shutdown debt pull. |
 | `deposit` | `deposit` | mapped, covered | `max_value(uint256)` deposit-all branch is covered. |
 | `mint` | `mint` | mapped, covered | Covered directly and through preview observers. |
-| `withdraw` | overloaded `withdraw` | mapped, covered | Long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
-| `redeem` | overloaded `redeem` | mapped, covered | Long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
+| `withdraw` | overloaded `withdraw` | mapped, covered | Default max-loss overload, max-loss upper-bound rejection, long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
+| `redeem` | overloaded `redeem` | mapped, covered | Default max-loss overload, max-loss upper-bound rejection, long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
 | `approve` | `approve` | mapped, covered | Covered directly. |
 | `transfer` | `transfer` | mapped, covered | Receiver zero and vault-self rejection are covered. |
 | `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |

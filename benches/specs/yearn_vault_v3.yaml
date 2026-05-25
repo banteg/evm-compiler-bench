@@ -138,8 +138,10 @@ real_derived:
     - withdraw_asset_no_return
     - withdraw_asset_false_return_reverts
     - withdraw_default_max_loss
+    - withdraw_max_loss_too_high_reverts
     - redeem_idle
     - redeem_default_max_loss
+    - redeem_max_loss_too_high_reverts
     - approve
     - transfer
     - transfer_zero_receiver_reverts
@@ -348,6 +350,7 @@ real_derived:
     - bitmask role mutation, Vyper enum role bounds, delegated role execution, and two-step role-manager transfer
     - mutable vault name and symbol metadata
     - Vyper-compatible String[64] name and String[32] symbol bounds
+    - user withdraw and redeem max-loss upper-bound rejection
     - accountant, protocol-fee, deposit-limit-module, and withdraw-limit-module hooks, including module-call failure propagation
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
@@ -402,12 +405,18 @@ scenarios:
   - name: withdraw_default_max_loss
     call: "withdraw(20_000, address(this), address(this)) using the Vyper default max_loss overload"
     expected: "burns shares and transfers idle assets with the upstream default max-loss selector"
+  - name: withdraw_max_loss_too_high_reverts
+    call: "withdraw(20_000, address(this), address(this), 10001)"
+    expected: "reverts through the upstream max-loss basis-point bound"
   - name: redeem_idle
     call: "redeem(20_000, address(this), address(this), 0)"
     expected: "burns shares and returns proportional idle assets"
   - name: redeem_default_max_loss
     call: "redeem(20_000, address(this), address(this)) using the Vyper default max_loss overload"
     expected: "burns shares and returns proportional idle assets with the upstream default max-loss selector"
+  - name: redeem_max_loss_too_high_reverts
+    call: "redeem(20_000, address(this), address(this), 10001)"
+    expected: "reverts through the upstream max-loss basis-point bound"
   - name: approve
     call: "approve(BOB, 123)"
     expected: "sets vault-share allowance"
