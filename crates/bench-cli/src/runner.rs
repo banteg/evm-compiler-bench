@@ -1,6 +1,7 @@
 use crate::{
     baselines::baseline_pairs,
     cache::{self, CacheLookup},
+    harness,
     models::{
         CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, DeploymentVariant,
         GasRecord, PropertySpec, RandomizedSpec, Scenario,
@@ -562,10 +563,7 @@ fn randomized_helper_functions() -> &'static str {
 }
 
 fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArtifact) {
-    let has_deployment_variants = matches!(
-        artifact.benchmark_id.as_str(),
-        "curve_stableswap_2coin" | "uniswap_v2_pair"
-    );
+    let has_deployment_variants = harness::has_deployment_variants(&artifact.benchmark_id);
     out.push_str("    function deployArtifact");
     out.push_str(&index.to_string());
     out.push_str("() internal returns (address target, uint256 deployGas) {\n");
@@ -667,7 +665,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("            require(deploymentVariant == 0, \"uniswap variant\");\n");
         out.push_str("        }\n");
     }
-    if let Some(args) = constructor_args(&artifact.benchmark_id) {
+    if let Some(args) = harness::constructor_args(&artifact.benchmark_id) {
         out.push_str("        code = abi.encodePacked(code, ");
         out.push_str(args);
         out.push_str(");\n");
@@ -798,7 +796,7 @@ fn write_diff_test(
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "solTarget", &scenario.setup, "setup");
     write_setup(out, "solTarget", &scenario.warmup, "warmup");
-    if supports_log_diff(benchmark_id) {
+    if harness::supports_log_diff(benchmark_id) {
         out.push_str(
             "        (bool solOk, bytes32 solHash, bytes32 solLogHash,) = _runWithLogs(solTarget, ",
         );
@@ -821,7 +819,7 @@ fn write_diff_test(
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
-    if supports_log_diff(benchmark_id) {
+    if harness::supports_log_diff(benchmark_id) {
         out.push_str(
             "        (bool vyperOk, bytes32 vyperHash, bytes32 vyperLogHash,) = _runWithLogs(vyperTarget, ",
         );
@@ -855,7 +853,7 @@ fn write_diff_test(
     out.push_str(
         "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
     );
-    if supports_log_diff(benchmark_id) {
+    if harness::supports_log_diff(benchmark_id) {
         out.push_str(
             "        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n",
         );
@@ -871,7 +869,8 @@ fn write_randomized_diff_test(
     vyper_idx: usize,
     randomized: &RandomizedSpec,
 ) -> Result<()> {
-    let helper = randomized_helper_name(benchmark_id)?;
+    let helper = harness::randomized_helper_name(benchmark_id)
+        .with_context(|| format!("unsupported randomized benchmark {benchmark_id}"))?;
     out.push_str("    function testRandomDiff_");
     out.push_str(&sanitize(benchmark_id));
     out.push_str("() public {\n");
@@ -900,7 +899,8 @@ fn write_property_test(
     randomized: Option<&RandomizedSpec>,
     property: &PropertySpec,
 ) -> Result<()> {
-    let helper = property_helper_name(&property.name)?;
+    let helper = harness::property_helper_name(&property.name)
+        .with_context(|| format!("unsupported property {}", property.name))?;
     let seed = property
         .seed
         .or_else(|| randomized.map(|spec| spec.seed))
@@ -933,35 +933,6 @@ fn write_property_test(
     out.push_str(");\n");
     out.push_str("    }\n\n");
     Ok(())
-}
-
-fn randomized_helper_name(benchmark_id: &str) -> Result<&'static str> {
-    match benchmark_id {
-        "counter" => Ok("_randomDiff_counter"),
-        "erc20_minimal" => Ok("_randomDiff_erc20_minimal"),
-        "vault_deposit_withdraw" => Ok("_randomDiff_vault_deposit_withdraw"),
-        "ownable_pausable" => Ok("_randomDiff_ownable_pausable"),
-        "amm_pair_subset" => Ok("_randomDiff_amm_pair_subset"),
-        _ => bail!("unsupported randomized benchmark {benchmark_id}"),
-    }
-}
-
-fn property_helper_name(property_name: &str) -> Result<&'static str> {
-    match property_name {
-        "counter_model_matches" => Ok("_property_counter"),
-        "erc20_supply_conservation" => Ok("_property_erc20_minimal"),
-        "vault_share_accounting" => Ok("_property_vault_deposit_withdraw"),
-        "ownable_authorization" => Ok("_property_ownable_pausable"),
-        "amm_reserve_liquidity_coherence" => Ok("_property_amm_pair_subset"),
-        _ => bail!("unsupported property {property_name}"),
-    }
-}
-
-fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(
-        benchmark_id,
-        "curve_stableswap_2coin" | "uniswap_v2_pair" | "yearn_vault_v3"
-    )
 }
 
 fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scenario) {
@@ -1020,10 +991,8 @@ fn call_data(call: &CallSpec, target: &str) -> String {
 }
 
 fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -> String {
-    if matches!(
-        artifact.benchmark_id.as_str(),
-        "curve_stableswap_2coin" | "uniswap_v2_pair"
-    ) && scenario.deployment_variant != DeploymentVariant::Standard
+    if harness::supports_deployment_variant(&artifact.benchmark_id, scenario.deployment_variant)
+        && scenario.deployment_variant != DeploymentVariant::Standard
     {
         format!(
             "deployArtifact{}({})",
@@ -1032,14 +1001,6 @@ fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -
         )
     } else {
         format!("deployArtifact{}()", index)
-    }
-}
-
-fn constructor_args(benchmark_id: &str) -> Option<&'static str> {
-    match benchmark_id {
-        "counter" => Some("abi.encode(uint256(3))"),
-        "erc20_minimal" => Some("abi.encode(uint256(1000 ether))"),
-        _ => None,
     }
 }
 

@@ -2,6 +2,7 @@ mod baselines;
 mod cache;
 mod catalog;
 mod compiler;
+mod harness;
 mod models;
 mod report;
 mod runner;

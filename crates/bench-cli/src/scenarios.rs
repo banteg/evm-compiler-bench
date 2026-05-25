@@ -1,4 +1,7 @@
-use crate::models::{DeploymentVariant, ScenarioFile};
+use crate::{
+    harness::{property_benchmark_id, supports_deployment_variant, supports_randomized},
+    models::ScenarioFile,
+};
 use anyhow::{Context, Result, bail};
 use std::{
     collections::BTreeMap,
@@ -74,12 +77,7 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
         if scenario.name.trim().is_empty() {
             bail!("{} has scenario with empty name", path.display());
         }
-        if scenario.deployment_variant != DeploymentVariant::Standard
-            && !matches!(
-                file.benchmark_id.as_str(),
-                "curve_stableswap_2coin" | "uniswap_v2_pair"
-            )
-        {
+        if !supports_deployment_variant(&file.benchmark_id, scenario.deployment_variant) {
             bail!(
                 "{} scenario {} has deployment_variant for unsupported benchmark {}",
                 path.display(),
@@ -130,7 +128,7 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
         );
     }
     for property in &file.properties {
-        if property_helper_name(&property.name) != Some(file.benchmark_id.as_str()) {
+        if property_benchmark_id(&property.name) != Some(file.benchmark_id.as_str()) {
             bail!(
                 "{} has unsupported property {} for benchmark {}",
                 path.display(),
@@ -140,28 +138,6 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn supports_randomized(benchmark_id: &str) -> bool {
-    matches!(
-        benchmark_id,
-        "counter"
-            | "erc20_minimal"
-            | "vault_deposit_withdraw"
-            | "ownable_pausable"
-            | "amm_pair_subset"
-    )
-}
-
-fn property_helper_name(property_name: &str) -> Option<&'static str> {
-    match property_name {
-        "counter_model_matches" => Some("counter"),
-        "erc20_supply_conservation" => Some("erc20_minimal"),
-        "vault_share_accounting" => Some("vault_deposit_withdraw"),
-        "ownable_authorization" => Some("ownable_pausable"),
-        "amm_reserve_liquidity_coherence" => Some("amm_pair_subset"),
-        _ => None,
-    }
 }
 
 fn yaml_files(dir: &Path) -> Result<Vec<PathBuf>> {
