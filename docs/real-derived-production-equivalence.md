@@ -226,7 +226,8 @@ Exact now:
   accounting, permit, moving averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
   donation-before-first-deposit handling, initial and imbalanced three-coin,
-  four-coin endpoint one-coin withdrawal quote/action,
+  four-coin endpoint `get_dy`/`get_dx`, exchange, one-coin withdrawal quote/action,
+  `calc_token_amount` deposit/withdraw, and dynamic-fee quote,
   five-coin midpoint `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, exchange, `exchange_received`, one-coin withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths,
   seven-coin midpoint `get_dy`/`get_dx`, exchange, one-coin withdrawal quote/action, and
   eight-coin liquidity, three-coin `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quote views, eight-coin quote views including `calc_token_amount` deposit/withdraw, three-coin exchange and
@@ -258,8 +259,9 @@ Remaining:
   slippage rejection, imbalanced-withdrawal, imbalanced-withdrawal
   slippage rejection, one-coin-withdrawal,
   oracle-update scenarios, five-coin midpoint/endpoint `get_dy`/`get_dx`, midpoint/endpoint exchange and `exchange_received`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, one-coin-withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths, and
-  four-coin initial-liquidity, endpoint `get_dy` quote, endpoint
-  one-coin-withdrawal quote, endpoint one-coin-withdrawal, and endpoint
+  four-coin initial-liquidity, endpoint `get_dy`/`get_dx` quotes, endpoint
+  exchange, endpoint one-coin-withdrawal quote, endpoint one-coin-withdrawal,
+  deposit and withdraw `calc_token_amount` quotes, endpoint `dynamic_fee`, and endpoint
   `exchange_received`, six-coin endpoint `get_dy`/`get_dx`, midpoint exchange and
   `exchange_received`, deposit and withdraw `calc_token_amount` quotes, and
   midpoint one-coin-withdrawal quote/action, seven-coin midpoint `get_dy`/`get_dx`,

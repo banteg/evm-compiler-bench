@@ -341,6 +341,22 @@ scenarios:
       - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: get_dx_four_coin_endpoint
+    deployment_variant: curve_four_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("get_dx(int128,int128,uint256)", int128(0), int128(3), uint256(20_000))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: get_dx_five_coin_midpoint
     deployment_variant: curve_five_coin
     state_access_profile: warm
@@ -460,6 +476,28 @@ scenarios:
       - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("D_oracle()")'
+      - data: 'abi.encodeWithSignature("get_virtual_price()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: exchange_four_coin_endpoint
+    deployment_variant: curve_four_coin
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("exchange(int128,int128,uint256,uint256,address)", int128(0), int128(3), uint256(25_000), uint256(0), address(this))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("balances(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("balances(uint256)", uint256(3))'
+      - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(0))'
+      - data: 'abi.encodeWithSignature("admin_balances(uint256)", uint256(3))'
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(2))'
       - data: 'abi.encodeWithSignature("D_oracle()")'
       - data: 'abi.encodeWithSignature("get_virtual_price()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
@@ -1776,6 +1814,34 @@ scenarios:
       - data: 'abi.encodeWithSignature("get_balances()")'
       - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: calc_token_amount_four_coin
+    deployment_variant: curve_four_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("calc_token_amount(uint256[],bool)", curveAmounts4(100_000, 300_000, 200_000, 50_000), true)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: calc_token_amount_four_coin_withdraw
+    deployment_variant: curve_four_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("calc_token_amount(uint256[],bool)", curveAmounts4(40_000, 10_000, 25_000, 30_000), false)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: calc_token_amount_five_coin
     deployment_variant: curve_five_coin
     state_access_profile: warm
@@ -1897,6 +1963,23 @@ scenarios:
       - data: 'abi.encodeWithSignature("stored_rates()")'
       - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(1))'
       - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(1))'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
+  - name: dynamic_fee_four_coin_endpoint
+    deployment_variant: curve_four_coin
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(1_000_000, 1_000_000, 1_000_000, 1_000_000), uint256(0), address(this))'
+      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts4(100_000, 300_000, 200_000, 50_000), uint256(0), address(this))'
+    measured:
+      data: 'abi.encodeWithSignature("dynamic_fee(int128,int128)", int128(0), int128(3))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("get_balances()")'
+      - data: 'abi.encodeWithSignature("stored_rates()")'
+      - data: 'abi.encodeWithSignature("last_price(uint256)", uint256(2))'
+      - data: 'abi.encodeWithSignature("price_oracle(uint256)", uint256(2))'
       - data: 'abi.encodeWithSignature("totalSupply()")'
   - name: dynamic_fee_five_coin_midpoint
     deployment_variant: curve_five_coin

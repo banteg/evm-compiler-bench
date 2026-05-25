@@ -102,6 +102,7 @@ real_derived:
     - get_dy_seven_coin_midpoint
     - get_dy_eight_coin
     - get_dx_three_coin
+    - get_dx_four_coin_endpoint
     - get_dx_five_coin_midpoint
     - get_dx_five_coin_endpoint
     - get_dx_six_coin_endpoint
@@ -110,6 +111,8 @@ real_derived:
     - get_dx_eight_coin_interior
     - calc_token_amount_three_coin
     - calc_token_amount_three_coin_withdraw
+    - calc_token_amount_four_coin
+    - calc_token_amount_four_coin_withdraw
     - calc_token_amount_five_coin
     - calc_token_amount_five_coin_withdraw
     - calc_token_amount_six_coin
@@ -117,6 +120,7 @@ real_derived:
     - calc_token_amount_eight_coin
     - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
+    - exchange_four_coin_endpoint
     - exchange_six_coin_midpoint
     - exchange_seven_coin_midpoint
     - exchange_five_coin_midpoint
@@ -185,6 +189,7 @@ real_derived:
     - calc_token_amount_too_many_amounts_reverts
     - dynamic_fee_quote
     - dynamic_fee_three_coin
+    - dynamic_fee_four_coin_endpoint
     - dynamic_fee_five_coin_midpoint
     - dynamic_fee_seven_coin_midpoint
     - dynamic_fee_eight_coin
@@ -237,13 +242,14 @@ real_derived:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
-    - constructor-initialized four-coin setup plus endpoint get_dy, one-coin withdrawal quote, and one-coin withdrawal coverage
+    - constructor-initialized four-coin setup plus endpoint get_dy/get_dx, endpoint exchange, one-coin withdrawal quote, one-coin withdrawal, calc_token_amount deposit/withdraw quote, and dynamic_fee coverage
     - constructor-initialized five-coin midpoint pool setup
     - constructor-initialized six-coin midpoint exchange, midpoint exchange_received, endpoint get_dy/get_dx, endpoint one-coin-withdrawal quote, endpoint one-coin withdrawal, and calc_token_amount deposit/withdraw quote coverage
     - constructor-initialized seven-coin midpoint get_dy/get_dx quotes, midpoint exchange, proportional withdrawal, imbalanced withdrawal, one-coin withdrawal, one-coin withdrawal quote, and dynamic_fee quote coverage
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
-    - factory-delegated four-coin endpoint get_dy quote
+    - factory-delegated four-coin endpoint get_dy and get_dx quotes
+    - factory-delegated four-coin calc_token_amount deposit and withdraw quotes
     - factory-delegated five-coin midpoint and endpoint get_dy quotes
     - factory-delegated five-coin midpoint and endpoint get_dx quotes
     - factory-delegated five-coin calc_token_amount deposit and withdraw quotes
@@ -252,12 +258,14 @@ real_derived:
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin endpoint and interior get_dx quotes at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
+    - factory-delegated four-coin endpoint dynamic_fee quote
     - factory-delegated five-coin midpoint dynamic_fee quote
     - factory-delegated seven-coin midpoint dynamic_fee quote
     - factory-delegated eight-coin endpoint and interior dynamic_fee quotes at MAX_COINS
     - standard-token three-coin imbalanced add-liquidity path and slippage rejection
     - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
+    - standard-token four-coin endpoint exchange path
     - standard-token five-coin midpoint and endpoint exchange paths
     - standard-token five-coin midpoint and endpoint exchange_received optimistic-transfer paths and midpoint slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
@@ -360,6 +368,9 @@ scenarios:
   - name: get_dx_three_coin
     call: "get_dx(0, 2, 20_000) after initial liquidity on a three-coin deployment"
     expected: "quotes required input through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dx_four_coin_endpoint
+    call: "get_dx(0, 3, 20_000) after initial liquidity on a four-coin deployment"
+    expected: "quotes endpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_five_coin_midpoint
     call: "get_dx(1, 3, 20_000) after initial liquidity on a five-coin deployment"
     expected: "quotes midpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
@@ -381,6 +392,9 @@ scenarios:
   - name: exchange_three_coin
     call: "exchange(0, 2, 25_000, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates all constructor-sized accounting and oracle slots after a non-two-coin swap"
+  - name: exchange_four_coin_endpoint
+    call: "exchange(0, 3, 25_000, 0, address(this)) after initial liquidity on a four-coin deployment"
+    expected: "updates endpoint constructor-sized balances, dynamic fees, and oracle slots for an intermediate N_COINS value"
   - name: exchange_six_coin_midpoint
     call: "exchange(2, 4, 25_000, 0, address(this)) after initial liquidity on a six-coin deployment"
     expected: "swaps a midpoint pair for an intermediate constructor-driven N_COINS value"
@@ -582,6 +596,12 @@ scenarios:
   - name: calc_token_amount_three_coin_withdraw
     call: "calc_token_amount([40_000, 10_000, 25_000], false) after initial liquidity on a three-coin deployment"
     expected: "quotes LP burned through the factory views implementation using constructor-driven N_COINS quote math"
+  - name: calc_token_amount_four_coin
+    call: "calc_token_amount([100_000, 300_000, 200_000, 50_000], true) after initial liquidity on a four-coin deployment"
+    expected: "quotes LP minted through the factory views implementation using constructor-driven N_COINS quote math"
+  - name: calc_token_amount_four_coin_withdraw
+    call: "calc_token_amount([40_000, 10_000, 25_000, 30_000], false) after initial liquidity on a four-coin deployment"
+    expected: "quotes LP burned through the factory views implementation using constructor-driven N_COINS quote math"
   - name: calc_token_amount_five_coin
     call: "calc_token_amount([100_000, 300_000, 200_000, 50_000, 75_000], true) after initial liquidity on a five-coin deployment"
     expected: "quotes LP minted through the factory views implementation using constructor-driven N_COINS quote math"
@@ -609,6 +629,9 @@ scenarios:
   - name: dynamic_fee_three_coin
     call: "dynamic_fee(0, 2) after imbalanced liquidity on a three-coin deployment"
     expected: "returns the off-peg dynamic fee through the factory views implementation using constructor-driven N_COINS math"
+  - name: dynamic_fee_four_coin_endpoint
+    call: "dynamic_fee(0, 3) after imbalanced liquidity on a four-coin deployment"
+    expected: "returns an endpoint off-peg dynamic fee through the factory views implementation using constructor-driven N_COINS math"
   - name: dynamic_fee_five_coin_midpoint
     call: "dynamic_fee(1, 3) after imbalanced liquidity on a five-coin deployment"
     expected: "returns a midpoint off-peg dynamic fee through the factory views implementation using constructor-driven N_COINS math"
