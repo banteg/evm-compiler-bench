@@ -128,9 +128,12 @@ real_derived:
     - remove_liquidity_imbalance_three_coin
     - remove_liquidity_imbalance_three_coin_slippage_reverts
     - calc_withdraw_one_coin_three_coin
+    - calc_withdraw_one_coin_five_coin
     - calc_withdraw_one_coin_eight_coin
     - calc_withdraw_one_coin_eight_coin_interior
     - remove_one_coin_three_coin
+    - remove_one_coin_five_coin
+    - remove_one_coin_five_coin_slippage_reverts
     - remove_one_coin_three_coin_slippage_reverts
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
@@ -223,6 +226,7 @@ real_derived:
     - eight-coin endpoint and interior one-coin withdrawal at MAX_COINS
     - eight-coin endpoint and interior one-coin withdrawal slippage rejection at MAX_COINS
     - eight-coin endpoint and interior one-coin withdrawal quote at MAX_COINS
+    - five-coin midpoint one-coin withdrawal, slippage rejection, and quote paths
     - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced eight-coin liquidity removal slippage rejection at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees and slippage rejection
@@ -379,6 +383,9 @@ scenarios:
   - name: calc_withdraw_one_coin_three_coin
     call: "calc_withdraw_one_coin(10_000, 2) after initial liquidity on a three-coin deployment"
     expected: "quotes a single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
+  - name: calc_withdraw_one_coin_five_coin
+    call: "calc_withdraw_one_coin(10_000, 3) after initial liquidity on a five-coin deployment"
+    expected: "quotes a midpoint single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
   - name: calc_withdraw_one_coin_eight_coin
     call: "calc_withdraw_one_coin(10_000, 7) after initial liquidity on an eight-coin deployment"
     expected: "quotes an endpoint single-coin withdrawal at the upstream MAX_COINS boundary"
@@ -388,6 +395,12 @@ scenarios:
   - name: remove_one_coin_three_coin
     call: "remove_liquidity_one_coin(10_000, 2, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers the selected coin while updating constructor-sized fee and oracle accounting"
+  - name: remove_one_coin_five_coin
+    call: "remove_liquidity_one_coin(10_000, 3, 0, address(this)) after initial liquidity on a five-coin deployment"
+    expected: "burns LP shares for a midpoint selected coin while updating constructor-sized fee and oracle accounting"
+  - name: remove_one_coin_five_coin_slippage_reverts
+    call: "remove_liquidity_one_coin(10_000, 3, 1_000_000, address(this)) after initial liquidity on a five-coin deployment"
+    expected: "reverts when the midpoint five-coin withdrawal amount is below min_amount"
   - name: add_imbalanced_liquidity
     call: "add_liquidity([100_000, 300_000], 0, address(this)) after initial liquidity"
     expected: "mints proportional LP shares"
