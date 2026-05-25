@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_yaml::Value as YamlValue;
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
@@ -123,7 +124,14 @@ impl Benchmark {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CallSpec {
-    pub data: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data_expr: Option<String>,
+    #[serde(default, rename = "function", skip_serializing_if = "Option::is_none")]
+    pub function_signature: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<SolArg>,
     #[serde(default)]
     pub sender: Option<String>,
     #[serde(default = "default_call_value")]
@@ -133,6 +141,13 @@ pub struct CallSpec {
         skip_serializing_if = "is_default_call_destination"
     )]
     pub destination: CallDestination,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum SolArg {
+    Expr(String),
+    Typed(BTreeMap<String, YamlValue>),
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]

@@ -1,6 +1,6 @@
 use crate::{
     harness::{property_benchmark_id, supports_deployment_variant, supports_randomized},
-    models::ScenarioFile,
+    models::{CallSpec, ScenarioFile, SolArg},
 };
 use anyhow::{Context, Result, bail};
 use std::{
@@ -92,26 +92,14 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
                 scenario.name
             );
         }
-        if scenario.measured.data.trim().is_empty() {
-            bail!(
-                "{} scenario {} has empty measured call",
-                path.display(),
-                scenario.name
-            );
-        }
+        validate_call(&scenario.measured, path, &scenario.name, "measured")?;
         for (label, calls) in [
             ("setup", &scenario.setup),
             ("warmup", &scenario.warmup),
             ("observers", &scenario.observers),
         ] {
             for call in calls {
-                if call.data.trim().is_empty() {
-                    bail!(
-                        "{} scenario {} has empty {label} call",
-                        path.display(),
-                        scenario.name
-                    );
-                }
+                validate_call(call, path, &scenario.name, label)?;
             }
         }
     }
@@ -136,6 +124,71 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
                 file.benchmark_id
             );
         }
+    }
+    Ok(())
+}
+
+fn validate_call(call: &CallSpec, path: &Path, scenario_name: &str, label: &str) -> Result<()> {
+    let raw_fields = [call.data.as_ref(), call.data_expr.as_ref()]
+        .into_iter()
+        .flatten()
+        .count();
+    let typed_fields = usize::from(call.function_signature.is_some());
+    if raw_fields + typed_fields != 1 {
+        bail!(
+            "{} scenario {} {label} call must specify exactly one of data, data_expr, or function",
+            path.display(),
+            scenario_name
+        );
+    }
+    if let Some(data) = call.data.as_deref().or(call.data_expr.as_deref())
+        && data.trim().is_empty()
+    {
+        bail!(
+            "{} scenario {} has empty {label} call",
+            path.display(),
+            scenario_name
+        );
+    }
+    if let Some(signature) = call.function_signature.as_deref() {
+        if signature.trim().is_empty() {
+            bail!(
+                "{} scenario {} has empty {label} function signature",
+                path.display(),
+                scenario_name
+            );
+        }
+        for arg in &call.args {
+            if let SolArg::Typed(values) = arg {
+                if values.len() != 1 {
+                    bail!(
+                        "{} scenario {} {label} typed arg must have exactly one type key",
+                        path.display(),
+                        scenario_name
+                    );
+                }
+                if let Some((_, value)) = values.iter().next()
+                    && !matches!(
+                        value,
+                        serde_yaml::Value::Bool(_)
+                            | serde_yaml::Value::Number(_)
+                            | serde_yaml::Value::String(_)
+                    )
+                {
+                    bail!(
+                        "{} scenario {} {label} typed arg has unsupported value {value:?}",
+                        path.display(),
+                        scenario_name
+                    );
+                }
+            }
+        }
+    } else if !call.args.is_empty() {
+        bail!(
+            "{} scenario {} {label} call args require function",
+            path.display(),
+            scenario_name
+        );
     }
     Ok(())
 }

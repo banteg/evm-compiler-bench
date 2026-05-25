@@ -4,7 +4,7 @@ use crate::{
     harness,
     models::{
         CacheInfo, CallDestination, CallSpec, CompileSet, CompiledArtifact, DeploymentVariant,
-        GasRecord, PropertySpec, RandomizedSpec, Scenario,
+        GasRecord, PropertySpec, RandomizedSpec, Scenario, SolArg,
     },
     scenarios::ScenarioCatalog,
     util::{Progress, ensure_dir, require_success, run_measured, sha256_bytes},
@@ -987,7 +987,51 @@ fn call_destination<'a>(call: &CallSpec, target: &'a str) -> &'a str {
 }
 
 fn call_data(call: &CallSpec, target: &str) -> String {
-    call.data.replace("{target}", target)
+    if let Some(data) = call.data.as_deref().or(call.data_expr.as_deref()) {
+        return data.replace("{target}", target);
+    }
+    let signature = call
+        .function_signature
+        .as_deref()
+        .expect("typed call missing function signature");
+    let args = call
+        .args
+        .iter()
+        .map(|arg| sol_arg(arg, target))
+        .collect::<Vec<_>>()
+        .join(", ");
+    if args.is_empty() {
+        format!("abi.encodeWithSignature(\"{signature}\")")
+    } else {
+        format!("abi.encodeWithSignature(\"{signature}\", {args})")
+    }
+}
+
+fn sol_arg(arg: &SolArg, target: &str) -> String {
+    match arg {
+        SolArg::Expr(expr) => sol_expr(expr, target),
+        SolArg::Typed(values) => {
+            let (ty, value) = values.iter().next().expect("typed arg must have one entry");
+            format!("{}({})", ty, sol_yaml_value(value, target))
+        }
+    }
+}
+
+fn sol_yaml_value(value: &serde_yaml::Value, target: &str) -> String {
+    match value {
+        serde_yaml::Value::Bool(value) => value.to_string(),
+        serde_yaml::Value::Number(value) => value.to_string(),
+        serde_yaml::Value::String(value) => sol_expr(value, target),
+        _ => panic!("unsupported typed call argument value {value:?}"),
+    }
+}
+
+fn sol_expr(value: &str, target: &str) -> String {
+    match value {
+        "target" => target.to_string(),
+        "this" => "address(this)".to_string(),
+        _ => value.replace("{target}", target),
+    }
 }
 
 fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -> String {

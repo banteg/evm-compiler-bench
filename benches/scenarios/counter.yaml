@@ -9,10 +9,10 @@ scenarios:
   - name: read_initial
     state_access_profile: cold
     measured:
-      data: 'abi.encodeWithSignature("value()")'
+      function: "value()"
     expect_success: true
     observers:
-      - data: 'abi.encodeWithSignature("value()")'
+      - function: "value()"
   - name: increment
     state_access_profile: cold
     measured:
@@ -23,12 +23,14 @@ scenarios:
   - name: add_five
     state_access_profile: warm
     warmup:
-      - data: 'abi.encodeWithSignature("value()")'
+      - function: "value()"
     measured:
-      data: 'abi.encodeWithSignature("add(uint256)", uint256(5))'
+      function: "add(uint256)"
+      args:
+        - uint256: 5
     expect_success: true
     observers:
-      - data: 'abi.encodeWithSignature("value()")'
+      - function: "value()"
   - name: reset
     state_access_profile: mixed
     setup:

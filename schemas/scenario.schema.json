@@ -3,6 +3,7 @@
   "title": "EVM Compiler Bench scenario file",
   "type": "object",
   "required": ["benchmark_id", "scenarios"],
+  "additionalProperties": false,
   "properties": {
     "benchmark_id": { "type": "string" },
     "scenarios": {
@@ -11,9 +12,22 @@
       "items": {
         "type": "object",
         "required": ["name", "measured", "expect_success"],
+        "additionalProperties": false,
         "properties": {
           "name": { "type": "string" },
           "state_access_profile": { "enum": ["cold", "warm", "mixed"] },
+          "deployment_variant": {
+            "enum": [
+              "standard",
+              "curve_oracle",
+              "curve_rebasing",
+              "curve_erc4626",
+              "curve_three_coin",
+              "curve_eight_coin",
+              "curve_five_coin",
+              "uniswap_create2"
+            ]
+          },
           "setup": { "$ref": "#/$defs/calls" },
           "warmup": { "$ref": "#/$defs/calls" },
           "measured": { "$ref": "#/$defs/call" },
@@ -25,6 +39,7 @@
     "randomized": {
       "type": "object",
       "required": ["seed"],
+      "additionalProperties": false,
       "properties": {
         "seed": { "type": "integer", "minimum": 0 },
         "iterations": { "type": "integer", "minimum": 1 }
@@ -35,6 +50,7 @@
       "items": {
         "type": "object",
         "required": ["name"],
+        "additionalProperties": false,
         "properties": {
           "name": { "type": "string" },
           "seed": { "type": "integer", "minimum": 0 }
@@ -45,12 +61,56 @@
   "$defs": {
     "call": {
       "type": "object",
-      "required": ["data"],
+      "oneOf": [
+        {
+          "required": ["data"],
+          "not": {
+            "anyOf": [{ "required": ["data_expr"] }, { "required": ["function"] }]
+          }
+        },
+        {
+          "required": ["data_expr"],
+          "not": {
+            "anyOf": [{ "required": ["data"] }, { "required": ["function"] }]
+          }
+        },
+        {
+          "required": ["function"],
+          "not": {
+            "anyOf": [{ "required": ["data"] }, { "required": ["data_expr"] }]
+          }
+        }
+      ],
+      "additionalProperties": false,
       "properties": {
-        "data": { "type": "string" },
+        "data": { "type": "string", "minLength": 1 },
+        "data_expr": { "type": "string", "minLength": 1 },
+        "function": { "type": "string", "minLength": 1 },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/arg" }
+        },
         "sender": { "type": "string" },
-        "value": { "type": "string" }
+        "value": { "type": "string" },
+        "destination": { "enum": ["target", "harness"] }
       }
+    },
+    "arg": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "integer" },
+              { "type": "boolean" }
+            ]
+          }
+        }
+      ]
     },
     "calls": {
       "type": "array",

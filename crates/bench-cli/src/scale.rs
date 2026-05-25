@@ -691,7 +691,10 @@ fn scenario(
 
 fn call(data: impl Into<String>) -> CallSpec {
     CallSpec {
-        data: data.into(),
+        data: Some(data.into()),
+        data_expr: None,
+        function_signature: None,
+        args: Vec::new(),
         sender: None,
         value: "0".to_string(),
         destination: crate::models::CallDestination::Target,
