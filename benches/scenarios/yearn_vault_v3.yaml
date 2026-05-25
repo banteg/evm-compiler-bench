@@ -793,6 +793,19 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     expect_success: true
     observers: *yearn_observers
+  - name: auto_allocate_deposit_min_idle_not_met
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
+      - data: 'abi.encodeWithSignature("update_max_debt_for_strategy(address,uint256)", benchYearnStrategy({target}), uint256(150_000))'
+      - data: 'abi.encodeWithSignature("set_minimum_total_idle(uint256)", uint256(200_000))'
+      - data: 'abi.encodeWithSignature("set_auto_allocate(bool)", true)'
+    measured:
+      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+    expect_success: true
+    observers: *yearn_observers
   - name: set_minimum_total_idle
     state_access_profile: warm
     setup:

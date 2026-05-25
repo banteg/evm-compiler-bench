@@ -196,6 +196,7 @@ real_derived:
     - set_auto_allocate
     - set_use_default_queue
     - auto_allocate_deposit
+    - auto_allocate_deposit_min_idle_not_met
     - set_minimum_total_idle
     - set_profit_max_unlock_time
     - reset_profit_unlock_after_report
@@ -351,7 +352,7 @@ real_derived:
     - minimal-proxy deployment for the upstream Vyper blueprint
     - external ERC20 asset transfers for deposits, withdrawals, and strategy debt movement
     - role-gated strategy add, max debt, debt update, report, and shutdown paths
-    - auto-allocation of deposits into the first default-queue strategy
+    - auto-allocation of deposits into the first default-queue strategy, including the minimum-idle-not-met short-circuit
     - Vyper default-argument external overloads for strategy, debt, deposit-limit, and queue-bound management
     - first-class measured management calls for max debt, additive roles, pending role-manager transfer, accountant, default-queue toggle, withdraw-limit module, and shutdown
     - strategy revoke with upstream default-queue order preservation, force revoke, minimum idle set/update-debt clipping, default queue, custom queue, and debt purchase surfaces
@@ -587,6 +588,9 @@ scenarios:
   - name: auto_allocate_deposit
     call: "deposit(100_000, address(this)) with auto_allocate enabled and a default-queue strategy"
     expected: "mints shares and allocates newly idle assets into the first strategy"
+  - name: auto_allocate_deposit_min_idle_not_met
+    call: "deposit(100_000, address(this)) with auto_allocate enabled and minimum_total_idle set above the deposit"
+    expected: "mints shares but leaves the new assets idle because the minimum idle reserve is not met"
   - name: set_minimum_total_idle
     call: "set_minimum_total_idle(10_000)"
     expected: "updates the minimum idle asset reserve"
