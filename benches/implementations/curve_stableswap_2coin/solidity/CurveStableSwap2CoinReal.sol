@@ -314,6 +314,19 @@ contract CurveStableSwap2CoinReal {
         uint256[] memory xp = _xpMem(rates, _balances());
         uint256 actualDx = _transferIn(coinIn, dx, msg.sender, expectOptimisticTransfer);
 
+        dy = _applyExchange(coinIn, coinOut, actualDx, minDy, receiver, rates, xp);
+        emit TokenExchange(msg.sender, i, actualDx, j, dy);
+    }
+
+    function _applyExchange(
+        uint256 coinIn,
+        uint256 coinOut,
+        uint256 actualDx,
+        uint256 minDy,
+        address receiver,
+        uint256[] memory rates,
+        uint256[] memory xp
+    ) internal returns (uint256 dy) {
         uint256 x;
         uint256 y;
         uint256 d;
@@ -326,7 +339,6 @@ contract CurveStableSwap2CoinReal {
         xp[coinOut] = y;
         _upkeepOracles(xp, _A(), d);
         _transferOut(coinOut, dy, receiver);
-        emit TokenExchange(msg.sender, i, actualDx, j, dy);
     }
 
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts)
@@ -961,11 +973,20 @@ contract CurveStableSwap2CoinReal {
         d = _getD(xp);
         y = _getY(coinIn, coinOut, x, xp, d);
         uint256 grossDy = xp[coinOut] - y - 1;
-        uint256 feeAmount = grossDy
-            * _dynamicFee((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, fee)
-            / FEE_DENOMINATOR;
+        uint256 feeAmount = _exchangeFeeAmount(coinIn, coinOut, x, y, grossDy, xp);
         adminCut = feeAmount * admin_fee / FEE_DENOMINATOR * PRECISION / rates[coinOut];
         userDy = (grossDy - feeAmount) * PRECISION / rates[coinOut];
+    }
+
+    function _exchangeFeeAmount(
+        uint256 coinIn,
+        uint256 coinOut,
+        uint256 x,
+        uint256 y,
+        uint256 grossDy,
+        uint256[] memory xp
+    ) internal view returns (uint256) {
+        return grossDy * _dynamicFee((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, fee) / FEE_DENOMINATOR;
     }
 
     function _getY(uint256 i, uint256 j, uint256 x, uint256[] memory xp, uint256 d) internal view returns (uint256) {
@@ -1050,6 +1071,17 @@ contract CurveStableSwap2CoinReal {
             xpReduced[j] = xp[j] - _dynamicFee(xavg, ys, baseFee) * dxExpected / FEE_DENOMINATOR;
         }
 
+        (dy, feeAmount) = _finalizeWithdrawOneCoin(i, newY, d1, rates, xp, xpReduced);
+    }
+
+    function _finalizeWithdrawOneCoin(
+        uint256 i,
+        uint256 newY,
+        uint256 d1,
+        uint256[] memory rates,
+        uint256[] memory xp,
+        uint256[] memory xpReduced
+    ) internal view returns (uint256 dy, uint256 feeAmount) {
         uint256 reducedY = _getYD(i, xpReduced, d1);
         uint256 dyNoFee = (xp[i] - newY) * PRECISION / rates[i];
         dy = (xpReduced[i] - reducedY - 1) * PRECISION / rates[i];
