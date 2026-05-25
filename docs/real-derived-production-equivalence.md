@@ -287,7 +287,8 @@ Exact now:
   rejection, realized and unrealized loss paths, protocol-fee splits on gain
   and loss reports, locked-profit zero reset, module acceptance/rejection,
   cross-strategy loss reporting after another strategy's partially unlocked
-  profit report with accountant effects,
+  profit report with accountant effects, and loss reports with both accountant
+  refunds and protocol-fee splits,
   high-return withdraw-limit capping, withdraw module `max_loss` and
   strategy-queue argument forwarding, long-queue bounds, no-return/false-return
   asset handling, and permit before/after initialization plus after chain-id
