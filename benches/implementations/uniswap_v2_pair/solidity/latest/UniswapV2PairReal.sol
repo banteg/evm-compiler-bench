@@ -62,30 +62,6 @@ interface IUniswapV2Pair {
     function initialize(address, address) external;
 }
 
-library SafeMath {
-    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x + y;
-        }
-        require(z >= x, "ds-math-add-overflow");
-    }
-
-    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require(y <= x, "ds-math-sub-underflow");
-        unchecked {
-            z = x - y;
-        }
-    }
-
-    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        if (y == 0) return 0;
-        unchecked {
-            z = x * y;
-        }
-        require(z / y == x, "ds-math-mul-overflow");
-    }
-}
-
 library Math {
     function min(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = x < y ? x : y;
@@ -118,8 +94,6 @@ library UQ112x112 {
 }
 
 contract UniswapV2ERC20 {
-    using SafeMath for uint256;
-
     string public constant name = "Uniswap V2";
     string public constant symbol = "UNI-V2";
     uint8 public constant decimals = 18;
@@ -148,14 +122,18 @@ contract UniswapV2ERC20 {
     }
 
     function _mint(address to, uint256 value) internal {
-        totalSupply = totalSupply.add(value);
-        balanceOf[to] = balanceOf[to].add(value);
+        totalSupply += value;
+        balanceOf[to] += value;
         emit Transfer(address(0), to, value);
     }
 
     function _burn(address from, uint256 value) internal {
-        balanceOf[from] = balanceOf[from].sub(value);
-        totalSupply = totalSupply.sub(value);
+        uint256 fromBalance = balanceOf[from];
+        require(fromBalance >= value, "ds-math-sub-underflow");
+        unchecked {
+            balanceOf[from] = fromBalance - value;
+            totalSupply -= value;
+        }
         emit Transfer(from, address(0), value);
     }
 
@@ -165,8 +143,12 @@ contract UniswapV2ERC20 {
     }
 
     function _transfer(address from, address to, uint256 value) private {
-        balanceOf[from] = balanceOf[from].sub(value);
-        balanceOf[to] = balanceOf[to].add(value);
+        uint256 fromBalance = balanceOf[from];
+        require(fromBalance >= value, "ds-math-sub-underflow");
+        unchecked {
+            balanceOf[from] = fromBalance - value;
+        }
+        balanceOf[to] += value;
         emit Transfer(from, to, value);
     }
 
@@ -181,8 +163,12 @@ contract UniswapV2ERC20 {
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
-        if (allowance[from][msg.sender] != type(uint256).max) {
-            allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
+        uint256 currentAllowance = allowance[from][msg.sender];
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance >= value, "ds-math-sub-underflow");
+            unchecked {
+                allowance[from][msg.sender] = currentAllowance - value;
+            }
         }
         _transfer(from, to, value);
         return true;
@@ -199,7 +185,7 @@ contract UniswapV2ERC20 {
     ) external {
         require(deadline >= block.timestamp, "UniswapV2: EXPIRED");
         uint256 nonce = nonces[owner];
-        nonces[owner] = nonce.add(1);
+        nonces[owner] = nonce + 1;
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -214,7 +200,6 @@ contract UniswapV2ERC20 {
 }
 
 contract UniswapV2Pair is UniswapV2ERC20 {
-    using SafeMath for uint256;
     using UQ112x112 for uint224;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
@@ -299,11 +284,11 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         uint256 _kLast = kLast;
         if (feeOn) {
             if (_kLast != 0) {
-                uint256 rootK = Math.sqrt(uint256(_reserve0).mul(_reserve1));
+                uint256 rootK = Math.sqrt(uint256(_reserve0) * _reserve1);
                 uint256 rootKLast = Math.sqrt(_kLast);
                 if (rootK > rootKLast) {
-                    uint256 numerator = totalSupply.mul(rootK.sub(rootKLast));
-                    uint256 denominator = rootK.mul(5).add(rootKLast);
+                    uint256 numerator = totalSupply * (rootK - rootKLast);
+                    uint256 denominator = rootK * 5 + rootKLast;
                     uint256 liquidity = numerator / denominator;
                     if (liquidity > 0) _mint(feeTo, liquidity);
                 }
@@ -317,22 +302,26 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves();
         uint256 balance0 = IERC20(token0).balanceOf(address(this));
         uint256 balance1 = IERC20(token1).balanceOf(address(this));
-        uint256 amount0 = balance0.sub(_reserve0);
-        uint256 amount1 = balance1.sub(_reserve1);
+        uint256 amount0 = balance0 - _reserve0;
+        uint256 amount1 = balance1 - _reserve1;
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint256 _totalSupply = totalSupply;
         if (_totalSupply == 0) {
-            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+            uint256 initialLiquidity = Math.sqrt(amount0 * amount1);
+            require(initialLiquidity >= MINIMUM_LIQUIDITY, "ds-math-sub-underflow");
+            unchecked {
+                liquidity = initialLiquidity - MINIMUM_LIQUIDITY;
+            }
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+            liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
         }
         require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint256(reserve0).mul(reserve1);
+        if (feeOn) kLast = uint256(reserve0) * reserve1;
         emit Mint(msg.sender, amount0, amount1);
     }
 
@@ -346,8 +335,8 @@ contract UniswapV2Pair is UniswapV2ERC20 {
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint256 _totalSupply = totalSupply;
-        amount0 = liquidity.mul(balance0) / _totalSupply;
-        amount1 = liquidity.mul(balance1) / _totalSupply;
+        amount0 = liquidity * balance0 / _totalSupply;
+        amount1 = liquidity * balance1 / _totalSupply;
         require(amount0 > 0 && amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
@@ -356,7 +345,7 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         balance1 = IERC20(_token1).balanceOf(address(this));
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint256(reserve0).mul(reserve1);
+        if (feeOn) kLast = uint256(reserve0) * reserve1;
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
@@ -381,9 +370,9 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         uint256 amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
         require(amount0In > 0 || amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
         {
-            uint256 balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
-            uint256 balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-            require(balance0Adjusted.mul(balance1Adjusted) >= uint256(_reserve0).mul(_reserve1).mul(1000 ** 2), "UniswapV2: K");
+            uint256 balance0Adjusted = balance0 * 1000 - amount0In * 3;
+            uint256 balance1Adjusted = balance1 * 1000 - amount1In * 3;
+            require(balance0Adjusted * balance1Adjusted >= uint256(_reserve0) * _reserve1 * 1000 ** 2, "UniswapV2: K");
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -393,8 +382,8 @@ contract UniswapV2Pair is UniswapV2ERC20 {
     function skim(address to) external lock {
         address _token0 = token0;
         address _token1 = token1;
-        _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)).sub(reserve0));
-        _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)).sub(reserve1));
+        _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)) - reserve0);
+        _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)) - reserve1);
     }
 
     function sync() external lock {
