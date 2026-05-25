@@ -826,7 +826,6 @@ fn validate_source_profiles(
         crate::models::Language::Solidity => "solc-latest",
         crate::models::Language::Vyper => "vyper-latest",
     };
-    let mut has_latest_source_profile = false;
     for profile in profiles {
         let profile = profile
             .as_str()
@@ -856,16 +855,14 @@ fn validate_source_profiles(
                 provenance.source_language.as_str()
             );
         }
-        if profile.starts_with(latest_source_profile_prefix) {
-            has_latest_source_profile = true;
+        if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal
+            && !profile.starts_with(latest_source_profile_prefix)
+        {
+            bail!(
+                "{} latest_syntax_original source_lane requires source profile {profile} to use {latest_source_profile_prefix} prefix",
+                path.display()
+            );
         }
-    }
-    if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal && !has_latest_source_profile
-    {
-        bail!(
-            "{} latest_syntax_original source_lane requires at least one {latest_source_profile_prefix} source profile",
-            path.display()
-        );
     }
     Ok(())
 }
@@ -1461,6 +1458,40 @@ mod tests {
 
         super::validate_row_status(&row, path).unwrap();
         assert!(super::validate_row_status(&missing_variant, path).is_err());
+    }
+
+    #[test]
+    fn rejects_historical_profiles_for_latest_syntax_original_sources() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap();
+        let benchmark = crate::catalog::real_derived_benchmarks()
+            .into_iter()
+            .find(|benchmark| benchmark.id == "uniswap_v2_pair")
+            .unwrap();
+        let provenance = benchmark.provenance.clone().unwrap();
+        let real = serde_yaml::from_str::<serde_yaml::Value>(
+            r#"
+source_profiles:
+  - solc-latest-noopt
+  - solc-0.5.16-noopt
+"#,
+        )
+        .unwrap();
+
+        let err = super::validate_source_profiles(
+            root,
+            Path::new("benches/specs/uniswap_v2_pair.yaml"),
+            &real,
+            &provenance,
+        )
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("requires source profile solc-0.5.16-noopt")
+        );
     }
 
     #[test]
