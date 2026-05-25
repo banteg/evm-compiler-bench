@@ -284,7 +284,7 @@ Exact now:
   gain-with-refund net-loss fee recalculation with and without protocol-fee
   splits, zero-return accountant reports,
   refund clipping by balance/allowance, refund balance/allowance mutation
-  during accountant reports, excessive-fee rejection, reentrant accountant
+  during zero and gain accountant reports, excessive-fee rejection, reentrant accountant
   rejection, realized and unrealized loss paths, protocol-fee splits on gain
   and loss reports, locked-profit zero reset, module acceptance/rejection,
   cross-strategy loss reporting after another strategy's partially unlocked
