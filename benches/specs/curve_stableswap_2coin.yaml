@@ -98,10 +98,12 @@ real_derived:
     - get_dy_four_coin_endpoint
     - get_dy_five_coin_midpoint
     - get_dy_five_coin_endpoint
+    - get_dy_six_coin_endpoint
     - get_dy_eight_coin
     - get_dx_three_coin
     - get_dx_five_coin_midpoint
     - get_dx_five_coin_endpoint
+    - get_dx_six_coin_endpoint
     - get_dx_eight_coin
     - get_dx_eight_coin_interior
     - calc_token_amount_three_coin
@@ -123,6 +125,7 @@ real_derived:
     - exchange_eight_coin_interior_slippage_reverts
     - exchange_received_five_coin_midpoint
     - exchange_received_five_coin_endpoint
+    - exchange_received_six_coin_midpoint
     - exchange_received_five_coin_slippage_reverts
     - exchange_received_eight_coin_boundary
     - exchange_received_eight_coin_interior
@@ -151,12 +154,14 @@ real_derived:
     - calc_withdraw_one_coin_three_coin
     - calc_withdraw_one_coin_four_coin
     - calc_withdraw_one_coin_five_coin
+    - calc_withdraw_one_coin_six_coin
     - calc_withdraw_one_coin_seven_coin
     - calc_withdraw_one_coin_eight_coin
     - calc_withdraw_one_coin_eight_coin_interior
     - remove_one_coin_three_coin
     - remove_one_coin_four_coin
     - remove_one_coin_five_coin
+    - remove_one_coin_six_coin
     - remove_one_coin_seven_coin
     - remove_one_coin_five_coin_slippage_reverts
     - remove_one_coin_three_coin_slippage_reverts
@@ -231,7 +236,7 @@ real_derived:
     - constructor-initialized three-coin pool setup
     - constructor-initialized four-coin setup plus endpoint get_dy, one-coin withdrawal quote, and one-coin withdrawal coverage
     - constructor-initialized five-coin midpoint pool setup
-    - constructor-initialized six-coin midpoint exchange and calc_token_amount deposit/withdraw quote coverage
+    - constructor-initialized six-coin midpoint exchange, midpoint exchange_received, endpoint get_dy/get_dx, endpoint one-coin-withdrawal quote, endpoint one-coin withdrawal, and calc_token_amount deposit/withdraw quote coverage
     - constructor-initialized seven-coin proportional, imbalanced, and one-coin withdrawal plus one-coin withdrawal quote and dynamic_fee quote coverage
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
@@ -239,7 +244,7 @@ real_derived:
     - factory-delegated five-coin midpoint and endpoint get_dy quotes
     - factory-delegated five-coin midpoint and endpoint get_dx quotes
     - factory-delegated five-coin calc_token_amount deposit and withdraw quotes
-    - factory-delegated six-coin calc_token_amount deposit quote
+    - factory-delegated six-coin get_dy, get_dx, and calc_token_amount deposit quote
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin endpoint and interior get_dx quotes at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
@@ -338,6 +343,9 @@ scenarios:
   - name: get_dy_five_coin_endpoint
     call: "get_dy(0, 4, 25_000) after initial liquidity on a five-coin deployment"
     expected: "routes an endpoint pair through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dy_six_coin_endpoint
+    call: "get_dy(0, 5, 25_000) after initial liquidity on a six-coin deployment"
+    expected: "routes an endpoint pair through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dy_eight_coin
     call: "get_dy(0, 7, 25_000) after initial liquidity on an eight-coin deployment"
     expected: "routes through the benchmark views implementation at the upstream MAX_COINS boundary"
@@ -349,6 +357,9 @@ scenarios:
     expected: "quotes midpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_five_coin_endpoint
     call: "get_dx(0, 4, 20_000) after initial liquidity on a five-coin deployment"
+    expected: "quotes endpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dx_six_coin_endpoint
+    call: "get_dx(0, 5, 20_000) after initial liquidity on a six-coin deployment"
     expected: "quotes endpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_eight_coin
     call: "get_dx(0, 7, 20_000) after initial liquidity on an eight-coin deployment"
@@ -365,6 +376,9 @@ scenarios:
   - name: exchange_five_coin_endpoint
     call: "exchange(0, 4, 25_000, 0, address(this)) after initial liquidity on a five-coin deployment"
     expected: "updates endpoint constructor-sized balances, dynamic fees, and the endpoint price oracle slot"
+  - name: exchange_received_six_coin_midpoint
+    call: "exchange_received(2, 4, 25_000, 0, address(this)) after direct token transfer to a six-coin deployment"
+    expected: "uses the optimistic incoming balance and updates midpoint constructor-sized accounting and oracle slots"
   - name: exchange_eight_coin_boundary
     call: "exchange(0, 7, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint coin balances, fees, and the final price oracle slot at the MAX_COINS boundary"
@@ -464,6 +478,9 @@ scenarios:
   - name: calc_withdraw_one_coin_five_coin
     call: "calc_withdraw_one_coin(10_000, 3) after initial liquidity on a five-coin deployment"
     expected: "quotes a midpoint single-coin withdrawal using constructor-driven N_COINS fee and invariant math"
+  - name: calc_withdraw_one_coin_six_coin
+    call: "calc_withdraw_one_coin(10_000, 4) after initial liquidity on a six-coin deployment"
+    expected: "quotes a midpoint single-coin withdrawal for an intermediate constructor-sized deployment"
   - name: calc_withdraw_one_coin_seven_coin
     call: "calc_withdraw_one_coin(10_000, 4) after initial liquidity on a seven-coin deployment"
     expected: "quotes a midpoint single-coin withdrawal for another intermediate constructor-sized deployment"
@@ -482,6 +499,9 @@ scenarios:
   - name: remove_one_coin_five_coin
     call: "remove_liquidity_one_coin(10_000, 3, 0, address(this)) after initial liquidity on a five-coin deployment"
     expected: "burns LP shares for a midpoint selected coin while updating constructor-sized fee and oracle accounting"
+  - name: remove_one_coin_six_coin
+    call: "remove_liquidity_one_coin(10_000, 4, 0, address(this)) after initial liquidity on a six-coin deployment"
+    expected: "burns LP shares and transfers a midpoint coin through an intermediate constructor-sized deployment"
   - name: remove_one_coin_seven_coin
     call: "remove_liquidity_one_coin(10_000, 4, 0, address(this)) after initial liquidity on a seven-coin deployment"
     expected: "burns LP shares and transfers a midpoint coin through another intermediate constructor-sized deployment"

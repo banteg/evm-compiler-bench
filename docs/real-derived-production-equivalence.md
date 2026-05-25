@@ -105,7 +105,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus standard-token coverage for every `N_COINS` value from 2 through 8. Counts 3, 5, and 8 carry representative full action coverage across liquidity, quote, exchange, withdrawal, fee, and oracle paths; counts 4, 6, and 7 now include targeted constructor-sizing plus endpoint optimistic-transfer exchange, deposit/withdraw quote, one-coin withdrawal quote/action, imbalanced withdrawal, proportional withdrawal, or dynamic-fee coverage for intermediate coin indexing. |
+| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus standard-token coverage for every `N_COINS` value from 2 through 8. Counts 3, 5, and 8 carry representative full action coverage across liquidity, quote, exchange, withdrawal, fee, and oracle paths; counts 4, 6, and 7 now include targeted constructor-sizing plus endpoint quote, optimistic-transfer exchange, deposit/withdraw quote, one-coin withdrawal quote/action, imbalanced withdrawal, proportional withdrawal, or dynamic-fee coverage for intermediate coin indexing. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
@@ -260,8 +260,9 @@ Remaining:
   oracle-update scenarios, five-coin midpoint/endpoint `get_dy`/`get_dx`, midpoint/endpoint exchange and `exchange_received`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, one-coin-withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths, and
   four-coin initial-liquidity, endpoint `get_dy` quote, endpoint
   one-coin-withdrawal quote, endpoint one-coin-withdrawal, and endpoint
-  `exchange_received`, six-coin midpoint exchange plus deposit and withdraw
-  `calc_token_amount` quotes, seven-coin proportional and imbalanced
+  `exchange_received`, six-coin endpoint `get_dy`/`get_dx`, midpoint exchange and
+  `exchange_received`, deposit and withdraw `calc_token_amount` quotes, and
+  midpoint one-coin-withdrawal quote/action, seven-coin proportional and imbalanced
   withdrawal plus midpoint one-coin-withdrawal quote, midpoint
   one-coin-withdrawal, and midpoint `dynamic_fee` quote, and eight-coin
   initial-liquidity,
