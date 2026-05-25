@@ -1,8 +1,8 @@
 use crate::{
     baselines::baseline_pairs,
     models::{
-        CompileFailure, CompileSet, CompiledArtifact, GasRecord, Language, Provenance,
-        ScenarioFile, Toolchains,
+        CompileFailure, CompileSet, CompiledArtifact, CompilerProfile, GasRecord, Language,
+        Provenance, ScenarioFile, Toolchains,
     },
     scale::ScaleManifest,
     scenarios::ScenarioCatalog,
@@ -174,7 +174,7 @@ pub fn write_outputs(
         "started_at": Utc::now(),
         "evm_version": toolchains.evm_version,
         "toolchains": toolchains.compilers.values().collect::<Vec<_>>(),
-        "profiles": compiled.profiles,
+        "profiles": manifest_profiles(&compiled.profiles),
         "scale_generator": {
             "version": scale_manifest.generator_version.clone(),
             "config_hash": scale_manifest.config_hash.clone(),
@@ -214,6 +214,23 @@ pub fn write_outputs(
         html_report,
         methodology_report,
     })
+}
+
+fn manifest_profiles(profiles: &[CompilerProfile]) -> Vec<serde_json::Value> {
+    profiles
+        .iter()
+        .map(|profile| {
+            let mut value = serde_json::to_value(profile)
+                .expect("serializing compiler profile to manifest value must not fail");
+            if value
+                .get("source_variant")
+                .is_none_or(|source_variant| source_variant.is_null())
+            {
+                value["source_variant"] = json!("latest");
+            }
+            value
+        })
+        .collect()
 }
 
 fn write_static_report_ui(
@@ -1172,4 +1189,37 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
         serde_json::Value::Number(value) => Some(value.to_string()),
         _ => None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::manifest_profiles;
+    use crate::models::{CompilerProfile, Language, MetadataMode};
+
+    fn profile(id: &str, source_variant: Option<&str>) -> CompilerProfile {
+        CompilerProfile {
+            id: id.to_string(),
+            language: Language::Solidity,
+            compiler: "solc".to_string(),
+            optimizer: false,
+            optimizer_runs: 0,
+            optimizer_mode: None,
+            experimental_codegen: false,
+            via_ir: false,
+            metadata_mode: MetadataMode::Off,
+            source_variant: source_variant.map(str::to_string),
+            evm_version: "latest-shared".to_string(),
+        }
+    }
+
+    #[test]
+    fn manifest_profiles_label_implicit_source_variant_as_latest() {
+        let profiles = manifest_profiles(&[
+            profile("solc-latest-noopt", None),
+            profile("solc-0.5.16-noopt", Some("solidity-0.5")),
+        ]);
+
+        assert_eq!(profiles[0]["source_variant"], "latest");
+        assert_eq!(profiles[1]["source_variant"], "solidity-0.5");
+    }
 }
