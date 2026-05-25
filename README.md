@@ -180,6 +180,10 @@ just zip-design
   source variant actually compiled for the row. The run manifest also records
   per-benchmark `source_variants` with profile, variant, path, hash, and
   compile status.
+- Normalized real-derived row provenance keeps `comparison_lane` as the
+  benchmark-level lane, such as `production_conformance`, and records the
+  compiled artifact's side as `implementation_lane`. This keeps latest-syntax
+  source rows from being mistaken for the benchmark comparison lane.
 - During compilation, profile-specific source variants rewrite version pragmas
   and apply backward syntax rewrites where the older language version has
   enough features. `source_profiles` records intended source-language coverage;

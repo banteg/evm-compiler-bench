@@ -58,6 +58,7 @@
         "checked_at",
         "model_kind",
         "comparison_lane",
+        "implementation_lane",
         "source_lane",
         "counterpart_lane",
         "production_equivalence",
@@ -92,6 +93,16 @@
         "checked_at": { "type": "string" },
         "model_kind": { "type": "string" },
         "comparison_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_syntax_original",
+            "latest_idiomatic",
+            "production_conformance",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
+        "implementation_lane": {
           "enum": [
             "upstream_exact_historical",
             "latest_syntax_original",

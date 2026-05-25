@@ -894,6 +894,7 @@ function RealDerivedProvenance() {
       React.createElement('thead', null,
         React.createElement('tr', null,
           React.createElement('th', null, 'Benchmark'),
+          React.createElement('th', null, 'Comparison lane'),
           React.createElement('th', null, 'Source lane'),
           React.createElement('th', null, 'Counterpart lane'),
           React.createElement('th', null, 'Compiled sources'),
@@ -916,6 +917,7 @@ function RealDerivedProvenance() {
             : 'n/a';
           return React.createElement('tr', { key: model.benchmark_id },
             React.createElement('td', { className: 'scenario' }, model.benchmark_id),
+            React.createElement('td', null, p.comparison_lane || 'n/a'),
             React.createElement('td', null, p.source_lane || 'n/a'),
             React.createElement('td', null, p.counterpart_lane || 'n/a'),
             React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel),

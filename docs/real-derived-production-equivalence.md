@@ -13,6 +13,9 @@ hash, and compile status, while provenance fields `source_path`,
 reference under the implementation's `upstream/` directory.
 `cargo run --release -- validate` enforces the reference blob without treating
 that historical source as the compiled comparison artifact.
+Normalized row provenance keeps `comparison_lane` as the benchmark-level lane
+and uses `implementation_lane` for the compiled artifact's source or
+counterpart side.
 
 A counterpart-language port is production-equivalent only after all of these
 are true:

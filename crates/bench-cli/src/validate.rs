@@ -1016,6 +1016,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/api_compatibility",
                 "/provenance/external_token_semantics",
                 "/provenance/source_derivation",
+                "/provenance/implementation_lane",
                 "/provenance/port_language",
                 "/provenance/port_version",
                 "/provenance/source_reference_path",
@@ -1027,6 +1028,19 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             require_enum(
                 row,
                 "/provenance/comparison_lane",
+                &[
+                    "upstream_exact_historical",
+                    "latest_syntax_original",
+                    "latest_idiomatic",
+                    "production_conformance",
+                    "diagnostic_layout_matched",
+                    "fixture_scoped_port",
+                ],
+                path,
+            )?;
+            require_enum(
+                row,
+                "/provenance/implementation_lane",
                 &[
                     "upstream_exact_historical",
                     "latest_syntax_original",
