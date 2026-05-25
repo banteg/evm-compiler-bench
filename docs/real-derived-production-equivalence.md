@@ -339,16 +339,16 @@ Exact now:
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
   limit module.
-- The scenario set includes five combined management sequences that mutate
+- The scenario set includes six combined management sequences that mutate
   delegated roles, role-manager authority, the default/custom queue, debt,
   reporting, limit modules, shutdown state, and then withdraw or redeem from the
   post-sequence vault state. They include an active non-shutdown withdrawal path
   plus a three-strategy queue rewrite, repeated default-queue toggles, debt
   increase/decrease cycles, multiple reports, repeated module updates, and
-  delegated emergency shutdown. One path also combines a mutating-accountant
-  mixed report with receiver-specific deposit-module state, queue-specific
-  withdraw-module state, role-manager handoff, and live explicit-queue
-  withdrawal.
+  delegated emergency shutdown. The third-party edge paths combine
+  mutating-accountant reports with receiver-specific deposit-module state,
+  queue-specific or owner-specific withdraw-module state, role-manager handoff,
+  and live explicit-queue withdrawal or shutdown redeem behavior.
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
@@ -363,10 +363,11 @@ Remaining:
   refund-mutating harness mocks; deposit-limit module, withdraw-limit module,
   and strategy behavior is represented by deterministic harness mocks. The
   current scenarios cover important boundary paths, share-based over-limit
-  rejection, receiver/owner short-circuits, and a partial-unlock mixed report
-  where the accountant creates refund balance and allowance during the report
-  hook, but not exhaustive adversarial or unusual implementations behind those
-  interfaces.
+  rejection, receiver/owner short-circuits, a partial-unlock mixed report where
+  the accountant creates refund balance and allowance during the report hook,
+  and a cross-strategy partial-unlock mixed report with hook-created refunds and
+  protocol-fee splitting, but not exhaustive adversarial or unusual
+  implementations behind those interfaces.
 - The current sequence coverage proves six representative combined management
   orderings, including active non-shutdown withdrawal and repeated transitions
   across queues, debt, reports, modules, and role-manager handoff. Third-party
