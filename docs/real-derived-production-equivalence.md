@@ -62,7 +62,7 @@ layout.
 | --- | --- | --- |
 | Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
 | Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate and CREATE2 deployment path are covered; the full upstream factory contract is not the benchmark target. |
-| LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, and insufficient-allowance rejection are implemented and scenario-covered. |
+| LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
 | Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
 | Reserve packing and `getReserves` | Exact counterpart surface | Vyper packs `reserve0`, `reserve1`, and `blockTimestampLast` into the upstream bit layout; reserve overflow rejection is covered. |
@@ -175,7 +175,8 @@ Remaining:
   path and `feeTo`, but it is not the full upstream `UniswapV2Factory`.
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
-  by direct getter, permit, LP-token, reserve, or pair-action scenarios.
+  by direct getter, permit, LP-token zero-recipient behavior plus
+  allowance/balance rejection, reserve, or pair-action scenarios.
 
 Suggested next chips:
 
