@@ -703,37 +703,62 @@ fn validate_source_blob(
     benchmark: &Benchmark,
     provenance: &Provenance,
 ) -> Result<()> {
-    if provenance.source_lane != ComparisonLane::UpstreamExactHistorical {
-        return Ok(());
-    }
     let Some(expected_blob) = provenance.source_blob.as_deref() else {
+        if matches!(
+            provenance.source_lane,
+            ComparisonLane::UpstreamExactHistorical | ComparisonLane::LatestSyntaxOriginal
+        ) {
+            bail!(
+                "{} {} source_lane requires source_blob for provenance validation",
+                path.display(),
+                provenance.source_lane.as_str()
+            );
+        }
         return Ok(());
     };
-    let implementation = match provenance.source_language {
-        crate::models::Language::Solidity => &benchmark.solidity_path,
-        crate::models::Language::Vyper => &benchmark.vyper_path,
+
+    let source_path = match provenance.source_lane {
+        ComparisonLane::UpstreamExactHistorical => {
+            let implementation = match provenance.source_language {
+                crate::models::Language::Solidity => &benchmark.solidity_path,
+                crate::models::Language::Vyper => &benchmark.vyper_path,
+            };
+            if !implementation.ends_with(&provenance.source_path) {
+                bail!(
+                    "{} source-language implementation {} does not end with pinned upstream source_path {}",
+                    path.display(),
+                    implementation,
+                    provenance.source_path
+                );
+            }
+            root.join(implementation)
+        }
+        ComparisonLane::LatestSyntaxOriginal => {
+            upstream_reference_path(root, benchmark, provenance)
+        }
+        _ => return Ok(()),
     };
-    if !implementation.ends_with(&provenance.source_path) {
-        bail!(
-            "{} source-language implementation {} does not end with pinned upstream source_path {}",
-            path.display(),
-            implementation,
-            provenance.source_path
-        );
-    }
-    let implementation_path = root.join(implementation);
-    let actual_blob = git_blob_hash(&implementation_path)
-        .with_context(|| format!("hashing source blob {}", implementation_path.display()))?;
+
+    let actual_blob = git_blob_hash(&source_path)
+        .with_context(|| format!("hashing source blob {}", source_path.display()))?;
     if actual_blob != expected_blob {
         bail!(
             "{} source_blob mismatch for {}: expected {}, got {}",
             path.display(),
-            implementation_path.display(),
+            source_path.display(),
             expected_blob,
             actual_blob
         );
     }
     Ok(())
+}
+
+fn upstream_reference_path(root: &Path, benchmark: &Benchmark, provenance: &Provenance) -> PathBuf {
+    root.join("benches/implementations")
+        .join(&benchmark.id)
+        .join(provenance.source_language.as_str())
+        .join("upstream")
+        .join(&provenance.source_path)
 }
 
 fn git_blob_hash(path: &Path) -> Result<String> {

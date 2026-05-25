@@ -3,10 +3,12 @@
 Last audited: 2026-05-24 on `dev`.
 
 This is the work queue for flipping any real-derived benchmark to
-`production_equivalence: true`. The upstream source-language side is exact only
-when the checked-in implementation path matches the spec `source_path` and
-`git hash-object` matches `source_blob`; `cargo run --release -- validate`
-enforces that gate.
+`production_equivalence: true`. For `latest_syntax_original` benchmarks, the
+checked-in implementation path is the modernized source-language original used
+for compilation, while `source_path` and `source_blob` identify the vendored
+upstream reference under the implementation's `upstream/` directory. `cargo run
+--release -- validate` enforces the reference blob without treating that
+historical source as the compiled comparison artifact.
 
 A counterpart-language port is production-equivalent only after all of these
 are true:
@@ -32,8 +34,9 @@ layout.
 Every real-derived spec also declares lane metadata:
 
 - `upstream_exact_historical`: exact pinned protocol source, compiled with its
-  historical compiler lane. This is provenance/reference material, not the
-  intended production-conformance benchmark source.
+  historical compiler lane. This remains available as a lane label, but it is
+  provenance/reference material rather than the intended production-conformance
+  benchmark source.
 - `latest_syntax_original`: upstream-derived original source modernized to the
   checked-in latest syntax baseline. Older compiler rows are produced from this
   source by generated pragma and compatibility rewrites where possible.
@@ -54,8 +57,7 @@ benchmark-level lane used by legacy report consumers. Current real-derived
 specs use `comparison_lane: production_conformance` and
 `counterpart_lane: fixture_scoped_port`. The target source side is
 `source_lane: latest_syntax_original`, with pinned upstream files retained only
-as provenance/reference inputs; benchmarks still marked
-`upstream_exact_historical` have not been modernized yet.
+as provenance/reference inputs.
 
 ## Summary
 
@@ -67,8 +69,10 @@ as provenance/reference inputs; benchmarks still marked
 
 ## Status Legend
 
-- Exact source: the checked-in source-language implementation is upstream at
-  the pinned blob, and `validate` enforces the hash.
+- Exact source: the checked-in source-language implementation is the
+  source-language original for the active lane. For `latest_syntax_original`,
+  `validate` enforces the vendored upstream reference hash separately from the
+  compiled modernized implementation.
 - Exact counterpart surface: the counterpart-language port implements the same
   externally observable behavior for that surface and the listed scenarios
   differentially cover it.
@@ -111,7 +115,7 @@ Immediate chips:
 
 | Surface | Status | Notes |
 | --- | --- | --- |
-| Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
+| Pool source-language original | Latest-syntax original | `CurveStableSwapNG.vy` is a latest-syntax Vyper modernization of the pinned upstream pool source; the pinned upstream file remains provenance/reference input only. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
 | Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus standard-token coverage for every `N_COINS` value from 2 through 8. Counts 3, 5, and 8 carry representative full action coverage across liquidity, quote, exchange, withdrawal, fee, and oracle paths; counts 4, 6, and 7 now include targeted constructor-sizing plus endpoint quote, midpoint quote/exchange, optimistic-transfer exchange, deposit/withdraw quote, one-coin withdrawal quote/action, imbalanced withdrawal, proportional withdrawal, or dynamic-fee coverage for intermediate coin indexing. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
