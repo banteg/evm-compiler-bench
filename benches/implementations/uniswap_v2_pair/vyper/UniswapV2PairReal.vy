@@ -108,7 +108,7 @@ def approve(spender: address, amount: uint256) -> bool:
 def permit(owner: address, spender: address, amount: uint256, deadline: uint256, v: uint8, r: bytes32, s: bytes32):
     assert deadline >= block.timestamp, "UniswapV2: EXPIRED"
     nonce: uint256 = self.nonces[owner]
-    self.nonces[owner] = unsafe_add(nonce, 1)
+    self.nonces[owner] = nonce + 1
     digest: bytes32 = keccak256(
         concat(
             b"\x19\x01",
