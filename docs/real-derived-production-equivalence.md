@@ -281,14 +281,15 @@ Exact now:
   gain plus clipped refund locking, receiver/owner-specific limit-module
   asset/share max-view returns, post-gain and non-1:1 partial-unlock
   `maxMint`/`maxRedeem` conversion, mixed loss/fee/refund reports,
-  gain-with-refund net-loss fee recalculation, zero-return accountant reports,
+  gain-with-refund net-loss fee recalculation with and without protocol-fee
+  splits, zero-return accountant reports,
   refund clipping by balance/allowance, refund balance/allowance mutation
   during accountant reports, excessive-fee rejection, reentrant accountant
   rejection, realized and unrealized loss paths, protocol-fee splits on gain
   and loss reports, locked-profit zero reset, module acceptance/rejection,
   cross-strategy loss reporting after another strategy's partially unlocked
-  profit report with accountant effects, and loss reports with both accountant
-  refunds and protocol-fee splits,
+  profit report with accountant effects, and gain/loss reports with both
+  accountant refunds and protocol-fee splits,
   high-return deposit-limit module execution through deposit and mint,
   high-return withdraw-limit execution through withdraw and redeem, capping,
   withdraw module `max_loss` and
