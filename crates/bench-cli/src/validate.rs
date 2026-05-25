@@ -363,6 +363,8 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             require_json_pointer(row, "/compiler/settings/metadataMode", &results_path)?;
             require_json_pointer(row, "/cache/compile/status", &results_path)?;
             require_json_pointer(row, "/compile/status", &results_path)?;
+            require_json_pointer(row, "/source_path", &results_path)?;
+            require_json_pointer(row, "/source_hash", &results_path)?;
             require_json_pointer(row, "/correctness/scenario_status_check", &results_path)?;
             require_json_pointer(row, "/correctness/golden_behavior_check", &results_path)?;
             require_json_pointer(

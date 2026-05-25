@@ -16,6 +16,7 @@
     "language",
     "compiler",
     "cache",
+    "source_path",
     "source_hash",
     "compile",
     "bytecode",
@@ -176,6 +177,7 @@
         }
       }
     },
+    "source_path": { "type": "string" },
     "source_hash": { "type": "string" },
     "compile": {
       "type": "object",

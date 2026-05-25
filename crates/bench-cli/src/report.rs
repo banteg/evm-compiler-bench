@@ -607,6 +607,7 @@ fn normalized_rows(
             .cloned()
             .unwrap_or_default();
         rows.push(row(
+            root,
             artifact,
             gas,
             scenario_file,
@@ -615,7 +616,7 @@ fn normalized_rows(
         ));
     }
     for failure in &compiled.failures {
-        rows.push(failure_row(failure));
+        rows.push(failure_row(root, failure));
     }
     rows.sort_by(|a, b| {
         let left = sort_key(a);
@@ -626,6 +627,7 @@ fn normalized_rows(
 }
 
 fn row(
+    root: &Path,
     artifact: &CompiledArtifact,
     gas: &GasRecord,
     scenario_file: &ScenarioFile,
@@ -688,6 +690,7 @@ fn row(
             "settings": artifact.compiler_settings
         },
         "source_hash": artifact.source_hash,
+        "source_path": report_path(root, &artifact.source_path),
         "cache": {
             "compile": artifact.cache,
             "gas": gas.cache
@@ -743,7 +746,7 @@ fn supports_log_diff(benchmark_id: &str) -> bool {
     )
 }
 
-fn failure_row(failure: &CompileFailure) -> serde_json::Value {
+fn failure_row(root: &Path, failure: &CompileFailure) -> serde_json::Value {
     json!({
         "status": "compile_error",
         "benchmark_id": failure.benchmark_id,
@@ -775,6 +778,7 @@ fn failure_row(failure: &CompileFailure) -> serde_json::Value {
             "settings": failure.compiler_settings
         },
         "source_hash": failure.source_hash,
+        "source_path": report_path(root, &failure.source_path),
         "cache": {
             "compile": failure.cache,
             "gas": null
@@ -800,6 +804,13 @@ fn failure_row(failure: &CompileFailure) -> serde_json::Value {
             "scenario_status_ok": false
         }
     })
+}
+
+fn report_path(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 fn real_derived_manifest(compiled: &CompileSet) -> Vec<serde_json::Value> {
