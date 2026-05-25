@@ -669,6 +669,7 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
 .tbl td.delta.bad { color: var(--bad); }
 .tbl td.delta.tie { color: var(--fg-3); }
 .tbl td.scenario { color: var(--fg); max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.path-cell { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- Version chart ---------- */
 .evo-grid {

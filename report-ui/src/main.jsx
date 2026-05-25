@@ -880,6 +880,43 @@ function Methodology() {
   );
 }
 
+function RealDerivedProvenance() {
+  const models = Bench.D.real_derived_models || [];
+  if (!models.length) return null;
+  return React.createElement('div', { className: 'card' },
+    React.createElement('div', { className: 'card-head' },
+      React.createElement('div', null,
+        React.createElement('div', { className: 'card-title' }, 'Real-derived source lanes'),
+        React.createElement('div', { className: 'card-sub' }, 'Pinned upstream files are reference inputs; compiled rows use the active source and counterpart lanes.')
+      )
+    ),
+    React.createElement('table', { className: 'tbl' },
+      React.createElement('thead', null,
+        React.createElement('tr', null,
+          React.createElement('th', null, 'Benchmark'),
+          React.createElement('th', null, 'Source lane'),
+          React.createElement('th', null, 'Counterpart lane'),
+          React.createElement('th', null, 'Reference path'),
+          React.createElement('th', { style: { textAlign: 'right' } }, 'Prod eq')
+        )
+      ),
+      React.createElement('tbody', null,
+        models.map(model => {
+          const p = model.provenance || {};
+          const referencePath = p.source_reference_path || p.source_path || 'n/a';
+          return React.createElement('tr', { key: model.benchmark_id },
+            React.createElement('td', { className: 'scenario' }, model.benchmark_id),
+            React.createElement('td', null, p.source_lane || 'n/a'),
+            React.createElement('td', null, p.counterpart_lane || 'n/a'),
+            React.createElement('td', { className: 'path-cell', title: referencePath }, referencePath),
+            React.createElement('td', { className: 'num' }, p.production_equivalence ? 'yes' : 'no')
+          );
+        })
+      )
+    )
+  );
+}
+
 function CompilerConfigurations() {
   const compilerMeta = (language, modes) => {
     const profiles = Bench.D.profiles.filter(p => p.language === language);
@@ -1024,6 +1061,7 @@ function SectionMethodology() {
       )
     ),
     React.createElement(Methodology),
+    React.createElement(RealDerivedProvenance),
     React.createElement('div', { className: 'raw-links-row' },
       React.createElement('div', { className: 'raw-links' },
         React.createElement('a', { href: source }, 'report-model.json'),
