@@ -32,7 +32,11 @@ layout.
 Every real-derived spec also declares lane metadata:
 
 - `upstream_exact_historical`: exact pinned protocol source, compiled with its
-  historical compiler lane.
+  historical compiler lane. This is provenance/reference material, not the
+  intended production-conformance benchmark source.
+- `latest_syntax_original`: upstream-derived original source modernized to the
+  checked-in latest syntax baseline. Older compiler rows are produced from this
+  source by generated pragma and compatibility rewrites where possible.
 - `latest_idiomatic`: modern high-level source in each language; this is the
   intended headline compiler comparison lane.
 - `production_conformance`: broad real-contract behavior coverage against
@@ -44,14 +48,15 @@ Every real-derived spec also declares lane metadata:
   fixtures. This is a source/counterpart lane for harness-dependent ports, not
   a benchmark-level headline lane.
 
-`source_lane` is the checked-in upstream side, `counterpart_lane` is the
-cross-language port side, and `comparison_lane` is the benchmark-level lane
-used by legacy report consumers. Current real-derived specs use
+`source_lane` is the checked-in source-language original side,
+`counterpart_lane` is the cross-language port side, and `comparison_lane` is the
+benchmark-level lane used by legacy report consumers. Current real-derived
+specs use
 `comparison_lane: production_conformance`,
 `source_lane: upstream_exact_historical`, and
-`counterpart_lane: fixture_scoped_port`; a future latest-stable shootout source
-must use separate latest-idiomatic artifacts instead of treating pinned
-historical upstream source as latest-idiomatic.
+`counterpart_lane: fixture_scoped_port`; the target state is
+`source_lane: latest_syntax_original` with pinned upstream files retained only
+as provenance/reference inputs.
 
 ## Summary
 

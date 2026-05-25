@@ -158,6 +158,8 @@ just zip-design
   diagnostic comparators, not as the primary report lane.
 - Benchmark specs make lanes explicit: `latest_idiomatic` is the headline
   lane, `upstream_exact_historical` is for pinned historical protocol source,
+  `latest_syntax_original` is for upstream-derived original source modernized
+  to the checked-in latest syntax baseline,
   `production_conformance` is for broad real-contract behavior checks that
   preserve upstream scope without claiming a latest-vs-latest shootout,
   `diagnostic_layout_matched` is for manual parity tricks, and
@@ -169,9 +171,10 @@ just zip-design
   non-upstream benchmark sources and scale templates: Solidity uses
   `pragma solidity ^0.8.35;` and Vyper uses
   `# pragma version >=0.4.3,<0.5.0`.
-- For real-derived benchmarks, `validate` also requires `source_profiles` to
-  stay on the declared historical source compiler, so pinned upstream sources
-  cannot silently drift into latest-stable compiler rows.
+- During compilation, profile-specific source variants rewrite version pragmas
+  and apply backward syntax rewrites where the older language version has
+  enough features. `source_profiles` records intended source-language coverage;
+  it does not pin real-derived originals to a historical compiler.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Scoped or partial counterpart-language ports are

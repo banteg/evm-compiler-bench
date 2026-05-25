@@ -643,15 +643,20 @@ fn validate_real_derived_spec(
 }
 
 fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<()> {
-    if provenance.source_lane != ComparisonLane::UpstreamExactHistorical {
+    if matches!(
+        provenance.source_lane,
+        ComparisonLane::FixtureScopedPort | ComparisonLane::DiagnosticLayoutMatched
+    ) {
         bail!(
-            "{} real-derived source_lane must be upstream_exact_historical",
+            "{} real-derived source_lane must identify an original source lane",
             path.display()
         );
     }
-    if provenance.comparison_lane == ComparisonLane::LatestIdiomatic {
+    if provenance.comparison_lane == ComparisonLane::LatestIdiomatic
+        && provenance.source_lane != ComparisonLane::LatestIdiomatic
+    {
         bail!(
-            "{} latest_idiomatic real-derived comparison_lane requires separate latest-idiomatic artifacts, not pinned upstream source",
+            "{} latest_idiomatic real-derived comparison_lane requires latest_idiomatic source_lane",
             path.display()
         );
     }
@@ -677,17 +682,15 @@ fn validate_source_profiles(
         let profile = profile
             .as_str()
             .with_context(|| format!("{} source_profiles must contain strings", path.display()))?;
-        if !profile.starts_with(&provenance.source_compiler) {
+        let expected_prefix = match provenance.source_language {
+            crate::models::Language::Solidity => "solc",
+            crate::models::Language::Vyper => "vyper",
+        };
+        if !profile.starts_with(expected_prefix) {
             bail!(
-                "{} source profile {profile} must use historical source compiler {}",
+                "{} source profile {profile} must match source language {}",
                 path.display(),
-                provenance.source_compiler
-            );
-        }
-        if profile.contains("latest") {
-            bail!(
-                "{} source profile {profile} must not use a latest compiler lane",
-                path.display()
+                provenance.source_language.as_str()
             );
         }
     }
@@ -887,6 +890,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/comparison_lane",
                 &[
                     "upstream_exact_historical",
+                    "latest_syntax_original",
                     "latest_idiomatic",
                     "production_conformance",
                     "diagnostic_layout_matched",

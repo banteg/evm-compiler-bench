@@ -1,9 +1,9 @@
 use crate::{
     cache::{self, CacheLookup},
     models::{
-        Benchmark, BytecodeMetrics, CacheInfo, CommandStats, ComparisonLane, CompileFailure,
-        CompileMetrics, CompileSet, CompiledArtifact, CompilerProfile, Language, MetadataMode,
-        Toolchain, Toolchains,
+        Benchmark, BytecodeMetrics, CacheInfo, CommandStats, CompileFailure, CompileMetrics,
+        CompileSet, CompiledArtifact, CompilerProfile, Language, MetadataMode, Toolchain,
+        Toolchains,
     },
     util::{Progress, byte_len, require_success, run_measured, sha256_bytes, stripped_cbor_len},
 };
@@ -167,20 +167,8 @@ pub fn compile_all(
     })
 }
 
-fn profile_applies_to_benchmark(benchmark: &Benchmark, profile: &CompilerProfile) -> bool {
-    let Some(provenance) = &benchmark.provenance else {
-        return true;
-    };
-    if provenance.lane_for_language(profile.language) != ComparisonLane::UpstreamExactHistorical {
-        return true;
-    }
-    if provenance.source_profiles.is_empty() {
-        return profile.compiler == provenance.source_compiler;
-    }
-    provenance
-        .source_profiles
-        .iter()
-        .any(|source_profile| source_profile == &profile.id)
+fn profile_applies_to_benchmark(_benchmark: &Benchmark, _profile: &CompilerProfile) -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -287,7 +275,7 @@ fn compile_cache_input(
     toolchain: &Toolchain,
     evm_version: &str,
 ) -> Result<CompileCacheInput> {
-    let source_path = source_path_for_profile(root, benchmark, profile)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
     let source = source_fingerprint(profile.language, &source_path)?;
     let compiler_settings = match profile.language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -416,7 +404,7 @@ fn compile_solidity(
     solc: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, solc)?;
     let (file_name, sources) = solidity_sources(&source_path)?;
     let metadata_settings = solidity_metadata_settings(profile.metadata_mode, solc);
     let mut input = json!({
@@ -611,7 +599,7 @@ fn compile_vyper(
     vyper: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, vyper)?;
     let measured = repeat_compile_samples(
         || {
             let mut command = Command::new(&vyper.binary_path);
@@ -712,33 +700,55 @@ fn source_path_for_profile(
     root: &Path,
     benchmark: &Benchmark,
     profile: &CompilerProfile,
+    toolchain: &Toolchain,
 ) -> Result<PathBuf> {
     match profile.language {
         Language::Solidity => {
             let source_path = root.join(&benchmark.solidity_path);
-            let Some(variant) = profile.source_variant.as_deref() else {
-                return Ok(source_path);
-            };
-            let source = fs::read_to_string(&source_path)?;
-            if !source.contains("pragma solidity ^0.8.35;") {
-                return Ok(source_path);
+            let source_root = source_path.parent().context("solidity source parent")?;
+            let variant_path = root
+                .join("target/bench-source-variants")
+                .join(&profile.id)
+                .join(&benchmark.solidity_path);
+            let variant_root = variant_path.parent().context("solidity variant parent")?;
+            for path in solidity_files(source_root)? {
+                let relative = path.strip_prefix(source_root)?;
+                let target = variant_root.join(relative);
+                if let Some(parent) = target.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                let source = fs::read_to_string(&path)?;
+                let transformed = transform_solidity_source(
+                    &source,
+                    profile.source_variant.as_deref(),
+                    &solidity_pragma_for_toolchain(toolchain)?,
+                )
+                .with_context(|| {
+                    format!(
+                        "applying source variant {} to {}",
+                        profile.source_variant.as_deref().unwrap_or("latest"),
+                        path.display()
+                    )
+                })?;
+                fs::write(target, transformed)?;
             }
-            let transformed = transform_solidity_source(&source, variant)
-                .with_context(|| format!("applying source variant {variant}"))?;
-            materialize_source_variant(root, variant, &benchmark.solidity_path, transformed)
+            Ok(variant_path)
         }
         Language::Vyper => {
             let source_path = root.join(&benchmark.vyper_path);
-            let Some(variant) = profile.source_variant.as_deref() else {
-                return Ok(source_path);
-            };
             let source = fs::read_to_string(&source_path)?;
-            if !source.contains("# pragma version >=0.4.3,<0.5.0") {
-                return Ok(source_path);
-            }
-            let transformed = transform_vyper_source(&source, variant)
-                .with_context(|| format!("applying source variant {variant}"))?;
-            materialize_source_variant(root, variant, &benchmark.vyper_path, transformed)
+            let transformed = transform_vyper_source(
+                &source,
+                profile.source_variant.as_deref(),
+                &vyper_pragma_for_toolchain(toolchain)?,
+            )
+            .with_context(|| {
+                format!(
+                    "applying source variant {}",
+                    profile.source_variant.as_deref().unwrap_or("latest")
+                )
+            })?;
+            materialize_source_variant(root, &profile.id, &benchmark.vyper_path, transformed)
         }
     }
 }
@@ -760,38 +770,62 @@ fn materialize_source_variant(
     Ok(variant_path)
 }
 
-fn transform_solidity_source(source: &str, variant: &str) -> Result<String> {
+fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) -> Result<String> {
+    let source = rewrite_solidity_pragma(source, pragma);
     let source = match variant {
-        "solidity-0.8" => rewrite_solidity_pragma(source, "pragma solidity >=0.8.0 <0.9.0;"),
-        "solidity-0.7" => {
-            let source = rewrite_solidity_pragma(source, "pragma solidity >=0.7.0 <0.8.0;");
-            rewrite_solidity_pre_08(&source)
-        }
-        "solidity-0.6" => {
-            let source = rewrite_solidity_pragma(source, "pragma solidity >=0.6.0 <0.7.0;");
+        None | Some("solidity-0.8") => source,
+        Some("solidity-0.7") => rewrite_solidity_pre_08(&source),
+        Some("solidity-0.6") => {
             let source = rewrite_solidity_pre_08(&source);
             add_constructor_visibility(&source)
         }
-        "solidity-0.5" => {
-            let source = rewrite_solidity_pragma(source, "pragma solidity >=0.5.0 <0.6.0;");
+        Some("solidity-0.5") => {
             let source = rewrite_solidity_pre_08(&source);
             let source = rewrite_solidity_pre_06_call_value(&source);
             add_constructor_visibility(&source)
         }
-        "solidity-0.4" => {
-            let source = rewrite_solidity_pragma(source, "pragma solidity >=0.4.26 <0.5.0;");
+        Some("solidity-0.4") => {
             let source = rewrite_solidity_pre_08(&source);
             let source = rewrite_solidity_04_low_level_calls(&source);
             let source = add_constructor_visibility(&source);
             source.replace(" calldata", "")
         }
-        other => bail!("unknown Solidity source variant {other}"),
+        Some(other) => bail!("unknown Solidity source variant {other}"),
     };
     Ok(source)
 }
 
 fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
-    source.replace("pragma solidity ^0.8.35;", pragma)
+    let mut replaced = false;
+    let mut lines = Vec::new();
+    for line in source.lines() {
+        if !replaced && line.trim_start().starts_with("pragma solidity ") {
+            lines.push(pragma.to_string());
+            replaced = true;
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+    if replaced {
+        lines.join("\n")
+    } else {
+        format!("{pragma}\n{source}")
+    }
+}
+
+fn solidity_pragma_for_toolchain(solc: &Toolchain) -> Result<String> {
+    let Some((major, minor, patch)) = solidity_version_tuple(solc) else {
+        bail!(
+            "cannot derive Solidity pragma from solc version {}",
+            solc.version
+        );
+    };
+    let lower_patch = if major == 0 && minor == 4 { patch } else { 0 };
+    let upper_major = if major == 0 { 0 } else { major + 1 };
+    let upper_minor = if major == 0 { minor + 1 } else { 0 };
+    Ok(format!(
+        "pragma solidity >={major}.{minor}.{lower_patch} <{upper_major}.{upper_minor}.0;"
+    ))
 }
 
 fn rewrite_solidity_pre_08(source: &str) -> String {
@@ -859,20 +893,13 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
         )
 }
 
-fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
+fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> Result<String> {
+    let source = rewrite_vyper_pragma(source, pragma);
     let source = match variant {
-        "vyper-0.4" => {
-            let source = source.replace(
-                "# pragma version >=0.4.3,<0.5.0",
-                "# pragma version >=0.4.0,<0.5.0",
-            );
-            rewrite_vyper_event_logs(&source)
-        }
-        "vyper-0.3" => {
-            let mut source = source.replace(
-                "# pragma version >=0.4.3,<0.5.0",
-                "# pragma version >=0.3.10,<0.4.0",
-            );
+        None => source,
+        Some("vyper-0.4") => rewrite_vyper_event_logs(&source),
+        Some("vyper-0.3") => {
+            let mut source = source;
             source = source.replace("@deploy", "@external");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
@@ -882,11 +909,8 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
             source = rewrite_typed_for_loops(&source);
             rewrite_vyper_event_logs(&source)
         }
-        "vyper-0.2" => {
-            let mut source = source.replace(
-                "# pragma version >=0.4.3,<0.5.0",
-                "# pragma version >=0.2.16,<0.3.0",
-            );
+        Some("vyper-0.2") => {
+            let mut source = source;
             source = source.replace("@deploy", "@external");
             source = source.replace("@pure", "@view");
             source = source.replace("//", "/");
@@ -913,9 +937,48 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
             source = rewrite_vyper_event_logs(&source);
             reorder_vyper_02_internal_functions(&source)
         }
-        other => bail!("unknown Vyper source variant {other}"),
+        Some(other) => bail!("unknown Vyper source variant {other}"),
     };
     Ok(source)
+}
+
+fn rewrite_vyper_pragma(source: &str, pragma: &str) -> String {
+    let mut replaced = false;
+    let mut lines = Vec::new();
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if !replaced
+            && (trimmed.starts_with("# pragma version ") || trimmed.starts_with("# @version "))
+        {
+            lines.push(pragma.to_string());
+            replaced = true;
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+    if replaced {
+        lines.join("\n")
+    } else {
+        format!("{pragma}\n{source}")
+    }
+}
+
+fn vyper_pragma_for_toolchain(vyper: &Toolchain) -> Result<String> {
+    let version = vyper.version.split('+').next().unwrap_or(&vyper.version);
+    let mut parts = version.split('.');
+    let major = parts
+        .next()
+        .context("missing Vyper major version")?
+        .parse::<u64>()?;
+    let minor = parts
+        .next()
+        .context("missing Vyper minor version")?
+        .parse::<u64>()?;
+    let upper_major = if major == 0 { 0 } else { major + 1 };
+    let upper_minor = if major == 0 { minor + 1 } else { 0 };
+    Ok(format!(
+        "# pragma version >={version},<{upper_major}.{upper_minor}.0"
+    ))
 }
 
 fn rewrite_typed_for_loops(source: &str) -> String {
@@ -1353,7 +1416,7 @@ fn compile_failure(
     error: String,
 ) -> Result<CompileFailure> {
     let language = profile.language;
-    let source_path = source_path_for_profile(root, benchmark, profile)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
     let source = fs::read(&source_path)?;
     let compiler_settings = match language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -1473,8 +1536,10 @@ mod tests {
     #[test]
     fn rewrites_vyper_03_compatibility_syntax() {
         let source = "# pragma version >=0.4.3,<0.5.0\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4]) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    return keccak256(abi_encode(4 // 2))\n";
-        let rewritten = transform_vyper_source(source, "vyper-0.3").unwrap();
-        assert!(rewritten.contains("# pragma version >=0.3.10,<0.4.0"));
+        let rewritten =
+            transform_vyper_source(source, Some("vyper-0.3"), "# pragma version >=0.3.7,<0.4.0")
+                .unwrap();
+        assert!(rewritten.contains("# pragma version >=0.3.7,<0.4.0"));
         assert!(rewritten.contains("@external\ndef __init__"));
         assert!(rewritten.contains("log Transfer(empty(address), msg.sender, 1)"));
         assert!(rewritten.contains("for item in xs:"));
@@ -1484,7 +1549,12 @@ mod tests {
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
         let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
-        let rewritten = transform_solidity_source(source, "solidity-0.4").unwrap();
+        let rewritten = transform_solidity_source(
+            source,
+            Some("solidity-0.4"),
+            "pragma solidity >=0.4.26 <0.5.0;",
+        )
+        .unwrap();
         assert!(rewritten.contains("pragma solidity >=0.4.26 <0.5.0;"));
         assert!(rewritten.contains("10000000000"));
         assert!(rewritten.contains("1000000"));
@@ -1500,7 +1570,12 @@ mod tests {
     #[test]
     fn rewrites_vyper_02_compatibility_syntax() {
         let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
-        let rewritten = transform_vyper_source(source, "vyper-0.2").unwrap();
+        let rewritten = transform_vyper_source(
+            source,
+            Some("vyper-0.2"),
+            "# pragma version >=0.2.16,<0.3.0",
+        )
+        .unwrap();
         assert!(rewritten.contains("# pragma version >=0.2.16,<0.3.0"));
         assert!(rewritten.contains("@view\ndef getReserves() -> (uint256, uint256, uint256):"));
         assert!(rewritten.contains("    strategyBalance: uint256"));
@@ -1515,7 +1590,12 @@ mod tests {
     #[test]
     fn rewrites_vyper_03_struct_constructor_assignments() {
         let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    activation: uint256\n    currentDebt: uint256\n    maxDebt: uint256\n    balance: uint256\n\nstruct PendingReport:\n    gain: uint256\n    loss: uint256\n\nstrategies: HashMap[address, Strategy]\npendingReports: HashMap[address, PendingReport]\n\n@external\ndef f(strategy: address, gain: uint256, loss: uint256):\n    self.strategies[strategy].activation = 1\n    self.strategies[strategy].currentDebt += gain\n    self.strategies[strategy].maxDebt = loss\n    self.strategies[strategy].balance += gain\n    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)\n    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)\n";
-        let rewritten = transform_vyper_source(source, "vyper-0.3").unwrap();
+        let rewritten = transform_vyper_source(
+            source,
+            Some("vyper-0.3"),
+            "# pragma version >=0.3.10,<0.4.0",
+        )
+        .unwrap();
         assert!(rewritten.contains("strategyActivation: HashMap[address, uint256]"));
         assert!(rewritten.contains("strategyCurrentDebt: HashMap[address, uint256]"));
         assert!(rewritten.contains("strategyMaxDebt: HashMap[address, uint256]"));

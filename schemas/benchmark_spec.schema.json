@@ -60,6 +60,7 @@
         "comparison_lane": {
           "enum": [
             "upstream_exact_historical",
+            "latest_syntax_original",
             "latest_idiomatic",
             "production_conformance",
             "diagnostic_layout_matched",

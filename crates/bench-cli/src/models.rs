@@ -73,6 +73,7 @@ pub struct Provenance {
 #[serde(rename_all = "snake_case")]
 pub enum ComparisonLane {
     UpstreamExactHistorical,
+    LatestSyntaxOriginal,
     LatestIdiomatic,
     ProductionConformance,
     DiagnosticLayoutMatched,
@@ -83,6 +84,7 @@ impl ComparisonLane {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::UpstreamExactHistorical => "upstream_exact_historical",
+            Self::LatestSyntaxOriginal => "latest_syntax_original",
             Self::LatestIdiomatic => "latest_idiomatic",
             Self::ProductionConformance => "production_conformance",
             Self::DiagnosticLayoutMatched => "diagnostic_layout_matched",
