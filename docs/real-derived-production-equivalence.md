@@ -172,8 +172,11 @@ Remaining:
   payloads above the old 4 KiB port bound and exactly at the current 64 KiB
   bound. This is an accepted idiomatic language-level semantic boundary for the
   primary port, not a reason to introduce a low-level emulation variant.
-- The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
-  path and `feeTo`, but it is not the full upstream `UniswapV2Factory`.
+- The benchmark CREATE2 fixture now mirrors upstream token sorting,
+  zero/identical/duplicate-pair guards, bidirectional `getPair` storage,
+  `allPairs`, `PairCreated`, `feeTo`, and `feeToSetter` authorization, but its
+  external deployment hook remains bytecode-injected so both language artifacts
+  can share the same factory path.
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
   by direct getter, permit, LP-token zero-recipient behavior plus
@@ -182,8 +185,8 @@ Remaining:
 
 Suggested next chips:
 
-- Decide whether full upstream factory behavior is in scope for this benchmark
-  or whether the benchmark is explicitly "Pair only".
+- Add direct factory-management scenarios if we want to retire the remaining
+  factory fixture caveat entirely.
 
 ## `curve_stableswap_2coin`
 

@@ -113,7 +113,7 @@ real_derived:
     - permit_expired_reverts
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys standard ERC20 test tokens and provides the factory feeTo address
+    - benchmark harness deploys standard ERC20 test tokens and uses a bytecode-injected factory helper that mirrors upstream pair creation state
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - false-return ERC20 coverage uses harness tokens that update balances but explicitly return false
     - token transfers into the pair are staged with harness mints before measured calls
@@ -123,7 +123,7 @@ real_derived:
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
-    - pair creation through a benchmark factory using CREATE2 and factory-owned initialize
+    - pair creation through a benchmark factory using CREATE2, upstream token sorting and duplicate guards, bidirectional getPair storage, allPairs tracking, and factory-owned initialize
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
     - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
@@ -143,7 +143,8 @@ real_derived:
     - LP token metadata, balances, direct transfers including upstream zero-recipient transfers, insufficient-balance transfer rejection, approvals, finite/infinite/insufficient allowance transferFrom, zero-recipient transferFrom behavior, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
-    - full upstream UniswapV2Factory behavior beyond pair initialize, feeTo, and benchmark CREATE2 deployment
+    - upstream UniswapV2Factory createPair ABI is represented by a bytecode-injected deployPair harness hook so both language artifacts can be deployed through the same CREATE2 path
+    - exhaustive factory-management scenarios beyond feeTo, feeToSetter authorization, pair mapping, allPairs tracking, and pair creation are not yet covered
     - exhaustive revert-data and ABI-boundary parity audit outside the listed scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
