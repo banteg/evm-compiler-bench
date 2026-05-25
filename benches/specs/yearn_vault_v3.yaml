@@ -127,7 +127,7 @@ real_derived:
     - bitmask role grants, delegated role execution, and role-manager handoff
     - mutable ERC20 metadata through role-manager setters
     - accountant, deposit-limit module, and withdraw-limit module configuration surfaces
-    - default and custom withdrawal queue configuration including Vyper MAX_QUEUE bounds
+    - default and custom withdrawal queue configuration including the upstream MAX_QUEUE semantic bound
     - duplicate default-queue entries and full default-queue append-skip behavior
     - process_report using ERC4626-compatible strategy accounting plus accountant/protocol fee paths and upstream nonreentrant guard behavior
     - unrealized strategy-loss assessment, withdrawal max-loss enforcement, and debt-decrease rejection before a new report
@@ -192,7 +192,7 @@ real_derived:
     - factory protocol fee config is provided by the harness for the representative accountant/report scenarios
     - custom deposit and withdraw limit module coverage uses deterministic harness mocks
     - unrealized strategy-loss coverage uses a deterministic harness burn from strategy-held assets
-    - Vyper String and DynArray decoder timing and exact revert bytes are intentionally out of scope when the accepted/rejected length boundary and post-state match
+    - Vyper String decoder timing, length caps, and exact revert bytes are intentionally out of scope for the idiomatic Solidity counterpart; queue length remains capped because it is vault behavior
     - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port because the benchmark claims externally observable vault behavior, not slot-level upgrade or proxy compatibility
     - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
   included_features:

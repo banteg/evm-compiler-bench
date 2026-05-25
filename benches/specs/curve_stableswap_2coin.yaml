@@ -75,7 +75,7 @@ real_derived:
   source_derivation: "Vyper implementation is a latest-syntax modernization of the pinned upstream source; Solidity implementation is an idiomatic constructor-driven N-coin port of the covered NG paths"
   equivalence_scope:
     - upstream Vyper constructor and external pool API for covered constructor-driven N-coin deployments
-    - representative Vyper dynamic-array length behavior for add_liquidity
+    - representative extra-amount behavior for add_liquidity without emulating Vyper's hard DynArray decoder cap
     - exchange and one-coin withdrawal signatures with receiver argument
     - exchange_received optimistic-transfer swaps for standard tokens
     - ERC20 tokens that return either bool or no data from transfer and transferFrom
@@ -178,7 +178,6 @@ real_derived:
     - remove_one_coin_three_coin_slippage_reverts
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
-    - add_liquidity_too_many_amounts_reverts
     - add_liquidity_slippage_reverts
     - add_liquidity_no_return_tokens
     - exchange_0_to_1
@@ -291,7 +290,7 @@ real_derived:
     - three-coin one-coin withdrawal, slippage rejection, and quote paths
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
-    - representative Vyper DynArray[MAX_COINS] amount bounds through add_liquidity accepted and rejected paths
+    - representative ignored extra amount entries through add_liquidity
     - both exchange directions
     - exchange_received optimistic-transfer flow
     - factory-delegated NG quote views for get_dy, get_dx, calc_token_amount, and dynamic_fee
@@ -311,7 +310,7 @@ real_derived:
   excluded_features:
     - exhaustive dynamic N-coin scenario coverage for every pool action at every N_COINS value; every N_COINS value from 2 through 8 now has at least one standard-token scenario
     - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
-    - exhaustive revert-data and Vyper DynArray decoder-boundary parity audit outside the listed scenarios
+    - Vyper DynArray too-long decoder rejections and exact revert-data parity
 semantics:
   - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over matched constructor-driven N-coin harness deployments, including two-coin standard-token, oracle-rate, rebasing, and ERC4626 variants."
   - "The Solidity port is scoped to the covered NG API and should not be read as a line-for-line production Curve NG rewrite."
@@ -541,9 +540,6 @@ scenarios:
   - name: add_liquidity_extra_amounts
     call: "add_liquidity([100_000, 100_000, 777], 0, address(this))"
     expected: "accepts a DynArray longer than the 2 active coins and ignores extra entries"
-  - name: add_liquidity_too_many_amounts_reverts
-    call: "add_liquidity([100_000, 100_000, ... length 9], 0, address(this))"
-    expected: "reverts at the Vyper DynArray[MAX_COINS] ABI bound"
   - name: add_liquidity_slippage_reverts
     call: "add_liquidity([1, 1], 10_000_000, address(this)) after initial liquidity"
     expected: "reverts"

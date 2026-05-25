@@ -107,8 +107,7 @@ contract YearnVaultV3Real {
     uint248 private __decimals_padding;
     address internal factory;
     mapping(address => StrategyParams) internal _strategies;
-    uint256 internal default_queue_length;
-    address[MAX_QUEUE] internal default_queue_storage;
+    address[] public default_queue;
     bool public use_default_queue;
     uint248 private __use_default_queue_padding;
     bool public auto_allocate;
@@ -194,8 +193,6 @@ contract YearnVaultV3Real {
         require(asset == address(0), "initialized");
         require(asset_ != address(0), "ZERO ADDRESS");
         require(roleManager_ != address(0), "ZERO ADDRESS");
-        require(bytes(name_).length <= 64, "name too long");
-        require(bytes(symbol_).length <= 32, "symbol too long");
         require(profitMaxUnlockTime_ <= 31_556_952, "profit unlock time too long");
 
         asset = asset_;
@@ -317,13 +314,11 @@ contract YearnVaultV3Real {
 
     function setName(string calldata newName) external {
         require(msg.sender == role_manager, "not allowed");
-        require(bytes(newName).length <= 64, "name too long");
         name = newName;
     }
 
     function setSymbol(string calldata newSymbol) external {
         require(msg.sender == role_manager, "not allowed");
-        require(bytes(newSymbol).length <= 32, "symbol too long");
         symbol = newSymbol;
     }
 
@@ -339,9 +334,9 @@ contract YearnVaultV3Real {
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
             require(_strategies[newDefaultQueue[i]].activation != 0, "!inactive");
         }
-        default_queue_length = newDefaultQueue.length;
+        delete default_queue;
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
-            default_queue_storage[i] = newDefaultQueue[i];
+            default_queue.push(newDefaultQueue[i]);
         }
         emit UpdateDefaultQueue(newDefaultQueue);
     }
@@ -569,12 +564,7 @@ contract YearnVaultV3Real {
     }
 
     function get_default_queue() external view returns (address[] memory) {
-        return _copyDefaultQueue();
-    }
-
-    function default_queue(uint256 index) external view returns (address) {
-        require(index < default_queue_length, "index out of bounds");
-        return default_queue_storage[index];
+        return default_queue;
     }
 
     function strategies(address strategy) external view returns (StrategyParams memory) {
@@ -734,7 +724,7 @@ contract YearnVaultV3Real {
         emit Deposit(msg.sender, recipient, assets, shares);
 
         if (auto_allocate) {
-            _updateDebt(default_queue_storage[0], type(uint256).max, 0);
+            _updateDebt(default_queue[0], type(uint256).max, 0);
         }
     }
 
@@ -880,9 +870,8 @@ contract YearnVaultV3Real {
         _strategies[newStrategy] =
             StrategyParams({activation: block.timestamp, lastReport: block.timestamp, currentDebt: 0, maxDebt: 0});
 
-        if (addToQueue && default_queue_length < MAX_QUEUE) {
-            default_queue_storage[default_queue_length] = newStrategy;
-            default_queue_length += 1;
+        if (addToQueue && default_queue.length < MAX_QUEUE) {
+            default_queue.push(newStrategy);
         }
 
         emit StrategyChanged(newStrategy, STRATEGY_CHANGE_ADDED);
@@ -900,17 +889,19 @@ contract YearnVaultV3Real {
 
         delete _strategies[strategy];
         uint256 writeIndex = 0;
-        uint256 length = default_queue_length;
+        uint256 length = default_queue.length;
         for (uint256 i = 0; i < length; i++) {
-            address queuedStrategy = default_queue_storage[i];
+            address queuedStrategy = default_queue[i];
             if (queuedStrategy != strategy) {
                 if (writeIndex != i) {
-                    default_queue_storage[writeIndex] = queuedStrategy;
+                    default_queue[writeIndex] = queuedStrategy;
                 }
                 writeIndex++;
             }
         }
-        default_queue_length = writeIndex;
+        while (default_queue.length > writeIndex) {
+            default_queue.pop();
+        }
 
         emit StrategyChanged(strategy, STRATEGY_CHANGE_REVOKED);
     }
@@ -1281,10 +1272,10 @@ contract YearnVaultV3Real {
     }
 
     function _copyDefaultQueue() internal view returns (address[] memory queue) {
-        uint256 length = default_queue_length;
+        uint256 length = default_queue.length;
         queue = new address[](length);
         for (uint256 i = 0; i < length; i++) {
-            queue[i] = default_queue_storage[i];
+            queue[i] = default_queue[i];
         }
     }
 

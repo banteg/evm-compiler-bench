@@ -1660,15 +1660,6 @@ scenarios:
       data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts3(100_000, 100_000, 777), uint256(0), address(this))'
     expect_success: true
     observers: *curve_observers
-  - name: add_liquidity_too_many_amounts_reverts
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-    measured:
-      data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts9(100_000, 100_000, 777), uint256(0), address(this))'
-    expect_success: false
-    observers: *curve_observers
   - name: add_liquidity_slippage_reverts
     state_access_profile: warm
     setup:

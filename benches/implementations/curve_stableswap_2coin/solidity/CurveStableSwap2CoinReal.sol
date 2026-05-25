@@ -242,7 +242,7 @@ contract CurveStableSwap2CoinReal {
         returns (uint256 minted)
     {
         require(receiver != address(0), "receiver");
-        _checkDynArrayAmountLength(amounts.length);
+        _checkAmountLength(amounts.length);
         uint256[] memory oldBalances = _balances();
         uint256[] memory rates = _storedRates();
         uint256 supply = _totalSupply;
@@ -439,7 +439,7 @@ contract CurveStableSwap2CoinReal {
         internal
         returns (uint256 burnAmount)
     {
-        _checkDynArrayAmountLength(amounts.length);
+        _checkAmountLength(amounts.length);
         uint256[] memory oldBalances = _balances();
         uint256[] memory rates = _storedRates();
         uint256 d0 = _getDMem(rates, oldBalances);
@@ -964,8 +964,8 @@ contract CurveStableSwap2CoinReal {
         return fee * N_COINS / (4 * (N_COINS - 1));
     }
 
-    function _checkDynArrayAmountLength(uint256 length) internal view {
-        require(length >= N_COINS && length <= MAX_COINS, "amount length");
+    function _checkAmountLength(uint256 length) internal view {
+        require(length >= N_COINS, "amount length");
     }
 
     function _copyArray(uint256[] memory source) internal pure returns (uint256[] memory result) {

@@ -94,7 +94,7 @@ ports are production-equivalent.
 | --- | --- | --- | --- | --- | --- | --- |
 | `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Factory deployment still uses a benchmark helper constructed with the active pair bytecode; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
-| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
+| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; exact Vyper bounded `String` decoder behavior is out of scope, while the `MAX_QUEUE` cap remains modeled as vault behavior. |
 
 ## Status Legend
 
@@ -155,7 +155,7 @@ Immediate chips:
 | LP token and permit | Exact counterpart surface | EOA and ERC1271 permit success plus invalid permit failure are covered. |
 | Factory and views dependencies | Fixture-exact | Both implementations call the benchmark-provided factory/views fixture. |
 | `StableSwapViews` call topology in Solidity | Exact counterpart surface for quote views | The Solidity port now mirrors upstream by routing `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` through `factory.views_implementation()`. |
-| Vyper `DynArray[MAX_COINS]` ABI bounds | Approximate | Too-long arrays and ignored extra entries are covered, but Solidity enforces this with runtime checks, not Vyper decoder behavior. |
+| Vyper `DynArray[MAX_COINS]` ABI bounds | Idiomatic counterpart divergence | Ignored extra amount entries are covered where both implementations accept them. Too-long Vyper decoder rejections are out of scope for the idiomatic Solidity counterpart. |
 | Storage layout | Tracked separately | The Solidity port is idiomatic and not storage-layout-compatible; this is outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
@@ -174,13 +174,13 @@ Immediate chips:
 | ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, zero/max-uint conversion boundaries, and direct deposit-limit equality are scenario-covered. |
 | ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, permit after chain-id changes, expired permits, and invalid permits are covered. |
 | Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
-| Metadata setters | Exact counterpart surface, audit pending | Name and symbol setters plus Vyper string length success/failure boundaries are covered with Solidity runtime checks under the semantic-boundary policy. |
+| Metadata setters | Exact counterpart surface, audit pending | Name and symbol initialization/setters use idiomatic Solidity strings on the counterpart side; exact Vyper bounded-string decoder behavior is out of scope. |
 | Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, minimum-idle clipping and no-available-idle return, report gain moving current debt above max debt, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt inactive/current-debt/amount/clipping/rejection paths are covered. |
 | Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, accountant fees/refunds and protocol-fee splits on zero strategy reports, gain plus clipped refund locking, gain that moves current debt above max debt, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive locking, gain-with-refund net-loss fee recalculation, simultaneous strategy gain/loss with accountant effects and protocol-fee splitting, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation on zero, gain, and loss reports, refund allowance reduction during zero, gain, and loss reports, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, no-lock refund reports, same-strategy partial-unlock profit/loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
-| Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, forced default queue, queue order, duplicate entries, full-queue append skipping, long-queue failures, strategy maxRedeem limits, zero-redeem after full unrealized loss, and partial/over strategy redeems are covered. |
+| Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, queue order, representative strategy maxRedeem behavior, strategy-debt withdrawal, and the `MAX_QUEUE` semantic cap are modeled; exact Vyper decoder timing and revert bytes remain out of scope. |
 | Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject and exact-limit paths, zero and high-return deposit/withdraw/redeem execution and capping, high-return deposit-limit module execution through both deposit and mint, active-module maxDeposit after existing vault assets, receiver/owner-specific asset/share max-view returns including zero-return special cases, max-loss-specific and queue-specific withdraw module argument forwarding through max views and execution paths, receiver-specific deposit and mint execution/rejection, owner-specific withdraw execution and rejection, post-gain and non-1:1 partial-unlock `maxMint`/`maxRedeem` conversion, exact-limit deposit/mint/withdraw/redeem execution, deposit/mint/withdraw/redeem over-limit rejection, zero/vault-receiver short-circuiting before deposit-module calls, and reverting deposit/withdraw-module calls across asset and share max views including zero-balance owners, but arbitrary third-party behavior is not exhaustive. Direct deposit-limit equality is covered outside the module path. |
 | Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover six management orderings, including active non-shutdown withdrawal, a three-strategy repeated-transition path, and mutating-accountant/module withdraw and shutdown-redeem edge paths; more adversarial third-party behavior remains. |
-| Vyper `String` and `DynArray` bounds | Exact counterpart surface, audit pending | Accepted and rejected lengths are covered at the semantic boundary; exact decoder timing and revert bytes are intentionally out of scope unless source behavior depends on them. |
+| Vyper `String` and `DynArray` bounds | Mixed | The source Vyper original remains bounded. The Solidity counterpart uses native dynamic strings for metadata, but retains the meaningful `MAX_QUEUE` cap for queue arrays. Exact decoder timing and revert bytes are intentionally out of scope for the headline comparison. |
 | Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
 | Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
 
@@ -283,8 +283,8 @@ Exact now:
   eight-coin imbalanced withdrawal slippage rejection,
   eight-coin endpoint/interior one-coin withdrawal slippage rejection,
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
-  slippage and invalid coin reverts, and Vyper DynArray length edges for the
-  two-coin deployment.
+  slippage and invalid coin reverts, plus ignored extra amount entries where
+  both implementations accept them.
 - Price and D oracle scenarios now advance time and exercise the upstream NG
   exponential moving-average decay path for two-coin, three-coin, and
   five-coin midpoint and eight-coin endpoint/interior price slots rather than only same-block oracle
@@ -434,11 +434,10 @@ Remaining:
   edge cases now include mutating-accountant/module withdraw and shutdown
   redeem sequences, but exhaustive adversarial implementations remain out of
   scope.
-- Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
-  success/failure boundaries are covered. The Solidity port uses runtime
-  checks rather than Vyper decoder rejection, which is acceptable under the
-  semantic-boundary policy because the vault does not expose or depend on the
-  exact decoder timing or revert bytes.
+- Vyper bounded `String[64]` and `String[32]` decoder bounds are not mirrored
+  in the Solidity port. `DynArray[address, MAX_QUEUE]` remains modeled as a
+  queue-length cap because that bound affects vault behavior; exact decoder
+  timing and revert bytes are still out of scope.
 - Exact storage layout compatibility is intentionally false for the Solidity
   port. That is acceptable for an idiomatic source comparison only after the
   behavior audit proves no storage-layout-dependent surface is being claimed.
