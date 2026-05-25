@@ -818,6 +818,18 @@ scenarios:
       data: 'abi.encodePacked(bytes4(keccak256("skim(address)")), bytes12(0))'
     expect_success: false
     observers: *pair_observers
+  - name: burn_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("burn(address)")), bytes12(0))'
+    expect_success: false
+    observers: *pair_observers
+  - name: approve_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("approve(address,uint256)")), abi.encode(BOB))'
+    expect_success: false
+    observers: *pair_observers
   - name: transfer_from_truncated_calldata_reverts
     state_access_profile: cold
     measured:
