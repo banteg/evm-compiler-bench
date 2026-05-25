@@ -867,6 +867,11 @@ function Methodology() {
     },
     {
       tag: 'G',
+      title: 'Compatibility source variants',
+      body: 'Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied.'
+    },
+    {
+      tag: 'H',
       title: 'Vyper Venom and 0.5.0a1',
       body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
     },
@@ -897,6 +902,7 @@ function RealDerivedProvenance() {
           React.createElement('th', null, 'Comparison lane'),
           React.createElement('th', null, 'Source lane'),
           React.createElement('th', null, 'Counterpart lane'),
+          React.createElement('th', null, 'Source profiles'),
           React.createElement('th', null, 'Compiled sources'),
           React.createElement('th', null, 'Reference path'),
           React.createElement('th', { style: { textAlign: 'right' } }, 'Prod eq')
@@ -906,6 +912,11 @@ function RealDerivedProvenance() {
         models.map(model => {
           const p = model.provenance || {};
           const referencePath = p.source_reference_path || p.source_path || 'n/a';
+          const sourceProfiles = Array.isArray(p.source_profiles) ? p.source_profiles : [];
+          const sourceProfileTitle = sourceProfiles.length ? sourceProfiles.join('\n') : 'n/a';
+          const sourceProfileLabel = sourceProfiles.length
+            ? `${sourceProfiles.length} profile${sourceProfiles.length === 1 ? '' : 's'}`
+            : 'n/a';
           const compiledSources = model.compiled_sources || [];
           const compiledTitle = compiledSources.length
             ? compiledSources
@@ -920,6 +931,7 @@ function RealDerivedProvenance() {
             React.createElement('td', null, p.comparison_lane || 'n/a'),
             React.createElement('td', null, p.source_lane || 'n/a'),
             React.createElement('td', null, p.counterpart_lane || 'n/a'),
+            React.createElement('td', { className: 'path-cell', title: sourceProfileTitle }, sourceProfileLabel),
             React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel),
             React.createElement('td', { className: 'path-cell', title: referencePath }, referencePath),
             React.createElement('td', { className: 'num' }, p.production_equivalence ? 'yes' : 'no')
