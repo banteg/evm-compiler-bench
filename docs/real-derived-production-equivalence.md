@@ -88,7 +88,7 @@ Immediate chips:
 | --- | --- | --- |
 | Upstream pool source | Exact source | `CurveStableSwapNG.vy` is vendored at the pinned blob. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus three-coin liquidity, imbalanced liquidity deposit, add-liquidity slippage rejection, `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quotes, exchange, exchange slippage rejection, `exchange_received`, `exchange_received` slippage rejection, proportional withdrawal, proportional withdrawal slippage rejection, imbalanced withdrawal, imbalanced withdrawal slippage rejection, one-coin withdrawal, one-coin withdrawal slippage rejection, oracle-update scenarios, and eight-coin initial liquidity, imbalanced liquidity deposit, add-liquidity slippage rejection, `get_dy`, `get_dx`, `dynamic_fee`, `calc_token_amount` deposit/withdraw, `calc_withdraw_one_coin`, endpoint and interior exchange, endpoint and interior exchange slippage rejection, endpoint and interior `exchange_received`, endpoint and interior `exchange_received` slippage rejection, proportional withdrawal, proportional withdrawal slippage rejection, imbalanced withdrawal, imbalanced withdrawal slippage rejection, one-coin withdrawal, one-coin withdrawal slippage rejection, and oracle-decay coverage. |
+| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus three-coin liquidity, imbalanced liquidity deposit, add-liquidity slippage rejection, `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quotes, exchange, exchange slippage rejection, `exchange_received`, `exchange_received` slippage rejection, proportional withdrawal, proportional withdrawal slippage rejection, imbalanced withdrawal, imbalanced withdrawal slippage rejection, one-coin withdrawal, one-coin withdrawal slippage rejection, oracle-update scenarios, and eight-coin initial liquidity, imbalanced liquidity deposit, add-liquidity slippage rejection, `get_dy`, `get_dx`, `dynamic_fee`, `calc_token_amount` deposit/withdraw, endpoint and interior `calc_withdraw_one_coin`, endpoint and interior exchange, endpoint and interior exchange slippage rejection, endpoint and interior `exchange_received`, endpoint and interior `exchange_received` slippage rejection, proportional withdrawal, proportional withdrawal slippage rejection, imbalanced withdrawal, imbalanced withdrawal slippage rejection, endpoint and interior one-coin withdrawal, endpoint and interior one-coin withdrawal slippage rejection, and oracle-decay coverage. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
@@ -200,10 +200,10 @@ Exact now:
   donation-before-first-deposit handling, initial and imbalanced three-coin and
   eight-coin liquidity, three-coin `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quote views, eight-coin quote views including `calc_token_amount` deposit/withdraw, three-coin exchange and
   `exchange_received`, proportional three-coin and eight-coin withdrawal,
-  imbalanced three-coin and eight-coin withdrawal, three-coin and eight-coin one-coin withdrawal,
-  eight-coin endpoint exchange and endpoint exchange slippage rejection,
+  imbalanced three-coin and eight-coin withdrawal, three-coin and eight-coin endpoint/interior one-coin withdrawal,
+  eight-coin endpoint/interior exchange and endpoint/interior exchange slippage rejection,
   eight-coin imbalanced withdrawal slippage rejection,
-  eight-coin one-coin withdrawal slippage rejection,
+  eight-coin endpoint/interior one-coin withdrawal slippage rejection,
   rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
   slippage and invalid coin reverts, and Vyper DynArray length edges for the
   two-coin deployment.
@@ -228,13 +228,13 @@ Remaining:
   oracle-update scenarios, and
   eight-coin initial-liquidity, imbalanced-liquidity deposit, add-liquidity
   slippage rejection, `get_dy`, `get_dx`, `dynamic_fee`,
-  `calc_token_amount` deposit/withdraw, `calc_withdraw_one_coin`, endpoint-exchange,
-  endpoint-exchange slippage rejection,
-  endpoint `exchange_received`, endpoint `exchange_received` slippage rejection,
+  `calc_token_amount` deposit/withdraw, endpoint/interior `calc_withdraw_one_coin`, endpoint/interior exchange,
+  endpoint/interior exchange slippage rejection,
+  endpoint/interior `exchange_received`, endpoint/interior `exchange_received` slippage rejection,
   proportional-withdrawal, proportional-withdrawal slippage rejection,
   imbalanced-withdrawal, imbalanced-withdrawal slippage rejection,
-  one-coin-withdrawal, and
-  one-coin-withdrawal slippage rejection
+  endpoint/interior one-coin-withdrawal, and
+  endpoint/interior one-coin-withdrawal slippage rejection
   coverage, plus eight-coin oracle-decay coverage, but every NG action has not
   been repeated at every possible
   constructor coin count.

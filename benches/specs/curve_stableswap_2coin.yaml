@@ -113,12 +113,15 @@ real_derived:
     - remove_liquidity_eight_coin_slippage_reverts
     - remove_one_coin_eight_coin
     - remove_one_coin_eight_coin_slippage_reverts
+    - remove_one_coin_eight_coin_interior
+    - remove_one_coin_eight_coin_interior_slippage_reverts
     - remove_liquidity_imbalance_eight_coin
     - remove_liquidity_imbalance_eight_coin_slippage_reverts
     - remove_liquidity_imbalance_three_coin
     - remove_liquidity_imbalance_three_coin_slippage_reverts
     - calc_withdraw_one_coin_three_coin
     - calc_withdraw_one_coin_eight_coin
+    - calc_withdraw_one_coin_eight_coin_interior
     - remove_one_coin_three_coin
     - remove_one_coin_three_coin_slippage_reverts
     - add_imbalanced_liquidity
@@ -198,9 +201,9 @@ real_derived:
     - standard-token eight-coin endpoint and interior exchange_received optimistic-transfer paths and slippage rejection
     - proportional three-coin liquidity removal and slippage rejection
     - proportional eight-coin liquidity removal and slippage rejection at MAX_COINS
-    - eight-coin one-coin withdrawal at MAX_COINS
-    - eight-coin one-coin withdrawal slippage rejection at MAX_COINS
-    - eight-coin one-coin withdrawal quote at MAX_COINS
+    - eight-coin endpoint and interior one-coin withdrawal at MAX_COINS
+    - eight-coin endpoint and interior one-coin withdrawal slippage rejection at MAX_COINS
+    - eight-coin endpoint and interior one-coin withdrawal quote at MAX_COINS
     - imbalanced eight-coin liquidity removal at MAX_COINS
     - imbalanced eight-coin liquidity removal slippage rejection at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees and slippage rejection
@@ -324,6 +327,12 @@ scenarios:
   - name: remove_one_coin_eight_coin_slippage_reverts
     call: "remove_liquidity_one_coin(10_000, 7, 1_000_000, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "reverts when the endpoint withdrawal amount at the upstream MAX_COINS boundary is below min_amount"
+  - name: remove_one_coin_eight_coin_interior
+    call: "remove_liquidity_one_coin(10_000, 4, 0, address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "burns LP shares for one interior coin in a MAX_COINS deployment"
+  - name: remove_one_coin_eight_coin_interior_slippage_reverts
+    call: "remove_liquidity_one_coin(10_000, 4, 1_000_000, address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "reverts when the interior eight-coin withdrawal amount is below min_amount"
   - name: remove_one_coin_three_coin_slippage_reverts
     call: "remove_liquidity_one_coin(10_000, 2, 1_000_000, address(this)) after initial liquidity on a three-coin deployment"
     expected: "reverts when the constructor-sized three-coin withdrawal amount is below min_amount"
@@ -345,6 +354,9 @@ scenarios:
   - name: calc_withdraw_one_coin_eight_coin
     call: "calc_withdraw_one_coin(10_000, 7) after initial liquidity on an eight-coin deployment"
     expected: "quotes an endpoint single-coin withdrawal at the upstream MAX_COINS boundary"
+  - name: calc_withdraw_one_coin_eight_coin_interior
+    call: "calc_withdraw_one_coin(10_000, 4) after initial liquidity on an eight-coin deployment"
+    expected: "quotes an interior single-coin withdrawal in a MAX_COINS deployment"
   - name: remove_one_coin_three_coin
     call: "remove_liquidity_one_coin(10_000, 2, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "burns LP shares and transfers the selected coin while updating constructor-sized fee and oracle accounting"
