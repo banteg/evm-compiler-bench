@@ -59,12 +59,12 @@ real_derived:
   upstream_license: "Curve copyright notice; upstream file says all rights reserved"
   checked_at: "2026-05-24"
   production_equivalence: false
-  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped fixed-2-coin port of the covered API"
+  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped constructor-driven N-coin port of the covered API"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_tokens"
-  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic fixed-2-coin port of the covered NG paths"
+  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic constructor-driven N-coin port of the covered NG paths"
   equivalence_scope:
-    - upstream Vyper constructor and external pool API for two-coin deployments
+    - upstream Vyper constructor and external pool API for covered constructor-driven N-coin deployments
     - Vyper dynamic-array length behavior for add_liquidity, calc_token_amount, remove_liquidity, and remove_liquidity_imbalance
     - exchange and one-coin withdrawal signatures with receiver argument
     - exchange_received optimistic-transfer swaps for standard tokens
@@ -268,8 +268,8 @@ real_derived:
     - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
     - exhaustive revert-data and Vyper DynArray decoder-boundary parity audit outside the listed scenarios
 semantics:
-  - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over matched two-coin standard-token, oracle-rate, rebasing, and ERC4626 harness deployments."
-  - "The Solidity port is scoped to a fixed 2-coin shape and should not be read as a line-for-line production Curve NG rewrite."
+  - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over matched constructor-driven N-coin harness deployments, including two-coin standard-token, oracle-rate, rebasing, and ERC4626 variants."
+  - "The Solidity port is scoped to the covered NG API and should not be read as a line-for-line production Curve NG rewrite."
 scenarios:
   - name: add_initial_liquidity
     call: "add_liquidity([1_000_000, 1_000_000], 0, address(this))"

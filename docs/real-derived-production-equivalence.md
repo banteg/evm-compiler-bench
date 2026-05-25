@@ -34,7 +34,7 @@ layout.
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
 | `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[65536]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers a two-coin NG deployment across standard, oracle, rebasing, and ERC4626 harness tokens, plus three-coin, five-coin, and eight-coin standard-token coverage. | Solidity port has moved to constructor-driven `N_COINS` for the covered standard-token paths, but not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; DynArray decoder details remain approximate. |
+| `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus three-coin, five-coin, and eight-coin standard-token coverage. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
@@ -248,8 +248,9 @@ Remaining:
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.
-- Solidity runtime length checks approximate Vyper `DynArray` decoder bounds;
-  revert data and decoder timing are not exact.
+- Solidity now preserves the relevant constructor DynArray storage lengths and
+  return shapes for covered pool behavior; revert data and decoder timing are
+  still not exact.
 - Exact storage layout compatibility is intentionally false for the Solidity
   port. That is acceptable for an idiomatic source comparison because the
   benchmark claims externally observable pool behavior, not slot-level upgrade
