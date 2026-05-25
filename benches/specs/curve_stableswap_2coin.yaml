@@ -84,7 +84,9 @@ real_derived:
     - add_initial_liquidity_three_coin
     - add_initial_liquidity_eight_coin
     - add_imbalanced_liquidity_three_coin
+    - add_liquidity_three_coin_slippage_reverts
     - add_imbalanced_liquidity_eight_coin
+    - add_liquidity_eight_coin_slippage_reverts
     - get_dy_three_coin
     - get_dy_eight_coin
     - get_dx_three_coin
@@ -182,8 +184,8 @@ real_derived:
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
     - factory-delegated eight-coin dynamic_fee quote at MAX_COINS
-    - standard-token three-coin imbalanced add-liquidity path
-    - standard-token eight-coin imbalanced add-liquidity path at MAX_COINS
+    - standard-token three-coin imbalanced add-liquidity path and slippage rejection
+    - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
     - standard-token eight-coin endpoint exchange path
@@ -242,9 +244,15 @@ scenarios:
   - name: add_imbalanced_liquidity_three_coin
     call: "add_liquidity([100_000, 300_000, 200_000], 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates constructor-sized balances, dynamic fees, oracle state, and LP supply for a non-two-coin deposit"
+  - name: add_liquidity_three_coin_slippage_reverts
+    call: "add_liquidity([100_000, 300_000, 200_000], 1_000_000_000, address(this)) after initial liquidity on a three-coin deployment"
+    expected: "reverts when constructor-sized LP output is below the requested minimum"
   - name: add_imbalanced_liquidity_eight_coin
     call: "add_liquidity([100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000], 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint balances, dynamic fees, oracle state, and LP supply at the upstream MAX_COINS boundary"
+  - name: add_liquidity_eight_coin_slippage_reverts
+    call: "add_liquidity([100_000, 300_000, 200_000, 50_000, 75_000, 125_000, 80_000, 60_000], 1_000_000_000, address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "reverts when LP output at the upstream MAX_COINS boundary is below the requested minimum"
   - name: get_dy_three_coin
     call: "get_dy(0, 2, 25_000) after initial liquidity on a three-coin deployment"
     expected: "routes through the benchmark views implementation using constructor-driven N_COINS quote math"
