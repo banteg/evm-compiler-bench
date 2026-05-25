@@ -697,6 +697,7 @@ fn validate_real_derived_spec(
             path.display()
         );
     }
+    validate_source_language_implementation(root, path, benchmark, provenance)?;
     validate_source_blob(root, path, benchmark, provenance)?;
     Ok(())
 }
@@ -733,6 +734,64 @@ fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<(
             path.display()
         );
     }
+    Ok(())
+}
+
+fn validate_source_language_implementation(
+    root: &Path,
+    path: &Path,
+    benchmark: &Benchmark,
+    provenance: &Provenance,
+) -> Result<()> {
+    let implementation = match provenance.source_language {
+        crate::models::Language::Solidity => &benchmark.solidity_path,
+        crate::models::Language::Vyper => &benchmark.vyper_path,
+    };
+    let implementation_path = Path::new(implementation);
+
+    if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal {
+        if path_has_component(implementation_path, "upstream") {
+            bail!(
+                "{} latest_syntax_original source-language implementation must not compile from upstream reference path {}",
+                path.display(),
+                implementation
+            );
+        }
+
+        let upstream_reference = provenance.upstream_reference_path(&benchmark.id);
+        if implementation_path == upstream_reference {
+            bail!(
+                "{} latest_syntax_original source-language implementation must be distinct from upstream reference path {}",
+                path.display(),
+                upstream_reference.display()
+            );
+        }
+
+        let source = fs::read_to_string(root.join(implementation_path)).with_context(|| {
+            format!(
+                "reading latest source-language implementation {}",
+                implementation
+            )
+        })?;
+        match provenance.source_language {
+            crate::models::Language::Solidity if !source.contains(LATEST_SOLIDITY_PRAGMA) => {
+                bail!(
+                    "{} latest_syntax_original Solidity implementation {} must use `{LATEST_SOLIDITY_PRAGMA}`",
+                    path.display(),
+                    implementation
+                );
+            }
+            crate::models::Language::Vyper if !source.contains(LATEST_VYPER_PRAGMA) => {
+                bail!(
+                    "{} latest_syntax_original Vyper implementation {} must use `{LATEST_VYPER_PRAGMA}`",
+                    path.display(),
+                    implementation
+                );
+            }
+            _ => {}
+        }
+    }
+
     Ok(())
 }
 
@@ -1312,6 +1371,35 @@ mod tests {
         assert!(
             super::validate_real_derived_excluded_features(&contradictory_incomplete, path)
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_latest_syntax_original_compiled_from_upstream_reference() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap();
+        let mut benchmark = crate::catalog::real_derived_benchmarks()
+            .into_iter()
+            .find(|benchmark| benchmark.id == "uniswap_v2_pair")
+            .unwrap();
+        let provenance = benchmark.provenance.clone().unwrap();
+        benchmark.solidity_path =
+            "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
+                .to_string();
+
+        let err = super::validate_source_language_implementation(
+            root,
+            Path::new("benches/specs/uniswap_v2_pair.yaml"),
+            &benchmark,
+            &provenance,
+        )
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("must not compile from upstream reference path")
         );
     }
 }
