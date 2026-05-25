@@ -119,6 +119,7 @@ real_derived:
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
     - Vyper preserves behavior for covered paths but does not claim truly unbounded callback calldata
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior; the upstream packed reserve word is preserved where pair behavior depends on uint112/uint32 reserve semantics
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters

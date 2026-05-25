@@ -71,7 +71,7 @@ layout.
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
 | Revert data and ABI boundary behavior | Incomplete | Success/failure is covered for important paths, but exhaustive revert-data and decoder-boundary parity has not been audited. |
-| Storage layout | Approximate | Packed reserves intentionally match; the rest is idiomatic Vyper storage and not full layout-compatible. |
+| Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
@@ -151,6 +151,10 @@ Exact now:
   the upstream uint112 reserve overflow guard, and
   `default_return_value=True` transfer handling for no-return ERC20s while
   still rejecting explicit false-return transfers.
+- Exact storage layout compatibility is intentionally false for the rest of the
+  Vyper port. That is acceptable for an idiomatic source comparison because the
+  benchmark claims externally observable pair behavior, while preserving the
+  packed reserve word where upstream behavior depends on uint112/uint32 bounds.
 - Scenarios cover initial and subsequent mints, initial mint rejection below
   `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
   factory CREATE2 deployment, exact upstream token0-input and token1-input
