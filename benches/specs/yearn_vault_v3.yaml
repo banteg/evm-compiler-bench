@@ -330,6 +330,7 @@ real_derived:
     - redeem_limit_module_owner_specific_redeem
     - max_withdraw_limit_module_max_loss_specific
     - max_redeem_limit_module_strategy_queue_specific
+    - redeem_limit_module_strategy_queue_specific_redeem
     - withdraw_limit_module_zero_max_redeem
     - max_withdraw_limit_module_zero_return
     - withdraw_limit_module_reverts
@@ -372,7 +373,7 @@ real_derived:
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
-    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding
+    - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding across max views and redeem execution
     - partial and over-returning strategy redeem accounting during user withdrawals
     - buy-debt inactive-strategy rejection, zero-current-debt rejection, zero-amount rejection, current-debt clipping, and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
@@ -988,6 +989,9 @@ scenarios:
   - name: max_redeem_limit_module_strategy_queue_specific
     call: "maxRedeem(address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
     expected: "passes the strategy queue argument to the module and returns the matching module limit converted to shares"
+  - name: redeem_limit_module_strategy_queue_specific_redeem
+    call: "redeem(12_345, address(this), address(this), 0, triple strategy queue) through a custom withdraw limit module with a queue-specific limit"
+    expected: "passes the strategy queue argument to the module in the redeem execution path and accepts the exact queue-specific limit"
   - name: withdraw_limit_module_zero_max_redeem
     call: "maxRedeem through a custom withdraw limit module returning zero"
     expected: "returns zero shares through the shared max-withdraw module path"

@@ -2699,6 +2699,18 @@ scenarios:
       data: 'benchYearnMaxRedeemTripleQueueCalldata({target}, address(this), uint256(0))'
     expect_success: true
     observers: *yearn_observers
+  - name: redeem_limit_module_strategy_queue_specific_redeem
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetStrategyQueueWithdrawLimitModule(address,uint256,uint256)", {target}, uint256(100_000), uint256(12_345))'
+    measured:
+      data: 'benchYearnRedeemTripleQueueCalldata({target}, uint256(12_345), address(this), address(this), uint256(0))'
+    expect_success: true
+    observers: *yearn_observers
   - name: withdraw_limit_module_zero_max_redeem
     state_access_profile: warm
     setup:
