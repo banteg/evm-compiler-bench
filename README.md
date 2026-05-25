@@ -174,7 +174,8 @@ just zip-design
 - For `latest_syntax_original` real-derived sources, validation also hashes
   the vendored upstream reference under `upstream/` against `source_blob`. The
   compiled implementation remains the modernized latest-syntax source, not the
-  pinned historical file.
+  pinned historical file. New result provenance includes
+  `source_reference_path` to make that distinction explicit.
 - During compilation, profile-specific source variants rewrite version pragmas
   and apply backward syntax rewrites where the older language version has
   enough features. `source_profiles` records intended source-language coverage;

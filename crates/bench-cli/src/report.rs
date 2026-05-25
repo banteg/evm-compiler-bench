@@ -673,6 +673,7 @@ fn row(
         },
         "provenance": provenance_value(
             artifact.provenance.as_ref(),
+            &artifact.benchmark_id,
             artifact.language,
             &artifact.implementation_id
         ),
@@ -759,6 +760,7 @@ fn failure_row(failure: &CompileFailure) -> serde_json::Value {
         },
         "provenance": provenance_value(
             failure.provenance.as_ref(),
+            &failure.benchmark_id,
             failure.language,
             &failure.implementation_id
         ),
@@ -820,12 +822,17 @@ fn real_derived_manifest(compiled: &CompileSet) -> Vec<serde_json::Value> {
 }
 
 fn provenance_manifest_value(benchmark_id: &str, provenance: &Provenance) -> serde_json::Value {
+    let source_reference_path = provenance
+        .upstream_reference_path(benchmark_id)
+        .display()
+        .to_string();
     json!({
         "benchmark_id": benchmark_id,
         "upstream_project": &provenance.upstream_project,
         "repository_url": &provenance.repository_url,
         "source_commit": &provenance.source_commit,
         "source_path": &provenance.source_path,
+        "source_reference_path": source_reference_path,
         "source_language": provenance.source_language.as_str(),
         "source_compiler": &provenance.source_compiler,
         "source_profiles": &provenance.source_profiles,
@@ -852,17 +859,23 @@ fn provenance_manifest_value(benchmark_id: &str, provenance: &Provenance) -> ser
 
 fn provenance_value(
     provenance: Option<&Provenance>,
+    benchmark_id: &str,
     port_language: Language,
     port_version: &str,
 ) -> serde_json::Value {
     let Some(provenance) = provenance else {
         return serde_json::Value::Null;
     };
+    let source_reference_path = provenance
+        .upstream_reference_path(benchmark_id)
+        .display()
+        .to_string();
     json!({
         "upstream_project": &provenance.upstream_project,
         "repository_url": &provenance.repository_url,
         "source_commit": &provenance.source_commit,
         "source_path": &provenance.source_path,
+        "source_reference_path": source_reference_path,
         "source_language": provenance.source_language.as_str(),
         "source_compiler": &provenance.source_compiler,
         "source_profiles": &provenance.source_profiles,

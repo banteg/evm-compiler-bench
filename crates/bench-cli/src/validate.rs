@@ -734,7 +734,7 @@ fn validate_source_blob(
             root.join(implementation)
         }
         ComparisonLane::LatestSyntaxOriginal => {
-            upstream_reference_path(root, benchmark, provenance)
+            root.join(provenance.upstream_reference_path(&benchmark.id))
         }
         _ => return Ok(()),
     };
@@ -751,14 +751,6 @@ fn validate_source_blob(
         );
     }
     Ok(())
-}
-
-fn upstream_reference_path(root: &Path, benchmark: &Benchmark, provenance: &Provenance) -> PathBuf {
-    root.join("benches/implementations")
-        .join(&benchmark.id)
-        .join(provenance.source_language.as_str())
-        .join("upstream")
-        .join(&provenance.source_path)
 }
 
 fn git_blob_hash(path: &Path) -> Result<String> {
@@ -910,6 +902,9 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/port_version",
             ] {
                 require_string_pointer(row, pointer, path)?;
+            }
+            if row.pointer("/provenance/source_reference_path").is_some() {
+                require_string_pointer(row, "/provenance/source_reference_path", path)?;
             }
             require_bool_pointer(row, "/provenance/production_equivalence", path)?;
             require_bool_pointer(row, "/provenance/storage_layout_compatibility", path)?;

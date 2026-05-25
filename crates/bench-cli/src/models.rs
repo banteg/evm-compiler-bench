@@ -101,6 +101,14 @@ impl Provenance {
             self.counterpart_lane
         }
     }
+
+    pub fn upstream_reference_path(&self, benchmark_id: &str) -> PathBuf {
+        PathBuf::from("benches/implementations")
+            .join(benchmark_id)
+            .join(self.source_language.as_str())
+            .join("upstream")
+            .join(&self.source_path)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

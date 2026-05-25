@@ -5,10 +5,11 @@ Last audited: 2026-05-24 on `dev`.
 This is the work queue for flipping any real-derived benchmark to
 `production_equivalence: true`. For `latest_syntax_original` benchmarks, the
 checked-in implementation path is the modernized source-language original used
-for compilation, while `source_path` and `source_blob` identify the vendored
-upstream reference under the implementation's `upstream/` directory. `cargo run
---release -- validate` enforces the reference blob without treating that
-historical source as the compiled comparison artifact.
+for compilation, while `source_path`, `source_reference_path`, and
+`source_blob` identify the vendored upstream reference under the
+implementation's `upstream/` directory. `cargo run --release -- validate`
+enforces the reference blob without treating that historical source as the
+compiled comparison artifact.
 
 A counterpart-language port is production-equivalent only after all of these
 are true:
