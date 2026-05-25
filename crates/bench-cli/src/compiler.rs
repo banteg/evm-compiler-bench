@@ -568,7 +568,7 @@ fn solidity_compiler_settings(
         "optimizer": profile.optimizer,
         "optimizerRuns": profile.optimizer_runs,
         "viaIR": profile.via_ir,
-        "sourceVariant": profile.source_variant.as_deref().unwrap_or("default")
+        "sourceVariant": source_variant_label(profile)
     })
 }
 
@@ -588,8 +588,12 @@ fn vyper_compiler_settings(profile: &CompilerProfile, evm_version: &str) -> serd
         "bytecodeMetadata": profile.metadata_mode == MetadataMode::On,
         "optimize": profile.optimizer_mode.as_deref().unwrap_or("default"),
         "experimentalCodegen": profile.experimental_codegen,
-        "sourceVariant": profile.source_variant.as_deref().unwrap_or("default")
+        "sourceVariant": source_variant_label(profile)
     })
+}
+
+fn source_variant_label(profile: &CompilerProfile) -> &str {
+    profile.source_variant.as_deref().unwrap_or("latest")
 }
 
 fn compile_vyper(
