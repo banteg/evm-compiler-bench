@@ -59,6 +59,7 @@ real_derived:
     - ERC20 LP share accounting, metadata, allowance, and EIP-2612 permit
   scenario_coverage:
     - initialize
+    - factory_getter
     - mint_initial
     - mint_initial_below_minimum_liquidity_reverts
     - factory_create2_mint_initial
@@ -111,7 +112,7 @@ real_derived:
     - Vyper preserves behavior for covered paths but does not claim truly unbounded callback calldata
   included_features:
     - upstream Solidity pair source at the pinned commit
-    - full upstream pair ABI surface including the MINIMUM_LIQUIDITY constant getter
+    - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
     - pair creation through a benchmark factory using CREATE2 and factory-owned initialize
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
@@ -142,6 +143,9 @@ scenarios:
   - name: initialize
     call: "initialize(token0, token1)"
     expected: "sets token addresses through the production initialization API"
+  - name: factory_getter
+    call: "factory() after initialization, with normalized token0/token1 and DOMAIN_SEPARATOR observers"
+    expected: "returns the deployer/factory address and proves initialized token getters plus constructor-time EIP-712 domain separator"
   - name: mint_initial
     call: "mint(address(this)) after token balances are sent to the pair"
     expected: "mints LP supply minus permanent minimum liquidity"

@@ -1601,6 +1601,33 @@ fn all_helper_functions() -> &'static str {
         return address(pairDeps[target].token1);
     }
 
+    function benchUniswapToken0GetterId(address target) external view returns (uint256) {
+        (bool ok, bytes memory rawToken) = target.staticcall(abi.encodeWithSignature("token0()"));
+        require(ok, "pair token0");
+        return _logAddressId(target, abi.decode(rawToken, (address)));
+    }
+
+    function benchUniswapToken1GetterId(address target) external view returns (uint256) {
+        (bool ok, bytes memory rawToken) = target.staticcall(abi.encodeWithSignature("token1()"));
+        require(ok, "pair token1");
+        return _logAddressId(target, abi.decode(rawToken, (address)));
+    }
+
+    function benchUniswapDomainSeparatorMatches(address target) external view returns (bool) {
+        (bool ok, bytes memory rawDomain) = target.staticcall(abi.encodeWithSignature("DOMAIN_SEPARATOR()"));
+        require(ok, "pair domain");
+        bytes32 expected = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("Uniswap V2")),
+                keccak256(bytes("1")),
+                block.chainid,
+                target
+            )
+        );
+        return abi.decode(rawDomain, (bytes32)) == expected;
+    }
+
     function benchUniswapFlashCallee(address target) public view returns (address) {
         return address(pairDeps[target].flashCallee);
     }

@@ -22,6 +22,24 @@ scenarios:
       - data: 'abi.encodeWithSignature("price0CumulativeLast()")'
       - data: 'abi.encodeWithSignature("price1CumulativeLast()")'
       - data: 'abi.encodeWithSignature("kLast()")'
+  - name: factory_getter
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+    measured:
+      data: 'abi.encodeWithSignature("factory()")'
+    expect_success: true
+    observers:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapToken0GetterId(address)", {target})'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapToken1GetterId(address)", {target})'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapDomainSeparatorMatches(address)", {target})'
+      - data: 'abi.encodeWithSignature("factory()")'
+      - data: 'abi.encodeWithSignature("PERMIT_TYPEHASH()")'
+      - data: 'abi.encodeWithSignature("MINIMUM_LIQUIDITY()")'
   - name: mint_initial
     state_access_profile: mixed
     setup:

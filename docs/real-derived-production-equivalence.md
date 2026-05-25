@@ -63,6 +63,7 @@ layout.
 | Upstream pair source | Exact source | `UniswapV2Pair.sol` is vendored at the pinned blob. |
 | Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate and CREATE2 deployment path are covered; the full upstream factory contract is not the benchmark target. |
 | LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, and insufficient-allowance rejection are implemented and scenario-covered. |
+| Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
 | EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
 | Reserve packing and `getReserves` | Exact counterpart surface | Vyper packs `reserve0`, `reserve1`, and `blockTimestampLast` into the upstream bit layout; reserve overflow rejection is covered. |
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, initial mint below `MINIMUM_LIQUIDITY` rejection, burn and no-staged-LP burn rejection, invariant swap, zero-output and insufficient-liquidity swap guards, drift, skim, sync, and timestamp wrap paths are covered. |
@@ -150,7 +151,8 @@ Exact now:
   `default_return_value=True` transfer handling for no-return ERC20s while
   still rejecting explicit false-return transfers.
 - Scenarios cover initial and subsequent mints, initial mint rejection below
-  `MINIMUM_LIQUIDITY`, factory CREATE2 deployment, token0-input and upstream
+  `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
+  factory CREATE2 deployment, token0-input and upstream
   token1-input swap invariant checks, zero-output and insufficient-liquidity
   swap guards, one-wei over-output K rejection, no-staged-LP burn rejection,
   no-return token transfers, false-return transfer rejection across swap, burn,
@@ -172,8 +174,8 @@ Remaining:
 - The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
   path and `feeTo`, but it is not the full upstream `UniswapV2Factory`.
 - The final audit still needs to check revert reasons or decoder failures where
-  they matter, permit/domain separator behavior across chain-id changes, and
-  every ABI entry outside the current scenarios.
+  they matter, and any ABI entry whose boundary behavior is not already covered
+  by direct getter, permit, LP-token, reserve, or pair-action scenarios.
 
 Suggested next chips:
 
