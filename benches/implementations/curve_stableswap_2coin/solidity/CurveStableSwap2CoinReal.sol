@@ -77,7 +77,8 @@ contract CurveStableSwap2CoinReal {
     uint256 public ma_exp_time;
     uint256 public D_ma_time;
     uint256 public ma_last_time;
-    uint256 public totalSupply;
+    uint256 internal _totalSupply;
+    bool internal locked;
     uint256 internal cachedChainId;
     bytes32 public salt;
     bytes32 internal nameHash;
@@ -109,6 +110,18 @@ contract CurveStableSwap2CoinReal {
 
     modifier ready() {
         require(initialized, "not initialized");
+        _;
+    }
+
+    modifier nonReentrant() {
+        require(!locked, "reentrant");
+        locked = true;
+        _;
+        locked = false;
+    }
+
+    modifier nonReentrantView() {
+        require(!locked, "reentrant");
         _;
     }
 
@@ -209,6 +222,7 @@ contract CurveStableSwap2CoinReal {
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount)
         external
         ready
+        nonReentrant
         returns (uint256 minted)
     {
         return _addLiquidity(amounts, minMintAmount, msg.sender);
@@ -217,6 +231,7 @@ contract CurveStableSwap2CoinReal {
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256 minted)
     {
         return _addLiquidity(amounts, minMintAmount, receiver);
@@ -230,7 +245,7 @@ contract CurveStableSwap2CoinReal {
         _checkDynArrayAmountLength(amounts.length);
         uint256[] memory oldBalances = _balances();
         uint256[] memory rates = _storedRates();
-        uint256 supply = totalSupply;
+        uint256 supply = _totalSupply;
         uint256 d0 = supply == 0 ? 0 : _getDMem(rates, oldBalances);
         uint256[] memory newBalances = _copyArray(oldBalances);
         for (uint256 i = 0; i < N_COINS; i++) {
@@ -262,7 +277,7 @@ contract CurveStableSwap2CoinReal {
         }
         require(minted >= minMintAmount, "slippage");
         _mint(receiver, minted);
-        emit AddLiquidity(msg.sender, amounts, fees, d1, totalSupply);
+        emit AddLiquidity(msg.sender, amounts, fees, d1, _totalSupply);
         if (supply == 0) {
             last_D_packed = _pack2(d1, d1);
             uint256 priceTime = ma_last_time & ((uint256(1) << 128) - 1);
@@ -276,19 +291,30 @@ contract CurveStableSwap2CoinReal {
         }
     }
 
-    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external ready returns (uint256 dy) {
+    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy)
+        external
+        ready
+        nonReentrant
+        returns (uint256 dy)
+    {
         return _exchange(i, j, dx, minDy, msg.sender, false);
     }
 
     function exchange(int128 i, int128 j, uint256 dx, uint256 minDy, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256 dy)
     {
         return _exchange(i, j, dx, minDy, receiver, false);
     }
 
-    function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy) external ready returns (uint256 dy) {
+    function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy)
+        external
+        ready
+        nonReentrant
+        returns (uint256 dy)
+    {
         require(!pool_contains_rebasing_tokens, "rebasing");
         return _exchange(i, j, dx, minDy, msg.sender, true);
     }
@@ -296,6 +322,7 @@ contract CurveStableSwap2CoinReal {
     function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256 dy)
     {
         require(!pool_contains_rebasing_tokens, "rebasing");
@@ -344,6 +371,7 @@ contract CurveStableSwap2CoinReal {
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts)
         external
         ready
+        nonReentrant
         returns (uint256[] memory amounts)
     {
         return _removeLiquidity(lpAmount, minAmounts, msg.sender, true);
@@ -352,6 +380,7 @@ contract CurveStableSwap2CoinReal {
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256[] memory amounts)
     {
         return _removeLiquidity(lpAmount, minAmounts, receiver, true);
@@ -362,7 +391,7 @@ contract CurveStableSwap2CoinReal {
         uint256[] calldata minAmounts,
         address receiver,
         bool claimAdminFees
-    ) external ready returns (uint256[] memory amounts) {
+    ) external ready nonReentrant returns (uint256[] memory amounts) {
         return _removeLiquidity(lpAmount, minAmounts, receiver, claimAdminFees);
     }
 
@@ -372,7 +401,7 @@ contract CurveStableSwap2CoinReal {
     {
         require(lpAmount > 0, "lp");
         require(minAmounts.length == N_COINS, "amount length");
-        uint256 supply = totalSupply;
+        uint256 supply = _totalSupply;
         uint256[] memory currentBalances = _balances();
         amounts = new uint256[](N_COINS);
         for (uint256 i = 0; i < N_COINS; i++) {
@@ -382,7 +411,7 @@ contract CurveStableSwap2CoinReal {
         }
         _burn(msg.sender, lpAmount);
         _upkeepDOracleAfterLiquidityRemoval(lpAmount, supply);
-        emit RemoveLiquidity(msg.sender, amounts, _emptyFees(), totalSupply);
+        emit RemoveLiquidity(msg.sender, amounts, _emptyFees(), _totalSupply);
         if (claimAdminFees) {
             _withdrawAdminFees();
         }
@@ -391,6 +420,7 @@ contract CurveStableSwap2CoinReal {
     function remove_liquidity_imbalance(uint256[] calldata amounts, uint256 maxBurnAmount)
         external
         ready
+        nonReentrant
         returns (uint256 burnAmount)
     {
         return _removeLiquidityImbalance(amounts, maxBurnAmount, msg.sender);
@@ -399,6 +429,7 @@ contract CurveStableSwap2CoinReal {
     function remove_liquidity_imbalance(uint256[] calldata amounts, uint256 maxBurnAmount, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256 burnAmount)
     {
         return _removeLiquidityImbalance(amounts, maxBurnAmount, receiver);
@@ -435,17 +466,18 @@ contract CurveStableSwap2CoinReal {
         }
 
         d1 = _getDMem(rates, newBalances);
-        burnAmount = (d0 - d1) * totalSupply / d0 + 1;
+        burnAmount = (d0 - d1) * _totalSupply / d0 + 1;
         require(burnAmount > 1, "burn");
         require(burnAmount <= maxBurnAmount, "slippage");
         _burn(msg.sender, burnAmount);
-        emit RemoveLiquidityImbalance(msg.sender, amounts, fees, d1, totalSupply);
+        emit RemoveLiquidityImbalance(msg.sender, amounts, fees, d1, _totalSupply);
         _upkeepOracles(_xpMem(rates, newBalances), _A(), d1);
     }
 
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount)
         external
         ready
+        nonReentrant
         returns (uint256 userAmount)
     {
         return _removeLiquidityOneCoin(lpAmount, i, minAmount, msg.sender);
@@ -454,6 +486,7 @@ contract CurveStableSwap2CoinReal {
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount, address receiver)
         external
         ready
+        nonReentrant
         returns (uint256 userAmount)
     {
         return _removeLiquidityOneCoin(lpAmount, i, minAmount, receiver);
@@ -476,16 +509,20 @@ contract CurveStableSwap2CoinReal {
         admin_balances[coinIndex] += adminCut;
         _burn(msg.sender, lpAmount);
         _transferOut(coinIndex, userAmount, receiver);
-        emit RemoveLiquidityOne(msg.sender, i, lpAmount, userAmount, totalSupply);
+        emit RemoveLiquidityOne(msg.sender, i, lpAmount, userAmount, _totalSupply);
         _upkeepOracles(xp, amp, d);
     }
 
-    function get_virtual_price() external view returns (uint256) {
-        if (totalSupply == 0) {
+    function totalSupply() external view nonReentrantView returns (uint256) {
+        return _totalSupply;
+    }
+
+    function get_virtual_price() external view nonReentrantView returns (uint256) {
+        if (_totalSupply == 0) {
             revert();
         }
         uint256[] memory rates = _storedRates();
-        return _getDMem(rates, _balances()) * 1e18 / totalSupply;
+        return _getDMem(rates, _balances()) * 1e18 / _totalSupply;
     }
 
     function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256) {
@@ -554,12 +591,12 @@ contract CurveStableSwap2CoinReal {
         return _getP(i, xp, _A(), d);
     }
 
-    function price_oracle(uint256 i) external view returns (uint256) {
+    function price_oracle(uint256 i) external view nonReentrantView returns (uint256) {
         require(i < N_COINS - 1, "price");
         return _calcMovingAverage(last_prices_packed[i], ma_exp_time, ma_last_time & ((uint256(1) << 128) - 1));
     }
 
-    function D_oracle() external view returns (uint256) {
+    function D_oracle() external view nonReentrantView returns (uint256) {
         return _calcMovingAverage(last_D_packed, D_ma_time, ma_last_time >> 128);
     }
 
@@ -644,7 +681,7 @@ contract CurveStableSwap2CoinReal {
         emit SetNewMATime(newMaExpTime, newDMaTime);
     }
 
-    function withdraw_admin_fees() external {
+    function withdraw_admin_fees() external nonReentrant {
         _withdrawAdminFees();
     }
 
@@ -839,7 +876,7 @@ contract CurveStableSwap2CoinReal {
     }
 
     function _mint(address to, uint256 value) internal {
-        totalSupply += value;
+        _totalSupply += value;
         balanceOf[to] += value;
         emit Transfer(address(0), to, value);
     }
@@ -847,7 +884,7 @@ contract CurveStableSwap2CoinReal {
     function _burn(address from, uint256 value) internal {
         require(balanceOf[from] >= value, "balance");
         balanceOf[from] -= value;
-        totalSupply -= value;
+        _totalSupply -= value;
         emit Transfer(from, address(0), value);
     }
 
@@ -1052,7 +1089,7 @@ contract CurveStableSwap2CoinReal {
         uint256[] memory rates = _storedRates();
         xp = _xpMem(rates, _balances());
         uint256 d0 = _getD(xp);
-        d1 = d0 - lpAmount * d0 / totalSupply;
+        d1 = d0 - lpAmount * d0 / _totalSupply;
         uint256 newY = _getYD(i, xp, d1);
         uint256[] memory xpReduced = _copyArray(xp);
         uint256 baseFee = _baseFee();
