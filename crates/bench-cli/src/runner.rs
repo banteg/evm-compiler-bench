@@ -1247,6 +1247,15 @@ fn all_helper_functions() -> &'static str {
         amounts[2] = amount2;
     }
 
+    function curveAmounts5(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](5);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+        amounts[3] = amount3;
+        amounts[4] = amount4;
+    }
+
     function curveAmounts8(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4, uint256 amount5, uint256 amount6, uint256 amount7) internal pure returns (uint256[] memory amounts) {
         amounts = new uint256[](8);
         amounts[0] = amount0;
@@ -3347,28 +3356,32 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else {\n");
         out.push_str("            coin0 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
-        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5) {\n");
+        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5 || deploymentVariant == 6) {\n");
         out.push_str("            coin2 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
-        out.push_str("        if (deploymentVariant == 5) {\n");
+        out.push_str("        if (deploymentVariant == 5 || deploymentVariant == 6) {\n");
         out.push_str("            coin3 = new BenchERC20OptionalReturn();\n");
         out.push_str("            coin4 = new BenchERC20OptionalReturn();\n");
+        out.push_str("        }\n");
+        out.push_str("        if (deploymentVariant == 5) {\n");
         out.push_str("            coin5 = new BenchERC20OptionalReturn();\n");
         out.push_str("            coin6 = new BenchERC20OptionalReturn();\n");
         out.push_str("            coin7 = new BenchERC20OptionalReturn();\n");
         out.push_str("        }\n");
         out.push_str(
-            "        uint256 nCoins = deploymentVariant == 5 ? uint256(8) : deploymentVariant == 4 ? uint256(3) : uint256(2);\n",
+            "        uint256 nCoins = deploymentVariant == 5 ? uint256(8) : deploymentVariant == 6 ? uint256(5) : deploymentVariant == 4 ? uint256(3) : uint256(2);\n",
         );
         out.push_str("        address[] memory coins = new address[](nCoins);\n");
         out.push_str("        coins[0] = address(coin0);\n");
         out.push_str("        coins[1] = address(coin1);\n");
-        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5) {\n");
+        out.push_str("        if (deploymentVariant == 4 || deploymentVariant == 5 || deploymentVariant == 6) {\n");
         out.push_str("            coins[2] = address(coin2);\n");
         out.push_str("        }\n");
-        out.push_str("        if (deploymentVariant == 5) {\n");
+        out.push_str("        if (deploymentVariant == 5 || deploymentVariant == 6) {\n");
         out.push_str("            coins[3] = address(coin3);\n");
         out.push_str("            coins[4] = address(coin4);\n");
+        out.push_str("        }\n");
+        out.push_str("        if (deploymentVariant == 5) {\n");
         out.push_str("            coins[5] = address(coin5);\n");
         out.push_str("            coins[6] = address(coin6);\n");
         out.push_str("            coins[7] = address(coin7);\n");
@@ -3390,7 +3403,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        } else if (deploymentVariant == 3) {\n");
         out.push_str("            assetTypes[0] = 3;\n");
         out.push_str("        } else {\n");
-        out.push_str("            require(deploymentVariant == 0 || deploymentVariant == 4 || deploymentVariant == 5, \"curve variant\");\n");
+        out.push_str("            require(deploymentVariant == 0 || deploymentVariant == 4 || deploymentVariant == 5 || deploymentVariant == 6, \"curve variant\");\n");
         out.push_str("        }\n");
         out.push_str("        code = abi.encodePacked(code, abi.encode(\"Curve.fi Stablecoin\", \"crv2\", uint256(200), uint256(4_000_000), uint256(20_000_000_000), uint256(866), coins, rates, assetTypes, methodIds, oracles));\n");
     }
@@ -3442,6 +3455,8 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("            coin3.approve(target, type(uint256).max);\n");
         out.push_str("            coin4.mint(address(this), 1e30);\n");
         out.push_str("            coin4.approve(target, type(uint256).max);\n");
+        out.push_str("        }\n");
+        out.push_str("        if (address(coin5) != address(0)) {\n");
         out.push_str("            coin5.mint(address(this), 1e30);\n");
         out.push_str("            coin5.approve(target, type(uint256).max);\n");
         out.push_str("            coin6.mint(address(this), 1e30);\n");
