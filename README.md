@@ -175,7 +175,9 @@ just zip-design
   the vendored upstream reference under `upstream/` against `source_blob`. The
   compiled implementation remains the modernized latest-syntax source, not the
   pinned historical file. New result provenance includes
-  `source_reference_path` to make that distinction explicit.
+  `source_reference_path` to make that distinction explicit, and normalized
+  result rows include `source_path` plus `source_hash` for the materialized
+  source variant actually compiled for the row.
 - During compilation, profile-specific source variants rewrite version pragmas
   and apply backward syntax rewrites where the older language version has
   enough features. `source_profiles` records intended source-language coverage;

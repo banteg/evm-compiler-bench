@@ -1,15 +1,16 @@
 # Real-Derived Production-Equivalence Inventory
 
-Last audited: 2026-05-24 on `dev`.
+Last audited: 2026-05-25 on `dev`.
 
 This is the work queue for flipping any real-derived benchmark to
 `production_equivalence: true`. For `latest_syntax_original` benchmarks, the
-checked-in implementation path is the modernized source-language original used
-for compilation, while `source_path`, `source_reference_path`, and
-`source_blob` identify the vendored upstream reference under the
-implementation's `upstream/` directory. `cargo run --release -- validate`
-enforces the reference blob without treating that historical source as the
-compiled comparison artifact.
+checked-in implementation path is the modernized source-language original.
+Normalized result rows expose the materialized `source_path` and `source_hash`
+that were compiled for each profile-specific source variant, while provenance
+fields `source_path`, `source_reference_path`, and `source_blob` identify the
+vendored upstream reference under the implementation's `upstream/` directory.
+`cargo run --release -- validate` enforces the reference blob without treating
+that historical source as the compiled comparison artifact.
 
 A counterpart-language port is production-equivalent only after all of these
 are true:
@@ -59,6 +60,22 @@ specs use `comparison_lane: production_conformance` and
 `counterpart_lane: fixture_scoped_port`. The target source side is
 `source_lane: latest_syntax_original`, with pinned upstream files retained only
 as provenance/reference inputs.
+
+## Focused Compatibility Checks
+
+The latest-syntax originals are also checked against representative historical
+compiler profiles through generated source variants. On 2026-05-25, these
+no-cache compile probes passed with zero failures:
+
+| Benchmark | Profiles |
+| --- | --- |
+| `uniswap_v2_pair` | `solc-0.5.16-noopt`, `solc-0.5.16-legacy-runs200`, `vyper-0.3.10-none`, `vyper-0.3.10-gas` |
+| `curve_stableswap_2coin` | `vyper-0.3.10-none`, `vyper-0.3.10-gas`, `solc-0.8.20-noopt`, `solc-0.8.20-legacy-runs200` |
+| `yearn_vault_v3` | `vyper-0.3.7-default`, `vyper-0.3.7-none`, `solc-0.8.20-noopt`, `solc-0.8.20-legacy-runs200` |
+
+These are compile-surface checks only. They prove the current source-variant
+rewrites are sufficient for those older profiles, not that the counterpart
+ports are production-equivalent.
 
 ## Summary
 
