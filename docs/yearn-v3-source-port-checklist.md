@@ -59,9 +59,9 @@ Status meanings:
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
 | `process_report` | `process_report` | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, strategy zero reports with accountant fees/refunds, self-report refunds including zero-effective clipping, self-report idle gain/loss with accountant fees/refunds, gain plus clipped refunds, gain that moves current debt above max debt, protocol-fee splits on gain and loss reports, gain/fee/refund exact offset, gain-with-refund net-loss fee recalculation, no-lock refund reports, zero-effective clipped refunds, third-party accountant refund state mutation, and partial-unlock profit/loss reports with accountant effects are covered; more strategy reporting variants remain open. |
 | `buy_debt` | `buy_debt` | mapped, covered | Inactive-strategy rejection, zero-current-debt rejection, zero-amount rejection, over-current-debt clipping, and zero-share rejection are covered. |
-| `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip behavior is covered. |
-| `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, active-debt rejection, and re-add after revoke. |
-| `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal and re-add after forced debt accounting. |
+| `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip, zero-address rejection, active-strategy rejection, and default-queue append behavior are covered. |
+| `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, inactive-strategy rejection, active-debt rejection, and re-add after revoke. |
+| `force_revoke_strategy` | `force_revoke_strategy` | mapped, covered | Covered for force removal, inactive-strategy rejection, and re-add after forced debt accounting. |
 | `update_max_debt_for_strategy` | `update_max_debt_for_strategy` | mapped, covered | Covered for active-strategy update and inactive-strategy rejection. |
 | `update_debt` | overloaded `update_debt` | mapped, covered | Strategy `maxDeposit`/`maxRedeem` limits, minimum-idle clipping and no-available-idle early return, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
 | `shutdown_vault` | `shutdown_vault` | mapped, covered | Covered with and without deposit-limit module, including post-shutdown debt pull. |

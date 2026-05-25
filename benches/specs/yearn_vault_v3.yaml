@@ -177,8 +177,11 @@ real_derived:
     - update_max_debt_inactive_reverts
     - role_delegate_add_strategy
     - add_strategy_default_queue
+    - add_strategy_zero_address_reverts
+    - add_strategy_already_active_reverts
     - revoke_strategy_preserves_queue_order
     - revoke_strategy_with_debt_reverts
+    - revoke_strategy_inactive_reverts
     - readd_after_revoke_strategy
     - add_remove_role
     - add_role_grants_extra_permission
@@ -270,6 +273,7 @@ real_derived:
     - alternate_management_sequence_redeem
     - repeated_management_transitions_redeem
     - force_revoke_strategy
+    - force_revoke_strategy_inactive_reverts
     - readd_after_force_revoke_strategy
     - buy_debt_inactive_strategy_reverts
     - buy_debt_no_current_debt_reverts
@@ -525,12 +529,21 @@ scenarios:
   - name: add_strategy_default_queue
     call: "add_strategy(strategy) using the Vyper default add_to_queue overload"
     expected: "adds the strategy and appends it to the default withdrawal queue"
+  - name: add_strategy_zero_address_reverts
+    call: "add_strategy(empty(address), true)"
+    expected: "reverts through the upstream zero-address strategy guard"
+  - name: add_strategy_already_active_reverts
+    call: "add_strategy(strategy, true) after the strategy is already active"
+    expected: "reverts through the upstream active-strategy guard"
   - name: revoke_strategy_preserves_queue_order
     call: "revoke_strategy(strategy) after three queued strategies"
     expected: "removes the revoked strategy without reordering surviving default queue entries"
   - name: revoke_strategy_with_debt_reverts
     call: "revoke_strategy for a strategy with active debt"
     expected: "reverts without the force flag"
+  - name: revoke_strategy_inactive_reverts
+    call: "revoke_strategy(strategy) before the strategy has been added"
+    expected: "reverts through the upstream inactive-strategy guard"
   - name: readd_after_revoke_strategy
     call: "add_strategy after a normal revoke cleared the strategy params"
     expected: "re-adds the same strategy and appends it to the default queue"
@@ -795,6 +808,9 @@ scenarios:
   - name: force_revoke_strategy
     call: "force_revoke_strategy(strategy)"
     expected: "force removes the strategy through the emergency role path"
+  - name: force_revoke_strategy_inactive_reverts
+    call: "force_revoke_strategy(strategy) before the strategy has been added"
+    expected: "reverts through the upstream inactive-strategy guard"
   - name: readd_after_force_revoke_strategy
     call: "add_strategy after force_revoke_strategy cleared an indebted strategy"
     expected: "re-adds the same strategy after the forced loss accounting path"
