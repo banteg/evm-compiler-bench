@@ -133,7 +133,8 @@ Immediate chips:
 - Add edge-case scenarios for repeated transitions across roles, queues, debt,
   reports, modules, shutdown, withdrawals, and redeems.
 - Expand third-party module/strategy mock coverage and any remaining unusual
-  third-party accountant paths beyond refund balance/allowance mutation.
+  third-party accountant paths beyond zero-return max views and refund
+  balance/allowance mutation.
 
 ## `uniswap_v2_pair`
 
