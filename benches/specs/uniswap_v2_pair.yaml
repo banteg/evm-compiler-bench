@@ -181,7 +181,6 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - upstream UniswapV2Factory createPair ABI is represented by a bytecode-injected deployPair harness hook so both language artifacts can be deployed through the same CREATE2 path
-    - exhaustive factory-management scenarios beyond feeTo, feeToSetter authorization including post-transfer old-setter rejection, pair mapping, allPairs tracking and bounds, pair creation, and invalid-pair guards are not yet covered
     - exhaustive revert-data parity and ABI-boundary audit outside the listed representative malformed calldata scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
