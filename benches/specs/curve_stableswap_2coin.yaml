@@ -99,11 +99,13 @@ real_derived:
     - get_dy_five_coin_midpoint
     - get_dy_five_coin_endpoint
     - get_dy_six_coin_endpoint
+    - get_dy_seven_coin_midpoint
     - get_dy_eight_coin
     - get_dx_three_coin
     - get_dx_five_coin_midpoint
     - get_dx_five_coin_endpoint
     - get_dx_six_coin_endpoint
+    - get_dx_seven_coin_midpoint
     - get_dx_eight_coin
     - get_dx_eight_coin_interior
     - calc_token_amount_three_coin
@@ -116,6 +118,7 @@ real_derived:
     - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
     - exchange_six_coin_midpoint
+    - exchange_seven_coin_midpoint
     - exchange_five_coin_midpoint
     - exchange_five_coin_endpoint
     - exchange_eight_coin_boundary
@@ -237,7 +240,7 @@ real_derived:
     - constructor-initialized four-coin setup plus endpoint get_dy, one-coin withdrawal quote, and one-coin withdrawal coverage
     - constructor-initialized five-coin midpoint pool setup
     - constructor-initialized six-coin midpoint exchange, midpoint exchange_received, endpoint get_dy/get_dx, endpoint one-coin-withdrawal quote, endpoint one-coin withdrawal, and calc_token_amount deposit/withdraw quote coverage
-    - constructor-initialized seven-coin proportional, imbalanced, and one-coin withdrawal plus one-coin withdrawal quote and dynamic_fee quote coverage
+    - constructor-initialized seven-coin midpoint get_dy/get_dx quotes, midpoint exchange, proportional withdrawal, imbalanced withdrawal, one-coin withdrawal, one-coin withdrawal quote, and dynamic_fee quote coverage
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated four-coin endpoint get_dy quote
@@ -245,6 +248,7 @@ real_derived:
     - factory-delegated five-coin midpoint and endpoint get_dx quotes
     - factory-delegated five-coin calc_token_amount deposit and withdraw quotes
     - factory-delegated six-coin get_dy, get_dx, and calc_token_amount deposit quote
+    - factory-delegated seven-coin midpoint get_dy and get_dx quotes
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin endpoint and interior get_dx quotes at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
@@ -258,6 +262,7 @@ real_derived:
     - standard-token five-coin midpoint and endpoint exchange_received optimistic-transfer paths and midpoint slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
     - standard-token four-coin endpoint exchange_received optimistic-transfer path
+    - standard-token seven-coin midpoint exchange path
     - standard-token eight-coin endpoint and interior exchange paths
     - standard-token eight-coin endpoint and interior exchange slippage rejection
     - standard-token eight-coin endpoint and interior exchange_received optimistic-transfer paths and slippage rejection
@@ -346,6 +351,9 @@ scenarios:
   - name: get_dy_six_coin_endpoint
     call: "get_dy(0, 5, 25_000) after initial liquidity on a six-coin deployment"
     expected: "routes an endpoint pair through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dy_seven_coin_midpoint
+    call: "get_dy(2, 5, 25_000) after initial liquidity on a seven-coin deployment"
+    expected: "routes a midpoint pair through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dy_eight_coin
     call: "get_dy(0, 7, 25_000) after initial liquidity on an eight-coin deployment"
     expected: "routes through the benchmark views implementation at the upstream MAX_COINS boundary"
@@ -361,6 +369,9 @@ scenarios:
   - name: get_dx_six_coin_endpoint
     call: "get_dx(0, 5, 20_000) after initial liquidity on a six-coin deployment"
     expected: "quotes endpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dx_seven_coin_midpoint
+    call: "get_dx(2, 5, 20_000) after initial liquidity on a seven-coin deployment"
+    expected: "quotes midpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_eight_coin
     call: "get_dx(0, 7, 20_000) after initial liquidity on an eight-coin deployment"
     expected: "quotes required input through the benchmark views implementation at the upstream MAX_COINS boundary"
@@ -373,6 +384,9 @@ scenarios:
   - name: exchange_six_coin_midpoint
     call: "exchange(2, 4, 25_000, 0, address(this)) after initial liquidity on a six-coin deployment"
     expected: "swaps a midpoint pair for an intermediate constructor-driven N_COINS value"
+  - name: exchange_seven_coin_midpoint
+    call: "exchange(2, 5, 25_000, 0, address(this)) after initial liquidity on a seven-coin deployment"
+    expected: "updates midpoint constructor-sized balances, dynamic fees, and oracle slots for another intermediate N_COINS value"
   - name: exchange_five_coin_endpoint
     call: "exchange(0, 4, 25_000, 0, address(this)) after initial liquidity on a five-coin deployment"
     expected: "updates endpoint constructor-sized balances, dynamic fees, and the endpoint price oracle slot"
