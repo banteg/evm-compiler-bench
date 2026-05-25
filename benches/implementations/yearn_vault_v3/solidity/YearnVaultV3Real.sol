@@ -1126,14 +1126,9 @@ contract YearnVaultV3Real {
             }
             uint256 newProfitLockingPeriod =
                 (previouslyLockedTime + sharesToLock * profitMaxUnlockTime_) / totalLockedShares;
-            if (newProfitLockingPeriod > 0) {
-                profit_unlocking_rate = totalLockedShares * MAX_BPS_EXTENDED / newProfitLockingPeriod;
-                full_profit_unlock_date = block.timestamp + newProfitLockingPeriod;
-                last_profit_update = block.timestamp;
-            } else {
-                profit_unlocking_rate = 0;
-                full_profit_unlock_date = 0;
-            }
+            profit_unlocking_rate = totalLockedShares * MAX_BPS_EXTENDED / newProfitLockingPeriod;
+            full_profit_unlock_date = block.timestamp + newProfitLockingPeriod;
+            last_profit_update = block.timestamp;
         } else {
             full_profit_unlock_date = 0;
         }
