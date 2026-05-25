@@ -232,7 +232,7 @@ Remaining:
   slippage rejection, proportional-withdrawal, proportional-withdrawal
   slippage rejection, imbalanced-withdrawal, imbalanced-withdrawal
   slippage rejection, one-coin-withdrawal,
-  oracle-update scenarios, five-coin midpoint `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, exchange, `exchange_received`, one-coin-withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths, and
+  oracle-update scenarios, five-coin midpoint/endpoint `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, exchange, `exchange_received`, one-coin-withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths, and
   eight-coin initial-liquidity, imbalanced-liquidity deposit, add-liquidity
   slippage rejection, `get_dy`, endpoint/interior `get_dx`, endpoint/interior `dynamic_fee`,
   `calc_token_amount` deposit/withdraw, endpoint/interior `calc_withdraw_one_coin`, endpoint/interior exchange,
