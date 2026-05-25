@@ -198,13 +198,13 @@ contract CurveStableSwap2CoinReal {
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
+        _transfer(from, to, value);
         uint256 allowed = allowance[from][msg.sender];
         if (allowed != type(uint256).max) {
             require(allowed >= value, "allowance");
             allowance[from][msg.sender] = allowed - value;
             emit Approval(from, msg.sender, allowed - value);
         }
-        _transfer(from, to, value);
         return true;
     }
 
