@@ -37,6 +37,14 @@
         amounts[2] = amount2;
     }
 
+    function curveAmounts4(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](4);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+        amounts[3] = amount3;
+    }
+
     function curveAmounts5(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4) internal pure returns (uint256[] memory amounts) {
         amounts = new uint256[](5);
         amounts[0] = amount0;
@@ -44,6 +52,27 @@
         amounts[2] = amount2;
         amounts[3] = amount3;
         amounts[4] = amount4;
+    }
+
+    function curveAmounts6(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4, uint256 amount5) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](6);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+        amounts[3] = amount3;
+        amounts[4] = amount4;
+        amounts[5] = amount5;
+    }
+
+    function curveAmounts7(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4, uint256 amount5, uint256 amount6) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](7);
+        amounts[0] = amount0;
+        amounts[1] = amount1;
+        amounts[2] = amount2;
+        amounts[3] = amount3;
+        amounts[4] = amount4;
+        amounts[5] = amount5;
+        amounts[6] = amount6;
     }
 
     function curveAmounts8(uint256 amount0, uint256 amount1, uint256 amount2, uint256 amount3, uint256 amount4, uint256 amount5, uint256 amount6, uint256 amount7) internal pure returns (uint256[] memory amounts) {

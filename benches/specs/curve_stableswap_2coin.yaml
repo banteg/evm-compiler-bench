@@ -86,6 +86,7 @@ real_derived:
     - add_initial_liquidity
     - add_initial_liquidity_after_donation
     - add_initial_liquidity_three_coin
+    - add_initial_liquidity_four_coin
     - add_initial_liquidity_eight_coin
     - add_imbalanced_liquidity_three_coin
     - add_liquidity_three_coin_slippage_reverts
@@ -107,6 +108,7 @@ real_derived:
     - calc_token_amount_eight_coin
     - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
+    - exchange_six_coin_midpoint
     - exchange_five_coin_midpoint
     - exchange_five_coin_endpoint
     - exchange_eight_coin_boundary
@@ -126,6 +128,7 @@ real_derived:
     - remove_liquidity_three_coin
     - remove_liquidity_three_coin_slippage_reverts
     - remove_liquidity_five_coin
+    - remove_liquidity_seven_coin
     - remove_liquidity_eight_coin
     - remove_liquidity_eight_coin_slippage_reverts
     - remove_one_coin_eight_coin
@@ -214,7 +217,10 @@ real_derived:
     - upstream Vyper pool source at the pinned commit
     - constructor-initialized two-coin pool setup
     - constructor-initialized three-coin pool setup
+    - constructor-initialized four-coin smoke coverage
     - constructor-initialized five-coin midpoint pool setup
+    - constructor-initialized six-coin midpoint exchange smoke coverage
+    - constructor-initialized seven-coin proportional withdrawal smoke coverage
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated five-coin midpoint and endpoint get_dy quotes
@@ -268,7 +274,7 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
     - slippage and invalid coin reverts
   excluded_features:
-    - exhaustive dynamic N-coin scenario coverage for every pool action at every N_COINS value
+    - exhaustive dynamic N-coin scenario coverage for every pool action at every N_COINS value; every N_COINS value from 2 through 8 now has at least one standard-token scenario
     - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
     - exhaustive revert-data and Vyper DynArray decoder-boundary parity audit outside the listed scenarios
 semantics:
@@ -284,6 +290,9 @@ scenarios:
   - name: add_initial_liquidity_three_coin
     call: "add_liquidity([1_000_000, 1_000_000, 1_000_000], 0, address(this)) on a three-coin deployment"
     expected: "mints initial LP shares using constructor-driven N_COINS rather than fixed two-coin math"
+  - name: add_initial_liquidity_four_coin
+    call: "add_liquidity([1_000_000 x 4], 0, address(this)) on a four-coin deployment"
+    expected: "mints initial LP shares for an intermediate constructor-driven N_COINS value"
   - name: add_initial_liquidity_eight_coin
     call: "add_liquidity([1_000_000 x 8], 0, address(this)) on an eight-coin deployment"
     expected: "mints initial LP shares at the upstream MAX_COINS boundary"
@@ -329,6 +338,9 @@ scenarios:
   - name: exchange_three_coin
     call: "exchange(0, 2, 25_000, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates all constructor-sized accounting and oracle slots after a non-two-coin swap"
+  - name: exchange_six_coin_midpoint
+    call: "exchange(2, 4, 25_000, 0, address(this)) after initial liquidity on a six-coin deployment"
+    expected: "swaps a midpoint pair for an intermediate constructor-driven N_COINS value"
   - name: exchange_five_coin_endpoint
     call: "exchange(0, 4, 25_000, 0, address(this)) after initial liquidity on a five-coin deployment"
     expected: "updates endpoint constructor-sized balances, dynamic fees, and the endpoint price oracle slot"
@@ -374,6 +386,9 @@ scenarios:
   - name: remove_liquidity_five_coin
     call: "remove_liquidity(10_000, [0 x 5], address(this)) after initial liquidity on a five-coin deployment"
     expected: "burns LP shares and transfers proportional balances for a midpoint constructor-sized coin count"
+  - name: remove_liquidity_seven_coin
+    call: "remove_liquidity(10_000, [0 x 7], address(this)) after initial liquidity on a seven-coin deployment"
+    expected: "burns LP shares and transfers proportional balances for another intermediate constructor-driven N_COINS value"
   - name: remove_liquidity_eight_coin
     call: "remove_liquidity(10_000, [0 x 8], address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns LP shares and transfers proportional balances at the upstream MAX_COINS boundary"
