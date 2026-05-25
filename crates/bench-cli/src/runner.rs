@@ -2479,6 +2479,23 @@ fn all_helper_functions() -> &'static str {
         );
     }
 
+    function benchYearnWithdrawTripleQueueCalldata(
+        address target,
+        uint256 assets,
+        address receiver,
+        address owner,
+        uint256 maxLoss
+    ) public view returns (bytes memory) {
+        return abi.encodeWithSignature(
+            "withdraw(uint256,address,address,uint256,address[])",
+            assets,
+            receiver,
+            owner,
+            maxLoss,
+            benchYearnTripleQueue(target)
+        );
+    }
+
     function benchYearnWithdrawLongQueueCalldata(
         address target,
         uint256 assets,
