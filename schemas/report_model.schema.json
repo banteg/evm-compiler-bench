@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EVM Compiler Bench report model",
+  "type": "object",
+  "$defs": {
+    "sourceVariantLabel": {
+      "enum": [
+        "latest",
+        "solidity-0.4",
+        "solidity-0.5",
+        "solidity-0.6",
+        "solidity-0.7",
+        "solidity-0.8",
+        "vyper-0.2",
+        "vyper-0.3",
+        "vyper-0.4"
+      ]
+    },
+    "comparisonLane": {
+      "enum": [
+        "upstream_exact_historical",
+        "latest_syntax_original",
+        "latest_idiomatic",
+        "production_conformance",
+        "diagnostic_layout_matched",
+        "fixture_scoped_port"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "generated_at",
+    "defaults",
+    "summary",
+    "toolchains",
+    "manifest",
+    "methodology",
+    "profiles",
+    "benchmarks",
+    "real_derived_models",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "defaults": { "type": "object" },
+    "summary": { "type": "object" },
+    "toolchains": { "type": "array", "items": { "type": "object" } },
+    "manifest": { "type": "object" },
+    "methodology": {
+      "type": "object",
+      "required": ["source_model", "notes"],
+      "properties": {
+        "source_model": {
+          "type": "object",
+          "required": [
+            "real_derived",
+            "compatibility_variants",
+            "compiled_source_root"
+          ],
+          "properties": {
+            "real_derived": { "type": "string" },
+            "compatibility_variants": { "type": "string" },
+            "compiled_source_root": {
+              "const": "target/bench-source-variants/<profile_id>/"
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["tag", "title", "body"],
+            "properties": {
+              "tag": { "type": "string" },
+              "title": { "type": "string" },
+              "body": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "profiles": { "type": "array", "items": { "type": "object" } },
+    "benchmarks": { "type": "array", "items": { "type": "object" } },
+    "real_derived_models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["benchmark_id", "provenance", "compiled_sources"],
+        "properties": {
+          "benchmark_id": { "type": "string" },
+          "provenance": {
+            "type": "object",
+            "required": [
+              "source_path",
+              "source_reference_path",
+              "source_language",
+              "source_profiles",
+              "source_blob",
+              "comparison_lane",
+              "source_lane",
+              "counterpart_lane",
+              "production_equivalence"
+            ],
+            "properties": {
+              "source_path": { "type": "string" },
+              "source_reference_path": { "type": "string" },
+              "source_language": { "enum": ["solidity", "vyper"] },
+              "source_profiles": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              },
+              "source_blob": { "type": ["string", "null"] },
+              "comparison_lane": { "$ref": "#/$defs/comparisonLane" },
+              "source_lane": { "$ref": "#/$defs/comparisonLane" },
+              "counterpart_lane": { "$ref": "#/$defs/comparisonLane" },
+              "production_equivalence": { "type": "boolean" }
+            }
+          },
+          "compiled_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "language",
+                "implementation_id",
+                "profile_id",
+                "source_variant",
+                "source_path",
+                "source_hash"
+              ],
+              "properties": {
+                "language": { "enum": ["solidity", "vyper"] },
+                "implementation_id": { "type": "string" },
+                "profile_id": { "type": "string" },
+                "source_variant": { "$ref": "#/$defs/sourceVariantLabel" },
+                "source_path": {
+                  "type": "string",
+                  "pattern": "^target/bench-source-variants/[^/]+/.+"
+                },
+                "source_hash": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rows": { "type": "array", "items": { "type": "object" } }
+  }
+}

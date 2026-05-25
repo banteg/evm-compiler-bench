@@ -41,6 +41,7 @@ pub struct ValidationSummary {
 pub fn validate_all(root: &Path) -> Result<ValidationSummary> {
     let specs = validate_specs(root)?;
     let scenario_files = validate_scenarios(root)?;
+    validate_schema_files(root)?;
     validate_latest_source_pragmas(root)?;
     validate_compiler_profile_source_variants(root)?;
     let (scale_config, _) = load_scale_config(root)?;
@@ -87,6 +88,17 @@ fn validate_specs(root: &Path) -> Result<usize> {
         );
     }
     Ok(count)
+}
+
+fn validate_schema_files(root: &Path) -> Result<()> {
+    for path in json_schema_files(&root.join("schemas"))? {
+        let value: Value = serde_json::from_str(&fs::read_to_string(&path)?)
+            .with_context(|| format!("parsing {}", path.display()))?;
+        for pointer in ["/$schema", "/title", "/type"] {
+            require_string_pointer(&value, pointer, &path)?;
+        }
+    }
+    Ok(())
 }
 
 fn validate_scenarios(root: &Path) -> Result<usize> {
@@ -2235,6 +2247,19 @@ fn yaml_files(dir: &Path) -> Result<Vec<PathBuf>> {
             path.extension().and_then(|ext| ext.to_str()),
             Some("yaml" | "yml")
         ) {
+            files.push(path);
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+fn json_schema_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) == Some("json") {
             files.push(path);
         }
     }
