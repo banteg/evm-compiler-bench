@@ -298,12 +298,13 @@ Exact now:
   grants, pending role-manager transfer, accountant updates, default-queue
   toggles, withdraw-limit module updates, and shutdown with an active deposit
   limit module.
-- The scenario set includes three combined management sequences that mutate
+- The scenario set includes four combined management sequences that mutate
   delegated roles, role-manager authority, the default/custom queue, debt,
   reporting, limit modules, shutdown state, and then withdraw or redeem from the
-  post-sequence vault state. The newest sequence exercises a three-strategy
-  queue rewrite, repeated default-queue toggles, debt increase/decrease cycles,
-  multiple reports, repeated module updates, and delegated emergency shutdown.
+  post-sequence vault state. They include an active non-shutdown withdrawal path
+  plus a three-strategy queue rewrite, repeated default-queue toggles, debt
+  increase/decrease cycles, multiple reports, repeated module updates, and
+  delegated emergency shutdown.
 - The generated differential harness normalizes deployment-specific vault,
   asset, strategy, accountant, and module addresses and compares event/log
   hashes for the listed scenarios.
@@ -321,10 +322,10 @@ Remaining:
   rejection, and receiver/owner
   short-circuits, but not exhaustive adversarial or unusual implementations
   behind those interfaces.
-- The current sequence coverage proves three representative combined management
-  orderings, including repeated transitions across queues, debt, reports,
-  modules, and role-manager handoff. Third-party edge cases remain to be
-  covered.
+- The current sequence coverage proves four representative combined management
+  orderings, including active non-shutdown withdrawal and repeated transitions
+  across queues, debt, reports, modules, and role-manager handoff. Third-party
+  edge cases remain to be covered.
 - Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
   success/failure boundaries are covered. The Solidity port uses runtime
   checks rather than Vyper decoder rejection, which is acceptable under the

@@ -355,6 +355,7 @@ real_derived:
     - accountant coverage uses deterministic and refund-mutating harness mocks; custom deposit/withdraw limit module coverage uses deterministic harness mocks
     - unrealized strategy-loss coverage uses a deterministic harness burn from strategy-held assets
     - Vyper String and DynArray decoder timing and exact revert bytes are intentionally out of scope when the accepted/rejected length boundary and post-state match
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port because the benchmark claims externally observable vault behavior, not slot-level upgrade or proxy compatibility
     - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
   included_features:
     - upstream Vyper vault source at the pinned commit
@@ -388,7 +389,6 @@ real_derived:
   excluded_features:
     - exhaustive third-party accountant, limit-module, and strategy edge-case differential coverage beyond the covered deterministic and refund-mutating accountant paths
     - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, and withdrawal flows
-    - exact storage layout compatibility in the Solidity port
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
   - "The Solidity port is expanded toward full upstream behavior, but production equivalence remains false until all management/module/queue paths are differentially covered and audited."
