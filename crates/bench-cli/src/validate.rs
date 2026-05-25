@@ -510,6 +510,7 @@ fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
 }
 
 fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
+    let profile_metadata = manifest_profile_metadata(value, path)?;
     let benchmarks = value
         .pointer("/real_derived/benchmarks")
         .and_then(|value| value.as_array())
@@ -594,7 +595,63 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             }
             require_enum(variant, "/language", &["solidity", "vyper"], path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
+            validate_real_derived_source_variant_profile(variant, &profile_metadata, path)?;
         }
+    }
+    Ok(())
+}
+
+fn manifest_profile_metadata(
+    value: &Value,
+    path: &Path,
+) -> Result<BTreeMap<String, (String, String)>> {
+    let profiles = value
+        .pointer("/profiles")
+        .and_then(|value| value.as_array())
+        .with_context(|| format!("{} profiles must be an array", path.display()))?;
+    let mut metadata = BTreeMap::new();
+    for profile in profiles {
+        let id = string_at(profile, "/id", path)?;
+        let language = string_at(profile, "/language", path)?;
+        let source_variant = string_at(profile, "/source_variant", path)?;
+        if metadata
+            .insert(
+                id.to_string(),
+                (language.to_string(), source_variant.to_string()),
+            )
+            .is_some()
+        {
+            bail!("{} duplicate manifest profile id {id}", path.display());
+        }
+    }
+    Ok(metadata)
+}
+
+fn validate_real_derived_source_variant_profile(
+    variant: &Value,
+    profile_metadata: &BTreeMap<String, (String, String)>,
+    path: &Path,
+) -> Result<()> {
+    let profile_id = string_at(variant, "/profile_id", path)?;
+    let language = string_at(variant, "/language", path)?;
+    let source_variant = string_at(variant, "/source_variant", path)?;
+    let Some((profile_language, profile_source_variant)) = profile_metadata.get(profile_id) else {
+        bail!(
+            "{} real-derived source variant references unknown profile {profile_id}",
+            path.display()
+        );
+    };
+    if language != profile_language {
+        bail!(
+            "{} real-derived source variant profile {profile_id} has language {language}, expected {profile_language}",
+            path.display()
+        );
+    }
+    if source_variant != profile_source_variant {
+        bail!(
+            "{} real-derived source variant profile {profile_id} has source_variant {source_variant}, expected {profile_source_variant}",
+            path.display()
+        );
     }
     Ok(())
 }
@@ -1796,6 +1853,14 @@ mod tests {
     fn validates_real_derived_manifest_lane_and_profile_invariants() {
         let path = Path::new("results/normalized/run-manifest.json");
         let manifest = json!({
+            "profiles": [
+                {
+                    "id": "solc-latest-noopt",
+                    "language": "solidity",
+                    "compiler": "solc",
+                    "source_variant": "latest"
+                }
+            ],
             "real_derived": {
                 "benchmarks": [
                     {
@@ -1851,6 +1916,18 @@ mod tests {
         *contradictory_equivalence
             .pointer_mut("/real_derived/benchmarks/0/production_equivalence")
             .unwrap() = json!(true);
+        let mut unknown_variant_profile = manifest.clone();
+        *unknown_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/profile_id")
+            .unwrap() = json!("solc-missing-noopt");
+        let mut wrong_variant_language = manifest.clone();
+        *wrong_variant_language
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/language")
+            .unwrap() = json!("vyper");
+        let mut wrong_variant_label = manifest.clone();
+        *wrong_variant_label
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
+            .unwrap() = json!("solidity-0.5");
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
@@ -1860,6 +1937,9 @@ mod tests {
         assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&comparison_as_source_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&contradictory_equivalence, path).is_err());
+        assert!(super::validate_real_derived_manifest(&unknown_variant_profile, path).is_err());
+        assert!(super::validate_real_derived_manifest(&wrong_variant_language, path).is_err());
+        assert!(super::validate_real_derived_manifest(&wrong_variant_label, path).is_err());
     }
 
     #[test]
