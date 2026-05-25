@@ -240,7 +240,7 @@
           "then": {
             "properties": {
               "source_profiles": {
-                "items": { "pattern": "^solc-latest" }
+                "items": { "pattern": "^solc" }
               }
             }
           }
@@ -258,7 +258,7 @@
           "then": {
             "properties": {
               "source_profiles": {
-                "items": { "pattern": "^vyper-latest" }
+                "items": { "pattern": "^vyper" }
               }
             }
           }

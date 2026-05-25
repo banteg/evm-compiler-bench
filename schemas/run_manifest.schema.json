@@ -294,14 +294,14 @@
                     "source_language": { "const": "solidity" }
                   }
                 },
-                "then": {
-                  "properties": {
-                    "source_profiles": {
-                      "items": { "pattern": "^solc-latest" }
+                  "then": {
+                    "properties": {
+                      "source_profiles": {
+                        "items": { "pattern": "^solc" }
+                      }
                     }
                   }
-                }
-              },
+                },
               {
                 "if": {
                   "required": ["source_lane", "source_language"],
@@ -312,13 +312,13 @@
                     "source_language": { "const": "vyper" }
                   }
                 },
-                "then": {
-                  "properties": {
-                    "source_profiles": {
-                      "items": { "pattern": "^vyper-latest" }
+                  "then": {
+                    "properties": {
+                      "source_profiles": {
+                        "items": { "pattern": "^vyper" }
+                      }
                     }
                   }
-                }
               }
             ]
           }
