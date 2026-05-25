@@ -69,15 +69,12 @@ layout.
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, upstream zero-recipient LP mint behavior, initial mint below `MINIMUM_LIQUIDITY` rejection, burn including zero-recipient output transfers and no-staged-LP burn rejection, invariant and dual-output swaps, zero-output and insufficient-liquidity swap guards, drift, skim including zero-recipient transfers, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
-| Flash-swap callback | Approximate | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered, but Vyper still has a `Bytes[65536]` ABI bound while upstream Solidity accepts unbounded `bytes calldata`. |
+| Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
 | Revert data and ABI boundary behavior | Incomplete | Success/failure is covered for important paths, but exhaustive revert-data and decoder-boundary parity has not been audited. |
 | Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
-- Decide whether the `Bytes[65536]` bound is an accepted language-policy
-  exception, or keep the port non-production-equivalent for truly unbounded
-  callback calldata.
 - Decide whether the benchmark remains pair-only or must include the full
   upstream factory implementation.
 - Complete the ABI/revert audit for the pair ABI outside the current scenarios.
@@ -171,11 +168,10 @@ Exact now:
 Remaining:
 
 - Upstream `swap` accepts unbounded `bytes calldata`. Vyper requires a bounded
-  byte array and the current port uses `Bytes[65536]`, with scenarios now
-  covering payloads above the old 4 KiB port bound and exactly at the current
-  64 KiB bound. Decide whether this
-  language-level bound keeps the benchmark non-production-equivalent, or
-  document an explicit policy exception before removing the excluded feature.
+  byte array and the current port uses `Bytes[65536]`, with scenarios covering
+  payloads above the old 4 KiB port bound and exactly at the current 64 KiB
+  bound. This is an accepted idiomatic language-level semantic boundary for the
+  primary port, not a reason to introduce a low-level emulation variant.
 - The benchmark CREATE2 fixture exercises the pair's factory-owned initialize
   path and `feeTo`, but it is not the full upstream `UniswapV2Factory`.
 - The final audit still needs to check revert reasons or decoder failures where
@@ -186,8 +182,6 @@ Remaining:
 
 Suggested next chips:
 
-- Decide whether the remaining 64 KiB Vyper callback-data bound is an accepted
-  language-level semantic boundary, or keep it listed as an excluded feature.
 - Decide whether full upstream factory behavior is in scope for this benchmark
   or whether the benchmark is explicitly "Pair only".
 
