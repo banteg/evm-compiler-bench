@@ -292,6 +292,8 @@ Exact now:
   strategy-queue argument forwarding, long-queue bounds, no-return/false-return
   asset handling, and permit before/after initialization plus after chain-id
   changes.
+- Strategy report scenarios now cover the no-profit-lock fee recalculation
+  branch on both gain and loss reports with accountant refunds.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, minimum-idle clipping/restoration on debt changes,
   limited `maxRedeem`, max-debt-below-current, shutdown pull-only, and actual
