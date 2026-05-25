@@ -91,6 +91,7 @@ real_derived:
     - get_dy_five_coin_midpoint
     - get_dy_eight_coin
     - get_dx_three_coin
+    - get_dx_five_coin_midpoint
     - get_dx_eight_coin
     - calc_token_amount_three_coin
     - calc_token_amount_three_coin_withdraw
@@ -195,6 +196,7 @@ real_derived:
     - constructor-initialized eight-coin MAX_COINS boundary setup
     - factory-delegated three-coin get_dy, get_dx, calc_token_amount deposit and withdraw, and dynamic_fee quote views
     - factory-delegated five-coin midpoint get_dy quote
+    - factory-delegated five-coin midpoint get_dx quote
     - factory-delegated eight-coin get_dy quote at MAX_COINS
     - factory-delegated eight-coin get_dx quote at MAX_COINS
     - factory-delegated eight-coin calc_token_amount deposit and withdraw quotes at MAX_COINS
@@ -282,6 +284,9 @@ scenarios:
   - name: get_dx_three_coin
     call: "get_dx(0, 2, 20_000) after initial liquidity on a three-coin deployment"
     expected: "quotes required input through the benchmark views implementation using constructor-driven N_COINS quote math"
+  - name: get_dx_five_coin_midpoint
+    call: "get_dx(1, 3, 20_000) after initial liquidity on a five-coin deployment"
+    expected: "quotes midpoint-pair required input through the benchmark views implementation using constructor-driven N_COINS quote math"
   - name: get_dx_eight_coin
     call: "get_dx(0, 7, 20_000) after initial liquidity on an eight-coin deployment"
     expected: "quotes required input through the benchmark views implementation at the upstream MAX_COINS boundary"
