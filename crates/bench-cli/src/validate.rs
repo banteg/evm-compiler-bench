@@ -742,6 +742,7 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
                 path.display()
             );
         }
+        let mut seen_variants = BTreeSet::new();
         for variant in variants {
             for pointer in [
                 "/language",
@@ -757,6 +758,8 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             require_enum(variant, "/language", &["solidity", "vyper"], path)?;
             require_enum(variant, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
+            validate_real_derived_source_variant_path(variant, path)?;
+            validate_real_derived_unique_source_variant(variant, &mut seen_variants, path)?;
             validate_real_derived_source_variant_profile(variant, &profile_metadata, path)?;
             validate_real_derived_source_variant_declared_profile(
                 variant,
@@ -765,6 +768,89 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
                 path,
             )?;
         }
+    }
+    Ok(())
+}
+
+fn validate_real_derived_source_variant_path(variant: &Value, path: &Path) -> Result<()> {
+    let profile_id = string_at(variant, "/profile_id", path)?;
+    let source_path = string_at(variant, "/source_path", path)?;
+    validate_materialized_source_variant_path(profile_id, source_path, path, "source variant")
+}
+
+fn validate_real_derived_row_source_path(row: &Value, path: &Path) -> Result<()> {
+    let profile_id = string_at(row, "/profile_id", path)?;
+    let source_path = string_at(row, "/source_path", path)?;
+    validate_materialized_source_variant_path(profile_id, source_path, path, "row source")
+}
+
+fn validate_materialized_source_variant_path(
+    profile_id: &str,
+    source_path: &str,
+    path: &Path,
+    context: &str,
+) -> Result<()> {
+    let source_path = Path::new(source_path);
+    if source_path.is_absolute() {
+        bail!(
+            "{} real-derived {context} path {} must be relative",
+            path.display(),
+            source_path.display()
+        );
+    }
+    if source_path
+        .components()
+        .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!(
+            "{} real-derived {context} path {} must not escape the repository",
+            path.display(),
+            source_path.display()
+        );
+    }
+    if path_has_component(source_path, "upstream") {
+        bail!(
+            "{} real-derived {context} path {} must not point at an upstream reference",
+            path.display(),
+            source_path.display()
+        );
+    }
+    let expected_prefix = Path::new("target")
+        .join("bench-source-variants")
+        .join(profile_id);
+    if !source_path.starts_with(&expected_prefix) {
+        bail!(
+            "{} real-derived {context} path {} must be under {}",
+            path.display(),
+            source_path.display(),
+            expected_prefix.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_real_derived_unique_source_variant(
+    variant: &Value,
+    seen_variants: &mut BTreeSet<String>,
+    path: &Path,
+) -> Result<()> {
+    let key = [
+        string_at(variant, "/language", path)?,
+        string_at(variant, "/implementation_id", path)?,
+        string_at(variant, "/profile_id", path)?,
+        string_at(variant, "/source_variant", path)?,
+        string_at(variant, "/source_path", path)?,
+        string_at(variant, "/source_hash", path)?,
+        string_at(variant, "/compile_status", path)?,
+    ]
+    .join("\0");
+    if !seen_variants.insert(key) {
+        bail!(
+            "{} duplicate real-derived source variant for profile {} path {}",
+            path.display(),
+            string_at(variant, "/profile_id", path)?,
+            string_at(variant, "/source_path", path)?
+        );
     }
     Ok(())
 }
@@ -1659,6 +1745,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             }
             validate_real_derived_row_lanes(row, path)?;
             validate_real_derived_row_source_profiles(row, path)?;
+            validate_real_derived_row_source_path(row, path)?;
             validate_real_derived_excluded_features(row, path)?;
         }
         Some(other) => bail!("{} unsupported suite {other}", path.display()),
@@ -2222,6 +2309,9 @@ mod tests {
         *compatibility_profile
             .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
             .unwrap() = json!("solidity-0.5");
+        *compatibility_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_path")
+            .unwrap() = json!("target/bench-source-variants/solc-0.5.16-noopt/Pair.sol");
         let mut wrong_language_profile = manifest.clone();
         *wrong_language_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
@@ -2271,6 +2361,34 @@ mod tests {
         *counterpart_variant_profile
             .pointer_mut("/real_derived/benchmarks/0/source_variants/0/profile_id")
             .unwrap() = json!("vyper-latest-none");
+        *counterpart_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_path")
+            .unwrap() = json!("target/bench-source-variants/vyper-latest-none/Pair.vy");
+        let mut upstream_variant_path = manifest.clone();
+        *upstream_variant_path
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_path")
+            .unwrap() = json!(
+            "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol"
+        );
+        let mut escaped_variant_path = manifest.clone();
+        *escaped_variant_path
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_path")
+            .unwrap() = json!("target/bench-source-variants/solc-latest-noopt/../Pair.sol");
+        let mut wrong_profile_variant_path = manifest.clone();
+        *wrong_profile_variant_path
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_path")
+            .unwrap() = json!("target/bench-source-variants/solc-0.5.16-noopt/Pair.sol");
+        let mut duplicate_variant = manifest.clone();
+        let duplicate_entry = duplicate_variant
+            .pointer("/real_derived/benchmarks/0/source_variants/0")
+            .unwrap()
+            .clone();
+        duplicate_variant
+            .pointer_mut("/real_derived/benchmarks/0/source_variants")
+            .unwrap()
+            .as_array_mut()
+            .unwrap()
+            .push(duplicate_entry);
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         super::validate_real_derived_manifest(&compatibility_profile, path).unwrap();
@@ -2287,6 +2405,10 @@ mod tests {
             super::validate_real_derived_manifest(&undeclared_source_variant_profile, path)
                 .is_err()
         );
+        assert!(super::validate_real_derived_manifest(&upstream_variant_path, path).is_err());
+        assert!(super::validate_real_derived_manifest(&escaped_variant_path, path).is_err());
+        assert!(super::validate_real_derived_manifest(&wrong_profile_variant_path, path).is_err());
+        assert!(super::validate_real_derived_manifest(&duplicate_variant, path).is_err());
     }
 
     #[test]

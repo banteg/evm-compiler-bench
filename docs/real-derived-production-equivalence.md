@@ -8,9 +8,10 @@ checked-in implementation path is the modernized source-language original.
 Normalized result rows expose the materialized `source_path` and `source_hash`
 that were compiled for each profile-specific source variant. The run manifest
 records per-benchmark `source_variants` with profile, source variant, path,
-hash, and compile status, while provenance fields `source_path`,
-`source_reference_path`, and `source_blob` identify the vendored upstream
-reference under the implementation's `upstream/` directory.
+hash, and compile status. Compiled variant paths must live under
+`target/bench-source-variants/<profile_id>/...`; provenance fields
+`source_path`, `source_reference_path`, and `source_blob` identify the vendored
+upstream reference under the implementation's `upstream/` directory.
 `cargo run --release -- validate` enforces the reference blob without treating
 that historical source as the compiled comparison artifact.
 Normalized row provenance keeps `comparison_lane` as the benchmark-level lane

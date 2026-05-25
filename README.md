@@ -184,7 +184,9 @@ just zip-design
   result rows include `source_path` plus `source_hash` for the materialized
   source variant actually compiled for the row. The run manifest also records
   per-benchmark `source_variants` with profile, variant, path, hash, and
-  compile status.
+  compile status. These compiled paths must be generated under
+  `target/bench-source-variants/<profile_id>/...`; `upstream/` paths are
+  provenance-only.
 - Normalized real-derived row provenance keeps `comparison_lane` as the
   benchmark-level lane, such as `production_conformance`, and records the
   compiled artifact's side as `implementation_lane`. This keeps latest-syntax

@@ -210,7 +210,10 @@
                     "implementation_id": { "type": "string" },
                     "profile_id": { "type": "string" },
                     "source_variant": { "$ref": "#/$defs/sourceVariantLabel" },
-                    "source_path": { "type": "string" },
+                    "source_path": {
+                      "type": "string",
+                      "pattern": "^target/bench-source-variants/[^/]+/.+"
+                    },
                     "source_hash": { "type": "string" },
                     "compile_status": { "enum": ["ok", "compile_error"] }
                   }
