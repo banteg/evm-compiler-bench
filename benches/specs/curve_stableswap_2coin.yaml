@@ -108,6 +108,7 @@ real_derived:
     - calc_withdraw_one_coin_three_coin
     - calc_withdraw_one_coin_eight_coin
     - remove_one_coin_three_coin
+    - remove_one_coin_three_coin_slippage_reverts
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
     - add_liquidity_too_many_amounts_reverts
@@ -192,7 +193,7 @@ real_derived:
     - imbalanced eight-coin liquidity removal slippage rejection at MAX_COINS
     - imbalanced three-coin liquidity removal with dynamic fees
     - eight-coin price and D oracle decay at MAX_COINS
-    - three-coin one-coin withdrawal and quote paths
+    - three-coin one-coin withdrawal, slippage rejection, and quote paths
     - first liquidity after pre-deposit token donation
     - balanced and imbalanced add liquidity
     - Vyper DynArray[MAX_COINS] amount bounds, including ignored extra entries for deposit, imbalanced-withdrawal, and quote paths
@@ -278,6 +279,9 @@ scenarios:
   - name: remove_one_coin_eight_coin_slippage_reverts
     call: "remove_liquidity_one_coin(10_000, 7, 1_000_000, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "reverts when the endpoint withdrawal amount at the upstream MAX_COINS boundary is below min_amount"
+  - name: remove_one_coin_three_coin_slippage_reverts
+    call: "remove_liquidity_one_coin(10_000, 2, 1_000_000, address(this)) after initial liquidity on a three-coin deployment"
+    expected: "reverts when the constructor-sized three-coin withdrawal amount is below min_amount"
   - name: remove_liquidity_imbalance_eight_coin
     call: "remove_liquidity_imbalance([40_000, 10_000, 25_000, 5_000, 12_000, 8_000, 15_000, 20_000], 250_000, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "burns the required LP amount and applies dynamic fees at the upstream MAX_COINS boundary"
