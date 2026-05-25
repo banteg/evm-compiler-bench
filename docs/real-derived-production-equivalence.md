@@ -33,7 +33,7 @@ layout.
 
 | Benchmark | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- |
-| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Vyper `Bytes[65536]` callback bound vs upstream unbounded `bytes calldata`; full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
+| `uniswap_v2_pair` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus three-coin, five-coin, and eight-coin standard-token coverage. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
@@ -99,10 +99,10 @@ Immediate chips:
 
 Immediate chips:
 
-- Decide whether production equivalence means a full generic NG Solidity port
-  or an explicitly production-equivalent two-coin specialization.
-- If full NG is the target, replace the fixed two-coin arrays and loops with
-  constructor-driven `N_COINS` behavior and add non-two-coin scenarios.
+- Decide whether every NG action must be repeated at each constructor coin
+  count through `MAX_COINS`, or whether the current constructor-driven port
+  plus representative three-, five-, and eight-coin coverage is the intended
+  production-equivalence boundary.
 
 ### `yearn_vault_v3`
 
