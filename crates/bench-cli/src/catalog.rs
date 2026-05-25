@@ -88,7 +88,7 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
             "yearn_vault_v3",
             "YearnVaultV3Real",
             "benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol",
-            "benches/implementations/yearn_vault_v3/vyper/upstream/contracts/VaultV3.vy",
+            "benches/implementations/yearn_vault_v3/vyper/latest/VaultV3.vy",
             provenance_from_spec(include_str!("../../../benches/specs/yearn_vault_v3.yaml")),
         ),
     ]

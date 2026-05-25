@@ -63,7 +63,7 @@ as provenance/reference inputs; benchmarks still marked
 | --- | --- | --- | --- | --- | --- | --- |
 | `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
-| `yearn_vault_v3` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
+| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
 
@@ -136,7 +136,7 @@ Immediate chips:
 
 | Surface | Status | Notes |
 | --- | --- | --- |
-| Upstream vault source | Exact source | `VaultV3.vy` is vendored at the pinned blob. |
+| Vault source-language original | Latest-syntax original | `VaultV3.vy` is a latest-syntax Vyper modernization of the pinned upstream vault source; the pinned upstream file remains provenance/reference input only. |
 | Blueprint/minimal-proxy deployment | Exact source path | The upstream Vyper benchmark is deployed through the blueprint/clone path. |
 | ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, zero/max-uint conversion boundaries, and direct deposit-limit equality are scenario-covered. |
 | ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, permit after chain-id changes, expired permits, and invalid permits are covered. |
@@ -314,8 +314,10 @@ Suggested next chips:
 
 Exact now:
 
-- The Vyper benchmark implementation is the pinned upstream
-  `contracts/VaultV3.vy`.
+- The Vyper benchmark implementation is `VaultV3.vy`, a latest-syntax
+  modernization of the pinned upstream `contracts/VaultV3.vy`.
+- The pinned upstream Vyper source remains vendored as a provenance/reference
+  input.
 - The benchmark deploys the Vyper source through the blueprint/minimal-proxy
   path used by the upstream vault.
 - The Solidity port covers the listed upstream vault API: initialization,

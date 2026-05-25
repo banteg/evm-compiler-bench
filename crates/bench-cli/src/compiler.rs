@@ -1165,6 +1165,9 @@ fn rewrite_vyper_03_pending_reports(source: &str) -> String {
 }
 
 fn rewrite_vyper_03_strategy_maps(source: &str) -> String {
+    if !source.contains("strategies: HashMap[address, Strategy]") {
+        return source.to_string();
+    }
     source
         .replace(
             "strategies: HashMap[address, Strategy]",

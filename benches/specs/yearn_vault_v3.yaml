@@ -95,26 +95,26 @@ real_derived:
   suite: real_derived
   model_kind: real_derived_model
   comparison_lane: production_conformance
-  source_lane: upstream_exact_historical
+  source_lane: latest_syntax_original
   counterpart_lane: fixture_scoped_port
   upstream_project: Yearn Vaults V3
   repository_url: "https://github.com/yearn/yearn-vaults-v3"
   source_commit: "104a2b233bc6d43ba40720d68355b04d2dc31795"
   source_path: "contracts/VaultV3.vy"
   source_language: vyper
-  source_compiler: vyper-0.3.7
+  source_compiler: vyper
   source_profiles:
-    - vyper-0.3.7-default
-    - vyper-0.3.7-none
+    - vyper-latest-gas
+    - vyper-latest-none
   source_contract: VaultV3
   source_blob: "97f4a60dd2485c6400f994e46b442d0424716eed"
   upstream_license: GNU AGPLv3
   checked_at: "2026-05-24"
   production_equivalence: false
-  api_compatibility: "upstream Vyper source is exact and deployed through an EIP-1167 clone; Solidity is an expanded idiomatic port of the upstream vault API but still under parity audit"
+  api_compatibility: "source-language implementation is upstream Yearn Vault V3 behavior modernized to latest Vyper syntax and deployed through an EIP-1167 clone; Solidity is an expanded idiomatic port of the upstream vault API but still under parity audit"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_asset_and_erc4626_strategy"
-  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic port of the upstream vault behavior with management, module, queue, and strategy-accounting surfaces"
+  source_derivation: "Vyper implementation is a latest-syntax modernization of the pinned upstream source; Solidity implementation is an idiomatic port of the upstream vault behavior with management, module, queue, and strategy-accounting surfaces"
   equivalence_scope:
     - upstream Vyper blueprint plus minimal-proxy deployment model
     - ERC4626-style deposit, mint, withdraw, and redeem
@@ -1144,4 +1144,4 @@ scenarios:
     expected: "reverts"
 implementations:
   solidity: "benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol"
-  vyper: "benches/implementations/yearn_vault_v3/vyper/upstream/contracts/VaultV3.vy"
+  vyper: "benches/implementations/yearn_vault_v3/vyper/latest/VaultV3.vy"
