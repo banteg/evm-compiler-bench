@@ -101,6 +101,7 @@ const SOL_0426_LEGACY = 'solc-0.4.26-legacy-runs200';
 const VYPER_0310_GAS = 'vyper-0.3.10-gas';
 const VYPER_GAS = 'vyper-latest-gas';
 const VYPER_GAS_VENOM = 'vyper-latest-gas-venom';
+const HEADLINE_SUITES = new Set(['fixed', 'scale']);
 
 // Pre-compute headline stories ONCE
 function buildHeadlines() {
@@ -109,7 +110,7 @@ function buildHeadlines() {
   const S = 'runtime_bytes_stripped';
 
   const v = (a, b, metric) => {
-    const cmp = Bench.compareProfiles(rows, a, b, metric);
+    const cmp = Bench.compareProfiles(rows, a, b, metric, HEADLINE_SUITES);
     return { ...Bench.summarize(cmp), cmp };
   };
 
@@ -847,7 +848,7 @@ function Methodology() {
     {
       tag: 'C',
       title: 'Idiomatic source comparison',
-      body: 'Headline results compare idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes.'
+      body: 'Headline results compare fixed and scale-suite idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes.'
     },
     {
       tag: 'D',
