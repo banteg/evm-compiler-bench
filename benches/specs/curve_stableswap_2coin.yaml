@@ -104,6 +104,7 @@ real_derived:
     - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
     - exchange_five_coin_midpoint
+    - exchange_five_coin_endpoint
     - exchange_eight_coin_boundary
     - exchange_eight_coin_interior
     - exchange_three_coin_slippage_reverts
@@ -222,7 +223,7 @@ real_derived:
     - standard-token three-coin imbalanced add-liquidity path and slippage rejection
     - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
-    - standard-token five-coin midpoint exchange path
+    - standard-token five-coin midpoint and endpoint exchange paths
     - standard-token five-coin midpoint exchange_received optimistic-transfer path and slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
     - standard-token eight-coin endpoint and interior exchange paths
@@ -323,6 +324,9 @@ scenarios:
   - name: exchange_three_coin
     call: "exchange(0, 2, 25_000, 0, address(this)) after initial liquidity on a three-coin deployment"
     expected: "updates all constructor-sized accounting and oracle slots after a non-two-coin swap"
+  - name: exchange_five_coin_endpoint
+    call: "exchange(0, 4, 25_000, 0, address(this)) after initial liquidity on a five-coin deployment"
+    expected: "updates endpoint constructor-sized balances, dynamic fees, and the endpoint price oracle slot"
   - name: exchange_eight_coin_boundary
     call: "exchange(0, 7, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint coin balances, fees, and the final price oracle slot at the MAX_COINS boundary"
