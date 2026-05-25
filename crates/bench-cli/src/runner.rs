@@ -10,7 +10,12 @@ use crate::{
 };
 use anyhow::{Context, Result, bail};
 use serde_json::json;
-use std::{collections::BTreeMap, fs, path::Path, process::Command};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+    process::Command,
+};
 
 const FAILURE_DIR: &str = "../results/raw/failures";
 const GAS_CACHE_SCHEMA: &str = "gas-v2";
@@ -30,10 +35,10 @@ pub fn run_foundry(
         return Ok(Vec::new());
     }
     let expected_cache = gas_cache_inputs(root, evm_version, compiled, scenarios, use_cache)?;
+    let mut cached = Vec::new();
+    let mut missing_keys = BTreeSet::new();
     if use_cache {
         let mut progress = Progress::new("gas cache", expected_cache.len());
-        let mut cached = Vec::with_capacity(expected_cache.len());
-        let mut all_hit = true;
         for (index, input) in expected_cache.values().enumerate() {
             match cache::lookup::<GasRecord>(
                 root,
@@ -48,18 +53,21 @@ pub fn run_foundry(
                     progress.update(index + 1, "hit");
                 }
                 CacheLookup::Miss(_) => {
-                    all_hit = false;
-                    progress.update(index + 1, "miss; Foundry run required");
-                    break;
+                    missing_keys.insert(input.record_key.clone());
+                    progress.update(index + 1, "miss");
                 }
             }
         }
-        if all_hit {
+        if missing_keys.is_empty() {
             progress.finish(format!("loaded {} rows from cache", cached.len()));
             write_raw_gas_records(root, &cached)?;
             return Ok(cached);
         }
-        progress.finish("cache incomplete; running Foundry");
+        progress.finish(format!(
+            "loaded {} cached rows; running Foundry for {} missing rows",
+            cached.len(),
+            missing_keys.len()
+        ));
     } else {
         eprintln!(
             "gas: cache disabled; running Foundry for {} expected rows",
@@ -67,12 +75,19 @@ pub fn run_foundry(
         );
     }
     clear_generated_shards(root)?;
-    let shards = gas_shards(&compiled.artifacts);
+    let selected_gas_keys = if use_cache { Some(&missing_keys) } else { None };
+    let artifacts = if use_cache {
+        artifacts_for_gas_keys(&compiled.artifacts, &missing_keys)
+    } else {
+        compiled.artifacts.clone()
+    };
+    let include_behavior_checks = !use_cache || cached.is_empty();
+    let shards = gas_shards(&artifacts);
     eprintln!(
         "foundry: generating {} gas test shards for {} artifacts and {} expected rows",
         shards.len(),
-        compiled.artifacts.len(),
-        expected_cache.len()
+        artifacts.len(),
+        selected_gas_keys.map_or(expected_cache.len(), BTreeSet::len)
     );
     let mut records = Vec::new();
     let mut progress = Progress::new("foundry", shards.len());
@@ -85,7 +100,14 @@ pub fn run_foundry(
         let test_path = root.join("foundry/test").join(&test_file);
         fs::write(
             &test_path,
-            generate_test(&contract_name, shard_artifacts, scenarios, &gas_jsonl)?,
+            generate_test(
+                &contract_name,
+                shard_artifacts,
+                scenarios,
+                &gas_jsonl,
+                selected_gas_keys,
+                include_behavior_checks,
+            )?,
         )
         .with_context(|| format!("writing {}", test_path.display()))?;
         progress.update(
@@ -125,15 +147,39 @@ pub fn run_foundry(
     }
     progress.finish(format!("recorded {} gas rows", records.len()));
     annotate_and_store_gas_records(root, &mut records, &expected_cache, use_cache)?;
-    write_raw_gas_records(root, &records)?;
-    eprintln!("foundry: recorded {} gas rows", records.len());
-    Ok(records)
+    if use_cache {
+        cached.extend(records);
+        cached.sort_by(|left, right| {
+            gas_record_key(
+                &left.benchmark_id,
+                &left.implementation_id,
+                &left.profile_id,
+                &left.scenario,
+                left.state_access_profile.as_str(),
+            )
+            .cmp(&gas_record_key(
+                &right.benchmark_id,
+                &right.implementation_id,
+                &right.profile_id,
+                &right.scenario,
+                right.state_access_profile.as_str(),
+            ))
+        });
+        write_raw_gas_records(root, &cached)?;
+        eprintln!("foundry: recorded {} gas rows", cached.len());
+        Ok(cached)
+    } else {
+        write_raw_gas_records(root, &records)?;
+        eprintln!("foundry: recorded {} gas rows", records.len());
+        Ok(records)
+    }
 }
 
 #[derive(Debug, Clone)]
 struct GasCacheInput {
     key: String,
     logical_id: String,
+    record_key: String,
     fingerprint: serde_json::Value,
     lookup_info: CacheInfo,
 }
@@ -166,17 +212,19 @@ fn gas_cache_inputs(
             } else {
                 CacheInfo::disabled()
             };
+            let record_key = gas_record_key(
+                &artifact.benchmark_id,
+                &artifact.implementation_id,
+                &artifact.profile_id,
+                &scenario.name,
+                scenario.state_access_profile.as_str(),
+            );
             inputs.insert(
-                gas_record_key(
-                    &artifact.benchmark_id,
-                    &artifact.implementation_id,
-                    &artifact.profile_id,
-                    &scenario.name,
-                    scenario.state_access_profile.as_str(),
-                ),
+                record_key.clone(),
                 GasCacheInput {
                     key,
                     logical_id,
+                    record_key,
                     fingerprint,
                     lookup_info,
                 },
@@ -184,6 +232,23 @@ fn gas_cache_inputs(
         }
     }
     Ok(inputs)
+}
+
+fn artifacts_for_gas_keys(
+    artifacts: &[CompiledArtifact],
+    selected_keys: &BTreeSet<String>,
+) -> Vec<CompiledArtifact> {
+    artifacts
+        .iter()
+        .filter(|artifact| {
+            let prefix = format!(
+                "{}\0{}\0{}\0",
+                artifact.benchmark_id, artifact.implementation_id, artifact.profile_id
+            );
+            selected_keys.iter().any(|key| key.starts_with(&prefix))
+        })
+        .cloned()
+        .collect()
 }
 
 fn gas_fingerprint(
@@ -362,6 +427,8 @@ fn generate_test(
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
     gas_jsonl: &str,
+    selected_gas_keys: Option<&BTreeSet<String>>,
+    include_behavior_checks: bool,
 ) -> Result<String> {
     if artifacts.is_empty() {
         bail!("no compiled artifacts for Foundry runner");
@@ -442,49 +509,60 @@ fn generate_test(
 
     for (index, artifact) in artifacts.iter().enumerate() {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            write_gas_test(&mut out, index, artifact, scenario);
-        }
-    }
-
-    let baselines = baseline_pairs(artifacts);
-    for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
-        for scenario in &scenarios.get(benchmark_id)?.scenarios {
-            write_diff_test(
-                &mut out,
-                benchmark_id,
-                *solidity_idx,
-                *vyper_idx,
-                artifacts
-                    .get(*solidity_idx)
-                    .context("missing solidity baseline")?,
-                artifacts
-                    .get(*vyper_idx)
-                    .context("missing vyper baseline")?,
-                scenario,
+            let record_key = gas_record_key(
+                &artifact.benchmark_id,
+                &artifact.implementation_id,
+                &artifact.profile_id,
+                &scenario.name,
+                scenario.state_access_profile.as_str(),
             );
+            if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
+                write_gas_test(&mut out, index, artifact, scenario);
+            }
         }
     }
 
-    for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
-        let scenario_file = scenarios.get(benchmark_id)?;
-        if let Some(randomized) = &scenario_file.randomized {
-            write_randomized_diff_test(
-                &mut out,
-                benchmark_id,
-                *solidity_idx,
-                *vyper_idx,
-                randomized,
-            )?;
+    if include_behavior_checks {
+        let baselines = baseline_pairs(artifacts);
+        for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
+            for scenario in &scenarios.get(benchmark_id)?.scenarios {
+                write_diff_test(
+                    &mut out,
+                    benchmark_id,
+                    *solidity_idx,
+                    *vyper_idx,
+                    artifacts
+                        .get(*solidity_idx)
+                        .context("missing solidity baseline")?,
+                    artifacts
+                        .get(*vyper_idx)
+                        .context("missing vyper baseline")?,
+                    scenario,
+                );
+            }
         }
-        for property in &scenario_file.properties {
-            write_property_test(
-                &mut out,
-                benchmark_id,
-                *solidity_idx,
-                *vyper_idx,
-                scenario_file.randomized.as_ref(),
-                property,
-            )?;
+
+        for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
+            let scenario_file = scenarios.get(benchmark_id)?;
+            if let Some(randomized) = &scenario_file.randomized {
+                write_randomized_diff_test(
+                    &mut out,
+                    benchmark_id,
+                    *solidity_idx,
+                    *vyper_idx,
+                    randomized,
+                )?;
+            }
+            for property in &scenario_file.properties {
+                write_property_test(
+                    &mut out,
+                    benchmark_id,
+                    *solidity_idx,
+                    *vyper_idx,
+                    scenario_file.randomized.as_ref(),
+                    property,
+                )?;
+            }
         }
     }
 
