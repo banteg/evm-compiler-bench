@@ -2,6 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EVM Compiler Bench run manifest",
   "type": "object",
+  "$defs": {
+    "sourceVariantLabel": {
+      "enum": [
+        "latest",
+        "solidity-0.4",
+        "solidity-0.5",
+        "solidity-0.6",
+        "solidity-0.7",
+        "solidity-0.8",
+        "vyper-0.2",
+        "vyper-0.3",
+        "vyper-0.4"
+      ]
+    }
+  },
   "required": [
     "run_id",
     "started_at",
@@ -29,7 +44,7 @@
           "id": { "type": "string" },
           "language": { "enum": ["solidity", "vyper"] },
           "compiler": { "type": "string" },
-          "source_variant": { "type": "string" }
+          "source_variant": { "$ref": "#/$defs/sourceVariantLabel" }
         }
       }
     },
@@ -194,7 +209,7 @@
                     "language": { "enum": ["solidity", "vyper"] },
                     "implementation_id": { "type": "string" },
                     "profile_id": { "type": "string" },
-                    "source_variant": { "type": "string" },
+                    "source_variant": { "$ref": "#/$defs/sourceVariantLabel" },
                     "source_path": { "type": "string" },
                     "source_hash": { "type": "string" },
                     "compile_status": { "enum": ["ok", "compile_error"] }

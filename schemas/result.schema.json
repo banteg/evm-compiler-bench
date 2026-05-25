@@ -2,6 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "EVM Compiler Bench result row",
   "type": "object",
+  "$defs": {
+    "sourceVariantLabel": {
+      "enum": [
+        "latest",
+        "solidity-0.4",
+        "solidity-0.5",
+        "solidity-0.6",
+        "solidity-0.7",
+        "solidity-0.8",
+        "vyper-0.2",
+        "vyper-0.3",
+        "vyper-0.4"
+      ]
+    }
+  },
   "required": [
     "status",
     "benchmark_id",
@@ -264,7 +279,7 @@
           "properties": {
             "evmVersion": { "type": "string" },
             "metadataMode": { "enum": ["on", "off"] },
-            "sourceVariant": { "type": "string" }
+            "sourceVariant": { "$ref": "#/$defs/sourceVariantLabel" }
           }
         }
       }
