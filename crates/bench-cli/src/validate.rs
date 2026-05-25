@@ -670,9 +670,11 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
                 path.display()
             );
         }
-        if source_lane == "latest_syntax_original" && !profile.starts_with(latest_prefix) {
+        if matches!(source_lane, "latest_syntax_original" | "latest_idiomatic")
+            && !profile.starts_with(latest_prefix)
+        {
             bail!(
-                "{} latest_syntax_original manifest entry requires source profile {profile} to use {latest_prefix} prefix",
+                "{} {source_lane} manifest entry requires source profile {profile} to use {latest_prefix} prefix",
                 path.display()
             );
         }
@@ -1012,11 +1014,57 @@ fn validate_source_profiles(
                 provenance.source_language.as_str()
             );
         }
-        if provenance.source_lane == ComparisonLane::LatestSyntaxOriginal
-            && !profile.starts_with(latest_source_profile_prefix)
+        if matches!(
+            provenance.source_lane,
+            ComparisonLane::LatestSyntaxOriginal | ComparisonLane::LatestIdiomatic
+        ) && !profile.starts_with(latest_source_profile_prefix)
         {
             bail!(
-                "{} latest_syntax_original source_lane requires source profile {profile} to use {latest_source_profile_prefix} prefix",
+                "{} {} source_lane requires source profile {profile} to use {latest_source_profile_prefix} prefix",
+                path.display(),
+                provenance.source_lane.as_str()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn latest_source_profile_prefix(source_language: &str, path: &Path) -> Result<&'static str> {
+    match source_language {
+        "solidity" => Ok("solc-latest"),
+        "vyper" => Ok("vyper-latest"),
+        other => bail!(
+            "{} unsupported real-derived source_language {other}",
+            path.display()
+        ),
+    }
+}
+
+fn source_lane_requires_latest_profiles(source_lane: &str) -> bool {
+    matches!(source_lane, "latest_syntax_original" | "latest_idiomatic")
+}
+
+fn validate_latest_real_derived_source_profiles(
+    source_lane: &str,
+    source_language: &str,
+    profiles: &[Value],
+    path: &Path,
+    context: &str,
+) -> Result<()> {
+    if !source_lane_requires_latest_profiles(source_lane) {
+        return Ok(());
+    }
+    let expected_prefix = latest_source_profile_prefix(source_language, path)?;
+    for profile in profiles {
+        let profile = profile.as_str().with_context(|| {
+            format!(
+                "{} JSON pointer /provenance/source_profiles must be a string array",
+                path.display()
+            )
+        })?;
+        if !profile.starts_with(expected_prefix) {
+            bail!(
+                "{} {source_lane} {context} requires source profile {profile} to use {expected_prefix} prefix",
                 path.display()
             );
         }
@@ -1374,18 +1422,7 @@ fn validate_real_derived_row_lanes(row: &Value, path: &Path) -> Result<()> {
 
 fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result<()> {
     let source_lane = string_at(row, "/provenance/source_lane", path)?;
-    if source_lane != "latest_syntax_original" {
-        return Ok(());
-    }
     let source_language = string_at(row, "/provenance/source_language", path)?;
-    let expected_prefix = match source_language {
-        "solidity" => "solc-latest",
-        "vyper" => "vyper-latest",
-        other => bail!(
-            "{} unsupported real-derived source_language {other}",
-            path.display()
-        ),
-    };
     let profiles = row
         .pointer("/provenance/source_profiles")
         .and_then(|value| value.as_array())
@@ -1395,21 +1432,13 @@ fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result
                 path.display()
             )
         })?;
-    for profile in profiles {
-        let profile = profile.as_str().with_context(|| {
-            format!(
-                "{} JSON pointer /provenance/source_profiles must be a string array",
-                path.display()
-            )
-        })?;
-        if !profile.starts_with(expected_prefix) {
-            bail!(
-                "{} latest_syntax_original row requires source profile {profile} to use {expected_prefix} prefix",
-                path.display()
-            );
-        }
-    }
-    Ok(())
+    validate_latest_real_derived_source_profiles(
+        source_lane,
+        source_language,
+        profiles,
+        path,
+        "row",
+    )
 }
 
 fn validate_real_derived_excluded_features(row: &Value, path: &Path) -> Result<()> {
@@ -1707,7 +1736,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_historical_profiles_in_latest_syntax_original_rows() {
+    fn rejects_historical_profiles_in_latest_source_rows() {
         let path = Path::new("results/normalized/results.json");
         let row = json!({
             "provenance": {
@@ -1729,9 +1758,34 @@ mod tests {
                 ]
             }
         });
+        let latest_idiomatic_row = json!({
+            "provenance": {
+                "source_lane": "latest_idiomatic",
+                "source_language": "vyper",
+                "source_profiles": [
+                    "vyper-latest-gas",
+                    "vyper-latest-none"
+                ]
+            }
+        });
+        let stale_latest_idiomatic_row = json!({
+            "provenance": {
+                "source_lane": "latest_idiomatic",
+                "source_language": "vyper",
+                "source_profiles": [
+                    "vyper-latest-gas",
+                    "vyper-0.3.10-gas"
+                ]
+            }
+        });
 
         super::validate_real_derived_row_source_profiles(&row, path).unwrap();
+        super::validate_real_derived_row_source_profiles(&latest_idiomatic_row, path).unwrap();
         assert!(super::validate_real_derived_row_source_profiles(&stale_row, path).is_err());
+        assert!(
+            super::validate_real_derived_row_source_profiles(&stale_latest_idiomatic_row, path)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1771,6 +1825,16 @@ mod tests {
         *stale_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
             .unwrap() = json!("solc-0.5.16-noopt");
+        let mut stale_latest_idiomatic_profile = manifest.clone();
+        *stale_latest_idiomatic_profile
+            .pointer_mut("/real_derived/benchmarks/0/comparison_lane")
+            .unwrap() = json!("latest_idiomatic");
+        *stale_latest_idiomatic_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_lane")
+            .unwrap() = json!("latest_idiomatic");
+        *stale_latest_idiomatic_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
+            .unwrap() = json!("solc-0.5.16-noopt");
         let mut stale_lane = manifest.clone();
         *stale_lane
             .pointer_mut("/real_derived/benchmarks/0/source_lane")
@@ -1786,6 +1850,9 @@ mod tests {
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
+        assert!(
+            super::validate_real_derived_manifest(&stale_latest_idiomatic_profile, path).is_err()
+        );
         assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&comparison_as_source_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&contradictory_equivalence, path).is_err());
@@ -1864,7 +1931,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_historical_profiles_for_latest_syntax_original_sources() {
+    fn rejects_historical_profiles_for_latest_source_lanes() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
             .nth(2)
@@ -1873,7 +1940,7 @@ mod tests {
             .into_iter()
             .find(|benchmark| benchmark.id == "uniswap_v2_pair")
             .unwrap();
-        let provenance = benchmark.provenance.clone().unwrap();
+        let mut provenance = benchmark.provenance.clone().unwrap();
         let real = serde_yaml::from_str::<serde_yaml::Value>(
             r#"
 source_profiles:
@@ -1883,6 +1950,20 @@ source_profiles:
         )
         .unwrap();
 
+        let err = super::validate_source_profiles(
+            root,
+            Path::new("benches/specs/uniswap_v2_pair.yaml"),
+            &real,
+            &provenance,
+        )
+        .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("requires source profile solc-0.5.16-noopt")
+        );
+
+        provenance.source_lane = crate::models::ComparisonLane::LatestIdiomatic;
         let err = super::validate_source_profiles(
             root,
             Path::new("benches/specs/uniswap_v2_pair.yaml"),

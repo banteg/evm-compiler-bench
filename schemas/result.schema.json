@@ -216,7 +216,9 @@
           "if": {
             "required": ["source_lane", "source_language"],
             "properties": {
-              "source_lane": { "const": "latest_syntax_original" },
+              "source_lane": {
+                "enum": ["latest_syntax_original", "latest_idiomatic"]
+              },
               "source_language": { "const": "solidity" }
             }
           },
@@ -232,7 +234,9 @@
           "if": {
             "required": ["source_lane", "source_language"],
             "properties": {
-              "source_lane": { "const": "latest_syntax_original" },
+              "source_lane": {
+                "enum": ["latest_syntax_original", "latest_idiomatic"]
+              },
               "source_language": { "const": "vyper" }
             }
           },
