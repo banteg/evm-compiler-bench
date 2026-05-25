@@ -1610,6 +1610,12 @@ fn all_helper_functions() -> &'static str {
         return address(pairDeps[target].token1);
     }
 
+    function benchUniswapTokenBalances(address target, address owner) external view returns (uint256, uint256) {
+        PairDeps storage deps = pairDeps[target];
+        require(address(deps.token0) != address(0), "pair deps");
+        return (deps.token0.balanceOf(owner), deps.token1.balanceOf(owner));
+    }
+
     function benchUniswapToken0GetterId(address target) external view returns (uint256) {
         (bool ok, bytes memory rawToken) = target.staticcall(abi.encodeWithSignature("token0()"));
         require(ok, "pair token0");

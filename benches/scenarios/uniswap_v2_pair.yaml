@@ -347,7 +347,12 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("burn(address)", address(0))'
     expect_success: true
-    observers: *pair_observers
+    observers:
+      - data: 'abi.encodeWithSignature("getReserves()")'
+      - data: 'abi.encodeWithSignature("totalSupply()")'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", {target})'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapTokenBalances(address,address)", {target}, address(0))'
   - name: burn_without_staged_liquidity_reverts
     state_access_profile: warm
     setup:
@@ -481,6 +486,23 @@ scenarios:
       data: 'abi.encodeWithSignature("skim(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: skim_zero_receiver
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
+    measured:
+      data: 'abi.encodeWithSignature("skim(address)", address(0))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("getReserves()")'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapTokenBalances(address,address)", {target}, address(0))'
   - name: skim_no_return_tokens
     state_access_profile: mixed
     setup:
