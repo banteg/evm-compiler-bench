@@ -486,8 +486,35 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
                 manifest_path.display()
             );
         }
+        validate_real_derived_manifest(&value, &manifest_path)?;
     }
     Ok(rows)
+}
+
+fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
+    let benchmarks = value
+        .pointer("/real_derived/benchmarks")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} real_derived.benchmarks must be an array",
+                path.display()
+            )
+        })?;
+    for benchmark in benchmarks {
+        for pointer in [
+            "/benchmark_id",
+            "/source_lane",
+            "/counterpart_lane",
+            "/source_path",
+            "/source_reference_path",
+            "/source_blob",
+        ] {
+            require_string_pointer(benchmark, pointer, path)?;
+        }
+        require_bool_pointer(benchmark, "/production_equivalence", path)?;
+    }
+    Ok(())
 }
 
 fn validate_benchmark_spec(root: &Path, value: &serde_yaml::Value, path: &Path) -> Result<()> {
@@ -900,11 +927,9 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 "/provenance/source_derivation",
                 "/provenance/port_language",
                 "/provenance/port_version",
+                "/provenance/source_reference_path",
             ] {
                 require_string_pointer(row, pointer, path)?;
-            }
-            if row.pointer("/provenance/source_reference_path").is_some() {
-                require_string_pointer(row, "/provenance/source_reference_path", path)?;
             }
             require_bool_pointer(row, "/provenance/production_equivalence", path)?;
             require_bool_pointer(row, "/provenance/storage_layout_compatibility", path)?;
