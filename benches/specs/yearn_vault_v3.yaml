@@ -95,6 +95,8 @@ real_derived:
   suite: real_derived
   model_kind: real_derived_model
   comparison_lane: fixture_scoped_port
+  source_lane: upstream_exact_historical
+  counterpart_lane: fixture_scoped_port
   upstream_project: Yearn Vaults V3
   repository_url: "https://github.com/yearn/yearn-vaults-v3"
   source_commit: "104a2b233bc6d43ba40720d68355b04d2dc31795"

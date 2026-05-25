@@ -50,6 +50,8 @@ real_derived:
   suite: real_derived
   model_kind: real_derived_model
   comparison_lane: fixture_scoped_port
+  source_lane: upstream_exact_historical
+  counterpart_lane: fixture_scoped_port
   upstream_project: Curve Stableswap NG
   repository_url: "https://github.com/curvefi/stableswap-ng"
   source_commit: "2abe778f40206a6c0fd108a0a53ad3266cbedeee"

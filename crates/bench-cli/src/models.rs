@@ -42,6 +42,8 @@ impl BenchmarkSuite {
 pub struct Provenance {
     pub model_kind: String,
     pub comparison_lane: ComparisonLane,
+    pub source_lane: ComparisonLane,
+    pub counterpart_lane: ComparisonLane,
     pub upstream_project: String,
     pub repository_url: String,
     pub source_commit: String,
@@ -90,9 +92,9 @@ impl ComparisonLane {
 impl Provenance {
     pub fn lane_for_language(&self, language: Language) -> ComparisonLane {
         if language == self.source_language {
-            ComparisonLane::UpstreamExactHistorical
+            self.source_lane
         } else {
-            self.comparison_lane
+            self.counterpart_lane
         }
     }
 }

@@ -506,6 +506,13 @@ fn validate_real_derived_spec(
         path,
         provenance.comparison_lane.as_str(),
     )?;
+    require_yaml_string(real, "source_lane", path, provenance.source_lane.as_str())?;
+    require_yaml_string(
+        real,
+        "counterpart_lane",
+        path,
+        provenance.counterpart_lane.as_str(),
+    )?;
     require_yaml_string(real, "upstream_project", path, &provenance.upstream_project)?;
     require_yaml_string(real, "repository_url", path, &provenance.repository_url)?;
     require_yaml_string(real, "source_commit", path, &provenance.source_commit)?;

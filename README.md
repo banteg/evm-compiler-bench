@@ -156,11 +156,13 @@ just zip-design
   as compile failures.
 - Assembly-heavy or mechanically matched variants should be treated as
   diagnostic comparators, not as the primary report lane.
-- Benchmark specs make the comparison lane explicit: `latest_idiomatic` is the
-  headline lane, `upstream_exact_historical` is for pinned historical protocol
-  source, `diagnostic_layout_matched` is for manual parity tricks, and
+- Benchmark specs make lanes explicit: `latest_idiomatic` is the headline
+  lane, `upstream_exact_historical` is for pinned historical protocol source,
+  `diagnostic_layout_matched` is for manual parity tricks, and
   `fixture_scoped_port` is for real-contract behavior over deterministic
-  harness dependencies.
+  harness dependencies. Real-derived specs distinguish `source_lane` from
+  `counterpart_lane`; pinned upstream-historical sources are not treated as
+  latest-stable shootout sources.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Scoped or partial counterpart-language ports are
