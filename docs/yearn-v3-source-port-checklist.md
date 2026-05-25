@@ -125,7 +125,7 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Strategy max-deposit zero, limited-deposit, minimum-idle clipping and no-available-idle early return, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, plain strategy loss, self-report gain/loss/refunds including zero-effective clipping, self-report idle gain with accountant fees/refunds, third-party accountant refund state mutation, fee/refund clipping including zero-effective refunds, gain plus clipped refund locking, gain that moves current debt above max debt, protocol-fee splits on gain and loss reports, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-loss fee recalculation, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports with accountant effects, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, plain strategy loss, self-report gain/loss/refunds including zero-effective clipping, self-report idle gain with accountant fees/refunds, third-party accountant refund state mutation, fee/refund clipping including zero-effective refunds, gain plus clipped refund locking, gain that moves current debt above max debt, protocol-fee splits on gain and loss reports, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive and net-loss fee/refund paths, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, partial-unlock profit/loss reports with accountant effects, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 
@@ -136,5 +136,5 @@ These items should be closed before flipping `yearn_vault_v3` to
 
 - Add any remaining adversarial strategy report value combinations beyond the
   covered current-debt-above-max-debt, net-positive/exact-offset/net-negative mixed loss/fee/refund,
-  gain/fee equality, gain/fee/refund exact offset, and gain-with-refund fee-recalculation,
+  gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive, and gain-with-refund fee-recalculation,
   net-loss, self-report, partial-unlock with accountant effects, and accountant-mutation paths.
