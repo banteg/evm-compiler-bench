@@ -387,5 +387,23 @@
         "scenario_status_ok": { "type": "boolean" }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["suite"],
+        "properties": {
+          "suite": { "const": "real_derived" }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_path": {
+            "type": "string",
+            "pattern": "^target/bench-source-variants/[^/]+/.+"
+          }
+        }
+      }
+    }
+  ]
 }
