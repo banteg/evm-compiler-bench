@@ -500,6 +500,12 @@ fn validate_real_derived_spec(
         .with_context(|| format!("{} missing real_derived metadata", path.display()))?;
     require_yaml_string(real, "suite", path, BenchmarkSuite::RealDerived.as_str())?;
     require_yaml_string(real, "model_kind", path, &provenance.model_kind)?;
+    require_yaml_string(
+        real,
+        "comparison_lane",
+        path,
+        provenance.comparison_lane.as_str(),
+    )?;
     require_yaml_string(real, "upstream_project", path, &provenance.upstream_project)?;
     require_yaml_string(real, "repository_url", path, &provenance.repository_url)?;
     require_yaml_string(real, "source_commit", path, &provenance.source_commit)?;
@@ -733,6 +739,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             require_null(row, "/generated/scenario_hash", path)?;
             for pointer in [
                 "/provenance/model_kind",
+                "/provenance/comparison_lane",
                 "/provenance/upstream_project",
                 "/provenance/repository_url",
                 "/provenance/source_commit",
@@ -751,6 +758,17 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             }
             require_bool_pointer(row, "/provenance/production_equivalence", path)?;
             require_bool_pointer(row, "/provenance/storage_layout_compatibility", path)?;
+            require_enum(
+                row,
+                "/provenance/comparison_lane",
+                &[
+                    "upstream_exact_historical",
+                    "latest_idiomatic",
+                    "diagnostic_layout_matched",
+                    "fixture_scoped_port",
+                ],
+                path,
+            )?;
             require_enum(
                 row,
                 "/provenance/source_language",

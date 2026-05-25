@@ -1,4 +1,4 @@
-# pragma version >=0.4.3,<0.6.0
+# pragma version >=0.4.3,<0.5.0
 
 saltValue: public(HashMap[bytes32, uint256])
 ADDRESS_MODULUS: constant(uint256) = 1461501637330902918203684832716283019655932542976

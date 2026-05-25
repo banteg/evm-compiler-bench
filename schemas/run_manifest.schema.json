@@ -84,6 +84,7 @@
               "source_language",
               "source_contract",
               "model_kind",
+              "comparison_lane",
               "production_equivalence",
               "api_compatibility",
               "storage_layout_compatibility",
@@ -107,6 +108,14 @@
               "upstream_license": { "type": "string" },
               "checked_at": { "type": "string" },
               "model_kind": { "type": "string" },
+              "comparison_lane": {
+                "enum": [
+                  "upstream_exact_historical",
+                  "latest_idiomatic",
+                  "diagnostic_layout_matched",
+                  "fixture_scoped_port"
+                ]
+              },
               "production_equivalence": { "type": "boolean" },
               "api_compatibility": { "type": "string" },
               "storage_layout_compatibility": { "type": "boolean" },

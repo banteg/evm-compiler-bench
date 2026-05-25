@@ -31,6 +31,7 @@ abi:
 real_derived:
   suite: real_derived
   model_kind: real_derived_model
+  comparison_lane: fixture_scoped_port
   upstream_project: Uniswap V2 Core
   repository_url: "https://github.com/Uniswap/v2-core"
   source_commit: "6a9e7c97860676e0992f22a49665760444c1cdf5"

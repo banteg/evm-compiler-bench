@@ -1,4 +1,4 @@
-# pragma version >=0.4.3,<0.6.0
+# pragma version >=0.4.3,<0.5.0
 
 reserve0: public(uint256)
 reserve1: public(uint256)

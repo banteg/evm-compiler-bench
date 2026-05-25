@@ -51,6 +51,14 @@
         "source_blob": { "type": ["string", "null"] },
         "upstream_license": { "type": "string" },
         "checked_at": { "type": "string" },
+        "comparison_lane": {
+          "enum": [
+            "upstream_exact_historical",
+            "latest_idiomatic",
+            "diagnostic_layout_matched",
+            "fixture_scoped_port"
+          ]
+        },
         "port_language": { "enum": ["solidity", "vyper"] },
         "port_version": { "type": "string" },
         "equivalence_scope": { "type": "array", "items": { "type": "string" } },

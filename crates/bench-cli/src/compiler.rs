@@ -694,7 +694,7 @@ fn source_path_for_profile(
                 return Ok(source_path);
             };
             let source = fs::read_to_string(&source_path)?;
-            if !source.contains("pragma solidity ^0.8.30;") {
+            if !source.contains("pragma solidity ^0.8.35;") {
                 return Ok(source_path);
             }
             let transformed = transform_solidity_source(&source, variant)
@@ -707,7 +707,7 @@ fn source_path_for_profile(
                 return Ok(source_path);
             };
             let source = fs::read_to_string(&source_path)?;
-            if !source.contains("# pragma version >=0.4.3,<0.6.0") {
+            if !source.contains("# pragma version >=0.4.3,<0.5.0") {
                 return Ok(source_path);
             }
             let transformed = transform_vyper_source(&source, variant)
@@ -765,7 +765,7 @@ fn transform_solidity_source(source: &str, variant: &str) -> Result<String> {
 }
 
 fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
-    source.replace("pragma solidity ^0.8.30;", pragma)
+    source.replace("pragma solidity ^0.8.35;", pragma)
 }
 
 fn rewrite_solidity_pre_08(source: &str) -> String {
@@ -837,14 +837,14 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
     let source = match variant {
         "vyper-0.4" => {
             let source = source.replace(
-                "# pragma version >=0.4.3,<0.6.0",
+                "# pragma version >=0.4.3,<0.5.0",
                 "# pragma version >=0.4.0,<0.5.0",
             );
             rewrite_vyper_event_logs(&source)
         }
         "vyper-0.3" => {
             let mut source = source.replace(
-                "# pragma version >=0.4.3,<0.6.0",
+                "# pragma version >=0.4.3,<0.5.0",
                 "# pragma version >=0.3.10,<0.4.0",
             );
             source = source.replace("@deploy", "@external");
@@ -858,7 +858,7 @@ fn transform_vyper_source(source: &str, variant: &str) -> Result<String> {
         }
         "vyper-0.2" => {
             let mut source = source.replace(
-                "# pragma version >=0.4.3,<0.6.0",
+                "# pragma version >=0.4.3,<0.5.0",
                 "# pragma version >=0.2.16,<0.3.0",
             );
             source = source.replace("@deploy", "@external");
@@ -1406,7 +1406,7 @@ mod tests {
         fs::create_dir(&lib_dir).unwrap();
         fs::write(
             &main,
-            "pragma solidity ^0.8.30; import './lib/Lib.sol'; contract Main {}",
+            "pragma solidity ^0.8.35; import './lib/Lib.sol'; contract Main {}",
         )
         .unwrap();
         fs::write(
@@ -1430,10 +1430,10 @@ mod tests {
     fn vyper_fingerprint_uses_single_source_file() {
         let dir = tempfile::tempdir().unwrap();
         let main = dir.path().join("Main.vy");
-        fs::write(&main, "# pragma version >=0.4.3,<0.6.0\n").unwrap();
+        fs::write(&main, "# pragma version >=0.4.3,<0.5.0\n").unwrap();
         fs::write(
             dir.path().join("Other.vy"),
-            "# pragma version >=0.4.3,<0.6.0\n",
+            "# pragma version >=0.4.3,<0.5.0\n",
         )
         .unwrap();
 
@@ -1446,7 +1446,7 @@ mod tests {
 
     #[test]
     fn rewrites_vyper_03_compatibility_syntax() {
-        let source = "# pragma version >=0.4.3,<0.6.0\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4]) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    return keccak256(abi_encode(4 // 2))\n";
+        let source = "# pragma version >=0.4.3,<0.5.0\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4]) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    return keccak256(abi_encode(4 // 2))\n";
         let rewritten = transform_vyper_source(source, "vyper-0.3").unwrap();
         assert!(rewritten.contains("# pragma version >=0.3.10,<0.4.0"));
         assert!(rewritten.contains("@external\ndef __init__"));
@@ -1457,7 +1457,7 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.30;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
         let rewritten = transform_solidity_source(source, "solidity-0.4").unwrap();
         assert!(rewritten.contains("pragma solidity >=0.4.26 <0.5.0;"));
         assert!(rewritten.contains("10000000000"));
@@ -1473,7 +1473,7 @@ mod tests {
 
     #[test]
     fn rewrites_vyper_02_compatibility_syntax() {
-        let source = "# pragma version >=0.4.3,<0.6.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
+        let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
         let rewritten = transform_vyper_source(source, "vyper-0.2").unwrap();
         assert!(rewritten.contains("# pragma version >=0.2.16,<0.3.0"));
         assert!(rewritten.contains("@view\ndef getReserves() -> (uint256, uint256, uint256):"));
@@ -1488,7 +1488,7 @@ mod tests {
 
     #[test]
     fn rewrites_vyper_03_struct_constructor_assignments() {
-        let source = "# pragma version >=0.4.3,<0.6.0\n\nstruct Strategy:\n    activation: uint256\n    currentDebt: uint256\n    maxDebt: uint256\n    balance: uint256\n\nstruct PendingReport:\n    gain: uint256\n    loss: uint256\n\nstrategies: HashMap[address, Strategy]\npendingReports: HashMap[address, PendingReport]\n\n@external\ndef f(strategy: address, gain: uint256, loss: uint256):\n    self.strategies[strategy].activation = 1\n    self.strategies[strategy].currentDebt += gain\n    self.strategies[strategy].maxDebt = loss\n    self.strategies[strategy].balance += gain\n    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)\n    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)\n";
+        let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    activation: uint256\n    currentDebt: uint256\n    maxDebt: uint256\n    balance: uint256\n\nstruct PendingReport:\n    gain: uint256\n    loss: uint256\n\nstrategies: HashMap[address, Strategy]\npendingReports: HashMap[address, PendingReport]\n\n@external\ndef f(strategy: address, gain: uint256, loss: uint256):\n    self.strategies[strategy].activation = 1\n    self.strategies[strategy].currentDebt += gain\n    self.strategies[strategy].maxDebt = loss\n    self.strategies[strategy].balance += gain\n    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)\n    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)\n";
         let rewritten = transform_vyper_source(source, "vyper-0.3").unwrap();
         assert!(rewritten.contains("strategyActivation: HashMap[address, uint256]"));
         assert!(rewritten.contains("strategyCurrentDebt: HashMap[address, uint256]"));

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.35;
 
 contract MerkleVerifier {
     function verify(bytes32[] calldata proof, bytes32 root, bytes32 leaf) external pure returns (bool) {

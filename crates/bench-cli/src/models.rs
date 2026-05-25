@@ -41,6 +41,7 @@ impl BenchmarkSuite {
 #[serde(deny_unknown_fields)]
 pub struct Provenance {
     pub model_kind: String,
+    pub comparison_lane: ComparisonLane,
     pub upstream_project: String,
     pub repository_url: String,
     pub source_commit: String,
@@ -61,6 +62,26 @@ pub struct Provenance {
     pub mock_assumptions: Vec<String>,
     pub included_features: Vec<String>,
     pub excluded_features: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ComparisonLane {
+    UpstreamExactHistorical,
+    LatestIdiomatic,
+    DiagnosticLayoutMatched,
+    FixtureScopedPort,
+}
+
+impl ComparisonLane {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::UpstreamExactHistorical => "upstream_exact_historical",
+            Self::LatestIdiomatic => "latest_idiomatic",
+            Self::DiagnosticLayoutMatched => "diagnostic_layout_matched",
+            Self::FixtureScopedPort => "fixture_scoped_port",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

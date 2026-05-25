@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.35;
 
 contract Eip1167CodehashBookkeeping {
     mapping(bytes32 => uint256) public cloneValue;

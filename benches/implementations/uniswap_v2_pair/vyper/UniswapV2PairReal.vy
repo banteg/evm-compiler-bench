@@ -1,4 +1,4 @@
-# pragma version >=0.4.3,<0.6.0
+# pragma version >=0.4.3,<0.5.0
 
 interface ERC20:
     def balanceOf(owner: address) -> uint256: view

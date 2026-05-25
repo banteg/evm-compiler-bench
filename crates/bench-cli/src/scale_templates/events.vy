@@ -1,4 +1,4 @@
-# pragma version >=0.4.3,<0.6.0
+# pragma version >=0.4.3,<0.5.0
 
 event Tick:
     index: indexed(uint256)
