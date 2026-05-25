@@ -285,11 +285,13 @@ contract BenchUniswapCreate2Factory {
     address public feeToSetter;
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
+    bytes internal pairCode;
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 
-    constructor() {
+    constructor(bytes memory code) {
         feeToSetter = msg.sender;
+        pairCode = code;
     }
 
     function allPairsLength() external view returns (uint256) {
@@ -306,15 +308,13 @@ contract BenchUniswapCreate2Factory {
         feeToSetter = newFeeToSetter;
     }
 
-    function deployPair(bytes memory code, bytes32, address tokenA, address tokenB)
-        external
-        returns (address pair)
-    {
+    function createPair(address tokenA, address tokenB) external returns (address pair) {
         require(tokenA != tokenB, "UniswapV2: IDENTICAL_ADDRESSES");
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "UniswapV2: ZERO_ADDRESS");
         require(getPair[token0][token1] == address(0), "UniswapV2: PAIR_EXISTS");
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        bytes memory code = pairCode;
         assembly {
             pair := create2(0, add(code, 0x20), mload(code), salt)
         }
@@ -697,4 +697,3 @@ contract BenchYearnWithdrawLimitModule {
         return limit;
     }
 }
-

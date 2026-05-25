@@ -672,7 +672,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("            uniswapToken1 = new BenchERC20();\n");
         out.push_str("            uniswapFlashCallee = new BenchUniswapFlashCallee();\n");
         out.push_str("            uniswapReentrantCallee = new BenchUniswapReentrantCallee();\n");
-        out.push_str("            uniswapFactory = _uniswapCreate2Factory();\n");
+        out.push_str("            uniswapFactory = new BenchUniswapCreate2Factory(code);\n");
         out.push_str("        } else {\n");
         out.push_str("            require(deploymentVariant == 0, \"uniswap variant\");\n");
         out.push_str("        }\n");
@@ -688,7 +688,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        target = _deployMinimalProxy(implementation);\n");
     } else if artifact.benchmark_id == "uniswap_v2_pair" {
         out.push_str("        if (deploymentVariant == 1) {\n");
-        out.push_str("            target = uniswapFactory.deployPair(code, keccak256(abi.encode(SALT, keccak256(code))), address(uniswapToken0), address(uniswapToken1));\n");
+        out.push_str("            target = uniswapFactory.createPair(address(uniswapToken0), address(uniswapToken1));\n");
         out.push_str("        } else {\n");
         out.push_str("            target = _deploy(code);\n");
         out.push_str("        }\n");
@@ -729,7 +729,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     }
     if artifact.benchmark_id == "uniswap_v2_pair" {
         out.push_str("        if (deploymentVariant == 1) {\n");
-        out.push_str("            pairDeps[target] = PairDeps(uniswapToken0, uniswapToken1, uniswapFlashCallee, uniswapReentrantCallee);\n");
+        out.push_str("            pairDeps[target] = PairDeps(uniswapToken0, uniswapToken1, uniswapFlashCallee, uniswapReentrantCallee, uniswapFactory);\n");
         out.push_str("        }\n");
     }
     out.push_str("    }\n\n");

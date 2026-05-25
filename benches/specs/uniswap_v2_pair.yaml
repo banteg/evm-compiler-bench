@@ -149,7 +149,7 @@ real_derived:
     - permit_expired_reverts
     - permit_invalid_reverts
   mock_assumptions:
-    - benchmark harness deploys standard ERC20 test tokens and uses a bytecode-injected factory helper that mirrors upstream pair creation state
+    - benchmark harness deploys standard ERC20 test tokens and uses a factory helper constructed with the active pair bytecode that mirrors upstream pair creation state
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
     - false-return ERC20 coverage uses harness tokens that update balances but explicitly return false
     - token transfers into the pair are staged with harness mints before measured calls
@@ -180,7 +180,7 @@ real_derived:
     - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token balance/allowance/nonce reads, LP-token approve/transfer/transferFrom, malformed swap head, missing dynamic calldata tail, short and overlapping dynamic calldata payloads, and truncated permit payloads including signature-tail truncation
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
-    - upstream UniswapV2Factory createPair ABI is represented by a bytecode-injected deployPair harness hook so both language artifacts can be deployed through the same CREATE2 path
+    - upstream UniswapV2Factory createPair behavior is represented by a benchmark factory helper constructed with the active pair bytecode so both language artifacts can be deployed through the same CREATE2 path
     - exhaustive revert-data parity and ABI-boundary audit outside the listed representative malformed calldata scenarios
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
@@ -223,16 +223,16 @@ scenarios:
     call: "factory allPairs(allPairsLength()) after CREATE2 pair deployment"
     expected: "reverts at the upstream public array getter bounds check"
   - name: factory_duplicate_pair_reverts
-    call: "factory deployPair with an existing token pair"
+    call: "factory createPair with an existing token pair"
     expected: "reverts through the upstream PAIR_EXISTS guard"
   - name: factory_reverse_duplicate_pair_reverts
-    call: "factory deployPair with an existing token pair in reverse token order"
+    call: "factory createPair with an existing token pair in reverse token order"
     expected: "reverts through the upstream PAIR_EXISTS guard because getPair is stored bidirectionally"
   - name: factory_identical_pair_reverts
-    call: "factory deployPair with identical token addresses"
+    call: "factory createPair with identical token addresses"
     expected: "reverts through the upstream IDENTICAL_ADDRESSES guard"
   - name: factory_zero_address_pair_reverts
-    call: "factory deployPair with a zero token address"
+    call: "factory createPair with a zero token address"
     expected: "reverts through the upstream ZERO_ADDRESS guard"
   - name: mint_subsequent
     call: "mint(address(this)) after an existing position and additional token balances"

@@ -87,7 +87,7 @@ ports are production-equivalent.
 
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Factory deployment still uses a bytecode-injected benchmark hook; final ABI/revert audit still pending. |
+| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Factory deployment still uses a benchmark helper constructed with the active pair bytecode; final ABI/revert audit still pending. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
@@ -233,12 +233,13 @@ Remaining:
   payloads above the old 4 KiB port bound and exactly at the current 64 KiB
   bound. This is an accepted idiomatic language-level semantic boundary for the
   primary port, not a reason to introduce a low-level emulation variant.
-- The benchmark CREATE2 fixture now mirrors upstream token sorting,
-  zero/identical/same-order and reverse-order duplicate-pair guards, bidirectional `getPair` storage,
+- The benchmark CREATE2 fixture now exposes the upstream `createPair(address,address)`
+  ABI and mirrors upstream token sorting, zero/identical/same-order and
+  reverse-order duplicate-pair guards, bidirectional `getPair` storage,
   `allPairs` tracking and public getter bounds, `PairCreated`, `feeTo`, and
-  `feeToSetter` authorization including post-transfer old-setter rejection, but
-  its external deployment hook remains bytecode-injected so both language
-  artifacts can share the same factory path.
+  `feeToSetter` authorization including post-transfer old-setter rejection.
+  The factory helper is still constructed with the active pair bytecode so both
+  language artifacts can share the same factory path.
 - The final audit still needs to check revert reasons or decoder failures where
   they matter, and any ABI entry whose boundary behavior is not already covered
   by the representative malformed calldata scenarios, direct getters, permit,
@@ -247,9 +248,9 @@ Remaining:
 
 Suggested next chips:
 
-- Decide whether the remaining bytecode-injected `createPair` deployment hook
-  is acceptable as the factory boundary, or whether this benchmark needs a
-  first-class full factory artifact before retiring the fixture caveat entirely.
+- Decide whether the active-bytecode factory helper is acceptable as the
+  factory boundary, or whether this benchmark needs a first-class full factory
+  artifact before retiring the fixture caveat entirely.
 
 ## `curve_stableswap_2coin`
 
