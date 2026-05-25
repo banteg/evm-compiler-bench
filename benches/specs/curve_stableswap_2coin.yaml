@@ -97,6 +97,7 @@ real_derived:
     - calc_token_amount_eight_coin_withdraw
     - exchange_three_coin
     - exchange_eight_coin_boundary
+    - exchange_eight_coin_interior
     - exchange_three_coin_slippage_reverts
     - exchange_eight_coin_slippage_reverts
     - exchange_received_eight_coin_boundary
@@ -189,7 +190,7 @@ real_derived:
     - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
-    - standard-token eight-coin endpoint exchange path
+    - standard-token eight-coin endpoint and interior exchange paths
     - standard-token eight-coin endpoint exchange slippage rejection
     - standard-token eight-coin endpoint exchange_received optimistic-transfer path and slippage rejection
     - proportional three-coin liquidity removal and slippage rejection
@@ -272,6 +273,9 @@ scenarios:
   - name: exchange_eight_coin_boundary
     call: "exchange(0, 7, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
     expected: "updates endpoint coin balances, fees, and the final price oracle slot at the MAX_COINS boundary"
+  - name: exchange_eight_coin_interior
+    call: "exchange(3, 5, 25_000, 0, address(this)) after initial liquidity on an eight-coin deployment"
+    expected: "updates interior coin balances, fees, and non-endpoint price oracle slots in a MAX_COINS deployment"
   - name: exchange_three_coin_slippage_reverts
     call: "exchange(0, 2, 25_000, 1_000_000, address(this)) after initial liquidity on a three-coin deployment"
     expected: "reverts when the constructor-sized three-coin output is below min_dy"
