@@ -31,6 +31,7 @@ pub fn validate_all(root: &Path) -> Result<ValidationSummary> {
     let specs = validate_specs(root)?;
     let scenario_files = validate_scenarios(root)?;
     validate_latest_source_pragmas(root)?;
+    validate_compiler_profile_source_variants(root)?;
     let (scale_config, _) = load_scale_config(root)?;
     let scale_families = scale_config.families.len();
     let generated_benchmarks = validate_generated_outputs_if_present(root, &scale_config)?;
@@ -180,6 +181,124 @@ fn path_has_component(path: &Path, needle: &str) -> bool {
     let needle = OsStr::new(needle);
     path.components()
         .any(|component| matches!(component, Component::Normal(part) if part == needle))
+}
+
+fn validate_compiler_profile_source_variants(root: &Path) -> Result<()> {
+    for entry in fs::read_dir(root.join("compiler-profiles"))? {
+        let path = entry?.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("toml") {
+            continue;
+        }
+        let text = fs::read_to_string(&path)?;
+        let profile: crate::models::CompilerProfile =
+            toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        let expected = expected_profile_source_variant(&profile, &path)?;
+        match (profile.source_variant.as_deref(), expected) {
+            (Some(actual), Some(expected)) if actual == expected => {}
+            (None, None) => {}
+            (Some(actual), Some(expected)) => bail!(
+                "{} profile {} source_variant {actual} does not match expected {expected}",
+                path.display(),
+                profile.id
+            ),
+            (Some(actual), None) => bail!(
+                "{} latest-source profile {} must not set source_variant {actual}",
+                path.display(),
+                profile.id
+            ),
+            (None, Some(expected)) => bail!(
+                "{} historical profile {} must set source_variant {expected}",
+                path.display(),
+                profile.id
+            ),
+        }
+    }
+    Ok(())
+}
+
+fn expected_profile_source_variant(
+    profile: &crate::models::CompilerProfile,
+    path: &Path,
+) -> Result<Option<&'static str>> {
+    match profile.language {
+        crate::models::Language::Solidity => {
+            expected_solidity_source_variant(&profile.compiler, path)
+        }
+        crate::models::Language::Vyper => expected_vyper_source_variant(&profile.compiler, path),
+    }
+}
+
+fn expected_solidity_source_variant(compiler: &str, path: &Path) -> Result<Option<&'static str>> {
+    if compiler == "solc" {
+        return Ok(None);
+    }
+    let version = compiler.strip_prefix("solc-").with_context(|| {
+        format!(
+            "{} Solidity compiler profile must use solc or solc-MAJOR.MINOR.PATCH, got {compiler}",
+            path.display()
+        )
+    })?;
+    let (_, minor, _) = parse_semver_prefix(version, path, "Solidity")?;
+    Ok(Some(match minor {
+        4 => "solidity-0.4",
+        5 => "solidity-0.5",
+        6 => "solidity-0.6",
+        7 => "solidity-0.7",
+        8 => "solidity-0.8",
+        _ => bail!(
+            "{} unsupported Solidity compiler profile version {compiler}",
+            path.display()
+        ),
+    }))
+}
+
+fn expected_vyper_source_variant(compiler: &str, path: &Path) -> Result<Option<&'static str>> {
+    if compiler == "vyper" {
+        return Ok(None);
+    }
+    let version = compiler.strip_prefix("vyper-").with_context(|| {
+        format!(
+            "{} Vyper compiler profile must use vyper or vyper-MAJOR.MINOR.PATCH, got {compiler}",
+            path.display()
+        )
+    })?;
+    let (_, minor, _) = parse_semver_prefix(version, path, "Vyper")?;
+    Ok(match minor {
+        2 => Some("vyper-0.2"),
+        3 => Some("vyper-0.3"),
+        4 => Some("vyper-0.4"),
+        5 => None,
+        _ => bail!(
+            "{} unsupported Vyper compiler profile version {compiler}",
+            path.display()
+        ),
+    })
+}
+
+fn parse_semver_prefix(version: &str, path: &Path, language: &str) -> Result<(u64, u64, u64)> {
+    let mut parts = version.split('.');
+    let major = parts
+        .next()
+        .with_context(|| format!("{} missing {language} major version", path.display()))?
+        .parse::<u64>()?;
+    let minor = parts
+        .next()
+        .with_context(|| format!("{} missing {language} minor version", path.display()))?
+        .parse::<u64>()?;
+    let patch_part = parts
+        .next()
+        .with_context(|| format!("{} missing {language} patch version", path.display()))?;
+    let patch_digits: String = patch_part
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect();
+    if patch_digits.is_empty() {
+        bail!(
+            "{} invalid {language} patch version {patch_part}",
+            path.display()
+        );
+    }
+    Ok((major, minor, patch_digits.parse::<u64>()?))
 }
 
 fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> Result<usize> {
@@ -1689,6 +1808,7 @@ mod tests {
         let checked_in_count = crate::catalog::checked_in_benchmarks().len();
         assert_eq!(super::validate_specs(root).unwrap(), checked_in_count);
         assert_eq!(super::validate_scenarios(root).unwrap(), checked_in_count);
+        super::validate_compiler_profile_source_variants(root).unwrap();
         let (config, _) = crate::scale::load_scale_config(root).unwrap();
         assert_eq!(config.families.len(), 7);
         let generated_count = super::validate_generated_outputs_if_present(root, &config).unwrap();
