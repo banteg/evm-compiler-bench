@@ -106,6 +106,11 @@ benchmark run, the most useful local files are:
 - `results/normalized/run-manifest.json`
 - `results/raw/foundry-gas.jsonl`
 
+The report model carries the methodology notes and real-derived source policy
+used by the UI, including the rule that compiled source variants come from
+`target/bench-source-variants/<profile_id>/...` while upstream files remain
+provenance references.
+
 Build the static report:
 
 ```sh

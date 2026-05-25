@@ -331,10 +331,63 @@ fn report_model(
         },
         "toolchains": toolchains.compilers.values().collect::<Vec<_>>(),
         "manifest": manifest,
+        "methodology": report_methodology(),
         "profiles": report_profiles(rows),
         "benchmarks": report_benchmarks(rows),
         "real_derived_models": report_real_models(rows),
         "rows": rows
+    })
+}
+
+fn report_methodology() -> serde_json::Value {
+    json!({
+        "source_model": {
+            "real_derived": "Production-conformance rows use latest-syntax source-language originals plus counterpart-language ports. Pinned upstream files are provenance references, not compiled headline artifacts.",
+            "compatibility_variants": "Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range before supported backward syntax rewrites are applied.",
+            "compiled_source_root": "target/bench-source-variants/<profile_id>/"
+        },
+        "notes": [
+            {
+                "tag": "A",
+                "title": "Foundry internal-call harness gas",
+                "body": "Gas is measured via Foundry's internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead."
+            },
+            {
+                "tag": "B",
+                "title": "Stripped runtime bytes",
+                "body": "Bytecode comparisons use runtime bytecode with appended metadata stripped, so trailing CBOR does not skew code-size deltas."
+            },
+            {
+                "tag": "C",
+                "title": "Idiomatic source comparison",
+                "body": "Headline results compare fixed and scale-suite idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes."
+            },
+            {
+                "tag": "D",
+                "title": "Geomean over comparable scenarios",
+                "body": "Each summary is a geometric mean of ratios B/A over scenarios where both profiles compiled. Missing scenarios are excluded from the comparison."
+            },
+            {
+                "tag": "E",
+                "title": "Metric-specific bands",
+                "body": "Gas and bytecode use a +/-0.5% materiality band for W/T/L counts. Compile time uses a +/-2% noise band."
+            },
+            {
+                "tag": "F",
+                "title": "Real-derived provenance",
+                "body": "Real-derived suites separate benchmark lanes from source lanes. Production-conformance rows use latest-syntax originals plus counterpart-language ports; pinned historical sources remain provenance references, not compiled headline artifacts."
+            },
+            {
+                "tag": "G",
+                "title": "Compatibility source variants",
+                "body": "Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied."
+            },
+            {
+                "tag": "H",
+                "title": "Vyper Venom and 0.5.0a1",
+                "body": "Vyper Venom rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release."
+            }
+        ]
     })
 }
 
@@ -1193,7 +1246,7 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::manifest_profiles;
+    use super::{manifest_profiles, report_methodology};
     use crate::models::{CompilerProfile, Language, MetadataMode};
 
     fn profile(id: &str, source_variant: Option<&str>) -> CompilerProfile {
@@ -1221,5 +1274,26 @@ mod tests {
 
         assert_eq!(profiles[0]["source_variant"], "latest");
         assert_eq!(profiles[1]["source_variant"], "solidity-0.5");
+    }
+
+    #[test]
+    fn report_methodology_carries_latest_source_policy() {
+        let methodology = report_methodology();
+        assert_eq!(
+            methodology["source_model"]["compiled_source_root"],
+            "target/bench-source-variants/<profile_id>/"
+        );
+        assert!(
+            methodology["source_model"]["real_derived"]
+                .as_str()
+                .unwrap()
+                .contains("latest-syntax source-language originals")
+        );
+        assert!(
+            methodology["source_model"]["compatibility_variants"]
+                .as_str()
+                .unwrap()
+                .contains("generated variants of the checked-in latest source")
+        );
     }
 }

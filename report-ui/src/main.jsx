@@ -834,7 +834,7 @@ function ReliabilityPanel() {
 // Methodology
 // ============================================================
 function Methodology() {
-  const methods = [
+  const fallbackNotes = [
     {
       tag: 'A',
       title: 'Foundry internal-call harness gas',
@@ -858,7 +858,7 @@ function Methodology() {
     {
       tag: 'E',
       title: 'Metric-specific bands',
-      body: 'Gas and bytecode use a ±0.5% materiality band for W/T/L counts. Compile time uses a ±2% noise band.'
+      body: 'Gas and bytecode use a +/-0.5% materiality band for W/T/L counts. Compile time uses a +/-2% noise band.'
     },
     {
       tag: 'F',
@@ -876,6 +876,9 @@ function Methodology() {
       body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
     },
   ];
+  const methods = Array.isArray(Bench.D.methodology?.notes) && Bench.D.methodology.notes.length
+    ? Bench.D.methodology.notes
+    : fallbackNotes;
   return React.createElement('div', { className: 'methods' },
     methods.map(m => React.createElement('div', { key: m.tag, className: 'method' },
       React.createElement('div', { className: 'nm' }, `Note ${m.tag}`),
