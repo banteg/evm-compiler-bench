@@ -62,7 +62,7 @@ as provenance/reference inputs; benchmarks still marked
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
+| `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
@@ -227,8 +227,11 @@ Suggested next chips:
 
 Exact now:
 
-- The Vyper benchmark implementation is the pinned upstream
+- The Vyper benchmark implementation is `CurveStableSwapNG.vy`, a
+  latest-syntax modernization of the pinned upstream
   `contracts/main/CurveStableSwapNG.vy`.
+- The pinned upstream Vyper source remains vendored as a provenance/reference
+  input.
 - The Solidity port implements a matched constructor-driven pool API for the
   covered paths, including add/remove liquidity, exchange, `exchange_received`,
   one-coin withdrawal, amplification and fee admin controls, LP ERC20

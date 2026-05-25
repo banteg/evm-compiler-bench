@@ -895,13 +895,17 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
 }
 
 fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> Result<String> {
-    let source = rewrite_vyper_pragma(source, pragma);
+    let source = strip_vyper_profile_pragmas(&rewrite_vyper_pragma(source, pragma));
     let source = match variant {
         None => source,
         Some("vyper-0.4") => rewrite_vyper_event_logs(&source),
         Some("vyper-0.3") => {
             let mut source = source;
             source = source.replace("@deploy", "@external");
+            source = source.replace("@nonreentrant\n", "@nonreentrant('lock')\n");
+            source = source.replace("staticcall ", "");
+            source = source.replace("extcall ", "");
+            source = rewrite_vyper_03_interface_imports(&source);
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
             source = rewrite_vyper_03_strategy_maps(&source);
@@ -913,6 +917,10 @@ fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> 
         Some("vyper-0.2") => {
             let mut source = source;
             source = source.replace("@deploy", "@external");
+            source = source.replace("@nonreentrant\n", "@nonreentrant('lock')\n");
+            source = source.replace("staticcall ", "");
+            source = source.replace("extcall ", "");
+            source = rewrite_vyper_03_interface_imports(&source);
             source = source.replace("@pure", "@view");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
@@ -941,6 +949,37 @@ fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> 
         Some(other) => bail!("unknown Vyper source variant {other}"),
     };
     Ok(source)
+}
+
+fn strip_vyper_profile_pragmas(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed.starts_with("# pragma optimize ")
+                && !trimmed.starts_with("# pragma evm-version ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn rewrite_vyper_03_interface_imports(source: &str) -> String {
+    source
+        .replace(
+            "from ethereum.ercs import IERC20Detailed",
+            "from vyper.interfaces import ERC20Detailed",
+        )
+        .replace(
+            "from ethereum.ercs import IERC4626",
+            "from vyper.interfaces import ERC4626",
+        )
+        .replace(
+            "from ethereum.ercs import IERC20",
+            "from vyper.interfaces import ERC20",
+        )
+        .replace("IERC20Detailed", "ERC20Detailed")
+        .replace("IERC4626", "ERC4626")
+        .replace("IERC20", "ERC20")
 }
 
 fn rewrite_vyper_pragma(source: &str, pragma: &str) -> String {
@@ -1011,11 +1050,39 @@ fn rewrite_typed_for_loops(source: &str) -> String {
 }
 
 fn rewrite_vyper_event_logs(source: &str) -> String {
-    source
-        .lines()
-        .map(rewrite_vyper_event_log_line)
-        .collect::<Vec<_>>()
-        .join("\n")
+    let lines: Vec<&str> = source.lines().collect();
+    let mut output = Vec::new();
+    let mut index = 0;
+    while index < lines.len() {
+        let line = lines[index];
+        let Some(log_index) = line.find("log ") else {
+            output.push(line.to_string());
+            index += 1;
+            continue;
+        };
+        let Some(open_index) = line[log_index..].find('(').map(|offset| log_index + offset) else {
+            output.push(line.to_string());
+            index += 1;
+            continue;
+        };
+
+        let mut block = line.to_string();
+        let mut balance = paren_balance(&line[open_index..]);
+        while balance > 0 && index + 1 < lines.len() {
+            index += 1;
+            block.push('\n');
+            block.push_str(lines[index]);
+            balance += paren_balance(lines[index]);
+        }
+
+        if let Some(rewritten) = rewrite_vyper_event_log_block(&block) {
+            output.push(rewritten);
+        } else {
+            output.extend(block.lines().map(str::to_string));
+        }
+        index += 1;
+    }
+    output.join("\n")
 }
 
 fn rewrite_vyper_02_owner_checks(source: &str) -> String {
@@ -1236,30 +1303,42 @@ fn vyper_internal_order(name: &str) -> usize {
     }
 }
 
-fn rewrite_vyper_event_log_line(line: &str) -> String {
-    let Some(log_index) = line.find("log ") else {
-        return line.to_string();
+fn rewrite_vyper_event_log_block(block: &str) -> Option<String> {
+    let first_line = block.lines().next()?;
+    let Some(log_index) = first_line.find("log ") else {
+        return None;
     };
-    let Some(open_index) = line[log_index..].find('(').map(|index| log_index + index) else {
-        return line.to_string();
+    let Some(open_index) = first_line[log_index..]
+        .find('(')
+        .map(|index| log_index + index)
+    else {
+        return None;
     };
-    if !line.trim_end().ends_with(')') {
-        return line.to_string();
+    if !block.trim_end().ends_with(')') {
+        return None;
     }
-    let Some(close_index) = line.rfind(')') else {
-        return line.to_string();
+    let Some(close_index) = block.rfind(')') else {
+        return None;
     };
-    let args = &line[open_index + 1..close_index];
+    let args = &block[open_index + 1..close_index];
     if !args.contains('=') {
-        return line.to_string();
+        return None;
     }
     let values = strip_keyword_args(args);
-    format!(
+    Some(format!(
         "{}log {}({})",
-        &line[..log_index],
-        line[log_index + 4..open_index].trim(),
+        &first_line[..log_index],
+        first_line[log_index + 4..open_index].trim(),
         values.join(", ")
-    )
+    ))
+}
+
+fn paren_balance(line: &str) -> i32 {
+    line.chars().fold(0, |balance, ch| match ch {
+        '(' => balance + 1,
+        ')' => balance - 1,
+        _ => balance,
+    })
 }
 
 fn strip_keyword_args(args: &str) -> Vec<String> {
@@ -1536,14 +1615,20 @@ mod tests {
 
     #[test]
     fn rewrites_vyper_03_compatibility_syntax() {
-        let source = "# pragma version >=0.4.3,<0.5.0\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4]) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    return keccak256(abi_encode(4 // 2))\n";
+        let source = "# pragma version >=0.4.3,<0.5.0\n# pragma optimize codesize\n# pragma evm-version prague\nfrom ethereum.ercs import IERC20\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4], token: address) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    assert extcall IERC20(token).transfer(msg.sender, 1, default_return_value=True)\n    amount: uint256 = staticcall IERC20(token).balanceOf(msg.sender)\n    log Approval(\n        owner=msg.sender,\n        spender=token,\n        value=amount,\n    )\n    return keccak256(abi_encode(4 // 2))\n";
         let rewritten =
             transform_vyper_source(source, Some("vyper-0.3"), "# pragma version >=0.3.7,<0.4.0")
                 .unwrap();
         assert!(rewritten.contains("# pragma version >=0.3.7,<0.4.0"));
+        assert!(!rewritten.contains("# pragma optimize"));
+        assert!(!rewritten.contains("# pragma evm-version"));
+        assert!(rewritten.contains("from vyper.interfaces import ERC20"));
         assert!(rewritten.contains("@external\ndef __init__"));
         assert!(rewritten.contains("log Transfer(empty(address), msg.sender, 1)"));
+        assert!(rewritten.contains("log Approval(msg.sender, token, amount)"));
         assert!(rewritten.contains("for item in xs:"));
+        assert!(rewritten.contains("assert ERC20(token).transfer"));
+        assert!(rewritten.contains("amount: uint256 = ERC20(token).balanceOf(msg.sender)"));
         assert!(rewritten.contains("_abi_encode(4 / 2)"));
     }
 

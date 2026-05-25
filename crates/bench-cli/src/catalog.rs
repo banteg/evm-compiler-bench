@@ -79,7 +79,7 @@ pub fn real_derived_benchmarks() -> Vec<Benchmark> {
             "curve_stableswap_2coin",
             "CurveStableSwap2CoinReal",
             "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol",
-            "benches/implementations/curve_stableswap_2coin/vyper/upstream/contracts/main/CurveStableSwapNG.vy",
+            "benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy",
             provenance_from_spec(include_str!(
                 "../../../benches/specs/curve_stableswap_2coin.yaml"
             )),

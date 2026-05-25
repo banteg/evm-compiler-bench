@@ -50,25 +50,27 @@ real_derived:
   suite: real_derived
   model_kind: real_derived_model
   comparison_lane: production_conformance
-  source_lane: upstream_exact_historical
+  source_lane: latest_syntax_original
   counterpart_lane: fixture_scoped_port
   upstream_project: Curve Stableswap NG
   repository_url: "https://github.com/curvefi/stableswap-ng"
   source_commit: "2abe778f40206a6c0fd108a0a53ad3266cbedeee"
   source_path: "contracts/main/CurveStableSwapNG.vy"
   source_language: vyper
-  source_compiler: vyper-0.3.10
+  source_compiler: vyper
   source_profiles:
-    - vyper-0.3.10-codesize
+    - vyper-latest-codesize
+    - vyper-latest-gas
+    - vyper-latest-none
   source_contract: CurveStableSwapNG
   source_blob: "f192932a22958735acad4ca24c977cc4e058f1aa"
   upstream_license: "Curve copyright notice; upstream file says all rights reserved"
   checked_at: "2026-05-24"
   production_equivalence: false
-  api_compatibility: "upstream Vyper source is exact; Solidity is a scoped constructor-driven N-coin port of the covered API"
+  api_compatibility: "source-language implementation is upstream Curve Stableswap NG behavior modernized to latest Vyper syntax; Solidity is a scoped constructor-driven N-coin port of the covered API"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_tokens"
-  source_derivation: "Vyper implementation is vendored upstream source; Solidity implementation is an idiomatic constructor-driven N-coin port of the covered NG paths"
+  source_derivation: "Vyper implementation is a latest-syntax modernization of the pinned upstream source; Solidity implementation is an idiomatic constructor-driven N-coin port of the covered NG paths"
   equivalence_scope:
     - upstream Vyper constructor and external pool API for covered constructor-driven N-coin deployments
     - Vyper dynamic-array length behavior for add_liquidity, calc_token_amount, remove_liquidity, and remove_liquidity_imbalance
@@ -748,4 +750,4 @@ scenarios:
     expected: "reverts"
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
-  vyper: "benches/implementations/curve_stableswap_2coin/vyper/upstream/contracts/main/CurveStableSwapNG.vy"
+  vyper: "benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy"
