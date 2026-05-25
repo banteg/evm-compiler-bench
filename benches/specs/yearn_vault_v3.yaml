@@ -266,6 +266,7 @@ real_derived:
     - repeated_management_transitions_redeem
     - force_revoke_strategy
     - readd_after_force_revoke_strategy
+    - buy_debt_inactive_strategy_reverts
     - buy_debt
     - buy_debt_over_current_debt
     - buy_debt_zero_shares_reverts
@@ -355,7 +356,7 @@ real_derived:
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
     - withdraw-limit module high-return capping through both maxWithdraw and maxRedeem, plus max-loss and strategy-queue argument forwarding
     - partial and over-returning strategy redeem accounting during user withdrawals
-    - buy-debt current-debt clipping and zero-share rejection
+    - buy-debt inactive-strategy rejection, current-debt clipping, and zero-share rejection
     - profit unlock reset while locked profit shares are outstanding
     - optional-return ERC20 asset handling
     - normalized event/log parity across the listed differential scenarios
@@ -774,6 +775,9 @@ scenarios:
   - name: readd_after_force_revoke_strategy
     call: "add_strategy after force_revoke_strategy cleared an indebted strategy"
     expected: "re-adds the same strategy after the forced loss accounting path"
+  - name: buy_debt_inactive_strategy_reverts
+    call: "buy_debt(strategy, 25_000) before the strategy has been added"
+    expected: "reverts at the upstream inactive-strategy guard before reading debt or strategy shares"
   - name: buy_debt
     call: "buy_debt(strategy, 25_000) after debt allocation"
     expected: "repays strategy debt to idle and transfers the corresponding strategy shares to the debt purchaser"

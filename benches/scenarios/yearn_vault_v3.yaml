@@ -1962,6 +1962,15 @@ scenarios:
       data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
     expect_success: true
     observers: *yearn_observers
+  - name: buy_debt_inactive_strategy_reverts
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("buy_debt(address,uint256)", benchYearnStrategy({target}), uint256(25_000))'
+    expect_success: false
+    observers: *yearn_observers
   - name: buy_debt
     state_access_profile: mixed
     setup:
