@@ -88,6 +88,26 @@ scenarios:
       data: 'abi.encodeWithSignature("mint(address)", address(this))'
     expect_success: true
     observers: *pair_observers
+  - name: mint_zero_receiver
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
+      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(15))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(250_000), uint256(250_000))'
+    measured:
+      data: 'abi.encodeWithSignature("mint(address)", address(0))'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("totalSupply()")'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", address(0))'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
+      - data: 'abi.encodeWithSignature("getReserves()")'
   - name: swap_fee_invariant
     state_access_profile: mixed
     setup:

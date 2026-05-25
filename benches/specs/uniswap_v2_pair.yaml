@@ -64,6 +64,7 @@ real_derived:
     - mint_initial_below_minimum_liquidity_reverts
     - factory_create2_mint_initial
     - mint_subsequent
+    - mint_zero_receiver
     - swap_fee_invariant
     - swap_token0_input
     - swap_token0_input_k_reverts
@@ -121,7 +122,7 @@ real_derived:
     - pair creation through a benchmark factory using CREATE2 and factory-owned initialize
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
-    - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY
+    - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
     - burn path with staged LP shares and no-staged-liquidity rejection
     - constant-product swap fee invariant for both token0-input and token1-input paths, including upstream exact-price fixtures and one-wei-over K rejections
     - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
@@ -163,6 +164,9 @@ scenarios:
   - name: mint_subsequent
     call: "mint(address(this)) after an existing position and additional token balances"
     expected: "mints proportional LP shares"
+  - name: mint_zero_receiver
+    call: "mint(address(0)) after an existing position and additional token balances"
+    expected: "mints proportional LP shares to the zero address because upstream Uniswap V2 ERC20 has no zero-recipient mint guard"
   - name: swap_fee_invariant
     call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
