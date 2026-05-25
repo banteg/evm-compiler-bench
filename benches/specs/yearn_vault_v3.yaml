@@ -194,6 +194,7 @@ real_derived:
     - set_symbol_too_long_reverts
     - strategy_profit_report
     - strategy_zero_report
+    - strategy_zero_report_with_accountant_fee_refund
     - self_zero_report
     - self_report_airdrop
     - self_report_idle_loss
@@ -348,7 +349,7 @@ real_derived:
     - direct deposit-limit exact-limit boundary, deposit-limit module finite, exact-limit, zero-return, active-module maxDeposit after existing vault assets, maxMint conversion after gains and partial profit unlock, and max-uint deposit/max-view behavior, receiver-specific maxDeposit/maxMint returns and deposit/mint execution, zero/vault-receiver short-circuit before module calls, plus deposit and mint over-limit rejection
     - withdraw-limit-module exact-limit withdraw acceptance, max-withdraw capping above and below balance, zero-return, non-1:1 partial-unlock maxRedeem conversion, owner-specific, max-loss-specific, and queue-specific maxWithdraw/maxRedeem returns and withdraw/redeem execution, finite and max-uint withdraw acceptance, module-call failure including zero-balance maxWithdraw/maxRedeem owner calls, and withdraw/redeem rejection paths
     - combined role, default-queue, debt, report, module, shutdown, withdrawal, and redeem sequence parity across three orderings
-    - profit/loss/zero report accounting, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, fee recalculation when fees exceed gains even after pulling refunds and when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
+    - profit/loss/zero report accounting, strategy zero report accounting with accountant fees/refunds, self-report no-op/gain/loss/refund accounting, self-report idle gain/loss with accountant fees/refunds, self-report zero-effective clipped refund, refunds, gain plus clipped refund locking, gain reporting that moves current debt above max debt, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation, fees, protocol-fee splits on gain and loss reports, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports for loss and gain paths, fee recalculation when fees exceed gains even after pulling refunds and when profit locking is disabled, locked-profit shares, partial-unlock profit and loss reports with accountant effects, upstream excessive-fee underflow reverts, shared nonreentrant lock rejection, and unrealized-loss withdrawal/debt-update behavior
     - strategy maxDeposit limiting, minimum-idle clipping and no-available-idle early return, and zero-deposit debt update behavior
     - debt-decrease maxRedeem caps, shutdown pull-only, max-debt-below-current, and actual strategy redeem variance
     - strategy maxRedeem limiting, zero-redeem queue fallthrough, and withdrawable-asset capping
@@ -566,6 +567,9 @@ scenarios:
   - name: strategy_zero_report
     call: "process_report after debt allocation with strategy assets equal to current debt"
     expected: "updates last report without gain, loss, fees, refunds, or profit locking"
+  - name: strategy_zero_report_with_accountant_fee_refund
+    call: "process_report after debt allocation with strategy assets equal to current debt and accountant fees/refunds"
+    expected: "charges accountant fees and pulls refunds while leaving strategy debt unchanged"
   - name: self_zero_report
     call: "process_report(address(this)) with vault asset balance equal to total idle"
     expected: "updates last report through the self-report path without gain, loss, fees, refunds, or profit locking"
