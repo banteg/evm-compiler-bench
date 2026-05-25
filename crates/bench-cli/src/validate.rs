@@ -17,6 +17,17 @@ use std::{
 
 const LATEST_SOLIDITY_PRAGMA: &str = "pragma solidity ^0.8.35;";
 const LATEST_VYPER_PRAGMA: &str = "# pragma version >=0.4.3,<0.5.0";
+const SOURCE_VARIANT_LABELS: &[&str] = &[
+    "latest",
+    "solidity-0.4",
+    "solidity-0.5",
+    "solidity-0.6",
+    "solidity-0.7",
+    "solidity-0.8",
+    "vyper-0.2",
+    "vyper-0.3",
+    "vyper-0.4",
+];
 
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationSummary {
@@ -519,6 +530,12 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             )?;
             require_enum(
                 row,
+                "/compiler/settings/sourceVariant",
+                SOURCE_VARIANT_LABELS,
+                &results_path,
+            )?;
+            require_enum(
+                row,
                 "/cache/compile/status",
                 &["hit", "miss", "stale", "refreshed", "disabled"],
                 &results_path,
@@ -624,6 +641,7 @@ fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
             require_string_pointer(profile, pointer, path)?;
         }
         require_enum(profile, "/language", &["solidity", "vyper"], path)?;
+        require_enum(profile, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
     }
     Ok(())
 }
@@ -713,6 +731,7 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
                 require_string_pointer(variant, pointer, path)?;
             }
             require_enum(variant, "/language", &["solidity", "vyper"], path)?;
+            require_enum(variant, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
             validate_real_derived_source_variant_profile(variant, &profile_metadata, path)?;
         }
@@ -1348,6 +1367,12 @@ fn git_blob_hash(path: &Path) -> Result<String> {
 
 fn validate_row_status(row: &Value, path: &Path) -> Result<()> {
     require_string_pointer(row, "/compiler/settings/sourceVariant", path)?;
+    require_enum(
+        row,
+        "/compiler/settings/sourceVariant",
+        SOURCE_VARIANT_LABELS,
+        path,
+    )?;
     match row.pointer("/status").and_then(|value| value.as_str()) {
         Some("ok") => {
             require_enum(row, "/compile/status", &["ok"], path)?;
@@ -2048,6 +2073,10 @@ mod tests {
         *wrong_variant_label
             .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
             .unwrap() = json!("solidity-0.5");
+        let mut unknown_variant_label = manifest.clone();
+        *unknown_variant_label
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
+            .unwrap() = json!("solidity-experimental");
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
@@ -2060,6 +2089,7 @@ mod tests {
         assert!(super::validate_real_derived_manifest(&unknown_variant_profile, path).is_err());
         assert!(super::validate_real_derived_manifest(&wrong_variant_language, path).is_err());
         assert!(super::validate_real_derived_manifest(&wrong_variant_label, path).is_err());
+        assert!(super::validate_real_derived_manifest(&unknown_variant_label, path).is_err());
     }
 
     #[test]
@@ -2084,9 +2114,20 @@ mod tests {
                 }
             ]
         });
+        let unknown_variant = json!({
+            "profiles": [
+                {
+                    "id": "solc-latest-noopt",
+                    "language": "solidity",
+                    "compiler": "solc",
+                    "source_variant": "solidity-experimental"
+                }
+            ]
+        });
 
         super::validate_manifest_profiles(&manifest, path).unwrap();
         assert!(super::validate_manifest_profiles(&missing_variant, path).is_err());
+        assert!(super::validate_manifest_profiles(&unknown_variant, path).is_err());
     }
 
     #[test]
@@ -2129,9 +2170,14 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .remove("sourceVariant");
+        let mut unknown_variant = row.clone();
+        *unknown_variant
+            .pointer_mut("/compiler/settings/sourceVariant")
+            .unwrap() = json!("solidity-experimental");
 
         super::validate_row_status(&row, path).unwrap();
         assert!(super::validate_row_status(&missing_variant, path).is_err());
+        assert!(super::validate_row_status(&unknown_variant, path).is_err());
     }
 
     #[test]
