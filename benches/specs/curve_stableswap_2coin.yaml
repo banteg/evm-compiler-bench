@@ -111,6 +111,7 @@ real_derived:
     - exchange_eight_coin_slippage_reverts
     - exchange_eight_coin_interior_slippage_reverts
     - exchange_received_five_coin_midpoint
+    - exchange_received_five_coin_endpoint
     - exchange_received_five_coin_slippage_reverts
     - exchange_received_eight_coin_boundary
     - exchange_received_eight_coin_interior
@@ -224,7 +225,7 @@ real_derived:
     - standard-token eight-coin imbalanced add-liquidity path and slippage rejection at MAX_COINS
     - standard-token three-coin exchange path and slippage rejection
     - standard-token five-coin midpoint and endpoint exchange paths
-    - standard-token five-coin midpoint exchange_received optimistic-transfer path and slippage rejection
+    - standard-token five-coin midpoint and endpoint exchange_received optimistic-transfer paths and midpoint slippage rejection
     - standard-token three-coin exchange_received optimistic-transfer path and slippage rejection
     - standard-token eight-coin endpoint and interior exchange paths
     - standard-token eight-coin endpoint and interior exchange slippage rejection
@@ -456,6 +457,9 @@ scenarios:
   - name: exchange_received_five_coin_midpoint
     call: "exchange_received(1, 3, 25_000, 0, address(this)) after direct token transfer to a five-coin deployment"
     expected: "uses the optimistic incoming balance and updates midpoint constructor-sized accounting and oracle slots"
+  - name: exchange_received_five_coin_endpoint
+    call: "exchange_received(0, 4, 25_000, 0, address(this)) after direct token transfer to a five-coin deployment"
+    expected: "uses the optimistic incoming balance and updates endpoint constructor-sized accounting and oracle slots"
   - name: exchange_received_five_coin_slippage_reverts
     call: "exchange_received(1, 3, 25_000, 1_000_000, address(this)) after direct token transfer to a five-coin deployment"
     expected: "reverts when the midpoint optimistic-transfer output is below min_dy"
