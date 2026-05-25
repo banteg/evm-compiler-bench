@@ -144,9 +144,12 @@ real_derived:
     - redeem_max_loss_too_high_reverts
     - approve
     - transfer
+    - transfer_insufficient_balance_reverts
     - transfer_zero_receiver_reverts
     - transfer_vault_receiver_reverts
     - transfer_from
+    - transfer_from_insufficient_allowance_reverts
+    - transfer_from_insufficient_balance_reverts
     - transfer_from_zero_receiver_reverts
     - transfer_from_vault_receiver_reverts
     - transfer_from_infinite_allowance
@@ -423,6 +426,9 @@ scenarios:
   - name: transfer
     call: "transfer(BOB, 20_000) after deposit"
     expected: "moves vault shares between accounts"
+  - name: transfer_insufficient_balance_reverts
+    call: "transfer(BOB, 1) without any vault shares"
+    expected: "reverts through the upstream share-balance check"
   - name: transfer_zero_receiver_reverts
     call: "transfer(empty(address), 20_000)"
     expected: "reverts at the upstream receiver guard"
@@ -432,6 +438,12 @@ scenarios:
   - name: transfer_from
     call: "transferFrom(address(this), BOB, 20_000) from an approved spender"
     expected: "moves vault shares and spends allowance"
+  - name: transfer_from_insufficient_allowance_reverts
+    call: "transferFrom(address(this), BOB, 2_000) through a 1_000-share allowance"
+    expected: "reverts through the upstream allowance check"
+  - name: transfer_from_insufficient_balance_reverts
+    call: "transferFrom(address(this), BOB, 2_000) after approving more shares than the owner balance"
+    expected: "passes the allowance check and reverts through the upstream share-balance check"
   - name: transfer_from_zero_receiver_reverts
     call: "transferFrom(address(this), empty(address), 20_000)"
     expected: "reverts at the upstream receiver guard before spending allowance"

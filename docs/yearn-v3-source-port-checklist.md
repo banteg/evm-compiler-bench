@@ -70,8 +70,8 @@ Status meanings:
 | `withdraw` | overloaded `withdraw` | mapped, covered | Default max-loss overload, max-loss upper-bound rejection, long-queue, custom/default selection, limited strategy redeem, zero-redeem queue fallthrough, and partial/over strategy redeem returns are covered. |
 | `redeem` | overloaded `redeem` | mapped, covered | Default max-loss overload, max-loss upper-bound rejection, long-queue and custom/default selection covered; limited and partial/over strategy redeem behavior is covered through withdraw. |
 | `approve` | `approve` | mapped, covered | Covered directly. |
-| `transfer` | `transfer` | mapped, covered | Receiver zero and vault-self rejection are covered. |
-| `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths are covered. |
+| `transfer` | `transfer` | mapped, covered | Share movement plus insufficient-balance, receiver zero, and vault-self rejection are covered. |
+| `transferFrom` | `transferFrom` | mapped, covered | Finite and infinite allowance paths, insufficient allowance, insufficient owner balance, and receiver guards are covered. |
 | `permit` | `permit` | mapped, covered | Valid, expired, invalid, pre-initialization, and post-chain-id-change permit paths are covered. |
 | `balanceOf` | `balanceOf` | mapped, covered | Vault-self locked-share branch covered through observers after reports. |
 | `totalSupply` | `totalSupply` | mapped, covered | Covered as observer. |
@@ -101,9 +101,9 @@ Status meanings:
 
 | Upstream helper | Port counterpart | Status | Remaining work |
 | --- | --- | --- | --- |
-| `_spend_allowance` | `_spendAllowance` | mapped, covered | Infinite allowance branch is covered. |
+| `_spend_allowance` | `_spendAllowance` | mapped, covered | Finite, infinite, and insufficient allowance branches are covered. |
 | `_transfer` | `_transfer` | mapped, covered | Receiver checks happen in external wrappers, with zero and vault receiver rejection covered. |
-| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches plus zero/vault receiver guards are covered. |
+| `_transfer_from` | external `transferFrom` plus `_spendAllowance` and `_transfer` | mapped, covered | Finite and infinite allowance branches, insufficient allowance, insufficient owner balance, plus zero/vault receiver guards are covered. |
 | `_approve` | `_approve` | mapped, covered | Covered by approve and permit paths. |
 | `_permit` | `permit` plus `domain_separator` | mapped, covered | Post-chain-id-change signatures are covered. |
 | `_burn_shares` | `_burnShares` | mapped, covered | Locked-share zero reset now covered. |
