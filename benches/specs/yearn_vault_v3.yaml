@@ -173,6 +173,7 @@ real_derived:
     - update_debt_decrease
     - update_debt_decrease_restores_minimum_idle
     - update_debt_default_max_loss
+    - update_debt_equal_current_reverts
     - update_max_debt_for_strategy
     - update_max_debt_inactive_reverts
     - role_delegate_add_strategy
@@ -517,6 +518,9 @@ scenarios:
   - name: update_debt_default_max_loss
     call: "update_debt(strategy, 100_000) using the Vyper default max_loss overload"
     expected: "allocates debt with the upstream default max-loss selector"
+  - name: update_debt_equal_current_reverts
+    call: "update_debt(strategy, 100_000, 0) after current debt is already 100_000"
+    expected: "reverts through the upstream equal-current-debt guard"
   - name: update_max_debt_for_strategy
     call: "update_max_debt_for_strategy(strategy, 150_000)"
     expected: "updates the strategy max debt management parameter"
