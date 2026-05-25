@@ -167,6 +167,9 @@ just zip-design
   non-upstream benchmark sources and scale templates: Solidity uses
   `pragma solidity ^0.8.35;` and Vyper uses
   `# pragma version >=0.4.3,<0.5.0`.
+- For real-derived benchmarks, `validate` also requires `source_profiles` to
+  stay on the declared historical source compiler, so pinned upstream sources
+  cannot silently drift into latest-stable compiler rows.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The `production_equivalence` flag is reserved for full idiomatic ports of the
   upstream contract's behavior. Scoped or partial counterpart-language ports are

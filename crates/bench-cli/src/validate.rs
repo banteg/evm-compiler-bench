@@ -1,6 +1,6 @@
 use crate::{
     catalog::checked_in_benchmarks,
-    models::{Benchmark, BenchmarkSuite, Provenance, ScenarioFile},
+    models::{Benchmark, BenchmarkSuite, ComparisonLane, Provenance, ScenarioFile},
     scale::{SCALE_GENERATOR_VERSION, ScaleConfig, ScaleManifest, load_scale_config},
     scenarios::{load_scenario_catalog, validate_scenario_file},
     util::sha256_file,
@@ -586,6 +586,8 @@ fn validate_real_derived_spec(
     )?;
     require_yaml_string(real, "source_compiler", path, &provenance.source_compiler)?;
     require_sequence(real, "source_profiles", path)?;
+    validate_real_derived_lanes(path, provenance)?;
+    validate_source_profiles(path, real, provenance)?;
     require_yaml_bool(
         real,
         "production_equivalence",
@@ -637,6 +639,52 @@ fn validate_real_derived_spec(
         );
     }
     validate_source_blob(root, path, benchmark, provenance)?;
+    Ok(())
+}
+
+fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<()> {
+    if provenance.source_lane != ComparisonLane::UpstreamExactHistorical {
+        bail!(
+            "{} real-derived source_lane must be upstream_exact_historical",
+            path.display()
+        );
+    }
+    if provenance.counterpart_lane != provenance.comparison_lane {
+        bail!(
+            "{} real-derived counterpart_lane must match comparison_lane",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_source_profiles(
+    path: &Path,
+    real: &serde_yaml::Value,
+    provenance: &Provenance,
+) -> Result<()> {
+    let profiles = real
+        .get("source_profiles")
+        .and_then(|value| value.as_sequence())
+        .with_context(|| format!("{} missing source_profiles", path.display()))?;
+    for profile in profiles {
+        let profile = profile
+            .as_str()
+            .with_context(|| format!("{} source_profiles must contain strings", path.display()))?;
+        if !profile.starts_with(&provenance.source_compiler) {
+            bail!(
+                "{} source profile {profile} must use historical source compiler {}",
+                path.display(),
+                provenance.source_compiler
+            );
+        }
+        if profile.contains("latest") {
+            bail!(
+                "{} source profile {profile} must not use a latest compiler lane",
+                path.display()
+            );
+        }
+    }
     Ok(())
 }
 
