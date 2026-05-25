@@ -127,20 +127,12 @@ contract CurveStableSwap2CoinReal {
     ) {
         factory = CurveBenchFactory(msg.sender);
         uint256 nCoins = coins_.length;
-        require(nCoins >= 2 && nCoins <= MAX_COINS, "coin length");
+        require(nCoins <= MAX_COINS, "coin length");
         N_COINS = nCoins;
         require(rateMultipliers.length >= N_COINS, "rate length");
         require(assetTypes.length >= N_COINS, "asset length");
         require(methodIds.length >= N_COINS, "method length");
         require(oracles.length >= N_COINS, "oracle length");
-        for (uint256 i = 0; i < N_COINS; i++) {
-            require(coins_[i] != address(0), "coins");
-            for (uint256 j = 0; j < i; j++) {
-                require(coins_[i] != coins_[j], "coins");
-            }
-        }
-        require(amp > 0, "amp");
-        require(swapFee <= FEE_DENOMINATOR / 10, "fee");
         require(maExpTime != 0, "ma");
         initialized = true;
         name = name_;
@@ -153,7 +145,7 @@ contract CurveStableSwap2CoinReal {
         scale_factor = new uint256[](N_COINS);
         stored_balances = new uint256[](N_COINS);
         admin_balances = new uint256[](N_COINS);
-        last_prices_packed = new uint256[](N_COINS - 1);
+        last_prices_packed = new uint256[](N_COINS == 0 ? 0 : N_COINS - 1);
         for (uint256 i = 0; i < N_COINS; i++) {
             coins[i] = coins_[i];
             rate_multipliers[i] = rateMultipliers[i];
