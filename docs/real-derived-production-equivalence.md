@@ -73,6 +73,10 @@ The latest-syntax originals are also checked against representative historical
 compiler profiles through generated source variants. On 2026-05-25, these
 no-cache compile probes passed with zero failures:
 
+Those historical profiles are compatibility coverage for the modernized
+checked-in source. They do not switch the benchmark back to the vendored
+upstream historical file, which remains provenance-only for this lane.
+
 | Benchmark | Profiles |
 | --- | --- |
 | `uniswap_v2_pair` | `solc-0.5.16-noopt`, `solc-0.5.16-legacy-runs200`, `vyper-0.3.10-none`, `vyper-0.3.10-gas` |

@@ -62,6 +62,8 @@ real_derived:
     - vyper-latest-codesize
     - vyper-latest-gas
     - vyper-latest-none
+    - vyper-0.3.10-gas
+    - vyper-0.3.10-none
   source_contract: CurveStableSwapNG
   source_blob: "f192932a22958735acad4ca24c977cc4e058f1aa"
   upstream_license: "Curve copyright notice; upstream file says all rights reserved"

@@ -1180,10 +1180,6 @@ fn validate_source_profiles(
         .get("source_profiles")
         .and_then(|value| value.as_sequence())
         .with_context(|| format!("{} missing source_profiles", path.display()))?;
-    let latest_source_profile_prefix = match provenance.source_language {
-        crate::models::Language::Solidity => "solc-latest",
-        crate::models::Language::Vyper => "vyper-latest",
-    };
     for profile in profiles {
         let profile = profile
             .as_str()
@@ -1213,25 +1209,14 @@ fn validate_source_profiles(
                 provenance.source_language.as_str()
             );
         }
-        if matches!(
-            provenance.source_lane,
-            ComparisonLane::LatestSyntaxOriginal | ComparisonLane::LatestIdiomatic
-        ) && !profile.starts_with(latest_source_profile_prefix)
-        {
-            bail!(
-                "{} {} source_lane requires source profile {profile} to use {latest_source_profile_prefix} prefix",
-                path.display(),
-                provenance.source_lane.as_str()
-            );
-        }
     }
     Ok(())
 }
 
-fn latest_source_profile_prefix(source_language: &str, path: &Path) -> Result<&'static str> {
+fn source_profile_prefix(source_language: &str, path: &Path) -> Result<&'static str> {
     match source_language {
-        "solidity" => Ok("solc-latest"),
-        "vyper" => Ok("vyper-latest"),
+        "solidity" => Ok("solc"),
+        "vyper" => Ok("vyper"),
         other => bail!(
             "{} unsupported real-derived source_language {other}",
             path.display()
@@ -1239,21 +1224,13 @@ fn latest_source_profile_prefix(source_language: &str, path: &Path) -> Result<&'
     }
 }
 
-fn source_lane_requires_latest_profiles(source_lane: &str) -> bool {
-    matches!(source_lane, "latest_syntax_original" | "latest_idiomatic")
-}
-
-fn validate_latest_real_derived_source_profiles(
-    source_lane: &str,
+fn validate_real_derived_source_profile_language(
     source_language: &str,
     profiles: &[Value],
     path: &Path,
     context: &str,
 ) -> Result<()> {
-    if !source_lane_requires_latest_profiles(source_lane) {
-        return Ok(());
-    }
-    let expected_prefix = latest_source_profile_prefix(source_language, path)?;
+    let expected_prefix = source_profile_prefix(source_language, path)?;
     for profile in profiles {
         let profile = profile.as_str().with_context(|| {
             format!(
@@ -1263,7 +1240,7 @@ fn validate_latest_real_derived_source_profiles(
         })?;
         if !profile.starts_with(expected_prefix) {
             bail!(
-                "{} {source_lane} {context} requires source profile {profile} to use {expected_prefix} prefix",
+                "{} real-derived {context} source profile {profile} must match source language {source_language}",
                 path.display()
             );
         }
@@ -1626,7 +1603,6 @@ fn validate_real_derived_row_lanes(row: &Value, path: &Path) -> Result<()> {
 }
 
 fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result<()> {
-    let source_lane = string_at(row, "/provenance/source_lane", path)?;
     let source_language = string_at(row, "/provenance/source_language", path)?;
     let profiles = row
         .pointer("/provenance/source_profiles")
@@ -1637,13 +1613,7 @@ fn validate_real_derived_row_source_profiles(row: &Value, path: &Path) -> Result
                 path.display()
             )
         })?;
-    validate_latest_real_derived_source_profiles(
-        source_lane,
-        source_language,
-        profiles,
-        path,
-        "row",
-    )
+    validate_real_derived_source_profile_language(source_language, profiles, path, "row")
 }
 
 fn validate_real_derived_excluded_features(row: &Value, path: &Path) -> Result<()> {
@@ -1942,19 +1912,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_historical_profiles_in_latest_source_rows() {
+    fn validates_source_profile_language_in_real_derived_rows() {
         let path = Path::new("results/normalized/results.json");
         let row = json!({
-            "provenance": {
-                "source_lane": "latest_syntax_original",
-                "source_language": "vyper",
-                "source_profiles": [
-                    "vyper-latest-gas",
-                    "vyper-latest-none"
-                ]
-            }
-        });
-        let stale_row = json!({
             "provenance": {
                 "source_lane": "latest_syntax_original",
                 "source_language": "vyper",
@@ -1964,17 +1924,17 @@ mod tests {
                 ]
             }
         });
-        let latest_idiomatic_row = json!({
+        let wrong_language_row = json!({
             "provenance": {
-                "source_lane": "latest_idiomatic",
+                "source_lane": "latest_syntax_original",
                 "source_language": "vyper",
                 "source_profiles": [
                     "vyper-latest-gas",
-                    "vyper-latest-none"
+                    "solc-latest-noopt"
                 ]
             }
         });
-        let stale_latest_idiomatic_row = json!({
+        let latest_idiomatic_row = json!({
             "provenance": {
                 "source_lane": "latest_idiomatic",
                 "source_language": "vyper",
@@ -1987,10 +1947,8 @@ mod tests {
 
         super::validate_real_derived_row_source_profiles(&row, path).unwrap();
         super::validate_real_derived_row_source_profiles(&latest_idiomatic_row, path).unwrap();
-        assert!(super::validate_real_derived_row_source_profiles(&stale_row, path).is_err());
         assert!(
-            super::validate_real_derived_row_source_profiles(&stale_latest_idiomatic_row, path)
-                .is_err()
+            super::validate_real_derived_row_source_profiles(&wrong_language_row, path).is_err()
         );
     }
 
@@ -2181,7 +2139,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_historical_profiles_for_latest_source_lanes() {
+    fn accepts_compatibility_profiles_for_latest_source_lanes() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
             .nth(2)
@@ -2190,12 +2148,41 @@ mod tests {
             .into_iter()
             .find(|benchmark| benchmark.id == "uniswap_v2_pair")
             .unwrap();
-        let mut provenance = benchmark.provenance.clone().unwrap();
+        let provenance = benchmark.provenance.clone().unwrap();
         let real = serde_yaml::from_str::<serde_yaml::Value>(
             r#"
 source_profiles:
   - solc-latest-noopt
   - solc-0.5.16-noopt
+"#,
+        )
+        .unwrap();
+
+        super::validate_source_profiles(
+            root,
+            Path::new("benches/specs/uniswap_v2_pair.yaml"),
+            &real,
+            &provenance,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn rejects_cross_language_profiles_for_source_lanes() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap();
+        let benchmark = crate::catalog::real_derived_benchmarks()
+            .into_iter()
+            .find(|benchmark| benchmark.id == "uniswap_v2_pair")
+            .unwrap();
+        let provenance = benchmark.provenance.clone().unwrap();
+        let real = serde_yaml::from_str::<serde_yaml::Value>(
+            r#"
+source_profiles:
+  - solc-latest-noopt
+  - vyper-latest-none
 "#,
         )
         .unwrap();
@@ -2208,24 +2195,7 @@ source_profiles:
         )
         .unwrap_err();
 
-        assert!(
-            err.to_string()
-                .contains("requires source profile solc-0.5.16-noopt")
-        );
-
-        provenance.source_lane = crate::models::ComparisonLane::LatestIdiomatic;
-        let err = super::validate_source_profiles(
-            root,
-            Path::new("benches/specs/uniswap_v2_pair.yaml"),
-            &real,
-            &provenance,
-        )
-        .unwrap_err();
-
-        assert!(
-            err.to_string()
-                .contains("requires source profile solc-0.5.16-noopt")
-        );
+        assert!(err.to_string().contains("must match source language"));
     }
 
     #[test]
