@@ -336,6 +336,7 @@ real_derived:
     - max_redeem_limit_module_after_partial_unlock
     - withdraw_limit_module_owner_specific
     - withdraw_limit_module_owner_specific_withdraw
+    - withdraw_limit_module_owner_specific_reverts
     - max_redeem_limit_module_owner_specific
     - redeem_limit_module_owner_specific_redeem
     - max_withdraw_limit_module_max_loss_specific
@@ -1018,6 +1019,9 @@ scenarios:
   - name: withdraw_limit_module_owner_specific_withdraw
     call: "withdraw(12_345, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument to the module and accepts a withdrawal exactly at the owner-specific limit"
+  - name: withdraw_limit_module_owner_specific_reverts
+    call: "withdraw(12_346, BOB, BOB, 0) as BOB through a custom withdraw limit module with an owner-specific limit"
+    expected: "passes the owner argument to the module and rejects a withdrawal above the owner-specific limit"
   - name: max_redeem_limit_module_owner_specific
     call: "maxRedeem(BOB) through a custom withdraw limit module with an owner-specific limit"
     expected: "passes the owner argument through the shared max-withdraw path before converting and capping redeemable shares"
