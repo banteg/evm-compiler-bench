@@ -725,6 +725,8 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
         validate_real_derived_manifest_source_profiles(benchmark, path)?;
         validate_real_derived_manifest_excluded_features(benchmark, path)?;
         require_bool_pointer(benchmark, "/production_equivalence", path)?;
+        let source_profiles = real_derived_source_profile_set(benchmark, path)?;
+        let source_language = string_at(benchmark, "/source_language", path)?;
         let variants = benchmark
             .get("source_variants")
             .and_then(|value| value.as_array())
@@ -756,6 +758,12 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             require_enum(variant, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
             validate_real_derived_source_variant_profile(variant, &profile_metadata, path)?;
+            validate_real_derived_source_variant_declared_profile(
+                variant,
+                source_language,
+                &source_profiles,
+                path,
+            )?;
         }
     }
     Ok(())
@@ -869,6 +877,26 @@ fn validate_real_derived_source_variant_profile(
     Ok(())
 }
 
+fn validate_real_derived_source_variant_declared_profile(
+    variant: &Value,
+    source_language: &str,
+    source_profiles: &BTreeSet<String>,
+    path: &Path,
+) -> Result<()> {
+    let language = string_at(variant, "/language", path)?;
+    if language != source_language {
+        return Ok(());
+    }
+    let profile_id = string_at(variant, "/profile_id", path)?;
+    if !source_profiles.contains(profile_id) {
+        bail!(
+            "{} real-derived source-language variant profile {profile_id} is not declared in source_profiles",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
 fn validate_real_derived_manifest_lanes(benchmark: &Value, path: &Path) -> Result<()> {
     let comparison_lane = string_at(benchmark, "/comparison_lane", path)?;
     let source_lane = string_at(benchmark, "/source_lane", path)?;
@@ -897,21 +925,7 @@ fn validate_real_derived_manifest_lanes(benchmark: &Value, path: &Path) -> Resul
 }
 
 fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path) -> Result<()> {
-    let profiles = benchmark
-        .pointer("/source_profiles")
-        .and_then(|value| value.as_array())
-        .with_context(|| {
-            format!(
-                "{} JSON pointer /source_profiles must be a non-empty string array",
-                path.display()
-            )
-        })?;
-    if profiles.is_empty() {
-        bail!(
-            "{} JSON pointer /source_profiles must be a non-empty string array",
-            path.display()
-        );
-    }
+    let profiles = real_derived_source_profiles(benchmark, path)?;
     let source_language = string_at(benchmark, "/source_language", path)?;
     let expected_language_prefix = match source_language {
         "solidity" => "solc",
@@ -936,6 +950,39 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
         }
     }
     Ok(())
+}
+
+fn real_derived_source_profile_set(benchmark: &Value, path: &Path) -> Result<BTreeSet<String>> {
+    real_derived_source_profiles(benchmark, path)?
+        .iter()
+        .map(|profile| {
+            profile.as_str().map(str::to_string).with_context(|| {
+                format!(
+                    "{} JSON pointer /source_profiles must be a non-empty string array",
+                    path.display()
+                )
+            })
+        })
+        .collect()
+}
+
+fn real_derived_source_profiles<'a>(benchmark: &'a Value, path: &Path) -> Result<&'a Vec<Value>> {
+    let profiles = benchmark
+        .pointer("/source_profiles")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /source_profiles must be a non-empty string array",
+                path.display()
+            )
+        })?;
+    if profiles.is_empty() {
+        bail!(
+            "{} JSON pointer /source_profiles must be a non-empty string array",
+            path.display()
+        );
+    }
+    Ok(profiles)
 }
 
 fn validate_real_derived_manifest_excluded_features(benchmark: &Value, path: &Path) -> Result<()> {
@@ -2116,6 +2163,24 @@ mod tests {
                     "language": "solidity",
                     "compiler": "solc",
                     "source_variant": "latest"
+                },
+                {
+                    "id": "solc-0.8.20-noopt",
+                    "language": "solidity",
+                    "compiler": "solc-0.8.20",
+                    "source_variant": "solidity-0.8"
+                },
+                {
+                    "id": "solc-0.5.16-noopt",
+                    "language": "solidity",
+                    "compiler": "solc-0.5.16",
+                    "source_variant": "solidity-0.5"
+                },
+                {
+                    "id": "vyper-latest-none",
+                    "language": "vyper",
+                    "compiler": "vyper",
+                    "source_variant": "latest"
                 }
             ],
             "real_derived": {
@@ -2151,6 +2216,12 @@ mod tests {
         *compatibility_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
             .unwrap() = json!("solc-0.5.16-noopt");
+        *compatibility_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/profile_id")
+            .unwrap() = json!("solc-0.5.16-noopt");
+        *compatibility_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
+            .unwrap() = json!("solidity-0.5");
         let mut wrong_language_profile = manifest.clone();
         *wrong_language_profile
             .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
@@ -2183,9 +2254,27 @@ mod tests {
         *unknown_variant_label
             .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
             .unwrap() = json!("solidity-experimental");
+        let mut undeclared_source_variant_profile = manifest.clone();
+        *undeclared_source_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/profile_id")
+            .unwrap() = json!("solc-0.8.20-noopt");
+        *undeclared_source_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/source_variant")
+            .unwrap() = json!("solidity-0.8");
+        let mut counterpart_variant_profile = manifest.clone();
+        *counterpart_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/language")
+            .unwrap() = json!("vyper");
+        *counterpart_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/implementation_id")
+            .unwrap() = json!("vyper/handwritten/v1");
+        *counterpart_variant_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_variants/0/profile_id")
+            .unwrap() = json!("vyper-latest-none");
 
         super::validate_real_derived_manifest(&manifest, path).unwrap();
         super::validate_real_derived_manifest(&compatibility_profile, path).unwrap();
+        super::validate_real_derived_manifest(&counterpart_variant_profile, path).unwrap();
         assert!(super::validate_real_derived_manifest(&wrong_language_profile, path).is_err());
         assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
         assert!(super::validate_real_derived_manifest(&comparison_as_source_lane, path).is_err());
@@ -2194,6 +2283,10 @@ mod tests {
         assert!(super::validate_real_derived_manifest(&wrong_variant_language, path).is_err());
         assert!(super::validate_real_derived_manifest(&wrong_variant_label, path).is_err());
         assert!(super::validate_real_derived_manifest(&unknown_variant_label, path).is_err());
+        assert!(
+            super::validate_real_derived_manifest(&undeclared_source_variant_profile, path)
+                .is_err()
+        );
     }
 
     #[test]
