@@ -49,7 +49,7 @@ abi:
 real_derived:
   suite: real_derived
   model_kind: real_derived_model
-  comparison_lane: fixture_scoped_port
+  comparison_lane: production_conformance
   source_lane: upstream_exact_historical
   counterpart_lane: fixture_scoped_port
   upstream_project: Curve Stableswap NG

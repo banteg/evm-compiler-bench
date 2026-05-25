@@ -649,9 +649,15 @@ fn validate_real_derived_lanes(path: &Path, provenance: &Provenance) -> Result<(
             path.display()
         );
     }
-    if provenance.counterpart_lane != provenance.comparison_lane {
+    if provenance.comparison_lane == ComparisonLane::LatestIdiomatic {
         bail!(
-            "{} real-derived counterpart_lane must match comparison_lane",
+            "{} latest_idiomatic real-derived comparison_lane requires separate latest-idiomatic artifacts, not pinned upstream source",
+            path.display()
+        );
+    }
+    if provenance.comparison_lane == ComparisonLane::FixtureScopedPort {
+        bail!(
+            "{} fixture_scoped_port is a source/counterpart lane; use production_conformance or diagnostic_layout_matched for comparison_lane",
             path.display()
         );
     }
@@ -882,6 +888,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
                 &[
                     "upstream_exact_historical",
                     "latest_idiomatic",
+                    "production_conformance",
                     "diagnostic_layout_matched",
                     "fixture_scoped_port",
                 ],

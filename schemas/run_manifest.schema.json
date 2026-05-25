@@ -120,6 +120,7 @@
                 "enum": [
                   "upstream_exact_historical",
                   "latest_idiomatic",
+                  "production_conformance",
                   "diagnostic_layout_matched",
                   "fixture_scoped_port"
                 ]

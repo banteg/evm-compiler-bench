@@ -862,7 +862,7 @@ function Methodology() {
     {
       tag: 'F',
       title: 'Real-derived provenance',
-      body: 'Real-derived suites use upstream source-language originals where available, plus counterpart-language ports. Equivalence scope is documented per spec, and scoped ports are not upstream protocol gas claims.'
+      body: 'Real-derived suites separate benchmark lanes from source lanes. Production-conformance rows preserve broad upstream behavior for parity checks; pinned historical sources and fixture-scoped ports are not latest-vs-latest headline claims.'
     },
     {
       tag: 'G',

@@ -35,27 +35,31 @@ Every real-derived spec also declares lane metadata:
   historical compiler lane.
 - `latest_idiomatic`: modern high-level source in each language; this is the
   intended headline compiler comparison lane.
+- `production_conformance`: broad real-contract behavior coverage against
+  upstream-derived scope. This lane is for parity and regression evidence, not
+  for latest-vs-latest headline comparisons.
 - `diagnostic_layout_matched`: manual packing, assembly, unsafe math, or other
   parity tricks useful for diagnosis but not headline comparison.
 - `fixture_scoped_port`: real contract behavior over deterministic benchmark
-  fixtures. This can be useful evidence, but it is not a production-equivalent
-  upstream deployment claim.
+  fixtures. This is a source/counterpart lane for harness-dependent ports, not
+  a benchmark-level headline lane.
 
 `source_lane` is the checked-in upstream side, `counterpart_lane` is the
 cross-language port side, and `comparison_lane` is the benchmark-level lane
 used by legacy report consumers. Current real-derived specs use
-`source_lane: upstream_exact_historical` and
+`comparison_lane: production_conformance`,
+`source_lane: upstream_exact_historical`, and
 `counterpart_lane: fixture_scoped_port`; a future latest-stable shootout source
 must use separate latest-idiomatic artifacts instead of treating pinned
 historical upstream source as latest-idiomatic.
 
 ## Summary
 
-| Benchmark | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
-| --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
-| `yearn_vault_v3` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
+| Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
+| --- | --- | --- | --- | --- | --- | --- |
+| `uniswap_v2_pair` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Solidity `UniswapV2Pair.sol` at the pinned blob. | Vyper port covers the pair hot path and LP-token surface. | Full factory behavior is represented by a benchmark fixture; final ABI/revert audit still pending. |
+| `curve_stableswap_2coin` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `CurveStableSwapNG.vy` at the pinned blob. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
+| `yearn_vault_v3` | `production_conformance` | `upstream_exact_historical` | `fixture_scoped_port` | Vendored upstream Vyper `VaultV3.vy` at the pinned blob. | Solidity port covers the main vault API, management paths, strategy accounting, modules, queues, and permit. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; Vyper bounded `String` and `DynArray` ABI behavior is approximated with Solidity runtime checks. |
 
 ## Status Legend
 

@@ -158,11 +158,13 @@ just zip-design
   diagnostic comparators, not as the primary report lane.
 - Benchmark specs make lanes explicit: `latest_idiomatic` is the headline
   lane, `upstream_exact_historical` is for pinned historical protocol source,
+  `production_conformance` is for broad real-contract behavior checks that
+  preserve upstream scope without claiming a latest-vs-latest shootout,
   `diagnostic_layout_matched` is for manual parity tricks, and
-  `fixture_scoped_port` is for real-contract behavior over deterministic
-  harness dependencies. Real-derived specs distinguish `source_lane` from
-  `counterpart_lane`; pinned upstream-historical sources are not treated as
-  latest-stable shootout sources.
+  `fixture_scoped_port` is for deterministic harness-dependent ports. Real-derived
+  specs distinguish `source_lane` from `counterpart_lane`; pinned
+  upstream-historical sources are not treated as latest-stable shootout
+  sources.
 - `cargo run --release -- validate` enforces latest-lane pragmas on checked-in
   non-upstream benchmark sources and scale templates: Solidity uses
   `pragma solidity ^0.8.35;` and Vyper uses

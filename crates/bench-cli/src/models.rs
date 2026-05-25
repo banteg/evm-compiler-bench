@@ -74,6 +74,7 @@ pub struct Provenance {
 pub enum ComparisonLane {
     UpstreamExactHistorical,
     LatestIdiomatic,
+    ProductionConformance,
     DiagnosticLayoutMatched,
     FixtureScopedPort,
 }
@@ -83,6 +84,7 @@ impl ComparisonLane {
         match self {
             Self::UpstreamExactHistorical => "upstream_exact_historical",
             Self::LatestIdiomatic => "latest_idiomatic",
+            Self::ProductionConformance => "production_conformance",
             Self::DiagnosticLayoutMatched => "diagnostic_layout_matched",
             Self::FixtureScopedPort => "fixture_scoped_port",
         }
