@@ -366,11 +366,12 @@ Remaining:
   where the accountant creates refund balance and allowance during the report
   hook, but not exhaustive adversarial or unusual implementations behind those
   interfaces.
-- The current sequence coverage proves five representative combined management
+- The current sequence coverage proves six representative combined management
   orderings, including active non-shutdown withdrawal and repeated transitions
   across queues, debt, reports, modules, and role-manager handoff. Third-party
-  edge cases now include one mutating-accountant/module sequence, but exhaustive
-  adversarial implementations remain out of scope.
+  edge cases now include mutating-accountant/module withdraw and shutdown
+  redeem sequences, but exhaustive adversarial implementations remain out of
+  scope.
 - Vyper bounded `String[64]`, `String[32]`, and `DynArray[address, MAX_QUEUE]`
   success/failure boundaries are covered. The Solidity port uses runtime
   checks rather than Vyper decoder rejection, which is acceptable under the
