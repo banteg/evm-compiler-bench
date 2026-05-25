@@ -522,14 +522,48 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
     for benchmark in benchmarks {
         for pointer in [
             "/benchmark_id",
+            "/comparison_lane",
             "/source_lane",
             "/counterpart_lane",
+            "/source_language",
             "/source_path",
             "/source_reference_path",
             "/source_blob",
         ] {
             require_string_pointer(benchmark, pointer, path)?;
         }
+        require_enum(
+            benchmark,
+            "/comparison_lane",
+            &[
+                "upstream_exact_historical",
+                "latest_syntax_original",
+                "latest_idiomatic",
+                "production_conformance",
+                "diagnostic_layout_matched",
+                "fixture_scoped_port",
+            ],
+            path,
+        )?;
+        for pointer in ["/source_lane", "/counterpart_lane"] {
+            require_enum(
+                benchmark,
+                pointer,
+                &[
+                    "upstream_exact_historical",
+                    "latest_syntax_original",
+                    "latest_idiomatic",
+                    "production_conformance",
+                    "diagnostic_layout_matched",
+                    "fixture_scoped_port",
+                ],
+                path,
+            )?;
+        }
+        require_enum(benchmark, "/source_language", &["solidity", "vyper"], path)?;
+        validate_real_derived_manifest_lanes(benchmark, path)?;
+        validate_real_derived_manifest_source_profiles(benchmark, path)?;
+        validate_real_derived_manifest_excluded_features(benchmark, path)?;
         require_bool_pointer(benchmark, "/production_equivalence", path)?;
         let variants = benchmark
             .get("source_variants")
@@ -561,6 +595,124 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             require_enum(variant, "/language", &["solidity", "vyper"], path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
         }
+    }
+    Ok(())
+}
+
+fn validate_real_derived_manifest_lanes(benchmark: &Value, path: &Path) -> Result<()> {
+    let comparison_lane = string_at(benchmark, "/comparison_lane", path)?;
+    let source_lane = string_at(benchmark, "/source_lane", path)?;
+    if comparison_lane == "production_conformance" && source_lane != "latest_syntax_original" {
+        bail!(
+            "{} production_conformance real-derived manifest entry requires latest_syntax_original source_lane",
+            path.display()
+        );
+    }
+    if comparison_lane == "latest_idiomatic" && source_lane != "latest_idiomatic" {
+        bail!(
+            "{} latest_idiomatic real-derived manifest entry requires latest_idiomatic source_lane",
+            path.display()
+        );
+    }
+    if source_lane == "fixture_scoped_port" || source_lane == "diagnostic_layout_matched" {
+        bail!(
+            "{} real-derived manifest source_lane must identify an original source lane",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path) -> Result<()> {
+    let profiles = benchmark
+        .pointer("/source_profiles")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /source_profiles must be a non-empty string array",
+                path.display()
+            )
+        })?;
+    if profiles.is_empty() {
+        bail!(
+            "{} JSON pointer /source_profiles must be a non-empty string array",
+            path.display()
+        );
+    }
+    let source_lane = string_at(benchmark, "/source_lane", path)?;
+    let source_language = string_at(benchmark, "/source_language", path)?;
+    let expected_language_prefix = match source_language {
+        "solidity" => "solc",
+        "vyper" => "vyper",
+        other => bail!(
+            "{} unsupported real-derived source_language {other}",
+            path.display()
+        ),
+    };
+    let latest_prefix = match source_language {
+        "solidity" => "solc-latest",
+        "vyper" => "vyper-latest",
+        _ => unreachable!(),
+    };
+    for profile in profiles {
+        let profile = profile.as_str().with_context(|| {
+            format!(
+                "{} JSON pointer /source_profiles must be a non-empty string array",
+                path.display()
+            )
+        })?;
+        if !profile.starts_with(expected_language_prefix) {
+            bail!(
+                "{} real-derived manifest source profile {profile} must match source language {source_language}",
+                path.display()
+            );
+        }
+        if source_lane == "latest_syntax_original" && !profile.starts_with(latest_prefix) {
+            bail!(
+                "{} latest_syntax_original manifest entry requires source profile {profile} to use {latest_prefix} prefix",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_real_derived_manifest_excluded_features(benchmark: &Value, path: &Path) -> Result<()> {
+    let production_equivalence = benchmark
+        .pointer("/production_equivalence")
+        .and_then(|value| value.as_bool())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /production_equivalence must be a boolean",
+                path.display()
+            )
+        })?;
+    let excluded_features = benchmark
+        .pointer("/excluded_features")
+        .and_then(|value| value.as_array())
+        .with_context(|| {
+            format!(
+                "{} JSON pointer /excluded_features must be a string array",
+                path.display()
+            )
+        })?;
+    if !excluded_features.iter().all(|item| item.is_string()) {
+        bail!(
+            "{} JSON pointer /excluded_features must be a string array",
+            path.display()
+        );
+    }
+    if production_equivalence && !excluded_features.is_empty() {
+        bail!(
+            "{} production-equivalent real-derived manifest entry must not list excluded_features",
+            path.display()
+        );
+    }
+    if !production_equivalence && excluded_features.is_empty() {
+        bail!(
+            "{} non-production-equivalent real-derived manifest entry must explain excluded_features",
+            path.display()
+        );
     }
     Ok(())
 }
@@ -1561,6 +1713,58 @@ mod tests {
 
         super::validate_real_derived_row_source_profiles(&row, path).unwrap();
         assert!(super::validate_real_derived_row_source_profiles(&stale_row, path).is_err());
+    }
+
+    #[test]
+    fn validates_real_derived_manifest_lane_and_profile_invariants() {
+        let path = Path::new("results/normalized/run-manifest.json");
+        let manifest = json!({
+            "real_derived": {
+                "benchmarks": [
+                    {
+                        "benchmark_id": "uniswap_v2_pair",
+                        "comparison_lane": "production_conformance",
+                        "source_lane": "latest_syntax_original",
+                        "counterpart_lane": "fixture_scoped_port",
+                        "source_language": "solidity",
+                        "source_profiles": ["solc-latest-noopt"],
+                        "source_path": "contracts/UniswapV2Pair.sol",
+                        "source_reference_path": "benches/implementations/uniswap_v2_pair/solidity/upstream/contracts/UniswapV2Pair.sol",
+                        "source_blob": "f87a1db262fba132862eae377d8cdaef74c79f97",
+                        "production_equivalence": false,
+                        "excluded_features": ["factory fixture"],
+                        "source_variants": [
+                            {
+                                "language": "solidity",
+                                "implementation_id": "solidity/handwritten/v1",
+                                "profile_id": "solc-latest-noopt",
+                                "source_variant": "latest",
+                                "source_path": "target/bench-source-variants/solc-latest-noopt/Pair.sol",
+                                "source_hash": "abc",
+                                "compile_status": "ok"
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+        let mut stale_profile = manifest.clone();
+        *stale_profile
+            .pointer_mut("/real_derived/benchmarks/0/source_profiles/0")
+            .unwrap() = json!("solc-0.5.16-noopt");
+        let mut stale_lane = manifest.clone();
+        *stale_lane
+            .pointer_mut("/real_derived/benchmarks/0/source_lane")
+            .unwrap() = json!("upstream_exact_historical");
+        let mut contradictory_equivalence = manifest.clone();
+        *contradictory_equivalence
+            .pointer_mut("/real_derived/benchmarks/0/production_equivalence")
+            .unwrap() = json!(true);
+
+        super::validate_real_derived_manifest(&manifest, path).unwrap();
+        assert!(super::validate_real_derived_manifest(&stale_profile, path).is_err());
+        assert!(super::validate_real_derived_manifest(&stale_lane, path).is_err());
+        assert!(super::validate_real_derived_manifest(&contradictory_equivalence, path).is_err());
     }
 
     #[test]
