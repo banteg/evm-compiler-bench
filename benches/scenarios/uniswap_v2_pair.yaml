@@ -730,6 +730,30 @@ scenarios:
       data: 'abi.encodeWithSignature("swap(uint256,uint256,address,bytes)", uint256(0), uint256(100), benchUniswapToken1({target}), bytes(""))'
     expect_success: false
     observers: *pair_observers
+  - name: unknown_selector_reverts
+    state_access_profile: cold
+    measured:
+      data: 'hex"deadbeef"'
+    expect_success: false
+    observers: *pair_observers
+  - name: mint_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("mint(address)")), bytes12(0))'
+    expect_success: false
+    observers: *pair_observers
+  - name: swap_truncated_dynamic_tail_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this), uint256(128)))'
+    expect_success: false
+    observers: *pair_observers
+  - name: permit_truncated_calldata_reverts
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodePacked(bytes4(keccak256("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)")), abi.encode(benchUniswapPermitOwner(), BOB, uint256(123)))'
+    expect_success: false
+    observers: *pair_observers
   - name: permit_valid
     state_access_profile: mixed
     measured:

@@ -82,14 +82,14 @@ Every real-derived spec also declares a `comparison_lane`:
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
 | Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
-| Revert data and ABI boundary behavior | Incomplete | Success/failure is covered for important paths, but exhaustive revert-data and decoder-boundary parity has not been audited. |
+| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated fixed-argument calldata, malformed dynamic calldata tails, and truncated permit payloads. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
 | Storage layout | Tracked separately | Packed reserves intentionally match because pair behavior depends on uint112/uint32 reserve semantics; the rest is idiomatic Vyper storage and outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
 - Decide whether the benchmark remains pair-only or must include the full
   upstream factory implementation.
-- Complete the ABI/revert audit for the pair ABI outside the current scenarios.
+- Complete the remaining ABI/revert audit for exact revert bytes and malformed calldata cases outside the current selector, fixed-argument, dynamic-tail, and permit truncation scenarios.
 
 ### `curve_stableswap_2coin`
 
