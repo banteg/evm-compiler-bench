@@ -863,7 +863,7 @@ function Methodology() {
     {
       tag: 'F',
       title: 'Real-derived provenance',
-      body: 'Real-derived suites separate benchmark lanes from source lanes. Production-conformance rows are moving to latest-syntax originals plus counterpart-language ports; pinned historical sources remain provenance, not headline compiler claims.'
+      body: 'Real-derived suites separate benchmark lanes from source lanes. Production-conformance rows use latest-syntax originals plus counterpart-language ports; pinned historical sources remain provenance references, not compiled headline artifacts.'
     },
     {
       tag: 'G',

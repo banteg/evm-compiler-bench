@@ -109,10 +109,18 @@ mod tests {
     use crate::models::Language;
 
     #[test]
-    fn ranks_version_pinned_real_derived_profiles() {
+    fn ranks_latest_profiles_before_compatibility_variants() {
+        assert!(
+            baseline_score(Language::Solidity, "solc-latest-legacy-runs200")
+                < baseline_score(Language::Solidity, "solc-0.5.16-legacy-runs200")
+        );
         assert!(
             baseline_score(Language::Solidity, "solc-0.5.16-legacy-runs200")
                 < baseline_score(Language::Solidity, "solc-0.5.16-noopt")
+        );
+        assert!(
+            baseline_score(Language::Vyper, "vyper-latest-gas")
+                < baseline_score(Language::Vyper, "vyper-0.3.10-gas")
         );
         assert!(
             baseline_score(Language::Vyper, "vyper-0.3.10-gas")
