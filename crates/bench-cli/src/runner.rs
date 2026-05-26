@@ -21,6 +21,8 @@ use std::{
 const FAILURE_DIR: &str = "../results/raw/failures";
 const GAS_CACHE_SCHEMA: &str = "gas-v2";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
+const MAX_GAS_ROWS_PER_SHARD: usize = 800;
+const MAX_GAS_SHARD_ESTIMATED_BYTES: usize = 1_200_000;
 
 pub fn run_foundry(
     root: &Path,
@@ -83,7 +85,7 @@ pub fn run_foundry(
         compiled.artifacts.clone()
     };
     let include_behavior_checks = !use_cache || cached.is_empty();
-    let shards = gas_shards(&artifacts);
+    let shards = gas_shards(&artifacts, scenarios)?;
     eprintln!(
         "foundry: generating {} gas test shards for {} artifacts and {} expected rows",
         shards.len(),
@@ -111,13 +113,16 @@ pub fn run_foundry(
             )?,
         )
         .with_context(|| format!("writing {}", test_path.display()))?;
+        let expected_shard_rows =
+            expected_shard_gas_rows(shard_artifacts, scenarios, selected_gas_keys)?;
         progress.update(
             index,
             format!(
-                "running shard {}/{} ({} artifacts)",
+                "running shard {}/{} ({} artifacts, {} expected rows)",
                 index + 1,
                 shards.len(),
-                shard_artifacts.len()
+                shard_artifacts.len(),
+                expected_shard_rows
             ),
         );
         require_success(
@@ -348,7 +353,10 @@ fn read_gas_records(path: &Path) -> Result<Vec<GasRecord>> {
     Ok(records)
 }
 
-fn gas_shards(artifacts: &[CompiledArtifact]) -> Vec<Vec<CompiledArtifact>> {
+fn gas_shards(
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+) -> Result<Vec<Vec<CompiledArtifact>>> {
     let mut groups: Vec<(String, Vec<CompiledArtifact>)> = Vec::new();
     let mut positions = BTreeMap::new();
     for artifact in artifacts {
@@ -363,17 +371,150 @@ fn gas_shards(artifacts: &[CompiledArtifact]) -> Vec<Vec<CompiledArtifact>> {
 
     let mut shards = Vec::new();
     let mut current = Vec::new();
-    for (_, mut group) in groups {
-        if !current.is_empty() && current.len() + group.len() > MAX_ARTIFACTS_PER_GAS_SHARD {
+    let mut current_rows = 0;
+    let mut current_bytes = 0;
+    for (benchmark_id, group) in groups {
+        let scenario_count = scenarios.get(&benchmark_id)?.scenarios.len().max(1);
+        let group = baseline_pair_first(group);
+        let group_bytes = estimated_group_bytes(&group)?;
+        let min_chunk_artifacts = if baseline_pairs(&group).contains_key(&benchmark_id) {
+            2
+        } else {
+            1
+        };
+        let max_group_artifacts = MAX_ARTIFACTS_PER_GAS_SHARD
+            .min((MAX_GAS_ROWS_PER_SHARD / scenario_count).max(min_chunk_artifacts));
+
+        if group.len() > max_group_artifacts || group_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES {
+            if !current.is_empty() {
+                shards.push(current);
+                current = Vec::new();
+                current_rows = 0;
+                current_bytes = 0;
+            }
+            shards.extend(split_group_for_gas_shards(
+                group,
+                scenario_count,
+                max_group_artifacts,
+                min_chunk_artifacts,
+            )?);
+            continue;
+        }
+
+        let group_rows = group.len() * scenario_count;
+        if !current.is_empty()
+            && (current.len() + group.len() > MAX_ARTIFACTS_PER_GAS_SHARD
+                || current_rows + group_rows > MAX_GAS_ROWS_PER_SHARD
+                || current_bytes + group_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES)
+        {
             shards.push(current);
             current = Vec::new();
+            current_rows = 0;
+            current_bytes = 0;
         }
-        current.append(&mut group);
+        current_rows += group_rows;
+        current_bytes += group_bytes;
+        current.extend(group);
     }
     if !current.is_empty() {
         shards.push(current);
     }
-    shards
+    Ok(shards)
+}
+
+fn split_group_for_gas_shards(
+    group: Vec<CompiledArtifact>,
+    scenario_count: usize,
+    max_group_artifacts: usize,
+    min_chunk_artifacts: usize,
+) -> Result<Vec<Vec<CompiledArtifact>>> {
+    let mut chunks = Vec::new();
+    let mut current = Vec::new();
+    let mut current_rows = 0;
+    let mut current_bytes = 0;
+
+    for artifact in group {
+        let artifact_bytes = estimated_artifact_bytes(&artifact)?;
+        let can_split = current.len() >= min_chunk_artifacts;
+        if can_split
+            && (current.len() + 1 > max_group_artifacts
+                || current_rows + scenario_count > MAX_GAS_ROWS_PER_SHARD
+                || current_bytes + artifact_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES)
+        {
+            chunks.push(current);
+            current = Vec::new();
+            current_rows = 0;
+            current_bytes = 0;
+        }
+        current_rows += scenario_count;
+        current_bytes += artifact_bytes;
+        current.push(artifact);
+    }
+
+    if !current.is_empty() {
+        chunks.push(current);
+    }
+    Ok(chunks)
+}
+
+fn estimated_group_bytes(group: &[CompiledArtifact]) -> Result<usize> {
+    group.iter().map(estimated_artifact_bytes).sum()
+}
+
+fn estimated_artifact_bytes(artifact: &CompiledArtifact) -> Result<usize> {
+    let source_bytes = fs::metadata(&artifact.source_path)
+        .with_context(|| {
+            format!(
+                "reading source metadata for {}",
+                artifact.source_path.display()
+            )
+        })?
+        .len() as usize;
+    Ok(source_bytes
+        + artifact.creation_bytecode.len() / 2
+        + artifact.runtime_bytecode.len() / 2
+        + 4_096)
+}
+
+fn baseline_pair_first(group: Vec<CompiledArtifact>) -> Vec<CompiledArtifact> {
+    let Some((solidity_idx, vyper_idx)) = baseline_pairs(&group).values().next().copied() else {
+        return group;
+    };
+
+    let mut ordered = Vec::with_capacity(group.len());
+    ordered.push(group[solidity_idx].clone());
+    if vyper_idx != solidity_idx {
+        ordered.push(group[vyper_idx].clone());
+    }
+    for (index, artifact) in group.into_iter().enumerate() {
+        if index != solidity_idx && index != vyper_idx {
+            ordered.push(artifact);
+        }
+    }
+    ordered
+}
+
+fn expected_shard_gas_rows(
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+    selected_gas_keys: Option<&BTreeSet<String>>,
+) -> Result<usize> {
+    let mut rows = 0;
+    for artifact in artifacts {
+        for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
+            let record_key = gas_record_key(
+                &artifact.benchmark_id,
+                &artifact.implementation_id,
+                &artifact.profile_id,
+                &scenario.name,
+                scenario.state_access_profile.as_str(),
+            );
+            if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
+                rows += 1;
+            }
+        }
+    }
+    Ok(rows)
 }
 
 fn gas_record_key(

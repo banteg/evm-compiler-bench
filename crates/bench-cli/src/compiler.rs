@@ -71,9 +71,11 @@ pub fn compile_all(
                         let failed = matches!(cached, CachedCompileResult::Failure(_));
                         match &mut cached {
                             CachedCompileResult::Artifact(artifact) => {
+                                refresh_cached_artifact_metadata(artifact, benchmark);
                                 artifact.cache = CacheInfo::hit(&cache_input.key);
                             }
                             CachedCompileResult::Failure(failure) => {
+                                refresh_cached_failure_metadata(failure, benchmark);
                                 failure.cache = CacheInfo::hit(&cache_input.key);
                             }
                         }
@@ -167,8 +169,19 @@ pub fn compile_all(
     })
 }
 
-fn profile_applies_to_benchmark(_benchmark: &Benchmark, _profile: &CompilerProfile) -> bool {
-    true
+fn profile_applies_to_benchmark(benchmark: &Benchmark, profile: &CompilerProfile) -> bool {
+    let Some(provenance) = benchmark.provenance.as_ref() else {
+        return true;
+    };
+
+    if profile.language != provenance.source_language {
+        return true;
+    }
+
+    provenance
+        .source_profiles
+        .iter()
+        .any(|source_profile| source_profile == &profile.id)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -176,6 +189,34 @@ fn profile_applies_to_benchmark(_benchmark: &Benchmark, _profile: &CompilerProfi
 enum CachedCompileResult {
     Artifact(CompiledArtifact),
     Failure(CompileFailure),
+}
+
+fn refresh_cached_artifact_metadata(artifact: &mut CompiledArtifact, benchmark: &Benchmark) {
+    artifact.suite = benchmark.suite;
+    artifact.family.clone_from(&benchmark.family);
+    artifact
+        .parameter_name
+        .clone_from(&benchmark.parameter_name);
+    artifact.parameter_value = benchmark.parameter_value;
+    artifact.scenario_path.clone_from(&benchmark.scenario_path);
+    artifact.scenario_hash.clone_from(&benchmark.scenario_hash);
+    artifact
+        .generator_version
+        .clone_from(&benchmark.generator_version);
+    artifact.provenance.clone_from(&benchmark.provenance);
+}
+
+fn refresh_cached_failure_metadata(failure: &mut CompileFailure, benchmark: &Benchmark) {
+    failure.suite = benchmark.suite;
+    failure.family.clone_from(&benchmark.family);
+    failure.parameter_name.clone_from(&benchmark.parameter_name);
+    failure.parameter_value = benchmark.parameter_value;
+    failure.scenario_path.clone_from(&benchmark.scenario_path);
+    failure.scenario_hash.clone_from(&benchmark.scenario_hash);
+    failure
+        .generator_version
+        .clone_from(&benchmark.generator_version);
+    failure.provenance.clone_from(&benchmark.provenance);
 }
 
 struct CompileCacheInput {
@@ -1560,10 +1601,10 @@ fn bytecode_metrics(creation: &str, runtime: &str) -> Result<BytecodeMetrics> {
 #[cfg(test)]
 mod tests {
     use super::{
-        bytecode_metrics, solidity_pragma_for_toolchain, source_fingerprint,
-        transform_solidity_source, transform_vyper_source,
+        bytecode_metrics, profile_applies_to_benchmark, solidity_pragma_for_toolchain,
+        source_fingerprint, transform_solidity_source, transform_vyper_source,
     };
-    use crate::models::{Language, Toolchain};
+    use crate::models::{CompilerProfile, Language, MetadataMode, Toolchain};
     use std::{collections::BTreeMap, fs, path::PathBuf};
 
     #[test]
@@ -1630,6 +1671,43 @@ mod tests {
             version_output: version.to_string(),
             metadata: BTreeMap::new(),
         }
+    }
+
+    fn profile(id: &str, language: Language) -> CompilerProfile {
+        CompilerProfile {
+            id: id.to_string(),
+            language,
+            compiler: language.as_str().to_string(),
+            optimizer: false,
+            optimizer_runs: 0,
+            optimizer_mode: None,
+            experimental_codegen: false,
+            via_ir: false,
+            metadata_mode: MetadataMode::Off,
+            source_variant: None,
+            evm_version: "prague".to_string(),
+        }
+    }
+
+    #[test]
+    fn real_derived_source_language_uses_declared_profiles() {
+        let benchmark = crate::catalog::real_derived_benchmarks()
+            .into_iter()
+            .find(|benchmark| benchmark.id == "uniswap_v2_factory")
+            .unwrap();
+
+        assert!(profile_applies_to_benchmark(
+            &benchmark,
+            &profile("solc-0.5.16-noopt", Language::Solidity)
+        ));
+        assert!(!profile_applies_to_benchmark(
+            &benchmark,
+            &profile("solc-0.4.26-noopt", Language::Solidity)
+        ));
+        assert!(profile_applies_to_benchmark(
+            &benchmark,
+            &profile("vyper-0.3.10-gas", Language::Vyper)
+        ));
     }
 
     #[test]

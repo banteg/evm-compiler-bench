@@ -334,10 +334,7 @@ contract YearnVaultV3Real {
         for (uint256 i = 0; i < newDefaultQueue.length; i++) {
             require(_strategies[newDefaultQueue[i]].activation != 0, "!inactive");
         }
-        delete default_queue;
-        for (uint256 i = 0; i < newDefaultQueue.length; i++) {
-            default_queue.push(newDefaultQueue[i]);
-        }
+        default_queue = newDefaultQueue;
         emit UpdateDefaultQueue(newDefaultQueue);
     }
 

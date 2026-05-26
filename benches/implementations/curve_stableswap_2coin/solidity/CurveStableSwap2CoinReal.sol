@@ -66,7 +66,7 @@ contract CurveStableSwap2CoinReal {
 
     uint256[] internal rate_multipliers;
     uint8[] internal asset_types;
-    bool internal pool_contains_rebasing_tokens;
+    bool internal immutable pool_contains_rebasing_tokens;
     uint256[] internal rate_oracles;
     uint256[] internal call_amount;
     uint256[] internal scale_factor;
@@ -162,12 +162,14 @@ contract CurveStableSwap2CoinReal {
         for (uint256 i = 0; i < rateMultipliers.length; i++) {
             rate_multipliers[i] = rateMultipliers[i];
         }
+        bool containsRebasingToken;
         for (uint256 i = 0; i < assetTypes.length; i++) {
             asset_types[i] = assetTypes[i];
             if (assetTypes[i] == 2) {
-                pool_contains_rebasing_tokens = true;
+                containsRebasingToken = true;
             }
         }
+        pool_contains_rebasing_tokens = containsRebasingToken;
         for (uint256 i = 0; i < N_COINS; i++) {
             coins[i] = coins_[i];
             rate_oracles[i] = (uint256(uint32(methodIds[i])) << 224) | uint160(oracles[i]);

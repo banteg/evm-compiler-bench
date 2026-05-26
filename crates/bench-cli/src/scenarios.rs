@@ -248,6 +248,7 @@ mod tests {
                     destination: CallDestination::Target,
                 },
                 expect_success: true,
+                compare_return: true,
                 observers: vec![],
             }],
             randomized: None,
