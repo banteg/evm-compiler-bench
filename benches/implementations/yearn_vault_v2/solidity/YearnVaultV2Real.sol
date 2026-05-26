@@ -275,14 +275,10 @@ contract YearnVaultV2Real {
     }
 
     function setEmergencyShutdown(bool active) external {
-        require(msg.sender == governance || msg.sender == guardian);
         if (active) {
-            depositLimit = 0;
-            for (uint256 i = 0; i < MAXIMUM_STRATEGIES; i++) {
-                address strategy = withdrawalQueue[i];
-                if (strategy == address(0)) break;
-                strategies[strategy].debtRatio = 0;
-            }
+            require(msg.sender == governance || msg.sender == guardian);
+        } else {
+            require(msg.sender == governance);
         }
         emergencyShutdown = active;
         emit EmergencyShutdown(active);

@@ -919,6 +919,33 @@
         return true;
     }
 
+    function benchYearnV2Init(address target, uint256 limit, uint256 feeBps) external returns (bool) {
+        _benchYearnPrepare(target);
+        YearnDeps storage deps = yearnDeps[target];
+        deps.strategy.setVault(target);
+        deps.strategy2.setVault(target);
+        deps.strategy3.setVault(target);
+        (bool ok,) = target.call(
+            abi.encodeWithSignature(
+                "initialize(address,address,address,string,string,address,address)",
+                address(deps.asset),
+                address(this),
+                address(this),
+                "Yearn V2 Vault",
+                "yvV2",
+                address(this),
+                address(this)
+            )
+        );
+        require(ok, "yearn v2 init");
+        (ok,) = target.call(abi.encodeWithSignature("setDepositLimit(uint256)", limit));
+        require(ok, "yearn v2 limit");
+        feeBps;
+        deps.asset.mint(address(this), 1e30);
+        deps.asset.approve(target, type(uint256).max);
+        return true;
+    }
+
     function benchYearnPrepare(address target) external returns (bool) {
         _benchYearnPrepare(target);
         return true;
@@ -1004,6 +1031,17 @@
         uint256[] memory ids = new uint256[](queue.length);
         for (uint256 i = 0; i < queue.length; i++) {
             ids[i] = _benchYearnAddressId(target, queue[i]);
+        }
+        return keccak256(abi.encode(ids));
+    }
+
+    function benchYearnV2QueueIds(address target) external view returns (bytes32) {
+        uint256[] memory ids = new uint256[](20);
+        for (uint256 i = 0; i < 20; i++) {
+            (bool ok, bytes memory raw) = target.staticcall(abi.encodeWithSignature("withdrawalQueue(uint256)", i));
+            require(ok, "yearn v2 queue observer");
+            address strategy = abi.decode(raw, (address));
+            ids[i] = _benchYearnAddressId(target, strategy);
         }
         return keccak256(abi.encode(ids));
     }

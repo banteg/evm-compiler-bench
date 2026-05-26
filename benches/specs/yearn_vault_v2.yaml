@@ -1,0 +1,164 @@
+id: yearn_vault_v2
+title: Real-Derived Yearn V2 Vault Benchmark
+abi:
+  - "initialize(address,address,address,string,string)"
+  - "initialize(address,address,address,string,string,address)"
+  - "initialize(address,address,address,string,string,address,address)"
+  - "deposit() returns (uint256)"
+  - "deposit(uint256) returns (uint256)"
+  - "deposit(uint256,address) returns (uint256)"
+  - "withdraw() returns (uint256)"
+  - "withdraw(uint256) returns (uint256)"
+  - "withdraw(uint256,address) returns (uint256)"
+  - "withdraw(uint256,address,uint256) returns (uint256)"
+  - "approve(address,uint256) returns (bool)"
+  - "transfer(address,uint256) returns (bool)"
+  - "transferFrom(address,address,uint256) returns (bool)"
+  - "increaseAllowance(address,uint256) returns (bool)"
+  - "decreaseAllowance(address,uint256) returns (bool)"
+  - "permit(address,address,uint256,uint256,bytes) returns (bool)"
+  - "setDepositLimit(uint256)"
+  - "setEmergencyShutdown(bool)"
+  - "addStrategy(address,uint256,uint256,uint256,uint256)"
+  - "updateStrategyDebtRatio(address,uint256)"
+  - "revokeStrategy(address)"
+  - "addStrategyToQueue(address)"
+  - "removeStrategyFromQueue(address)"
+  - "report(uint256,uint256,uint256) returns (uint256)"
+  - "sweep(address,uint256)"
+  - "name() returns (string)"
+  - "symbol() returns (string)"
+  - "apiVersion() returns (string)"
+  - "token() returns (address)"
+  - "governance() returns (address)"
+  - "management() returns (address)"
+  - "guardian() returns (address)"
+  - "depositLimit() returns (uint256)"
+  - "debtRatio() returns (uint256)"
+  - "totalIdle() returns (uint256)"
+  - "totalDebt() returns (uint256)"
+  - "totalAssets() returns (uint256)"
+  - "totalSupply() returns (uint256)"
+  - "balanceOf(address) returns (uint256)"
+  - "allowance(address,address) returns (uint256)"
+  - "pricePerShare() returns (uint256)"
+  - "maxAvailableShares() returns (uint256)"
+  - "availableDepositLimit() returns (uint256)"
+  - "creditAvailable(address) returns (uint256)"
+  - "debtOutstanding(address) returns (uint256)"
+  - "expectedReturn(address) returns (uint256)"
+  - "strategies(address) returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"
+  - "withdrawalQueue(uint256) returns (address)"
+real_derived:
+  suite: real_derived
+  model_kind: real_derived_model
+  comparison_lane: production_conformance
+  source_lane: latest_syntax_original
+  counterpart_lane: fixture_scoped_port
+  upstream_project: Yearn Vaults V2
+  repository_url: "https://github.com/yearn/yearn-vaults"
+  source_commit: "97ca1b2e4fcf20f4be0ff456dabd020bfeb6697b"
+  source_path: "contracts/Vault.vy"
+  source_language: vyper
+  source_compiler: vyper
+  source_profiles:
+    - vyper-latest-gas
+    - vyper-latest-none
+  source_contract: Vault
+  source_blob: "1159912c093b12cf8d758f71d2d568cda69990af"
+  upstream_license: GNU AGPLv3
+  checked_at: "2026-05-27"
+  production_equivalence: false
+  api_compatibility: "Vyper implementation is the pinned Yearn V2 Vault source modernized to latest Vyper syntax; Solidity is an idiomatic port of the same vault API over the benchmark token and strategy fixtures"
+  storage_layout_compatibility: false
+  external_token_semantics: "harnessed_external_erc20_asset_and_strategy"
+  source_derivation: "Vyper implementation is a latest-syntax modernization of the pinned upstream source; Solidity implementation ports the upstream vault behavior and management surface"
+  equivalence_scope:
+    - Yearn V2 monolithic vault initialization and ERC20 share behavior
+    - deposit, deposit-all, withdraw, and idle/strategy withdrawal accounting
+    - governance, management, guardian, deposit limit, emergency shutdown, and metadata management
+    - strategy add, queue, debt ratio, credit, debt outstanding, revoke, and report flows
+    - management, performance, and strategist fee share issuance
+    - locked-profit degradation and price-per-share views
+    - EIP-712 packed-signature permit
+    - optional-return ERC20 transfer and transferFrom compatibility
+  scenario_coverage:
+    - initialize
+    - set_deposit_limit
+    - deposit
+    - deposit_all
+    - transfer
+    - transfer_from
+    - withdraw_idle
+    - add_strategy
+    - update_strategy_debt_ratio
+    - report_credit
+    - report_gain
+    - withdraw_strategy
+    - revoke_strategy
+    - queue_add_remove
+    - emergency_shutdown
+  mock_assumptions:
+    - benchmark harness deploys a standard ERC20 asset and ERC20-like strategies with the Yearn V2 strategy view and withdrawal hooks
+    - scenario coverage focuses on common governance, deposit, withdrawal, strategy, and report workflows, not adversarial branch coverage
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port
+  included_features:
+    - pinned upstream Yearn V2 Vyper source
+    - latest Vyper syntax modernization
+    - full public vault ABI surface ported to Solidity
+    - representative deposit, withdrawal, share transfer, strategy queue, debt accounting, report, and shutdown paths
+  excluded_features:
+    - arbitrary strategy implementations beyond the deterministic benchmark fixture
+    - exhaustive queue ordering and governance revert permutations
+semantics:
+  - "Benchmarks the Yearn V2 monolithic Vyper vault against a Solidity port over the same asset and strategy harness."
+  - "The measured rows cover common vault usage patterns rather than adversarial branch coverage."
+scenarios:
+  - name: initialize
+    call: "initialize(token, governance, rewards, name, symbol, guardian, management)"
+    expected: "sets token, metadata, authority addresses, fees, and activation timestamps"
+  - name: set_deposit_limit
+    call: "setDepositLimit(limit)"
+    expected: "accepts authorized deposit limit update"
+  - name: deposit
+    call: "deposit(amount, receiver)"
+    expected: "transfers underlying and mints proportional shares"
+  - name: deposit_all
+    call: "deposit()"
+    expected: "deposits up to the sender balance and deposit limit"
+  - name: transfer
+    call: "transfer(receiver, amount)"
+    expected: "moves vault shares"
+  - name: transfer_from
+    call: "transferFrom(owner, receiver, amount)"
+    expected: "moves approved vault shares and decreases allowance"
+  - name: withdraw_idle
+    call: "withdraw(shares, receiver, maxLoss)"
+    expected: "burns shares and returns idle underlying"
+  - name: add_strategy
+    call: "addStrategy(strategy, debtRatio, minDebt, maxDebt, performanceFee)"
+    expected: "registers strategy and appends it to the withdrawal queue"
+  - name: update_strategy_debt_ratio
+    call: "updateStrategyDebtRatio(strategy, debtRatio)"
+    expected: "updates strategy and vault aggregate debt ratios"
+  - name: report_credit
+    call: "report(gain, loss, debtPayment)"
+    expected: "strategy receives available credit"
+  - name: report_gain
+    call: "report(gain, loss, debtPayment)"
+    expected: "accounts realized gain, fees, and locked profit"
+  - name: withdraw_strategy
+    call: "withdraw(shares, receiver, maxLoss)"
+    expected: "pulls funds from queued strategy when idle assets are insufficient"
+  - name: revoke_strategy
+    call: "revokeStrategy(strategy)"
+    expected: "sets strategy debt ratio to zero"
+  - name: queue_add_remove
+    call: "removeStrategyFromQueue(strategy)"
+    expected: "removes strategy and compacts withdrawal queue"
+  - name: emergency_shutdown
+    call: "setEmergencyShutdown(true)"
+    expected: "enables shutdown and zeros deposit/debt ratios"
+implementations:
+  solidity: "benches/implementations/yearn_vault_v2/solidity/YearnVaultV2Real.sol"
+  vyper: "benches/implementations/yearn_vault_v2/vyper/latest/Vault.vy"

@@ -353,6 +353,8 @@ contract BenchUniswapCreate2Factory {
 
 contract BenchYearnStrategy {
     BenchERC20 public immutable asset;
+    address public vault;
+    bool public emergencyExit;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -368,6 +370,32 @@ contract BenchYearnStrategy {
 
     constructor(BenchERC20 asset_) {
         asset = asset_;
+    }
+
+    function setVault(address vault_) external returns (bool) {
+        vault = vault_;
+        return true;
+    }
+
+    function want() external view returns (address) {
+        return address(asset);
+    }
+
+    function isActive() external view returns (bool) {
+        return !emergencyExit;
+    }
+
+    function delegatedAssets() external pure returns (uint256) {
+        return 0;
+    }
+
+    function estimatedTotalAssets() external view returns (uint256) {
+        return asset.balanceOf(address(this));
+    }
+
+    function setEmergencyExit(bool value) external returns (bool) {
+        emergencyExit = value;
+        return true;
     }
 
     function maxDeposit(address) external view returns (uint256) {
@@ -503,6 +531,22 @@ contract BenchYearnStrategy {
         require(target == 0 || loss * 10000 <= target * maxLoss, "loss");
         if (withdrawn > 0) {
             require(asset.transfer(receiver, withdrawn), "transfer");
+        }
+    }
+
+    function withdraw(uint256 amount) external returns (uint256 loss) {
+        uint256 available = asset.balanceOf(address(this));
+        uint256 withdrawn = amount > available ? available : amount;
+        loss = amount - withdrawn;
+        if (withdrawn > 0) {
+            require(asset.transfer(msg.sender, withdrawn), "transfer");
+        }
+    }
+
+    function migrate(address newStrategy) external {
+        uint256 available = asset.balanceOf(address(this));
+        if (available > 0) {
+            require(asset.transfer(newStrategy, available), "transfer");
         }
     }
 

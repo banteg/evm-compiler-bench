@@ -670,9 +670,12 @@ fn helper_functions(artifacts: &[CompiledArtifact]) -> String {
             "uniswap_v2_factory" | "uniswap_v2_pair"
         )
     });
-    let needs_yearn = artifacts
-        .iter()
-        .any(|artifact| artifact.benchmark_id == "yearn_vault_v3");
+    let needs_yearn = artifacts.iter().any(|artifact| {
+        matches!(
+            artifact.benchmark_id.as_str(),
+            "yearn_vault_v2" | "yearn_vault_v3"
+        )
+    });
     let mut include = true;
 
     for line in all_helper_functions().lines() {
@@ -1155,7 +1158,12 @@ fn write_call_args(out: &mut String, call: &CallSpec, target: &str) {
     out.push_str(", ");
     out.push_str(&call.value);
     out.push_str(", ");
-    out.push_str(call.sender.as_deref().unwrap_or("address(this)"));
+    let sender = call
+        .sender
+        .as_deref()
+        .unwrap_or("address(this)")
+        .replace("{target}", target);
+    out.push_str(&sender);
 }
 
 fn call_destination<'a>(call: &CallSpec, target: &'a str) -> &'a str {
