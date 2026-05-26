@@ -152,23 +152,17 @@ I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is 
 
 I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures, but I did find several things that should be fixed or disclosed.
 
-### 1. Yearn V3 constructor / initialization caveat should be made louder
-
-The Solidity Yearn port has a constructor/minimal-proxy pattern where direct implementation initialization is intentionally not representative. The docs mention this, but it is easy to miss.
-
-Do not include direct implementation deployment/initialization behavior in headline comparisons. Treat only the intended minimal-proxy harness flow as comparable.
-
-### 2. Curve StableSwap dynamic-array behavior is not exact decoder parity
+### 1. Curve StableSwap dynamic-array behavior is not exact decoder parity
 
 The Solidity Curve port accepts dynamic arrays and checks length with `>= N_COINS` in some paths. The docs already mark too-long dynamic-array decoder parity as out of scope.
 
 That is fine for fixture-based gas benchmarking, but it means some malformed-input behavior is not production-equivalent. Keep those cases out of any “real contract equivalence” headline.
 
-### 3. Curve constructor assumptions should be explicit
+### 2. Curve constructor assumptions should be explicit
 
 The Solidity Curve constructor allows `nCoins <= MAX_COINS`, and downstream logic assumes a valid two-or-more coin setup. If this is only ever deployed by the benchmark fixture with valid inputs, that is fine. For an idiomatic robust rewrite, I would add `nCoins >= 2` and stricter length checks.
 
-### 4. Historical source variants have compatibility bugs
+### 3. Historical source variants have compatibility bugs
 
 The old solc Yearn and Curve variants fail for reasons that look like generated-source compatibility issues, not meaningful optimizer results:
 
