@@ -12,7 +12,7 @@ def increment() -> uint256:
     return self.value
 
 @external
-def add(amount: uint256) -> uint256:
+def add_value(amount: uint256) -> uint256:
     self.value += amount
     return self.value
 

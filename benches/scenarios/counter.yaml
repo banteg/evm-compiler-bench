@@ -20,12 +20,12 @@ scenarios:
     expect_success: true
     observers:
       - data: 'abi.encodeWithSignature("value()")'
-  - name: add_five
+  - name: add_value_five
     state_access_profile: warm
     warmup:
       - function: "value()"
     measured:
-      function: "add(uint256)"
+      function: "add_value(uint256)"
       args:
         - uint256: 5
     expect_success: true
@@ -34,7 +34,7 @@ scenarios:
   - name: reset
     state_access_profile: mixed
     setup:
-      - data: 'abi.encodeWithSignature("add(uint256)", uint256(11))'
+      - data: 'abi.encodeWithSignature("add_value(uint256)", uint256(11))'
     warmup:
       - data: 'abi.encodeWithSignature("value()")'
     measured:

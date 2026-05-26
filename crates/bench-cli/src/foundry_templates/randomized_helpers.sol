@@ -194,9 +194,9 @@
                 _runBoth(solTarget, vyperTarget, abi.encodeWithSignature("increment()"), 0, address(this), "counter", seed, i, traceLog);
             } else if (op == 1) {
                 uint256 amount = rng % 17;
-                trace = string.concat("add:", vm.toString(amount));
+                trace = string.concat("add_value:", vm.toString(amount));
                 traceLog = _appendTrace(traceLog, trace);
-                _runBoth(solTarget, vyperTarget, abi.encodeWithSignature("add(uint256)", amount), 0, address(this), "counter", seed, i, traceLog);
+                _runBoth(solTarget, vyperTarget, abi.encodeWithSignature("add_value(uint256)", amount), 0, address(this), "counter", seed, i, traceLog);
             } else if (op == 2) {
                 trace = "reset";
                 traceLog = _appendTrace(traceLog, trace);
@@ -391,10 +391,10 @@
                 model += 1;
             } else if (op == 1) {
                 uint256 amount = rng % 17;
-                trace = string.concat("add:", vm.toString(amount));
+                trace = string.concat("add_value:", vm.toString(amount));
                 traceLog = _appendTrace(traceLog, trace);
-                (ok,,) = _run(target, abi.encodeWithSignature("add(uint256)", amount), 0, address(this));
-                _requireCheck(ok, "property", "counter", seed, i, traceLog, "counter add failed");
+                (ok,,) = _run(target, abi.encodeWithSignature("add_value(uint256)", amount), 0, address(this));
+                _requireCheck(ok, "property", "counter", seed, i, traceLog, "counter add_value failed");
                 model += amount;
             } else {
                 trace = "reset";
@@ -555,4 +555,3 @@
             _requireCheck(totalLiquidity == 0 || reserve0 + reserve1 > 0, "property", "amm_pair_subset", seed, i, traceLog, "liquidity without reserves");
         }
     }
-

@@ -13,7 +13,7 @@ contract Counter {
         return value;
     }
 
-    function add(uint256 amount) external returns (uint256) {
+    function add_value(uint256 amount) external returns (uint256) {
         value += amount;
         return value;
     }

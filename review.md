@@ -262,7 +262,7 @@ I would prioritize these:
    Especially important for Vyper Venom and historical profiles.
 
 2. **Fix or mark source-compatibility bugs.**
-   Especially `Counter.add` for old Vyper and Yearn old-solc redeclaration.
+   Especially Yearn old-solc redeclaration.
 
 3. **Add the Vyper Factory post-create check or a negative test.**
    This is the most concrete real-derived semantic caveat I found.

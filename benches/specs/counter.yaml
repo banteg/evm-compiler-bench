@@ -3,7 +3,7 @@ title: Counter
 abi:
   - "value() returns (uint256)"
   - "increment() returns (uint256)"
-  - "add(uint256) returns (uint256)"
+  - "add_value(uint256) returns (uint256)"
   - "reset() returns (uint256)"
 semantics:
   - "Tracks a single uint256 value initialized by constructor."
@@ -15,8 +15,8 @@ scenarios:
   - name: increment
     call: "increment()"
     expected: "returns value plus one"
-  - name: add_five
-    call: "add(5)"
+  - name: add_value_five
+    call: "add_value(5)"
     expected: "returns value plus five"
   - name: reset
     call: "reset()"
