@@ -223,12 +223,20 @@ function FindingsGrid() {
   const solcNoopt = Bench.profileLabel(SOL_NOOPT);
   const vyperGas = Bench.profileLabel(VYPER_GAS);
   const vyperVenom = Bench.profileLabel(VYPER_GAS_VENOM);
+  const absDelta = ratio => {
+    if (ratio == null || !isFinite(ratio)) return '—';
+    return Math.abs((ratio - 1) * 100).toFixed(1) + '%';
+  };
+  const lowerHigher = (ratio, noun) => {
+    if (ratio == null || !isFinite(ratio)) return noun;
+    return `${absDelta(ratio)} ${ratio <= 1 ? 'lower' : 'higher'} ${noun}`;
+  };
   const cards = [
     {
       tag: 'Finding 01',
       span: 4,
       headline: 'Vyper gas beats solc legacy on runtime gas.',
-      body: `Comparing stable, optimizer-enabled profiles, Vyper 0.4.3 is noticeably more efficient, using 9.6% less runtime gas than solc 0.8.35 legacy.`,
+      body: `Comparing stable, optimizer-enabled profiles over fixed and scale benchmarks, ${vyperGas} uses ${absDelta(HEADLINES.stableSolVsVyperGas.geomean)} less runtime gas than ${solcLegacy}.`,
       stat: HEADLINES.stableSolVsVyperGas.geomean,
       statLabel: 'runtime gas (Vyper gas vs solc legacy)',
       altStat: HEADLINES.stableSolVsVyperSize.geomean,
@@ -239,7 +247,7 @@ function FindingsGrid() {
       tag: 'Finding 02',
       span: 4,
       headline: 'Vyper + Venom beats solc viaIR on both axes.',
-      body: 'Usually, you trade bytecode size for gas savings. Against solc 0.8.35 viaIR, Vyper 0.4.3 with Venom codegen achieves both significant gas savings and a smaller footprint.',
+      body: `Against ${solcViaIR}, ${vyperVenom} uses ${absDelta(HEADLINES.solVsVyperVenomGas.geomean)} less runtime gas and ${absDelta(HEADLINES.solVsVyperVenomSize.geomean)} fewer runtime bytes.`,
       stat: HEADLINES.solVsVyperVenomGas.geomean,
       statLabel: 'runtime gas (Vyper Venom vs solc viaIR)',
       altStat: HEADLINES.solVsVyperVenomSize.geomean,
@@ -250,7 +258,7 @@ function FindingsGrid() {
       tag: 'Finding 03',
       span: 4,
       headline: 'Venom makes Vyper smaller and cheaper.',
-      body: 'Enabling --experimental-codegen ("Venom") in Vyper shrinks runtime bytecode, reduces runtime gas, and even cuts down compile times compared to legacy codegen.',
+      body: `Enabling --experimental-codegen ("Venom") in Vyper gives ${lowerHigher(HEADLINES.venomSize.geomean, 'runtime bytecode')}, ${lowerHigher(HEADLINES.venomGas.geomean, 'runtime gas')}, and ${lowerHigher(HEADLINES.venomCompile.geomean, 'compile time')} versus legacy Vyper codegen.`,
       stat: HEADLINES.venomSize.geomean,
       statLabel: 'runtime bytes vs Vyper legacy codegen',
       altStat: HEADLINES.venomGas.geomean,
@@ -261,7 +269,7 @@ function FindingsGrid() {
       tag: 'Finding 04',
       span: 4,
       headline: 'viaIR buys gas and size with compile time.',
-      body: 'Switching from solc 0.8.35 legacy to viaIR yields modest reductions in runtime gas and bytecode size, but comes with a massive 158% increase in compile time.',
+      body: `Switching from ${solcLegacy} to ${solcViaIR} gives ${lowerHigher(HEADLINES.viaIRGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.viaIRSize.geomean, 'runtime bytecode')}, but ${lowerHigher(HEADLINES.viaIRCompile.geomean, 'compile time')}.`,
       stat: HEADLINES.viaIRGas.geomean,
       statLabel: 'runtime gas vs solc legacy',
       altStat: HEADLINES.viaIRCompile.geomean,
@@ -272,8 +280,8 @@ function FindingsGrid() {
     {
       tag: 'Finding 05',
       span: 4,
-      headline: 'Seven years of solc legacy barely move runtime gas.',
-      body: 'Solc 0.4.26 was released in 2019. Compiling on the same legacy pipeline up to solc 0.8.35 results in a negligible 0.3% difference in runtime gas.',
+      headline: 'solc legacy nets out flat, with large offsetting moves.',
+      body: `Solc 0.4.26 to ${solcLegacy} nets to ${Bench.fmtDelta(HEADLINES.solEra.geomean)} runtime gas, but it is not a smooth drift story: loop bounds and ABI args regress while dispatch and Merkle improve.`,
       stat: HEADLINES.solEra.geomean,
       statLabel: 'runtime gas (solc 0.4.26 → 0.8.35 legacy)',
       neutral: true,
@@ -283,7 +291,7 @@ function FindingsGrid() {
       tag: 'Finding 06',
       span: 4,
       headline: 'The optimizer is the biggest lever in the run.',
-      body: 'Disabling the optimizer entirely in solc 0.8.35 triggers a massive 34.9% penalty to runtime gas: the single largest measured effect among all solc profile comparisons.',
+      body: `Disabling the optimizer entirely in solc 0.8.35 gives ${lowerHigher(HEADLINES.nooptGas.geomean, 'runtime gas')}: the single largest measured effect among all solc profile comparisons.`,
       stat: HEADLINES.nooptGas.geomean,
       statLabel: 'runtime gas without optimizer',
       altStat: HEADLINES.nooptSize.geomean,
@@ -297,7 +305,7 @@ function FindingsGrid() {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 01 · Summary'),
         React.createElement('div', { className: 'section-title' }, 'Six findings from this run.'),
-        React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable scenarios; card headers show the row count.')
+        React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable measurement units; card headers show the row count.')
       )
     ),
     React.createElement('div', { className: 'stories' },
@@ -577,6 +585,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
   const profA = Bench.profileById(profileA);
   const profB = Bench.profileById(profileB);
   const compareTitle = `${Bench.profileLabel(profileB)} vs ${Bench.profileLabel(profileA)}.`;
+  const unit = Bench.comparisonUnit(metric);
 
   const presets = [
     [SOL_LEGACY,       VYPER_GAS,       'Stable optimized'],
@@ -595,7 +604,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 03 · Pick any two configurations'),
         React.createElement('div', { className: 'section-title' }, compareTitle),
-        React.createElement('div', { className: 'section-sub' }, 'Comparisons match on suite/benchmark/scenario/state — different compilers, identical surface. Negative deltas favor the compared profile.'),
+        React.createElement('div', { className: 'section-sub' }, `Comparisons match on ${unit.match} - different compilers, identical surface. Negative deltas favor the compared profile.`),
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -625,7 +634,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Median Δ'),
         React.createElement('div', { className: 'v tie' }, Bench.fmtDelta(agg.median)),
-        React.createElement('div', { className: 'sub' }, 'of ' + agg.count + ' comparable scenarios')
+        React.createElement('div', { className: 'sub' }, 'of ' + agg.count + ' comparable ' + unit.plural)
       ),
       React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Win / Tie / Loss'),
@@ -652,8 +661,8 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       React.createElement('div', { className: 'card no-pad' },
         React.createElement('div', { style: { padding: '20px 24px 4px 24px' } },
           React.createElement('div', { className: 'card-head' },
-            React.createElement('div', { className: 'card-title' }, 'Distribution of scenario deltas'),
-            React.createElement('div', { className: 'card-sub' }, `${agg.count} scenarios · negative = compared is cheaper`)
+            React.createElement('div', { className: 'card-title' }, `Distribution of ${unit.singular} deltas`),
+            React.createElement('div', { className: 'card-sub' }, `${agg.count} ${unit.plural} · negative = compared is cheaper`)
           )
         ),
         React.createElement('div', { style: { padding: '0 24px 16px 24px' } },
@@ -661,7 +670,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
         ),
         React.createElement('div', { style: { padding: '14px 24px 24px 24px', maxHeight: '620px', overflow: 'auto', borderTop: '1px solid var(--line)' } },
           React.createElement('div', { className: 'card-head', style: { marginTop: '4px' } },
-            React.createElement('div', { className: 'card-title' }, 'Per-scenario Δ'),
+            React.createElement('div', { className: 'card-title' }, `Per-${unit.singular} Δ`),
             React.createElement('div', { className: 'card-sub' }, `top ${Math.min(120, cmp.length)} by |Δ|`)
           ),
           React.createElement(ScenarioDeltaChart, { rows: cmp, height: Math.min(2200, Math.max(200, cmp.length * 14 + 30)), limit: 120 })
@@ -852,8 +861,8 @@ function Methodology() {
     },
     {
       tag: 'D',
-      title: 'Geomean over comparable scenarios',
-      body: 'Each summary is a geometric mean of ratios B/A over scenarios where both profiles compiled. Missing scenarios are excluded from the comparison.'
+      title: 'Metric-aware geomeans',
+      body: 'Runtime gas is aggregated over matched headline scenarios. Artifact metrics such as bytecode size, deploy gas, and compile time are deduplicated per benchmark artifact before computing ratios.'
     },
     {
       tag: 'E',
@@ -867,11 +876,16 @@ function Methodology() {
     },
     {
       tag: 'G',
+      title: 'Diagnostic ABI-boundary rows',
+      body: 'Malformed selector and truncated-calldata rows remain in the raw Uniswap V2 Pair results, but are excluded from headline runtime-gas geomeans because the Vyper port intentionally bounds flash-swap callback bytes as Bytes[4096].'
+    },
+    {
+      tag: 'H',
       title: 'Compatibility source variants',
       body: 'Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied.'
     },
     {
-      tag: 'H',
+      tag: 'I',
       title: 'Vyper Venom and 0.5.0a1',
       body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
     },

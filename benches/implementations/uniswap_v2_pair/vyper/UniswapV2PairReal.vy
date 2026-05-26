@@ -153,7 +153,7 @@ def mint(receiver: address) -> uint256:
     supply: uint256 = self.totalSupply
     liquidity: uint256 = 0
     if supply == 0:
-        liquidity = self._sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+        liquidity = isqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
         self._mint(empty(address), MINIMUM_LIQUIDITY)
     else:
         liquidity = self._min(
@@ -325,8 +325,8 @@ def _mint_fee(old_reserve0: uint112, old_reserve1: uint112) -> bool:
     last_k: uint256 = self.kLast
     if fee_on:
         if last_k != 0:
-            root_k: uint256 = self._sqrt(convert(old_reserve0, uint256) * convert(old_reserve1, uint256))
-            root_k_last: uint256 = self._sqrt(last_k)
+            root_k: uint256 = isqrt(convert(old_reserve0, uint256) * convert(old_reserve1, uint256))
+            root_k_last: uint256 = isqrt(last_k)
             if root_k > root_k_last:
                 liquidity: uint256 = self.totalSupply * (root_k - root_k_last) // (root_k * 5 + root_k_last)
                 if liquidity > 0:
@@ -334,22 +334,6 @@ def _mint_fee(old_reserve0: uint112, old_reserve1: uint112) -> bool:
     elif last_k != 0:
         self.kLast = 0
     return fee_on
-
-@internal
-@pure
-def _sqrt(y: uint256) -> uint256:
-    z: uint256 = 0
-    if y > 3:
-        z = y
-        x: uint256 = y // 2 + 1
-        for _: uint256 in range(256):
-            if x >= z:
-                break
-            z = x
-            x = (y // x + x) // 2
-    elif y != 0:
-        z = 1
-    return z
 
 @internal
 @pure

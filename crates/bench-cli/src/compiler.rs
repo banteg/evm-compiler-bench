@@ -1317,6 +1317,7 @@ fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> 
             source = rewrite_vyper_02_owner_checks(&source);
             source = rewrite_vyper_02_manager_checks(&source);
             source = rewrite_vyper_02_uniswap_integer_types(&source);
+            source = rewrite_vyper_02_isqrt(&source);
             source = rewrite_typed_for_loops(&source);
             source = rewrite_vyper_event_logs(&source);
             reorder_vyper_02_internal_functions(&source)
@@ -1574,6 +1575,39 @@ fn rewrite_vyper_02_uniswap_integer_types(source: &str) -> String {
             "convert(max_value(uint112), uint256)",
             "5192296858534827628530496329220095",
         )
+}
+
+fn rewrite_vyper_02_isqrt(source: &str) -> String {
+    if !source.contains("isqrt(") {
+        return source.to_string();
+    }
+    let source = source.replace("isqrt(", "self._sqrt(");
+    let helper = r#"@internal
+@view
+def _sqrt(y: uint256) -> uint256:
+    z: uint256 = 0
+    if y > 3:
+        z = y
+        x: uint256 = y / 2 + 1
+        for _ in range(256):
+            if x >= z:
+                break
+            z = x
+            x = (y / x + x) / 2
+    elif y != 0:
+        z = 1
+    return z
+
+"#;
+    if let Some(index) = source.find("@internal\n@view\ndef _min(") {
+        let mut out = String::with_capacity(source.len() + helper.len());
+        out.push_str(&source[..index]);
+        out.push_str(helper);
+        out.push_str(&source[index..]);
+        out
+    } else {
+        format!("{source}\n{helper}")
+    }
 }
 
 #[derive(Debug)]
@@ -2149,7 +2183,7 @@ mod tests {
 
     #[test]
     fn rewrites_vyper_02_compatibility_syntax() {
-        let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
+        let source = "# pragma version >=0.4.3,<0.5.0\n\nstruct Strategy:\n    balance: uint256\n\n@external\n@pure\ndef getReserves() -> (uint112, uint112, uint32):\n    self._only_owner()\n    amount0: uint256 = self.balance0\n    value: uint256 = isqrt(amount0 * amount0)\n    return convert(self.reserve0, uint112), convert(self.reserve1, uint112), convert(self.blockTimestampLast, uint32)\n\n@internal\n@view\ndef _only_owner():\n    assert msg.sender == self.owner, \"owner\"\n\n@internal\n@pure\ndef _min(a: uint256, b: uint256) -> uint256:\n    if a < b:\n        return a\n    return b\n";
         let rewritten = transform_vyper_source(
             source,
             Some("vyper-0.2"),
@@ -2160,6 +2194,8 @@ mod tests {
         assert!(rewritten.contains("@view\ndef getReserves() -> (uint256, uint256, uint256):"));
         assert!(rewritten.contains("    strategyBalance: uint256"));
         assert!(rewritten.contains("amount0: uint256 = self.balance0"));
+        assert!(rewritten.contains("value: uint256 = self._sqrt(amount0 * amount0)"));
+        assert!(rewritten.contains("def _sqrt(y: uint256) -> uint256:"));
         assert!(rewritten.contains("def _only_owner(sender: address):"));
         assert!(rewritten.contains("assert sender == self.owner"));
         assert!(rewritten.contains("self._only_owner(msg.sender)"));
