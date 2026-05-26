@@ -152,11 +152,7 @@ I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is 
 
 I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures, but I did find several things that should be fixed or disclosed.
 
-### 1. Curve constructor assumptions should be explicit
-
-The Solidity Curve constructor allows `nCoins <= MAX_COINS`, and downstream logic assumes a valid two-or-more coin setup. If this is only ever deployed by the benchmark fixture with valid inputs, that is fine. For an idiomatic robust rewrite, I would add `nCoins >= 2` and stricter length checks.
-
-### 2. Historical source variants have compatibility bugs
+### 1. Historical source variants have compatibility bugs
 
 The old solc Yearn and Curve variants fail for reasons that look like generated-source compatibility issues, not meaningful optimizer results:
 

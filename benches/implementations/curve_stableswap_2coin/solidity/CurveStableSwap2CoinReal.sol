@@ -140,9 +140,9 @@ contract CurveStableSwap2CoinReal {
     ) {
         factory = CurveBenchFactory(msg.sender);
         uint256 nCoins = coins_.length;
-        require(nCoins <= MAX_COINS, "coin length");
+        require(nCoins >= 2 && nCoins <= MAX_COINS, "coin length");
         N_COINS = nCoins;
-        require(rateMultipliers.length <= MAX_COINS, "rate length");
+        require(rateMultipliers.length >= nCoins && rateMultipliers.length <= MAX_COINS, "rate length");
         require(assetTypes.length >= nCoins && assetTypes.length <= MAX_COINS, "asset length");
         require(methodIds.length >= nCoins && methodIds.length <= MAX_COINS, "method length");
         require(oracles.length >= nCoins && oracles.length <= MAX_COINS, "oracle length");
