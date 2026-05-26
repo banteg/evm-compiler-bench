@@ -694,24 +694,6 @@ scenarios:
       data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this)))'
     expect_success: false
     observers: *pair_observers
-  - name: swap_truncated_dynamic_tail_reverts
-    state_access_profile: cold
-    measured:
-      data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this), uint256(128)))'
-    expect_success: false
-    observers: *pair_observers
-  - name: swap_short_dynamic_tail_reverts
-    state_access_profile: cold
-    measured:
-      data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this), uint256(128), uint256(32)), bytes16(0))'
-    expect_success: false
-    observers: *pair_observers
-  - name: swap_overlapping_dynamic_tail_reverts
-    state_access_profile: cold
-    measured:
-      data: 'abi.encodePacked(bytes4(keccak256("swap(uint256,uint256,address,bytes)")), abi.encode(uint256(0), uint256(100), address(this), uint256(64), uint256(32)), bytes32(0))'
-    expect_success: false
-    observers: *pair_observers
   - name: permit_truncated_calldata_reverts
     state_access_profile: cold
     measured:

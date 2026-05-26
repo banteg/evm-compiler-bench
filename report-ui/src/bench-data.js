@@ -232,6 +232,15 @@
     const ids = new Set(D.profiles.map(p => p.id));
     const out = [];
     for (const p of D.profiles){
+      if (p.language === 'vyper' && profileOptimizer(p) === 'default') {
+        const hasExplicitNone = D.profiles.some(candidate =>
+          candidate.language === 'vyper'
+          && profileVersionKey(candidate) === profileVersionKey(p)
+          && profileOptimizer(candidate) === 'none'
+          && !!candidate.experimental_codegen === !!p.experimental_codegen
+        );
+        if (hasExplicitNone) continue;
+      }
       const baseline = latestBaselineProfile(p);
       if (!baseline || baseline === p.id || !ids.has(baseline)) continue;
       const baselineProfile = D.profiles.find(candidate => candidate.id === baseline);
@@ -323,7 +332,7 @@
   }
 
   function failureReason(error){
-    const e = String(error || '');
+    const e = normalizedFailureText(error);
     if (e.includes('YulException') && e.includes('too deep in the stack')) {
       return 'Yul stack depth while lowering viaIR';
     }
@@ -347,6 +356,30 @@
     }
     const first = e.split('\n').map(s => s.trim()).find(Boolean);
     return first ? first.slice(0, 96) : 'Compiler error';
+  }
+
+  function normalizedFailureText(error){
+    if (Array.isArray(error)) {
+      return error.map(formatCompilerDiagnostic).filter(Boolean).join('\n');
+    }
+    if (error && typeof error === 'object') {
+      return formatCompilerDiagnostic(error) || JSON.stringify(error);
+    }
+    const text = String(error || '');
+    const trimmed = text.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        return normalizedFailureText(JSON.parse(trimmed));
+      } catch (_) {
+        // Fall back to the raw compiler output below.
+      }
+    }
+    return text;
+  }
+
+  function formatCompilerDiagnostic(item){
+    if (!item || typeof item !== 'object') return String(item || '');
+    return item.formattedMessage || item.message || item.type || '';
   }
 
   function profileCompactLabel(id){

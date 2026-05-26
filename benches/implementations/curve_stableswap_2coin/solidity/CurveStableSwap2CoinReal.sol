@@ -143,40 +143,41 @@ contract CurveStableSwap2CoinReal {
         require(nCoins <= MAX_COINS, "coin length");
         N_COINS = nCoins;
         require(rateMultipliers.length <= MAX_COINS, "rate length");
-        require(assetTypes.length >= N_COINS && assetTypes.length <= MAX_COINS, "asset length");
-        require(methodIds.length >= N_COINS && methodIds.length <= MAX_COINS, "method length");
-        require(oracles.length >= N_COINS && oracles.length <= MAX_COINS, "oracle length");
+        require(assetTypes.length >= nCoins && assetTypes.length <= MAX_COINS, "asset length");
+        require(methodIds.length >= nCoins && methodIds.length <= MAX_COINS, "method length");
+        require(oracles.length >= nCoins && oracles.length <= MAX_COINS, "oracle length");
         require(maExpTime != 0, "ma");
         initialized = true;
         name = name_;
         symbol = symbol_;
-        coins = new address[](N_COINS);
+        coins = new address[](nCoins);
         rate_multipliers = new uint256[](rateMultipliers.length);
         asset_types = new uint8[](assetTypes.length);
-        rate_oracles = new uint256[](N_COINS);
-        call_amount = new uint256[](N_COINS);
-        scale_factor = new uint256[](N_COINS);
-        stored_balances = new uint256[](N_COINS);
-        admin_balances = new uint256[](N_COINS);
-        last_prices_packed = new uint256[](N_COINS == 0 ? 0 : N_COINS - 1);
+        rate_oracles = new uint256[](nCoins);
+        call_amount = new uint256[](nCoins);
+        scale_factor = new uint256[](nCoins);
+        stored_balances = new uint256[](nCoins);
+        admin_balances = new uint256[](nCoins);
+        last_prices_packed = new uint256[](nCoins == 0 ? 0 : nCoins - 1);
         for (uint256 i = 0; i < rateMultipliers.length; i++) {
             rate_multipliers[i] = rateMultipliers[i];
         }
         bool containsRebasingToken;
-        for (uint256 i = 0; i < assetTypes.length; i++) {
-            asset_types[i] = assetTypes[i];
-            if (assetTypes[i] == 2) {
+        for (uint256 assetIndex = 0; assetIndex < assetTypes.length; assetIndex++) {
+            asset_types[assetIndex] = assetTypes[assetIndex];
+            if (assetTypes[assetIndex] == 2) {
                 containsRebasingToken = true;
             }
         }
         pool_contains_rebasing_tokens = containsRebasingToken;
-        for (uint256 i = 0; i < N_COINS; i++) {
-            coins[i] = coins_[i];
-            rate_oracles[i] = (uint256(uint32(methodIds[i])) << 224) | uint160(oracles[i]);
-            if (assetTypes[i] == 3) {
-                call_amount[i] = 10 ** uint256(CurveBenchERC20Detailed(coins_[i]).decimals());
-                address underlying = CurveBenchERC4626(coins_[i]).asset();
-                scale_factor[i] = 10 ** (18 - uint256(CurveBenchERC20Detailed(underlying).decimals()));
+        for (uint256 coinIndex = 0; coinIndex < nCoins; coinIndex++) {
+            coins[coinIndex] = coins_[coinIndex];
+            rate_oracles[coinIndex] =
+                (uint256(uint32(methodIds[coinIndex])) << 224) | uint160(oracles[coinIndex]);
+            if (assetTypes[coinIndex] == 3) {
+                call_amount[coinIndex] = 10 ** uint256(CurveBenchERC20Detailed(coins_[coinIndex]).decimals());
+                address underlying = CurveBenchERC4626(coins_[coinIndex]).asset();
+                scale_factor[coinIndex] = 10 ** (18 - uint256(CurveBenchERC20Detailed(underlying).decimals()));
             }
         }
         uint256 preciseA = amp * A_PRECISION;
@@ -187,9 +188,9 @@ contract CurveStableSwap2CoinReal {
         ma_exp_time = maExpTime;
         D_ma_time = 62324;
         ma_last_time = _pack2(block.timestamp, block.timestamp);
-        if (N_COINS > 0) {
-            for (uint256 i = 0; i < N_COINS - 1; i++) {
-                last_prices_packed[i] = _pack2(1e18, 1e18);
+        if (nCoins > 0) {
+            for (uint256 priceIndex = 0; priceIndex < nCoins - 1; priceIndex++) {
+                last_prices_packed[priceIndex] = _pack2(1e18, 1e18);
             }
         }
         cachedChainId = block.chainid;
@@ -946,8 +947,8 @@ contract CurveStableSwap2CoinReal {
         uint256 ann = _A() * N_COINS;
         for (uint256 dIdx = 0; dIdx < 255; dIdx++) {
             uint256 dP = d;
-            for (uint256 i = 0; i < N_COINS; i++) {
-                dP = dP * d / xp[i];
+            for (uint256 xpIndex = 0; xpIndex < N_COINS; xpIndex++) {
+                dP = dP * d / xp[xpIndex];
             }
             dP /= N_COINS ** N_COINS;
             uint256 previousD = d;

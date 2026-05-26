@@ -819,18 +819,25 @@ fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) 
     let source = rewrite_solidity_pragma(source, pragma);
     let source = match variant {
         None | Some("solidity-0.8") => source,
-        Some("solidity-0.7") => rewrite_solidity_pre_08(&source),
+        Some("solidity-0.7") => {
+            let source = add_solidity_abicoder_pragma(&source, "pragma abicoder v2;");
+            rewrite_solidity_pre_08(&source)
+        }
         Some("solidity-0.6") => {
+            let source = add_solidity_abicoder_pragma(&source, "pragma experimental ABIEncoderV2;");
             let source = rewrite_solidity_pre_08(&source);
             add_constructor_visibility(&source)
         }
         Some("solidity-0.5") => {
+            let source = add_solidity_abicoder_pragma(&source, "pragma experimental ABIEncoderV2;");
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_06_immutables(&source);
             let source = rewrite_solidity_pre_06_call_value(&source);
             add_constructor_visibility(&source)
         }
         Some("solidity-0.4") => {
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_06_immutables(&source);
             let source = rewrite_solidity_04_low_level_calls(&source);
             let source = add_constructor_visibility(&source);
             source.replace(" calldata", "")
@@ -858,6 +865,29 @@ fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
     }
 }
 
+fn add_solidity_abicoder_pragma(source: &str, pragma: &str) -> String {
+    if source.contains("pragma abicoder v2;")
+        || source.contains("pragma experimental ABIEncoderV2;")
+    {
+        return source.to_string();
+    }
+
+    let mut inserted = false;
+    let mut lines = Vec::new();
+    for line in source.lines() {
+        lines.push(line.to_string());
+        if !inserted && line.trim_start().starts_with("pragma solidity ") {
+            lines.push(pragma.to_string());
+            inserted = true;
+        }
+    }
+    if inserted {
+        lines.join("\n")
+    } else {
+        format!("{pragma}\n{source}")
+    }
+}
+
 fn solidity_pragma_for_toolchain(solc: &Toolchain) -> Result<String> {
     let Some((major, minor, patch)) = solidity_version_tuple(solc) else {
         bail!(
@@ -874,13 +904,14 @@ fn solidity_pragma_for_toolchain(solc: &Toolchain) -> Result<String> {
 
 fn rewrite_solidity_pre_08(source: &str) -> String {
     let source = remove_numeric_separators(source);
-    source
+    let source = source
         .replace("unchecked {", "{")
         .replace("10_000_000_000", "10000000000")
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")
         .replace("type(uint112).max", "uint112(-1)")
-        .replace("block.chainid", "uint256(1)")
+        .replace("block.chainid", "uint256(1)");
+    rewrite_solidity_address_code_length(&source)
 }
 
 fn remove_numeric_separators(source: &str) -> String {
@@ -901,33 +932,197 @@ fn remove_numeric_separators(source: &str) -> String {
 }
 
 fn add_constructor_visibility(source: &str) -> String {
-    source
-        .lines()
-        .map(|line| {
-            let trimmed = line.trim_start();
-            if trimmed.starts_with("constructor(")
-                && trimmed.ends_with('{')
-                && !trimmed.contains(" public ")
-                && !trimmed.contains(" internal ")
-            {
-                line.replacen(") {", ") public {", 1)
+    let mut pending_constructor = false;
+    let mut lines = Vec::new();
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if pending_constructor {
+            if trimmed.starts_with(')') && trimmed.contains('{') {
+                lines.push(add_public_to_constructor_body_line(line));
+                pending_constructor = false;
             } else {
-                line.to_string()
+                lines.push(line.to_string());
             }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+            continue;
+        }
+
+        if trimmed.starts_with("constructor(") && !constructor_has_visibility(trimmed) {
+            if trimmed.contains('{') {
+                lines.push(add_public_to_constructor_body_line(line));
+            } else {
+                pending_constructor = true;
+                lines.push(line.to_string());
+            }
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+    lines.join("\n")
+}
+
+fn constructor_has_visibility(line: &str) -> bool {
+    line.contains(" public") || line.contains(" internal")
+}
+
+fn add_public_to_constructor_body_line(line: &str) -> String {
+    let Some(brace_index) = line.find('{') else {
+        return line.to_string();
+    };
+    let Some(close_paren_index) = line[..brace_index].rfind(')') else {
+        return line.to_string();
+    };
+    let mut output = String::with_capacity(line.len() + " public".len());
+    output.push_str(&line[..=close_paren_index]);
+    output.push_str(" public");
+    output.push_str(&line[close_paren_index + 1..]);
+    output
+}
+
+fn rewrite_solidity_address_code_length(source: &str) -> String {
+    const MARKER: &str = ".code.length";
+    if !source.contains(MARKER) {
+        return source.to_string();
+    }
+
+    let mut rewritten = String::with_capacity(source.len());
+    let mut remaining = source;
+    while let Some(marker_index) = remaining.find(MARKER) {
+        let prefix = &remaining[..marker_index];
+        if let Some(expr_start) = code_length_expression_start(prefix) {
+            rewritten.push_str(&prefix[..expr_start]);
+            rewritten.push_str("_benchExtcodesize(");
+            rewritten.push_str(&prefix[expr_start..]);
+            rewritten.push(')');
+        } else {
+            rewritten.push_str(prefix);
+            rewritten.push_str(MARKER);
+        }
+        remaining = &remaining[marker_index + MARKER.len()..];
+    }
+    rewritten.push_str(remaining);
+    append_solidity_contract_helper(&rewritten, SOLIDITY_EXTCODESIZE_HELPER)
+}
+
+fn code_length_expression_start(prefix: &str) -> Option<usize> {
+    let bytes = prefix.as_bytes();
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let mut index = bytes.len();
+    if bytes[index - 1] == b')' {
+        let mut depth = 0usize;
+        while index > 0 {
+            index -= 1;
+            match bytes[index] {
+                b')' => depth += 1,
+                b'(' => {
+                    depth = depth.checked_sub(1)?;
+                    if depth == 0 {
+                        while index > 0 && is_solidity_identifier_byte(bytes[index - 1]) {
+                            index -= 1;
+                        }
+                        return Some(index);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    } else {
+        while index > 0 && is_solidity_identifier_byte(bytes[index - 1]) {
+            index -= 1;
+        }
+        (index < bytes.len()).then_some(index)
+    }
+}
+
+fn is_solidity_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+const SOLIDITY_EXTCODESIZE_HELPER: &str = r#"
+
+    function _benchExtcodesize(address account) internal view returns (uint256 size) {
+        assembly { size := extcodesize(account) }
+    }
+"#;
+
+fn append_solidity_contract_helper(source: &str, helper: &str) -> String {
+    let helper_exists = (helper.contains("_benchExtcodesize")
+        && source.contains("function _benchExtcodesize("))
+        || (helper.contains("_benchStaticcallWord")
+            && source.contains("function _benchStaticcallWord("))
+        || (helper.contains("_benchCallWord") && source.contains("function _benchCallWord("))
+        || (helper.contains("_benchPermitDigest")
+            && source.contains("function _benchPermitDigest("))
+        || (helper.contains("_benchAcceptPermit")
+            && source.contains("function _benchAcceptPermit("))
+        || (helper.contains("_benchPermitStructHash")
+            && source.contains("function _benchPermitStructHash("));
+    if helper_exists {
+        return source.to_string();
+    }
+
+    let Some(insert_index) = source.rfind('}') else {
+        return source.to_string();
+    };
+    let mut output = String::with_capacity(source.len() + helper.len());
+    output.push_str(&source[..insert_index]);
+    output.push_str(helper);
+    output.push_str(&source[insert_index..]);
+    output
 }
 
 fn rewrite_solidity_pre_06_call_value(source: &str) -> String {
-    source.replace(
-        "(bool ok,) = msg.sender.call{value: amount}(\"\");",
-        "(bool ok,) = msg.sender.call.value(amount)(\"\");",
-    )
+    source
+        .replace(
+            "(bool ok,) = msg.sender.call{value: amount}(\"\");",
+            "(bool ok,) = msg.sender.call.value(amount)(\"\");",
+        )
+        .replace(
+            "CurveBenchERC20.transfer.selector",
+            "bytes4(keccak256(\"transfer(address,uint256)\"))",
+        )
+        .replace(
+            "CurveBenchERC20.transferFrom.selector",
+            "bytes4(keccak256(\"transferFrom(address,address,uint256)\"))",
+        )
+        .replace(
+            "YearnBenchERC20.approve.selector",
+            "bytes4(keccak256(\"approve(address,uint256)\"))",
+        )
+        .replace(
+            "YearnBenchERC20.transfer.selector",
+            "bytes4(keccak256(\"transfer(address,uint256)\"))",
+        )
+        .replace(
+            "YearnBenchERC20.transferFrom.selector",
+            "bytes4(keccak256(\"transferFrom(address,address,uint256)\"))",
+        )
+}
+
+fn rewrite_solidity_pre_06_immutables(source: &str) -> String {
+    source
+        .replace(
+            "function _addLiquidity(uint256[] calldata amounts",
+            "function _addLiquidity(uint256[] memory amounts",
+        )
+        .replace(
+            "function _removeLiquidity(uint256 lpAmount, uint256[] calldata minAmounts",
+            "function _removeLiquidity(uint256 lpAmount, uint256[] memory minAmounts",
+        )
+        .replace(
+            "function _removeLiquidityImbalance(uint256[] calldata amounts",
+            "function _removeLiquidityImbalance(uint256[] memory amounts",
+        )
+        .replace(" immutable ", " ")
+        .replace(" immutable;", ";")
+        .replace(" immutable =", " =")
 }
 
 fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
-    rewrite_solidity_pre_06_call_value(source)
+    let source = rewrite_solidity_pre_06_call_value(source)
         .replace(
             "(bool ok,) = msg.sender.call.value(amount)(\"\");",
             "bool ok = msg.sender.call.value(amount)();",
@@ -935,8 +1130,144 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
         .replace(
             "(bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));",
             "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));",
-        )
+        );
+    rewrite_solidity_04_staticcalls(&source)
 }
+
+fn rewrite_solidity_04_staticcalls(source: &str) -> String {
+    let source = source
+        .replace(
+            "keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline))",
+            "_benchPermitStructHash(owner, spender, value, nonce, deadline)",
+        )
+        .replace(
+            "uint256 nonce = nonces[owner];\n        bytes32 digest = keccak256(\n            abi.encodePacked(\n                bytes1(0x19),\n                bytes1(0x01),\n                _domainSeparator(),\n                _benchPermitStructHash(owner, spender, value, nonce, deadline)\n            )\n        );",
+            "(bytes32 digest, uint256 nonce) = _benchPermitDigest(owner, spender, value, deadline);",
+        )
+        .replace(
+            "(bool ok, bytes memory result) =\n                owner.staticcall(abi.encodeWithSignature(\"isValidSignature(bytes32,bytes)\", digest, signature));\n            require(ok && result.length >= 32 && abi.decode(result, (bytes32)) == ERC1271_MAGIC_VALUE, \"signature\");",
+            "(bool ok, bytes32 resultWord, uint256 resultSize) =\n                _benchStaticcallWord(owner, abi.encodeWithSignature(\"isValidSignature(bytes32,bytes)\", digest, signature));\n            require(ok && resultSize >= 32 && resultWord == ERC1271_MAGIC_VALUE, \"signature\");",
+        )
+        .replace(
+            "(bool ok, bytes memory response) = oracle.staticcall(abi.encodeWithSelector(selector));\n                require(ok && response.length == 32, \"rate oracle\");\n                uint256 fetchedRate = abi.decode(response, (uint256));",
+            "(bool ok, bytes32 responseWord, uint256 responseSize) = _benchStaticcallWord(oracle, abi.encodeWithSelector(selector));\n                require(ok && responseSize == 32, \"rate oracle\");\n                uint256 fetchedRate = uint256(responseWord);",
+        )
+        .replace(
+            "(bool ok, bytes memory returndata) = coin.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
+            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(uint256(returndataWord) != 0, message);\n        }",
+        )
+        .replace(
+            "allowance[owner][spender] = value;\n        nonces[owner] = nonce + 1;\n        emit Approval(owner, spender, value);\n        return true;",
+            "return _benchAcceptPermit(owner, spender, value, nonce);",
+        );
+    let source = if source.contains("_benchStaticcallWord(") {
+        append_solidity_contract_helper(&source, SOLIDITY_STATICCALL_WORD_HELPER)
+    } else {
+        source
+    };
+    let source = if source.contains("_benchCallWord(") {
+        append_solidity_contract_helper(&source, SOLIDITY_CALL_WORD_HELPER)
+    } else {
+        source
+    };
+    let source = if source.contains("_benchPermitDigest(") {
+        append_solidity_contract_helper(&source, SOLIDITY_PERMIT_DIGEST_HELPER)
+    } else {
+        source
+    };
+    let source = if source.contains("_benchAcceptPermit(") {
+        append_solidity_contract_helper(&source, SOLIDITY_ACCEPT_PERMIT_HELPER)
+    } else {
+        source
+    };
+    if source.contains("_benchPermitStructHash(") {
+        append_solidity_contract_helper(&source, SOLIDITY_PERMIT_STRUCT_HASH_HELPER)
+    } else {
+        source
+    }
+}
+
+const SOLIDITY_STATICCALL_WORD_HELPER: &str = r#"
+
+    function _benchStaticcallWord(address target, bytes memory data)
+        internal
+        view
+        returns (bool ok, bytes32 word, uint256 size)
+    {
+        assembly {
+            let ptr := mload(0x40)
+            ok := staticcall(gas, target, add(data, 32), mload(data), ptr, 32)
+            size := returndatasize
+            let copySize := size
+            if gt(copySize, 32) { copySize := 32 }
+            returndatacopy(ptr, 0, copySize)
+            word := mload(ptr)
+        }
+    }
+"#;
+
+const SOLIDITY_CALL_WORD_HELPER: &str = r#"
+
+    function _benchCallWord(address target, bytes memory data)
+        internal
+        returns (bool ok, bytes32 word, uint256 size)
+    {
+        assembly {
+            let ptr := mload(0x40)
+            ok := call(gas, target, 0, add(data, 32), mload(data), ptr, 32)
+            size := returndatasize
+            let copySize := size
+            if gt(copySize, 32) { copySize := 32 }
+            returndatacopy(ptr, 0, copySize)
+            word := mload(ptr)
+        }
+    }
+"#;
+
+const SOLIDITY_PERMIT_DIGEST_HELPER: &str = r#"
+
+    function _benchPermitDigest(address owner, address spender, uint256 value, uint256 deadline)
+        internal
+        view
+        returns (bytes32 digest, uint256 nonce)
+    {
+        nonce = nonces[owner];
+        digest = keccak256(
+            abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                _domainSeparator(),
+                keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline))
+            )
+        );
+    }
+"#;
+
+const SOLIDITY_ACCEPT_PERMIT_HELPER: &str = r#"
+
+    function _benchAcceptPermit(address owner, address spender, uint256 value, uint256 nonce)
+        internal
+        returns (bool)
+    {
+        allowance[owner][spender] = value;
+        nonces[owner] = nonce + 1;
+        emit Approval(owner, spender, value);
+        return true;
+    }
+"#;
+
+const SOLIDITY_PERMIT_STRUCT_HASH_HELPER: &str = r#"
+
+    function _benchPermitStructHash(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 nonce,
+        uint256 deadline
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline));
+    }
+"#;
 
 fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> Result<String> {
     let source = strip_vyper_profile_pragmas(&rewrite_vyper_pragma(source, pragma));
@@ -1743,7 +2074,7 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ninterface YearnBenchERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        abi.encodeWithSelector(YearnBenchERC20.transfer.selector, msg.sender, 1);\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
         let rewritten = transform_solidity_source(
             source,
             Some("solidity-0.4"),
@@ -1759,7 +2090,61 @@ mod tests {
         assert!(rewritten.contains(
             "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));"
         ));
+        assert!(rewritten.contains(
+            "abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), msg.sender, 1);"
+        ));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
+    }
+
+    #[test]
+    fn rewrites_solidity_05_abicoder_opt_in() {
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\nstruct StrategyParams {\n    uint256 debt;\n}\n\ncontract C {\n    uint256 public immutable value;\n    function _addLiquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver) internal {}\n    function f() external pure returns (StrategyParams memory params) {\n        params.debt = 1;\n    }\n}\n";
+        let rewritten = transform_solidity_source(
+            source,
+            Some("solidity-0.5"),
+            "pragma solidity >=0.5.16 <0.6.0;",
+        )
+        .unwrap();
+        assert!(
+            rewritten
+                .contains("pragma solidity >=0.5.16 <0.6.0;\npragma experimental ABIEncoderV2;")
+        );
+        assert!(rewritten.contains("uint256 public value;"));
+        assert!(rewritten.contains(
+            "function _addLiquidity(uint256[] memory amounts, uint256 minMintAmount, address receiver)"
+        ));
+        assert!(!rewritten.contains("immutable"));
+    }
+
+    #[test]
+    fn rewrites_solidity_06_multiline_constructor_visibility() {
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ncontract C {\n    constructor(\n        string memory name,\n        uint256 initial\n    ) {\n        name;\n        initial;\n    }\n}\n";
+        let rewritten = transform_solidity_source(
+            source,
+            Some("solidity-0.6"),
+            "pragma solidity >=0.6.12 <0.7.0;",
+        )
+        .unwrap();
+        assert!(rewritten.contains("pragma experimental ABIEncoderV2;"));
+        assert!(rewritten.contains("    ) public {"));
+    }
+
+    #[test]
+    fn rewrites_solidity_07_address_code_length() {
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ncontract C {\n    function f(address owner) external view returns (bool) {\n        return owner.code.length > 0 || address(this).code.length > 0;\n    }\n}\n";
+        let rewritten = transform_solidity_source(
+            source,
+            Some("solidity-0.7"),
+            "pragma solidity >=0.7.6 <0.8.0;",
+        )
+        .unwrap();
+        assert!(rewritten.contains("pragma solidity >=0.7.6 <0.8.0;\npragma abicoder v2;"));
+        assert!(rewritten.contains(
+            "return _benchExtcodesize(owner) > 0 || _benchExtcodesize(address(this)) > 0;"
+        ));
+        assert!(rewritten.contains(
+            "function _benchExtcodesize(address account) internal view returns (uint256 size)"
+        ));
     }
 
     #[test]
