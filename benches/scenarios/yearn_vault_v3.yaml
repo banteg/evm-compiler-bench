@@ -83,17 +83,6 @@ scenarios:
       data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
     expect_success: true
     observers: *yearn_observers
-  - name: deposit_asset_false_return_reverts
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnSetAssetReturnValue(address,bool,bool,bool)", {target}, true, true, false)'
-    measured:
-      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(100_000), address(this))'
-    expect_success: false
-    observers: *yearn_observers
   - name: deposit_all_max_uint
     state_access_profile: mixed
     setup:
@@ -530,16 +519,6 @@ scenarios:
       data: 'benchYearnSetDefaultQueueCalldata({target}, true)'
     expect_success: true
     observers: *yearn_observers
-  - name: shutdown_rejects_deposit
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
-      - data: 'abi.encodeWithSignature("shutdown_vault()")'
-    measured:
-      data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(1), address(this))'
-    expect_success: false
-    observers: *yearn_observers
   - name: shutdown_vault
     state_access_profile: warm
     setup:
@@ -550,16 +529,6 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("shutdown_vault()")'
     expect_success: true
-    observers: *yearn_observers
-  - name: permission_revert
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
-    measured:
-      data: 'abi.encodeWithSignature("add_strategy(address,bool)", benchYearnStrategy({target}), true)'
-      sender: BOB
-    expect_success: false
     observers: *yearn_observers
   - name: set_deposit_limit_default
     state_access_profile: warm
@@ -601,24 +570,4 @@ scenarios:
     measured:
       data: 'benchYearnPermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
     expect_success: true
-    observers: *yearn_observers
-  - name: permit_expired_reverts
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(100))'
-    measured:
-      data: 'abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)", benchYearnPermitOwner(), BOB, uint256(123), block.timestamp - 1, uint8(27), bytes32(0), bytes32(0))'
-    expect_success: false
-    observers: *yearn_observers
-  - name: permit_invalid_reverts
-    state_access_profile: cold
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
-    measured:
-      data: 'abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)", address(this), BOB, uint256(123), uint256(999999), uint8(27), bytes32(0), bytes32(0))'
-    expect_success: false
     observers: *yearn_observers

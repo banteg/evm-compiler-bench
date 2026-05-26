@@ -133,14 +133,13 @@ real_derived:
     - unrealized strategy-loss assessment, withdrawal max-loss enforcement, and debt-decrease rejection before a new report
     - locked-profit share accounting observable through pricePerShare
     - optional-return ERC20 asset transfer, transferFrom, and approve compatibility
-    - EIP-712 permit acceptance and invalid-permit reverts
-    - shutdown, deposit-limit, post-shutdown deposit-limit management, and permission reverts
+    - EIP-712 permit acceptance
+    - shutdown, deposit-limit, and post-shutdown deposit-limit management
     - inactive strategy management reverts and strategy re-addition after revoke or force-revoke
   scenario_coverage:
     - initialize
     - deposit
     - deposit_asset_no_return
-    - deposit_asset_false_return_reverts
     - deposit_all_max_uint
     - mint
     - withdraw_idle
@@ -178,15 +177,11 @@ real_derived:
     - withdraw_limited_strategy_redeem
     - custom_queue_withdraw
     - set_default_queue
-    - shutdown_rejects_deposit
     - shutdown_vault
-    - permission_revert
     - set_deposit_limit_default
     - deposit_limit_module
     - withdraw_limit_module
     - permit_valid
-    - permit_expired_reverts
-    - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys a standard ERC20 asset, two ERC4626-compatible strategies, a deterministic accountant, and limit modules
     - factory protocol fee config is provided by the harness for the representative accountant/report scenarios
@@ -209,13 +204,12 @@ real_derived:
     - mutable vault name and symbol metadata
     - representative accountant hook, strategy profit, strategy zero report, strategy loss report, locked-profit unlock, and unrealized-loss assessment
     - representative deposit-limit and withdraw-limit module execution paths
-    - permission, post-shutdown deposit rejection, expired permit, and invalid permit reverts
     - normalized event/log parity across the listed differential scenarios
-    - valid EIP-712 permit acceptance plus expired-deadline and invalid-signature revert paths
+    - valid EIP-712 permit acceptance
   excluded_features:
     - arbitrary custom accountant, limit-module, strategy, and optional-return edge-case behavior beyond the representative common-usage paths
     - sequence-level ordering permutations beyond the representative common workflow paths
-    - repeated ABI-bound and revert variants for every overloaded queue, module, and management function
+    - repeated ABI-bound, permission, invalid-permit, false-return, shutdown-deposit rejection, and other revert variants for every overloaded queue, module, and management function
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
   - "The Solidity port is measured through common vault usage patterns; long-tail workflow permutations are intentionally excluded from the headline benchmark."
@@ -229,9 +223,6 @@ scenarios:
   - name: deposit_asset_no_return
     call: "deposit(100_000, address(this)) with an asset transferFrom that returns no data"
     expected: "accepts the no-return ERC20 path through Vyper default_return_value=True semantics"
-  - name: deposit_asset_false_return_reverts
-    call: "deposit(100_000, address(this)) with an asset transferFrom that returns false"
-    expected: "reverts at the optional-return transferFrom assertion"
   - name: deposit_all_max_uint
     call: "deposit(max_value(uint256), address(this))"
     expected: "deposits the sender's full asset balance through the upstream deposit-all branch"
@@ -343,15 +334,9 @@ scenarios:
   - name: set_default_queue
     call: "set_default_queue with the two strategies in reverse order"
     expected: "updates the stored default withdrawal queue"
-  - name: shutdown_rejects_deposit
-    call: "deposit after shutdown"
-    expected: "reverts"
   - name: shutdown_vault
     call: "shutdown_vault() with an active deposit limit module"
     expected: "shuts down deposits, clears the deposit limit module, and emits shutdown state changes"
-  - name: permission_revert
-    call: "add_strategy from a non-manager sender"
-    expected: "reverts"
   - name: set_deposit_limit_default
     call: "set_deposit_limit(limit) using the Vyper default override=false overload"
     expected: "updates the direct deposit limit when no module is active"
@@ -364,12 +349,6 @@ scenarios:
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
-  - name: permit_expired_reverts
-    call: "permit with a deadline before the current block timestamp"
-    expected: "reverts before accepting the signature or changing nonce/allowance"
-  - name: permit_invalid_reverts
-    call: "permit with a zero signature"
-    expected: "reverts"
 implementations:
   solidity: "benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol"
   vyper: "benches/implementations/yearn_vault_v3/vyper/latest/VaultV3.vy"

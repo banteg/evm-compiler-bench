@@ -876,8 +876,8 @@ function Methodology() {
     },
     {
       tag: 'G',
-      title: 'Diagnostic ABI-boundary rows',
-      body: 'Malformed selector and truncated-calldata rows remain in the raw Uniswap V2 Pair results, but are excluded from headline runtime-gas geomeans because the Vyper port intentionally bounds flash-swap callback bytes as Bytes[4096].'
+      title: 'Trimmed diagnostic rows',
+      body: 'Malformed calldata, decoder-boundary, admin/auth reject, and other adversarial revert rows are excluded from the measured scenario corpus so real-derived results focus on common workflow paths.'
     },
     {
       tag: 'H',

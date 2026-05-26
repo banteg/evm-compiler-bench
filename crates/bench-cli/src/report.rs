@@ -379,16 +379,21 @@ fn report_methodology() -> serde_json::Value {
             },
             {
                 "tag": "G",
+                "title": "Trimmed diagnostic rows",
+                "body": "Malformed calldata, decoder-boundary, admin/auth reject, and other adversarial revert rows are excluded from the measured scenario corpus so real-derived results focus on common workflow paths."
+            },
+            {
+                "tag": "H",
                 "title": "Compatibility source variants",
                 "body": "Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied."
             },
             {
-                "tag": "H",
+                "tag": "I",
                 "title": "Cross-profile behavior checks",
                 "body": "Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario; expected-revert rows are compared by status and observer state, not raw revert bytes."
             },
             {
-                "tag": "I",
+                "tag": "J",
                 "title": "Vyper Venom and 0.5.0a1",
                 "body": "Vyper Venom rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release."
             }

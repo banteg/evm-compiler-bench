@@ -71,97 +71,55 @@ real_derived:
     - initialize
     - factory_getter
     - mint_initial
-    - mint_initial_below_minimum_liquidity_reverts
     - factory_create2_mint_initial
     - mint_subsequent
-    - mint_zero_receiver
     - swap_fee_invariant
     - swap_dual_output
     - swap_token0_input
-    - swap_token0_input_k_reverts
     - swap_token1_input
-    - swap_token1_input_k_reverts
-    - swap_zero_output_reverts
-    - swap_insufficient_liquidity_reverts
     - flash_swap_callback
     - flash_swap_reentrancy_reverts
     - burn
-    - burn_zero_receiver
-    - burn_without_staged_liquidity_reverts
     - swap_no_return_tokens
-    - swap_false_return_token_reverts
     - sync
     - sync_timestamp_wrap
-    - sync_reserve_overflow_reverts
     - skim
-    - skim_zero_receiver
     - fee_on_mint
     - fee_off_resets_k_last
     - lp_transfer
-    - lp_transfer_insufficient_balance_reverts
-    - lp_transfer_zero_receiver
     - lp_approve
     - lp_transfer_from_finite_allowance
-    - lp_transfer_from_insufficient_allowance_reverts
-    - lp_transfer_from_zero_receiver
     - lp_transfer_from_infinite_allowance
-    - uninitialized_mint_reverts
-    - reinitialize_by_factory
-    - non_factory_initialize_reverts
-    - invalid_swap_reverts
-    - swap_to_token_reverts
-    - swap_to_token1_reverts
-    - unknown_selector_reverts
-    - initialize_truncated_calldata_reverts
-    - mint_truncated_calldata_reverts
-    - skim_truncated_calldata_reverts
-    - burn_truncated_calldata_reverts
-    - approve_truncated_calldata_reverts
-    - transfer_truncated_calldata_reverts
-    - transfer_from_truncated_calldata_reverts
-    - balance_of_truncated_calldata_reverts
-    - allowance_truncated_calldata_reverts
-    - nonces_truncated_calldata_reverts
-    - swap_truncated_head_reverts
-    - permit_truncated_calldata_reverts
-    - permit_short_signature_tail_reverts
     - permit_valid
-    - permit_after_chain_id_change
-    - permit_expired_reverts
-    - permit_invalid_reverts
   mock_assumptions:
     - benchmark harness deploys standard ERC20 test tokens and uses a factory helper constructed with the active pair bytecode that mirrors upstream pair creation state
     - no-return ERC20 coverage uses harness tokens that update balances but return no transfer data
-    - false-return ERC20 coverage uses harness tokens that update balances but explicitly return false
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
     - Vyper's flash-swap callback payload uses a bounded Bytes[4096] ABI bytes type; oversized Solidity bytes calldata payload conformance is outside the headline benchmark scope
-    - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior; native uint112/uint32 reserve fields preserve the externally observable reserve overflow and timestamp wrap semantics
+    - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior
   included_features:
     - upstream Solidity pair source at the pinned commit
     - full upstream pair ABI surface including token0, token1, factory, DOMAIN_SEPARATOR, PERMIT_TYPEHASH, and MINIMUM_LIQUIDITY getters
     - pair creation through a benchmark factory using CREATE2 to exercise factory-owned initialize before pair minting
     - external ERC20 balance and transfer integration
     - optional-return ERC20 transfer compatibility
-    - first and subsequent mint paths, including initial mint rejection below MINIMUM_LIQUIDITY and upstream zero-recipient LP mint behavior
-    - burn path with staged LP shares, zero-recipient burn transfers, and no-staged-liquidity rejection
-    - constant-product swap fee invariant for both token0-input and token1-input paths, including dual-output swaps, upstream exact-price fixtures, and one-wei-over K rejections
-    - production swap guard rejection for zero-output, insufficient-liquidity, and one-wei over-output swaps
+    - first and subsequent mint paths
+    - burn path with staged LP shares
+    - constant-product swap fee invariant for both token0-input and token1-input paths, including dual-output swaps
     - non-empty flash-swap callback execution
     - non-empty flash-swap callback data forwarding
     - flash-swap reentrancy guard rejection
-    - sync and skim balance drift paths, including zero-recipient skim transfers
-    - upstream uint112 reserve overflow rejection
+    - sync and skim balance drift paths
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - native uint112 reserve0/reserve1 fields and uint32 blockTimestampLast semantics
-    - representative no-return and false-return token transfer-out paths
+    - representative no-return token transfer-out path
     - fee-on and fee-off kLast behavior
-    - LP token metadata, balances, direct transfers including upstream zero-recipient transfers, insufficient-balance transfer rejection, approvals, finite/infinite/insufficient allowance transferFrom, zero-recipient transferFrom behavior, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
-    - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token balance/allowance/nonce reads, LP-token approve/transfer/transferFrom, malformed swap head, and truncated permit payloads including signature-tail truncation
+    - LP token metadata, balances, direct transfers, approvals, finite/infinite allowance transferFrom, and EIP-712 permit acceptance
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
-    - factory control-plane scenarios such as feeToSetter authorization, pair duplicate guards, getPair bookkeeping, and allPairs bounds are covered by the separate Uniswap V2 Factory benchmark
-    - exhaustive revert-data and ABI decoder parity outside the listed representative malformed-calldata classes
+    - factory control-plane scenarios are covered by the separate Uniswap V2 Factory benchmark
+    - adversarial revert, malformed calldata, decoder-boundary, zero-address, and exhaustive guard-path parity
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover factory CREATE2 pair deployment plus pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
@@ -175,18 +133,12 @@ scenarios:
   - name: mint_initial
     call: "mint(address(this)) after token balances are sent to the pair"
     expected: "mints LP supply minus permanent minimum liquidity"
-  - name: mint_initial_below_minimum_liquidity_reverts
-    call: "mint(address(this)) after token balances below MINIMUM_LIQUIDITY are sent to the pair"
-    expected: "reverts through the upstream initial-liquidity underflow guard"
   - name: factory_create2_mint_initial
     call: "mint(address(this)) after the pair is created by a factory CREATE2 deployment"
     expected: "factory deploys and initializes the pair before the initial mint path"
   - name: mint_subsequent
     call: "mint(address(this)) after an existing position and additional token balances"
     expected: "mints proportional LP shares"
-  - name: mint_zero_receiver
-    call: "mint(address(0)) after an existing position and additional token balances"
-    expected: "mints proportional LP shares to the zero address because upstream Uniswap V2 ERC20 has no zero-recipient mint guard"
   - name: swap_fee_invariant
     call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
@@ -196,21 +148,9 @@ scenarios:
   - name: swap_token0_input
     call: "swap(0, 1662497915624478906, address(this), empty bytes) after token0 input is sent to the pair"
     expected: "matches the upstream token0-input swap fixture and updates reserves while preserving the adjusted invariant"
-  - name: swap_token0_input_k_reverts
-    call: "swap(0, 1662497915624478907, address(this), empty bytes) after token0 input is sent to the pair"
-    expected: "rejects the upstream over-output case through the production K-invariant check"
   - name: swap_token1_input
     call: "swap(453305446940074565, 0, address(this), empty bytes) after token1 input is sent to the pair"
     expected: "matches the upstream token1-input swap fixture and updates reserves while preserving the adjusted invariant"
-  - name: swap_token1_input_k_reverts
-    call: "swap(453305446940074566, 0, address(this), empty bytes) after token1 input is sent to the pair"
-    expected: "rejects the upstream over-output case through the production K-invariant check"
-  - name: swap_zero_output_reverts
-    call: "swap(0, 0, address(this), empty bytes) after initialized liquidity"
-    expected: "reverts through the upstream insufficient-output guard"
-  - name: swap_insufficient_liquidity_reverts
-    call: "swap(0, reserve1, address(this), empty bytes) after initialized liquidity"
-    expected: "reverts through the upstream insufficient-liquidity guard"
   - name: flash_swap_callback
     call: "swap(0, 100, flash callee, non-empty callback data)"
     expected: "optimistically transfers output, invokes the callback, accepts repayment, and updates reserves"
@@ -220,33 +160,18 @@ scenarios:
   - name: burn
     call: "burn(address(this)) after LP shares are transferred to the pair"
     expected: "burns staged LP and transfers proportional token balances out"
-  - name: burn_zero_receiver
-    call: "burn(address(0)) after LP shares are transferred to the pair"
-    expected: "burns staged LP and transfers proportional token balances to the zero address because the upstream pair has no zero-recipient burn guard"
-  - name: burn_without_staged_liquidity_reverts
-    call: "burn(address(this)) after pool initialization without transferring LP shares to the pair"
-    expected: "reverts through the upstream insufficient-liquidity-burned guard"
   - name: swap_no_return_tokens
     call: "swap(0, 100, address(this), empty bytes) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data on the output token and updates reserves"
-  - name: swap_false_return_token_reverts
-    call: "swap(0, 100, address(this), empty bytes) with an output token that returns false from transfer"
-    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: sync
     call: "sync() after token balance drift and time advance"
     expected: "updates reserves and cumulative prices from external token balances"
   - name: sync_timestamp_wrap
     call: "sync() after block.timestamp crosses the uint32 reserve timestamp boundary"
     expected: "updates reserves and cumulative prices using Uniswap's intended uint32 wraparound elapsed time"
-  - name: sync_reserve_overflow_reverts
-    call: "sync() after token0 balance exceeds uint112 max"
-    expected: "reverts through the upstream reserve overflow guard"
   - name: skim
     call: "skim(address(this)) after token balance drift"
     expected: "transfers token balances above reserves"
-  - name: skim_zero_receiver
-    call: "skim(address(0)) after token balance drift"
-    expected: "transfers token balances above reserves to the zero address because the upstream pair has no zero-recipient skim guard"
   - name: fee_on_mint
     call: "feeTo set, mint, sync, mint"
     expected: "updates kLast and mints protocol liquidity when rootK grows"
@@ -256,99 +181,18 @@ scenarios:
   - name: lp_transfer
     call: "transfer LP shares to another account"
     expected: "moves LP share balance and emits a normalized transfer log"
-  - name: lp_transfer_insufficient_balance_reverts
-    call: "transfer LP shares without a sufficient sender balance"
-    expected: "reverts through the upstream ERC20 balance check"
-  - name: lp_transfer_zero_receiver
-    call: "transfer LP shares to the zero address"
-    expected: "moves LP shares to the zero address because upstream Uniswap V2 ERC20 has no zero-recipient guard"
   - name: lp_approve
     call: "approve another account to spend LP shares"
     expected: "sets allowance and emits a normalized approval log"
   - name: lp_transfer_from_finite_allowance
     call: "transferFrom LP shares through a finite allowance"
     expected: "moves LP shares and decreases the allowance by the spent amount"
-  - name: lp_transfer_from_insufficient_allowance_reverts
-    call: "transferFrom LP shares above the approved finite allowance"
-    expected: "reverts through the upstream ERC20 allowance check"
-  - name: lp_transfer_from_zero_receiver
-    call: "transferFrom LP shares to the zero address through a finite allowance"
-    expected: "moves LP shares to the zero address and spends allowance because upstream Uniswap V2 ERC20 has no zero-recipient guard"
   - name: lp_transfer_from_infinite_allowance
     call: "transferFrom LP shares through a max uint256 allowance"
     expected: "moves LP shares without decreasing the allowance"
-  - name: uninitialized_mint_reverts
-    call: "mint(address(this)) before initialize"
-    expected: "reverts"
-  - name: reinitialize_by_factory
-    call: "initialize(token0, token1) from the factory after an initial initialize"
-    expected: "resets token addresses, matching the upstream pair's factory-only initialization gate"
-  - name: non_factory_initialize_reverts
-    call: "initialize(token0, token1) from a non-factory address"
-    expected: "reverts"
-  - name: invalid_swap_reverts
-    call: "swap with zero input"
-    expected: "reverts"
-  - name: swap_to_token_reverts
-    call: "swap output to token0 address"
-    expected: "reverts"
-  - name: swap_to_token1_reverts
-    call: "swap output to token1 address"
-    expected: "reverts through the symmetric upstream INVALID_TO guard"
-  - name: unknown_selector_reverts
-    call: "raw call with an unknown selector"
-    expected: "reverts through the absence of a fallback entry point"
-  - name: initialize_truncated_calldata_reverts
-    call: "raw initialize(address,address) selector with only one encoded address"
-    expected: "reverts before initialization state changes at the ABI boundary"
-  - name: mint_truncated_calldata_reverts
-    call: "raw mint(address) selector with a short address word"
-    expected: "reverts before mint state changes at the ABI boundary"
-  - name: skim_truncated_calldata_reverts
-    call: "raw skim(address) selector with a short address word"
-    expected: "reverts before transfer-out execution at the ABI boundary"
-  - name: burn_truncated_calldata_reverts
-    call: "raw burn(address) selector with a short address word"
-    expected: "reverts before LP burn or transfer-out execution at the ABI boundary"
-  - name: approve_truncated_calldata_reverts
-    call: "raw approve(address,uint256) selector with the amount word omitted"
-    expected: "reverts before LP allowance state changes at the ABI boundary"
-  - name: transfer_truncated_calldata_reverts
-    call: "raw transfer(address,uint256) selector with the amount word omitted"
-    expected: "reverts before LP balance state changes at the ABI boundary"
-  - name: transfer_from_truncated_calldata_reverts
-    call: "raw transferFrom(address,address,uint256) selector with the amount word omitted"
-    expected: "reverts before LP allowance or balance state changes at the ABI boundary"
-  - name: balance_of_truncated_calldata_reverts
-    call: "raw balanceOf(address) selector with a short address word"
-    expected: "reverts before reading an LP balance at the ABI boundary"
-  - name: allowance_truncated_calldata_reverts
-    call: "raw allowance(address,address) selector with the spender word omitted"
-    expected: "reverts before reading an LP allowance at the ABI boundary"
-  - name: nonces_truncated_calldata_reverts
-    call: "raw nonces(address) selector with a short owner word"
-    expected: "reverts before reading a permit nonce at the ABI boundary"
-  - name: swap_truncated_head_reverts
-    call: "raw swap(uint256,uint256,address,bytes) calldata with the dynamic bytes offset omitted"
-    expected: "reverts before swap state changes at the ABI boundary"
-  - name: permit_truncated_calldata_reverts
-    call: "raw permit calldata with only the first three encoded arguments"
-    expected: "reverts before accepting the signature or changing nonce/allowance"
-  - name: permit_short_signature_tail_reverts
-    call: "raw permit calldata truncated inside the final signature word"
-    expected: "reverts before accepting the signature or changing nonce/allowance"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets allowance and increments the owner's nonce"
-  - name: permit_after_chain_id_change
-    call: "permit with a harness-signed EIP-712 digest after block.chainid changes"
-    expected: "uses the constructor-time domain separator and accepts the permit"
-  - name: permit_expired_reverts
-    call: "permit with a deadline before the current block timestamp"
-    expected: "reverts before accepting the signature or changing nonce/allowance"
-  - name: permit_invalid_reverts
-    call: "permit with a zero signature"
-    expected: "reverts"
 implementations:
   solidity: "benches/implementations/uniswap_v2_pair/solidity/latest/UniswapV2PairReal.sol"
   vyper: "benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy"

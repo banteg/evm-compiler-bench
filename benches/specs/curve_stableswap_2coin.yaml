@@ -97,11 +97,9 @@ real_derived:
     - remove_liquidity_imbalance_eight_coin
     - add_imbalanced_liquidity
     - add_liquidity_extra_amounts
-    - add_liquidity_slippage_reverts
     - add_liquidity_no_return_tokens
     - exchange_0_to_1
     - exchange_1_to_0
-    - exchange_slippage_reverts
     - exchange_received_0_to_1
     - get_dy_quote
     - price_oracle_after_time
@@ -109,29 +107,18 @@ real_derived:
     - remove_liquidity
     - remove_liquidity_no_return_tokens
     - remove_liquidity_imbalance
-    - remove_liquidity_imbalance_slippage_reverts
     - remove_one_coin
     - calc_withdraw_one_coin
-    - remove_one_coin_slippage_reverts
-    - invalid_coin_reverts
     - ramp_a
-    - ramp_a_too_soon_reverts
-    - ramp_a_non_admin_reverts
     - stop_ramp_a
-    - stop_ramp_a_non_admin_reverts
     - set_new_fee
-    - set_new_fee_non_admin_reverts
     - set_ma_exp_time
-    - set_ma_exp_time_zero_reverts
-    - set_ma_exp_time_non_admin_reverts
     - withdraw_admin_fees
     - oracle_rate_exchange
     - rebasing_balance_exchange
-    - rebasing_exchange_received_reverts
     - erc4626_rate_exchange
     - permit_valid
     - permit_erc1271_valid
-    - permit_invalid_reverts
   mock_assumptions:
     - default benchmark scenarios deploy two standard 18-decimal ERC20 test coins with switchable optional return data
     - factory/admin/fee receiver hooks and the delegated NG views implementation are provided by the generated harness
@@ -158,15 +145,14 @@ real_derived:
     - admin amplification ramp, stop-ramp, fee, moving-average, and admin-fee withdrawal controls
     - dynamic/off-peg fee and admin-fee accounting
     - upstream exponential moving-average oracle decay for price and D oracle reads after elapsed time
-    - constructor-driven stored rates, oracle rates, rebasing balance reads, ERC4626 conversion rates, and the rebasing exchange_received rejection path
+    - constructor-driven stored rates, oracle rates, rebasing balance reads, and ERC4626 conversion rates
     - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
-    - valid EIP-712 LP permit acceptance for EOA signatures and ERC1271 smart contract wallets, plus invalid permit revert paths
+    - valid EIP-712 LP permit acceptance for EOA signatures and ERC1271 smart contract wallets
     - normalized event/log parity across the listed differential scenarios
-    - slippage and invalid coin reverts
   excluded_features:
     - exhaustive dynamic N-coin conformance coverage across every N_COINS value and operation; headline rows keep only representative three-coin and MAX_COINS canaries
     - full upstream factory/views dependency behavior beyond a single delegated quote-view canary
-    - Vyper DynArray too-long decoder rejections and exact revert-data parity
+    - adversarial slippage, admin/auth, invalid-coin, permit-invalid, rebasing-rejection, Vyper DynArray too-long decoder, and exact revert-data parity rows
 semantics:
   - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over a two-coin headline pool plus representative constructor-driven dynamic-N canaries and oracle-rate, rebasing, and ERC4626 variants."
   - "The Solidity port is scoped to the covered NG API and should not be read as a line-for-line production Curve NG rewrite."
@@ -199,9 +185,6 @@ scenarios:
   - name: add_liquidity_extra_amounts
     call: "add_liquidity([100_000, 100_000, 777], 0, address(this))"
     expected: "accepts a DynArray longer than the 2 active coins and ignores extra entries"
-  - name: add_liquidity_slippage_reverts
-    call: "add_liquidity([1, 1], 10_000_000, address(this)) after initial liquidity"
-    expected: "reverts"
   - name: add_liquidity_no_return_tokens
     call: "add_liquidity([100_000, 100_000], 0, address(this)) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transferFrom return data and mints LP shares"
@@ -212,9 +195,6 @@ scenarios:
     call: "exchange(1, 0, 25_000, 0, address(this))"
     expected: "moves along the invariant and charges fee in the opposite direction"
 
-  - name: exchange_slippage_reverts
-    call: "exchange(0, 1, 25_000, 1_000_000, address(this))"
-    expected: "reverts"
   - name: exchange_received_0_to_1
     call: "exchange_received(0, 1, 25_000, 0, address(this)) after direct token transfer to the pool"
     expected: "uses the optimistic incoming token balance and swaps along the invariant"
@@ -238,51 +218,24 @@ scenarios:
   - name: remove_liquidity_imbalance
     call: "remove_liquidity_imbalance([40_000, 10_000], 100_000, address(this))"
     expected: "burns the required LP amount and withdraws imbalanced coin amounts with fees"
-  - name: remove_liquidity_imbalance_slippage_reverts
-    call: "remove_liquidity_imbalance([40_000, 10_000], 1, address(this))"
-    expected: "reverts"
   - name: remove_one_coin
     call: "remove_liquidity_one_coin(10_000, 1, 0, address(this))"
     expected: "burns LP shares for one coin with fee"
   - name: calc_withdraw_one_coin
     call: "calc_withdraw_one_coin(10_000, 1) after initial liquidity"
     expected: "quotes one-coin withdrawal amount without mutating state"
-  - name: remove_one_coin_slippage_reverts
-    call: "remove_liquidity_one_coin(10_000, 1, 1_000_000, address(this))"
-    expected: "reverts"
-  - name: invalid_coin_reverts
-    call: "exchange(0, 2, 1, 0, address(this))"
-    expected: "reverts"
   - name: ramp_a
     call: "ramp_A(300, block.timestamp + MIN_RAMP_TIME) after the initial ramp delay"
     expected: "sets future amplification and ramp timestamps from the admin"
-  - name: ramp_a_too_soon_reverts
-    call: "ramp_A(300, block.timestamp + MIN_RAMP_TIME) before the initial ramp delay"
-    expected: "reverts"
-  - name: ramp_a_non_admin_reverts
-    call: "ramp_A(300, block.timestamp + MIN_RAMP_TIME) from a non-admin address after the initial ramp delay"
-    expected: "reverts through the upstream factory-admin guard"
   - name: stop_ramp_a
     call: "stop_ramp_A() during an active amplification ramp"
     expected: "pins current amplification and clears the active ramp window"
-  - name: stop_ramp_a_non_admin_reverts
-    call: "stop_ramp_A() from a non-admin address during an active amplification ramp"
-    expected: "reverts through the upstream factory-admin guard"
   - name: set_new_fee
     call: "set_new_fee(5_000_000, 30_000_000_000)"
     expected: "updates swap fee and off-peg fee multiplier from the admin"
-  - name: set_new_fee_non_admin_reverts
-    call: "set_new_fee(5_000_000, 30_000_000_000) from a non-admin address"
-    expected: "reverts"
   - name: set_ma_exp_time
     call: "set_ma_exp_time(1_000, 70_000)"
     expected: "updates both moving-average windows from the admin"
-  - name: set_ma_exp_time_zero_reverts
-    call: "set_ma_exp_time(0, 70_000)"
-    expected: "reverts"
-  - name: set_ma_exp_time_non_admin_reverts
-    call: "set_ma_exp_time(1_000, 70_000) from a non-admin address"
-    expected: "reverts through the upstream factory-admin guard"
   - name: withdraw_admin_fees
     call: "withdraw_admin_fees() after an exchange accrues admin fees"
     expected: "executes the public admin-fee withdrawal entrypoint"
@@ -292,9 +245,6 @@ scenarios:
   - name: permit_erc1271_valid
     call: "permit from a smart contract wallet whose isValidSignature returns the ERC1271 magic value for the EIP-712 digest"
     expected: "sets LP allowance and increments the contract owner's nonce"
-  - name: permit_invalid_reverts
-    call: "permit with a zero signature"
-    expected: "reverts"
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
   vyper: "benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy"

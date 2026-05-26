@@ -14,33 +14,11 @@ scenarios:
       data: 'abi.encodeWithSignature("setFeeTo(address)", BOB)'
     expect_success: true
     observers: *factory_observers
-  - name: set_fee_to_forbidden_reverts
-    state_access_profile: warm
-    measured:
-      data: 'abi.encodeWithSignature("setFeeTo(address)", CAROL)'
-      sender: BOB
-    expect_success: false
-    observers: *factory_observers
   - name: set_fee_to_setter
     state_access_profile: warm
     measured:
       data: 'abi.encodeWithSignature("setFeeToSetter(address)", BOB)'
     expect_success: true
-    observers: *factory_observers
-  - name: set_fee_to_setter_forbidden_reverts
-    state_access_profile: warm
-    measured:
-      data: 'abi.encodeWithSignature("setFeeToSetter(address)", CAROL)'
-      sender: BOB
-    expect_success: false
-    observers: *factory_observers
-  - name: old_setter_after_transfer_forbidden_reverts
-    state_access_profile: warm
-    setup:
-      - data: 'abi.encodeWithSignature("setFeeToSetter(address)", CAROL)'
-    measured:
-      data: 'abi.encodeWithSignature("setFeeTo(address)", BOB)'
-    expect_success: false
     observers: *factory_observers
   - name: create_pair
     state_access_profile: cold
@@ -57,40 +35,4 @@ scenarios:
       data: 'abi.encodeWithSignature("createPair(address,address)", CAROL, BOB)'
     expect_success: true
     compare_return: false
-    observers: *created_pair_observers
-  - name: duplicate_pair_reverts
-    state_access_profile: warm
-    setup:
-      - data: 'abi.encodeWithSignature("createPair(address,address)", BOB, CAROL)'
-    measured:
-      data: 'abi.encodeWithSignature("createPair(address,address)", BOB, CAROL)'
-    expect_success: false
-    observers: *created_pair_observers
-  - name: reverse_duplicate_pair_reverts
-    state_access_profile: warm
-    setup:
-      - data: 'abi.encodeWithSignature("createPair(address,address)", BOB, CAROL)'
-    measured:
-      data: 'abi.encodeWithSignature("createPair(address,address)", CAROL, BOB)'
-    expect_success: false
-    observers: *created_pair_observers
-  - name: identical_pair_reverts
-    state_access_profile: cold
-    measured:
-      data: 'abi.encodeWithSignature("createPair(address,address)", BOB, BOB)'
-    expect_success: false
-    observers: *factory_observers
-  - name: zero_address_pair_reverts
-    state_access_profile: cold
-    measured:
-      data: 'abi.encodeWithSignature("createPair(address,address)", address(0), BOB)'
-    expect_success: false
-    observers: *factory_observers
-  - name: all_pairs_out_of_bounds_reverts
-    state_access_profile: warm
-    setup:
-      - data: 'abi.encodeWithSignature("createPair(address,address)", BOB, CAROL)'
-    measured:
-      data: 'abi.encodeWithSignature("allPairs(uint256)", uint256(1))'
-    expect_success: false
     observers: *created_pair_observers

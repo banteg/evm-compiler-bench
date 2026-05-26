@@ -63,37 +63,10 @@
   function comparisonLabel(r, metric){
     return comparisonLevel(metric) === 'scenario' ? scenarioLabel(r) : artifactLabel(r);
   }
-  const DIAGNOSTIC_RUNTIME_SCENARIOS = new Set([
-    'uniswap_v2_pair|unknown_selector_reverts',
-    'uniswap_v2_pair|initialize_truncated_calldata_reverts',
-    'uniswap_v2_pair|mint_truncated_calldata_reverts',
-    'uniswap_v2_pair|skim_truncated_calldata_reverts',
-    'uniswap_v2_pair|burn_truncated_calldata_reverts',
-    'uniswap_v2_pair|approve_truncated_calldata_reverts',
-    'uniswap_v2_pair|transfer_truncated_calldata_reverts',
-    'uniswap_v2_pair|transfer_from_truncated_calldata_reverts',
-    'uniswap_v2_pair|balance_of_truncated_calldata_reverts',
-    'uniswap_v2_pair|allowance_truncated_calldata_reverts',
-    'uniswap_v2_pair|nonces_truncated_calldata_reverts',
-    'uniswap_v2_pair|swap_truncated_head_reverts',
-    'uniswap_v2_pair|permit_truncated_calldata_reverts',
-    'uniswap_v2_pair|permit_short_signature_tail_reverts',
-  ]);
-  function isDiagnosticRuntimeScenario(r){
-    const scenario = r.gas?.scenario;
-    if (!scenario) return false;
-    return DIAGNOSTIC_RUNTIME_SCENARIOS.has(`${r.benchmark_id}|${scenario}`);
-  }
-  function isHeadlineComparable(r, metric){
-    return metric !== 'harness_call_gas' || !isDiagnosticRuntimeScenario(r);
-  }
-
-  function compareProfiles(rows, pa, pb, metric, suiteSet, options = {}){
+  function compareProfiles(rows, pa, pb, metric, suiteSet){
     const L = new Map(), Ra = new Map(), Rb = new Map();
-    const includeDiagnostics = options.includeDiagnostics === true;
     for (const r of rows){
       if (suiteSet && !suiteSet.has(r.suite)) continue;
-      if (!includeDiagnostics && !isHeadlineComparable(r, metric)) continue;
       const v = valueAt(r, metric);
       if (v == null) continue;
       const k = comparisonKey(r, metric);
@@ -118,7 +91,6 @@
         ratio,
         deltaPct: (ratio - 1) * 100,
         comparisonLevel: comparisonLevel(metric),
-        diagnostic: isDiagnosticRuntimeScenario(Ra.get(k)),
       });
     }
     return out.sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
@@ -503,7 +475,6 @@
     D,
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
-    isDiagnosticRuntimeScenario, isHeadlineComparable,
     compareProfiles, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage,
