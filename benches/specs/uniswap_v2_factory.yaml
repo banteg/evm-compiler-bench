@@ -32,7 +32,7 @@ real_derived:
   upstream_license: GPL-3.0-or-later
   checked_at: "2026-05-26"
   production_equivalence: false
-  api_compatibility: "both implementations cover the upstream Uniswap V2 Factory ABI; pair initcode is supplied as a constructor fixture so factory rows compare factory logic directly across languages"
+  api_compatibility: "both implementations cover the upstream Uniswap V2 Factory ABI; pair initcode is intentionally supplied as a constructor fixture so factory rows compare factory logic directly across languages"
   storage_layout_compatibility: false
   external_token_semantics: "shared_factory_pair_initcode_fixture"
   source_derivation: "Solidity and Vyper implementations are idiomatic ports of the upstream factory behavior, with pair creation code injected at construction to keep the benchmark independent from the pair artifact"
@@ -61,7 +61,7 @@ real_derived:
     - zero_address_pair_reverts
     - all_pairs_out_of_bounds_reverts
   mock_assumptions:
-    - pair initcode is a shared benchmark fixture with a factory-only initialize(address,address) surface
+    - pair initcode is a shared benchmark fixture with a factory-only initialize(address,address) surface so the row measures factory control-plane behavior rather than pair runtime bytecode
     - pair contract behavior after initialization is covered by the separate Uniswap V2 Pair benchmark
   included_features:
     - upstream factory ABI surface
@@ -74,7 +74,7 @@ real_derived:
     - allPairs index tracking and bounds rejection
     - PairCreated event parity
   excluded_features:
-    - embedding the full pair contract source inside the factory artifact
+    - embedding the full pair contract source inside the factory artifact; pair bytecode size and runtime behavior are measured by the separate Uniswap V2 Pair benchmark
     - post-initialization pair mint, burn, swap, LP-token, permit, and reserve behavior
 semantics:
   - "Benchmarks the Uniswap V2 Factory control plane separately from the Pair state machine."

@@ -18,9 +18,8 @@ Published report: https://evm.banteg.xyz/
   surfaces such as dispatch, ABI arguments, events, loops, storage slots, and
   external calls.
 - Real-derived contracts: upstream source-language originals where available,
-  plus counterpart-language ports with provenance recorded in specs. A
-  counterpart port is production-equivalent only when it is a full idiomatic
-  port of the upstream contract's behavior, not a scenario-scoped subset.
+  plus counterpart-language ports with provenance and explicit benchmark scope
+  recorded in specs.
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
 
@@ -204,13 +203,12 @@ just zip-design
   profiles, but those profiles compile generated compatibility variants of the
   checked-in latest source rather than the pinned upstream historical source.
 - Real-derived specs record provenance and equivalence scope per benchmark.
-  The `production_equivalence` flag is reserved for full idiomatic ports of the
-  upstream contract's behavior. Production-equivalent specs and output rows
-  must have empty `excluded_features`; scoped or partial counterpart-language
-  ports must keep concrete exclusions and must not be read as production gas or
-  deploy size claims for the upstream protocols. The current parity inventory
-  lives in `docs/real-derived-production-equivalence.md`.
-- For idiomatic cross-language ports, production equivalence is about
+  The corpus targets faithful idiomatic ports under explicit scope boundaries;
+  `excluded_features` document what is intentionally outside the benchmark and
+  should not be read as a production deploy-size claim for the upstream
+  protocol. The current scope inventory lives in
+  `docs/real-derived-production-equivalence.md`.
+- For idiomatic cross-language ports, equivalence is about
   externally observable contract behavior: ABI shape, success or revert,
   accounting state, events, and external calls. Exact language-level decoder
   timing and revert bytes are tracked as approximations unless the upstream

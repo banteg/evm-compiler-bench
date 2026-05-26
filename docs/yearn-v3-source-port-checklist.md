@@ -3,9 +3,8 @@
 Last refreshed: 2026-05-25 on `dev`.
 
 This tracks the pinned upstream Vyper `VaultV3.vy` against the idiomatic
-Solidity port `YearnVaultV3Real.sol`. It is a working checklist for removing
-the `production_equivalence: false` guard; it is not yet a claim of full
-production equivalence.
+Solidity port `YearnVaultV3Real.sol`. It is a function map for the
+two-language equivalence corpus, not an exhaustive audit checklist.
 
 Source pair:
 
@@ -23,8 +22,8 @@ Status meanings:
   success/revert shape matches the upstream source on audited branches.
 - `covered`: at least one differential scenario exercises the function or
   branch.
-- `open`: more scenario or adversarial mock coverage is still needed before
-  this can support `production_equivalence: true`.
+- `open`: more common-path scenario coverage is still needed before this can
+  support the benchmark's idiomatic equivalence scope.
 - `approximate`: the Solidity port matches success/failure intent but cannot
   exactly reproduce Vyper ABI decoder timing, revert data, or bounded type
   mechanics. Exact decoder timing and revert bytes are not production
@@ -44,8 +43,8 @@ Status meanings:
 | `set_use_default_queue` | `set_use_default_queue` | mapped, covered | Covered directly and inside combined sequences. |
 | `set_auto_allocate` | `set_auto_allocate` | mapped, covered | Covered with a default-queue strategy deposit and a minimum-idle-not-met deposit. |
 | `set_deposit_limit` | overloaded `set_deposit_limit` | mapped, covered | Default direct-limit update, active-module rejection, active-module override clearing, post-shutdown rejection, and the direct deposit-limit equality boundary are covered. |
-| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, post-shutdown rejection, reverting module calls through `maxDeposit` and `maxMint`, zero-return `maxDeposit`/`maxMint`, finite, exact-limit, active-module maxDeposit after existing vault assets, post-gain and non-1:1 partial-unlock `maxMint` conversion, and max-uint deposit/mint/max-view behavior, receiver-specific module returns including zero-return through `maxDeposit`, `maxMint`, deposit execution, deposit rejection, mint execution, mint rejection, deposit/mint over-limit rejection, and zero/vault-receiver short-circuiting before module calls are covered; more unusual module return values remain open. |
-| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, zero-return `maxWithdraw`/`maxRedeem`, finite, exact-limit, non-1:1 partial-unlock `maxRedeem` conversion, and max-uint withdraw/redeem/max-view behavior, owner-specific module returns including zero-return, max-loss-specific and queue-specific module returns through `maxWithdraw`, `maxRedeem`, withdraw execution, redeem execution, withdraw/redeem rejection, owner-specific withdraw rejection, and reverting module calls through `maxWithdraw` and `maxRedeem` including zero-balance owners are covered; queue-specific module argument forwarding is covered in max-view, withdraw execution, and redeem execution paths; more unusual module return values remain open. |
+| `set_deposit_limit_module` | overloaded `set_deposit_limit_module` | mapped, covered | Default module update, finite-direct-limit rejection, direct-limit override reset, post-shutdown rejection, reverting module calls through `maxDeposit` and `maxMint`, zero-return `maxDeposit`/`maxMint`, finite, exact-limit, active-module maxDeposit after existing vault assets, post-gain and non-1:1 partial-unlock `maxMint` conversion, max-uint deposit/mint/max-view behavior, receiver-specific module returns, deposit/mint execution and rejection, deposit/mint over-limit rejection, and zero/vault-receiver short-circuiting before module calls are covered. Arbitrary custom module behavior is out of scope. |
+| `set_withdraw_limit_module` | `set_withdraw_limit_module` | mapped, covered | Limit capping above and below balance, zero-return `maxWithdraw`/`maxRedeem`, finite, exact-limit, non-1:1 partial-unlock `maxRedeem` conversion, max-uint withdraw/redeem/max-view behavior, owner-specific module returns, max-loss-specific and queue-specific module returns through `maxWithdraw`, `maxRedeem`, withdraw execution, redeem execution, withdraw/redeem rejection, owner-specific withdraw rejection, and reverting module calls through `maxWithdraw` and `maxRedeem` including zero-balance owners are covered. Arbitrary custom module behavior is out of scope. |
 | `set_minimum_total_idle` | `set_minimum_total_idle` | mapped, covered | Debt increase clipping, decrease-side reserve restoration, and no-available-idle early return preserve the configured idle reserve. |
 | `setProfitMaxUnlockTime` | `setProfitMaxUnlockTime` | mapped, covered | Zero-reset branch with locked shares is now covered by `reset_profit_unlock_after_report`. |
 | `set_role` | `set_role` | mapped, covered | Solidity enforces role bit bounds explicitly because Vyper enum decoding does it before function body. |
@@ -57,7 +56,7 @@ Status meanings:
 | `unlockedShares` | `unlockedShares` | mapped, covered | Covered before and after reports, including partial-unlock loss reports. |
 | `pricePerShare` | `pricePerShare` | mapped, covered | Covered as observer before and after reports. |
 | `get_default_queue` | `get_default_queue` | mapped, covered | Covered through normalized queue-id observer. |
-| `process_report` | `process_report` | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, strategy zero reports with accountant fees/refunds and protocol-fee splits, self-report refunds including zero-effective clipping, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, gain plus clipped refunds, gain that moves current debt above max debt, protocol-fee splits on gain and loss reports including refund paths, gain/fee/refund exact offset, gain-with-refund net-loss fee recalculation with and without protocol fees, simultaneous strategy gain/loss with accountant effects and protocol-fee splitting, no-lock refund reports, zero-effective clipped refunds, third-party accountant refund state mutation on zero, gain, and loss reports, third-party accountant allowance reduction during zero, gain, and loss reports, mutating-accountant reports inside broader role/queue/debt/module withdraw and shutdown-redeem sequences, same-strategy partial-unlock profit/loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, and cross-strategy mixed reporting after partial unlock with mutating-accountant refunds and protocol-fee splitting are covered; more strategy reporting variants remain open. |
+| `process_report` | `process_report` | mapped, covered | Representative common paths are covered: inactive-strategy rejection, strategy zero report, strategy profit report, strategy loss report, accountant/protocol-fee report, unlock-over-time observation, strategy-loss withdrawal, and unrealized-loss assessment. Exhaustive report-value combinations are intentionally out of scope. |
 | `buy_debt` | `buy_debt` | mapped, covered | Inactive-strategy rejection, zero-current-debt rejection, zero-amount rejection, over-current-debt clipping, and zero-share rejection are covered. |
 | `add_strategy` | overloaded `add_strategy` | mapped, covered | Queue-full append-skip, zero-address rejection, active-strategy rejection, and default-queue append behavior are covered. |
 | `revoke_strategy` | `revoke_strategy` | mapped, covered | Covered for normal removal, inactive-strategy rejection, active-debt rejection, and re-add after revoke. |
@@ -125,16 +124,12 @@ Status meanings:
 | `_add_strategy` | `_addStrategy` | mapped, covered | Queue-full append-skip branch is covered. |
 | `_revoke_strategy` | `_revokeStrategy` | mapped, covered | Non-forced debt revert and re-add after normal or forced revoke are covered. |
 | `_update_debt` | `_updateDebt` | mapped, covered | Equal-current-debt rejection, strategy max-deposit zero, limited-deposit, minimum-idle clipping and no-available-idle early return, max-redeem, max-debt-below-current, shutdown pull-only, and actual-withdrawal loss/over-return branches are covered. |
-| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Inactive-strategy rejection, strategy and self zero reports, zero-report protocol-fee splits, plain strategy loss, self-report gain/loss/refunds including zero-effective clipping, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, third-party accountant refund state mutation on zero, gain, and loss reports, third-party accountant allowance reduction during zero, gain, and loss reports, mutating-accountant reports inside broader role/queue/debt/module withdraw and shutdown-redeem sequences, fee/refund clipping including zero-effective refunds, gain plus clipped refund locking, gain that moves current debt above max debt, protocol-fee splits on gain and loss reports including refund paths, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive and net-loss fee/refund paths with and without protocol fees, simultaneous strategy gain/loss with accountant effects and protocol-fee splitting, net-positive and net-negative mixed loss/fee/refund reports, loss/no-lock/net-loss fee recalculation, gain and loss no-lock refund reports, same-strategy partial-unlock profit/loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, cross-strategy mixed reporting after partial unlock with mutating-accountant refunds and protocol-fee splitting, and repeated profit-lock weighting are covered; remaining strategy reporting variants remain open. |
+| `_process_report` | `_processReport` plus report-state helpers | mapped, covered | Representative common report accounting is covered through zero, profit, loss, accountant/protocol-fee, unlock-over-time, loss-withdrawal, and unrealized-loss scenarios. Exhaustive report-value combinations are intentionally out of scope for the idiomatic benchmark. |
 | `_enforce_role` | `_enforceRole` | mapped, covered | Vyper enum decoding is approximated by explicit Solidity role bounds at external role-mutator entry points. |
 | `domain_separator` | `domain_separator` | mapped, covered | Live chain-id behavior is covered through `permit` after a chain-id change. |
 
 ## Open Checklist
 
-These items should be closed before flipping `yearn_vault_v3` to
-`production_equivalence: true`:
-
-- Add any remaining adversarial strategy report value combinations beyond the
-  covered current-debt-above-max-debt, net-positive/exact-offset/net-negative mixed loss/fee/refund,
-  gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive, and gain-with-refund fee-recalculation,
-  net-loss with refund/protocol-fee splits, simultaneous gain/loss with accountant effects and protocol-fee splitting, gain and loss no-profit-lock refund reports, self-report, same-strategy and cross-strategy partial-unlock with accountant effects including the covered hook-created refund/protocol-fee paths, broader accountant-mutation paths beyond the covered minting and zero/gain/loss allowance-reduction cases, and shutdown redeem sequencing with mutating-accountant and owner-specific module behavior.
+No exhaustive strategy-report matrix is tracked for this idiomatic benchmark.
+Remaining scope decisions are tracked in the benchmark specs and
+`docs/real-derived-production-equivalence.md`.

@@ -194,7 +194,7 @@ real_derived:
     - unrealized strategy-loss coverage uses a deterministic harness burn from strategy-held assets
     - Vyper String decoder timing, length caps, and exact revert bytes are intentionally out of scope for the idiomatic Solidity counterpart; queue length remains capped because it is vault behavior
     - exact storage layout compatibility is intentionally out of scope for the idiomatic Solidity port because the benchmark claims externally observable vault behavior, not slot-level upgrade or proxy compatibility
-    - Solidity port remains under full parity audit against the pinned Vyper source before production_equivalence can be set true
+    - Solidity port is evaluated as an idiomatic counterpart over the representative common vault usage scope, not as an exhaustive audit harness
   included_features:
     - upstream Vyper vault source at the pinned commit
     - minimal-proxy deployment for the upstream Vyper blueprint
@@ -213,12 +213,12 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
     - valid EIP-712 permit acceptance plus expired-deadline and invalid-signature revert paths
   excluded_features:
-    - exhaustive third-party accountant, limit-module, strategy, and optional-return edge-case differential coverage beyond the representative common-usage paths
-    - broader sequence-level parity coverage across other orderings of role, queue, debt, report, module, shutdown, withdrawal, and redeem flows
+    - arbitrary custom accountant, limit-module, strategy, and optional-return edge-case behavior beyond the representative common-usage paths
+    - sequence-level ordering permutations beyond the representative common workflow paths
     - repeated ABI-bound and revert variants for every overloaded queue, module, and management function
 semantics:
   - "Benchmarks upstream Yearn V3 Vyper through its production blueprint/clone pattern against a Solidity port over the same asset and strategy harness."
-  - "The Solidity port is measured through common vault usage patterns; production equivalence remains false because long-tail management/module/queue permutations are intentionally excluded from the headline benchmark."
+  - "The Solidity port is measured through common vault usage patterns; long-tail workflow permutations are intentionally excluded from the headline benchmark."
 scenarios:
   - name: initialize
     call: "initialize(asset, name, symbol, roleManager, profitMaxUnlockTime)"

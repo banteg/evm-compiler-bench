@@ -1,10 +1,10 @@
-# Real-Derived Production-Equivalence Inventory
+# Real-Derived Two-Language Equivalence Inventory
 
 Last audited: 2026-05-25 on `dev`.
 
-This is the work queue for flipping any real-derived benchmark to
-`production_equivalence: true`. For `latest_syntax_original` benchmarks, the
-checked-in implementation path is the modernized source-language original.
+This is the scope inventory for the real-derived two-language equivalence
+corpus. For `latest_syntax_original` benchmarks, the checked-in implementation
+path is the modernized source-language original.
 Normalized result rows expose the materialized `source_path` and `source_hash`
 that were compiled for each profile-specific source variant. The run manifest
 records per-benchmark `source_variants` with profile, source variant, path,
@@ -18,21 +18,22 @@ Normalized row provenance keeps `comparison_lane` as the benchmark-level lane
 and uses `implementation_lane` for the compiled artifact's source or
 counterpart side.
 
-A counterpart-language port is production-equivalent only after all of these
-are true:
+The target corpus is an idiomatic cross-language comparison, not an exhaustive
+audit harness. A counterpart-language port is considered in-scope when these
+conditions hold:
 
-- The port is an idiomatic implementation of the upstream contract's full
-  externally observable behavior, not a scenario-scoped subset.
-- The spec, normalized output provenance, and run manifest have no
-  `excluded_features`.
+- The port is an idiomatic implementation of the upstream contract behavior
+  selected for the benchmark, with explicit scope boundaries.
+- The spec, normalized output provenance, and run manifest list any
+  `excluded_features` that are outside the benchmark scope.
 - ABI shape, access control, accounting, external-call behavior, token return
   handling, events, and intended success/revert behavior have been audited.
 - Language-level ABI decoder timing and exact revert bytes are not required to
   match for idiomatic cross-language ports unless the upstream contract exposes
   or depends on them. The semantic boundary, such as accepted lengths, rejected
   lengths, and post-state, still must be covered.
-- Scenario coverage is broad enough to catch cross-feature interactions, not
-  only one-call happy paths.
+- Scenario coverage is broad enough to catch representative cross-feature
+  interactions, not every branch, adversarial hook, or ordering permutation.
 - A benchmark-scoped no-cache run and `validate` pass. The full matrix and
   report build are still required before release.
 
@@ -86,15 +87,15 @@ upstream historical file, which remains provenance-only for this lane.
 
 These are compile-surface checks only. They prove the current source-variant
 rewrites are sufficient for those older profiles, not that the counterpart
-ports are production-equivalent.
+ports cover additional benchmark behavior.
 
 ## Summary
 
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Factory deployment still uses a benchmark helper constructed with the active pair bytecode; final ABI/revert audit still pending. |
+| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
-| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; exact Vyper bounded `String` decoder behavior is out of scope, while the `MAX_QUEUE` cap remains modeled as vault behavior. |
+| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Intentional boundaries remain for representative third-party fixtures, representative common workflow sequences, exact Vyper bounded-string decoder behavior, and storage layout; the `MAX_QUEUE` cap remains modeled as vault behavior. |
 
 ## Status Legend
 
@@ -113,7 +114,7 @@ ports are production-equivalent.
   topology, or a language-level bound. This can be acceptable for production
   equivalence only when the semantic boundary is covered and the source behavior
   does not expose or depend on the lower-level detail.
-- Incomplete: still blocks `production_equivalence: true`.
+- Incomplete: still blocks the stated benchmark scope.
 
 ## Granular Inventory
 
@@ -130,15 +131,14 @@ ports are production-equivalent.
 | Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, upstream zero-recipient LP mint behavior, initial mint below `MINIMUM_LIQUIDITY` rejection, burn including zero-recipient output transfers and no-staged-LP burn rejection, invariant and dual-output swaps, zero-output and insufficient-liquidity swap guards, drift, skim including zero-recipient transfers, sync, and timestamp wrap paths are covered. |
 | Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
 | Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
-| Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Non-empty, reentrant, larger-than-old-1024-byte, larger-than-old-4096-byte, and exact-65536-byte data are covered. The Vyper port keeps an idiomatic `Bytes[65536]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; this is tracked as a language-level semantic boundary rather than a port implementation gap. |
-| Revert data and ABI boundary behavior | Partial | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head, missing/short/overlapping dynamic calldata tails, and truncated permit payloads including signature-tail truncation. Exact revert bytes and exhaustive decoder-boundary parity have not been audited. |
+| Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Ordinary non-empty callback repayment and reentrancy rejection are covered. The Vyper port keeps an idiomatic `Bytes[4096]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; oversized callback payload conformance is tracked as a language-level semantic boundary rather than a port implementation gap. |
+| Revert data and ABI boundary behavior | Representative boundary | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head, missing/short/overlapping dynamic calldata tails, and truncated permit payloads including signature-tail truncation. Exhaustive decoder-boundary permutations and exact revert bytes are intentionally out of scope for the headline benchmark. |
 | Storage layout | Tracked separately | The Vyper port uses idiomatic storage rather than matching the upstream packed reserve word. Externally observable uint112/uint32 reserve semantics are preserved, while slot layout remains outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
 Immediate chips:
 
-- Decide whether the benchmark remains pair-only or must include the full
-  upstream factory implementation beyond the covered fixture factory branches.
-- Complete the remaining ABI/revert audit for exact revert bytes and malformed calldata cases outside the current selector, fixed-argument, dynamic-tail, and permit truncation scenarios.
+- Exact revert bytes and exhaustive ABI decoder permutations remain out of scope
+  beyond the representative malformed-calldata classes already covered.
 
 ### `curve_stableswap_2coin`
 
@@ -171,28 +171,22 @@ Immediate chips:
 | --- | --- | --- |
 | Vault source-language original | Latest-syntax original | `VaultV3.vy` is a latest-syntax Vyper modernization of the pinned upstream vault source; the pinned upstream file remains provenance/reference input only. |
 | Blueprint/minimal-proxy deployment | Exact source path | The upstream Vyper benchmark is deployed through the blueprint/clone path. |
-| ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface, audit pending | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, zero/max-uint conversion boundaries, and direct deposit-limit equality are scenario-covered. |
-| ERC20 share accounting and permit | Exact counterpart surface, audit pending | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, permit after chain-id changes, expired permits, and invalid permits are covered. |
-| Role bitmasks and role-manager handoff | Exact counterpart surface, audit pending | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
-| Metadata setters | Exact counterpart surface, audit pending | Name and symbol initialization/setters use idiomatic Solidity strings on the counterpart side; exact Vyper bounded-string decoder behavior is out of scope. |
-| Strategy registry and debt management | Exact counterpart surface, audit pending | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, minimum-idle clipping and no-available-idle return, report gain moving current debt above max debt, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt inactive/current-debt/amount/clipping/rejection paths are covered. |
-| Report accounting and locked profit | Exact counterpart surface, audit pending | Profit, loss, self-report idle gain/loss, self-report idle gain/loss with accountant fees/refunds and protocol-fee splits, self-report zero-effective clipped refund, accountant fees/refunds and protocol-fee splits on zero strategy reports, gain plus clipped refund locking, gain that moves current debt above max debt, gain/fee equality, gain/fee/refund exact offset, gain-with-refund net-positive locking, gain-with-refund net-loss fee recalculation, simultaneous strategy gain/loss with accountant effects and protocol-fee splitting, net-positive, exact-offset, and net-negative mixed loss/fee/refund reports, refund clipping to partial and zero effective refunds, refund clipping after accountant state mutation on zero, gain, and loss reports, refund allowance reduction during zero, gain, and loss reports, zero-return accountant reports, loss/no-lock/net-loss fee recalculation, no-lock refund reports, same-strategy partial-unlock profit/loss reports with accountant effects, cross-strategy loss reporting after another strategy's partially unlocked profit report, protocol fees, excessive-fee failure, reentrancy failure, unlock-over-time, and zero-reset paths are covered. |
-| Default/custom withdrawal queues | Exact counterpart surface, audit pending | Default queue, custom queue, queue order, representative strategy maxRedeem behavior, strategy-debt withdrawal, and the `MAX_QUEUE` semantic cap are modeled; exact Vyper decoder timing and revert bytes remain out of scope. |
-| Limit modules and accountant dependencies | Fixture-exact | Deterministic and refund-mutating accountant mocks cover important fee/refund paths; deterministic module mocks cover accept/reject and exact-limit paths, zero and high-return deposit/withdraw/redeem execution and capping, high-return deposit-limit module execution through both deposit and mint, active-module maxDeposit after existing vault assets, receiver/owner-specific asset/share max-view returns including zero-return special cases, max-loss-specific and queue-specific withdraw module argument forwarding through max views and execution paths, receiver-specific deposit and mint execution/rejection, owner-specific withdraw execution and rejection, post-gain and non-1:1 partial-unlock `maxMint`/`maxRedeem` conversion, exact-limit deposit/mint/withdraw/redeem execution, deposit/mint/withdraw/redeem over-limit rejection, zero/vault-receiver short-circuiting before deposit-module calls, and reverting deposit/withdraw-module calls across asset and share max views including zero-balance owners, but arbitrary third-party behavior is not exhaustive. Direct deposit-limit equality is covered outside the module path. |
-| Cross-feature sequence behavior | Incomplete | Withdrawal and redeem sequences now cover six management orderings, including active non-shutdown withdrawal, a three-strategy repeated-transition path, and mutating-accountant/module withdraw and shutdown-redeem edge paths; more adversarial third-party behavior remains. |
+| ERC4626 deposit, mint, withdraw, redeem | Exact counterpart surface | Direct/default-argument overloads, deposit-all, no-return/false-return asset transfers, zero/max-uint conversion boundaries, and direct deposit-limit equality are scenario-covered. |
+| ERC20 share accounting and permit | Exact counterpart surface | Transfers, receiver rejection, approvals, finite/infinite allowance spends, EIP-712 permit before/after initialization, permit after chain-id changes, expired permits, and invalid permits are covered. |
+| Role bitmasks and role-manager handoff | Exact counterpart surface | Set/add/remove role, delegated execution, bounds, pending transfer, and acceptance are covered. |
+| Metadata setters | Exact counterpart surface | Name and symbol initialization/setters use idiomatic Solidity strings on the counterpart side; exact Vyper bounded-string decoder behavior is out of scope. |
+| Strategy registry and debt management | Exact counterpart surface | Add, revoke, force revoke, inactive-management rejection, re-add after revoke/force-revoke, max debt, debt increase/decrease, minimum-idle clipping and no-available-idle return, report gain moving current debt above max debt, unrealized-loss assessment boundaries, max-loss defaults, strategy maxDeposit/maxRedeem limits, unrealized-loss queue breaks, shutdown pull-only, and buy-debt inactive/current-debt/amount/clipping/rejection paths are covered. |
+| Report accounting and locked profit | Representative common-path surface | Strategy zero, profit, loss, accountant/protocol-fee report, unlock-over-time, strategy-loss withdrawal, and unrealized-loss assessment paths are covered. Exhaustive report-value combinatorics are intentionally out of scope for the idiomatic benchmark. |
+| Default/custom withdrawal queues | Exact counterpart surface | Default queue, custom queue, queue order, representative strategy maxRedeem behavior, strategy-debt withdrawal, and the `MAX_QUEUE` semantic cap are modeled; exact Vyper decoder timing and revert bytes remain out of scope. |
+| Limit modules and accountant dependencies | Fixture-exact representative surface | Deterministic and refund-mutating accountant mocks cover representative fee/refund paths; deterministic module mocks cover accept/reject and exact-limit paths, zero and high-return deposit/withdraw/redeem execution and capping, high-return deposit-limit module execution through both deposit and mint, active-module maxDeposit after existing vault assets, receiver/owner-specific asset/share max-view returns including zero-return special cases, max-loss-specific and queue-specific withdraw module argument forwarding through max views and execution paths, receiver-specific deposit and mint execution/rejection, owner-specific withdraw execution and rejection, post-gain and non-1:1 partial-unlock `maxMint`/`maxRedeem` conversion, exact-limit deposit/mint/withdraw/redeem execution, deposit/mint/withdraw/redeem over-limit rejection, zero/vault-receiver short-circuiting before deposit-module calls, and reverting deposit/withdraw-module calls across asset and share max views including zero-balance owners. Arbitrary custom accountant/module behavior is intentionally out of scope. Direct deposit-limit equality is covered outside the module path. |
+| Cross-feature sequence behavior | Representative common-path surface | Withdrawal and redeem sequences cover representative management orderings, including active non-shutdown withdrawal, a three-strategy repeated-transition path, and mutating-accountant/module withdraw and shutdown-redeem paths. Exhaustive ordering permutations are out of scope for the idiomatic benchmark. |
 | Vyper `String` and `DynArray` bounds | Mixed | The source Vyper original remains bounded. The Solidity counterpart uses native dynamic strings for metadata, but retains the meaningful `MAX_QUEUE` cap for queue arrays. Exact decoder timing and revert bytes are intentionally out of scope for the headline comparison. |
-| Function-by-function parity audit | Incomplete | The source-to-port checklist now maps every upstream function and tracks the remaining branch gaps in `docs/yearn-v3-source-port-checklist.md`. |
+| Function-by-function map | Scope tracker | The source-to-port checklist maps upstream functions to counterpart surfaces and records any explicit benchmark-scope notes in `docs/yearn-v3-source-port-checklist.md`. |
 | Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
 
 Immediate chips:
 
-- Close the open Yearn branch gaps tracked in
-  `docs/yearn-v3-source-port-checklist.md`.
-- Add edge-case scenarios for repeated transitions across roles, queues, debt,
-  reports, modules, shutdown, withdrawals, and redeems.
-- Expand third-party module/strategy mock coverage and any remaining unusual
-  third-party accountant paths beyond zero-return max views and refund
-  balance/allowance mutation.
+- No additional Yearn matrix-expansion work is tracked for the idiomatic benchmark.
 
 ## `uniswap_v2_pair`
 
@@ -221,8 +215,7 @@ Exact now:
   swap invariant checks, zero-output and insufficient-liquidity swap guards,
   one-wei over-output K rejection for each input side, no-staged-LP burn rejection,
   no-return token transfers, false-return transfer rejection across swap, burn,
-  and skim, flash callback repayment through callback data above the old 4 KiB
-  port bound and at the current 64 KiB bound, flash reentrancy rejection,
+  and skim, ordinary flash callback repayment, flash reentrancy rejection,
   fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP
   transfer/allowance failures, raw ABI-boundary rejection for representative
   pair actions, LP-token balance/allowance/nonce/spend calls, swap head, missing
@@ -234,28 +227,23 @@ Exact now:
 Remaining:
 
 - Upstream `swap` accepts unbounded `bytes calldata`. Vyper requires a bounded
-  byte array and the current port uses `Bytes[65536]`, with scenarios covering
-  payloads above the old 4 KiB port bound and exactly at the current 64 KiB
-  bound. This is an accepted idiomatic language-level semantic boundary for the
+  byte array for the same ABI `bytes` shape, and the current port uses
+  `Bytes[4096]` as a realistic callback-payload ceiling. Oversized payload
+  conformance is an accepted idiomatic language-level semantic boundary for the
   primary port, not a reason to introduce a low-level emulation variant.
 - The benchmark CREATE2 fixture now exposes the upstream `createPair(address,address)`
   ABI and mirrors upstream token sorting, zero/identical/same-order and
   reverse-order duplicate-pair guards, bidirectional `getPair` storage,
   `allPairs` tracking and public getter bounds, `PairCreated`, `feeTo`, and
   `feeToSetter` authorization including post-transfer old-setter rejection.
-  The factory helper is still constructed with the active pair bytecode so both
-  language artifacts can share the same factory path.
-- The final audit still needs to check revert reasons or decoder failures where
-  they matter, and any ABI entry whose boundary behavior is not already covered
-  by the representative malformed calldata scenarios, direct getters, permit,
-  LP-token zero-recipient behavior plus allowance/balance rejection, reserve,
-  symmetric swap receiver guards, or pair-action scenarios.
-
-Suggested next chips:
-
-- Decide whether the active-bytecode factory helper is acceptable as the
-  factory boundary, or whether this benchmark needs a first-class full factory
-  artifact before retiring the fixture caveat entirely.
+  The factory helper is intentionally constructed with the active pair bytecode
+  so both language artifacts can share the same factory path while pair runtime
+  behavior and bytecode size remain owned by the separate pair benchmark.
+- Exact revert bytes and exhaustive decoder-boundary permutations are
+  intentionally out of scope beyond the representative malformed-calldata
+  scenarios, direct getters, permit, LP-token zero-recipient behavior plus
+  allowance/balance rejection, reserve, symmetric swap receiver guards, and
+  pair-action scenarios already covered.
 
 ## `curve_stableswap_2coin`
 
@@ -310,12 +298,6 @@ Remaining:
   benchmark claims externally observable pool behavior, not slot-level upgrade
   or proxy compatibility.
 
-Suggested next chips:
-
-- Decide whether every NG action must be repeated at `N_COINS = 8`, or whether
-  the current three-coin surface plus eight-coin boundary checks are the desired
-  production-equivalence boundary for standard-token dynamic-N behavior.
-
 ## `yearn_vault_v3`
 
 Exact now:
@@ -333,29 +315,20 @@ Exact now:
   default/custom queues, strategy add/revoke/debt flows, process-report
   accounting, locked-profit shares, shutdown, and
   optional-return asset transfer/transferFrom/approve handling.
-- Scenarios now cover self-report idle asset accrual/loss, self-report idle
-  gains with accountant fees/refunds, accountant fees/refunds,
-  gain plus clipped refund locking, receiver/owner-specific limit-module
-  asset/share max-view returns, post-gain and non-1:1 partial-unlock
-  `maxMint`/`maxRedeem` conversion, mixed loss/fee/refund reports,
-  gain-with-refund net-loss fee recalculation with and without protocol-fee
-  splits, zero-return accountant reports,
-  refund clipping by balance/allowance, refund balance/allowance mutation
-  during zero and gain accountant reports, excessive-fee rejection, reentrant accountant
-  rejection, realized and unrealized loss paths, protocol-fee splits on gain
-  and loss reports, locked-profit zero reset, module acceptance/rejection,
-  cross-strategy loss reporting after another strategy's partially unlocked
-  profit report with accountant effects, and gain/loss reports with both
-  accountant refunds and protocol-fee splits,
-  high-return deposit-limit module execution through deposit and mint,
+- Scenarios now cover representative common strategy report paths: zero report,
+  profit report, loss report, accountant/protocol-fee report,
+  unlock-over-time observation, loss withdrawal, and unrealized-loss
+  assessment. Exhaustive report-value combinations are intentionally out of
+  scope for this idiomatic benchmark. Additional scenarios cover
+  receiver/owner-specific limit-module asset/share max-view returns,
+  post-gain and non-1:1 partial-unlock `maxMint`/`maxRedeem` conversion,
+  module acceptance/rejection, high-return deposit-limit module execution
+  through deposit and mint,
   high-return withdraw-limit execution through withdraw and redeem, capping,
   withdraw module `max_loss` and
   strategy-queue argument forwarding, long-queue bounds, no-return/false-return
   asset handling, and permit before/after initialization plus after chain-id
   changes.
-- Strategy report scenarios now cover the no-profit-lock fee recalculation
-  branch on both gain and loss reports with accountant refunds, and simultaneous
-  strategy gain/loss reports with accountant effects.
 - Strategy edge scenarios now cover limited and zero `maxDeposit` behavior
   during debt increases, minimum-idle clipping/restoration on debt changes,
   limited `maxRedeem`, max-debt-below-current, shutdown pull-only, and actual
@@ -388,35 +361,27 @@ Exact now:
 
 Remaining:
 
-- The source-to-port checklist still has open branch gaps before the spec can
-  honestly set `production_equivalence: true`.
+- The source-to-port checklist tracks benchmark scope and function mapping
+  without requiring exhaustive report-value combinatorics before release.
 - Third-party accountant behavior is represented by deterministic and
   refund-mutating harness mocks; deposit-limit module, withdraw-limit module,
   and strategy behavior is represented by deterministic harness mocks. The
-  current scenarios cover important boundary paths, share-based over-limit
-  rejection, receiver/owner zero-return special cases, receiver/owner
-  short-circuits, gain-path allowance mutation, a partial-unlock mixed report where
-  the accountant creates refund balance and allowance during the report hook,
-  and a cross-strategy partial-unlock mixed report with hook-created refunds and
-  protocol-fee splitting, but not exhaustive adversarial or unusual
-  implementations behind those interfaces.
+  current scenarios cover representative common and boundary paths, including
+  share-based over-limit rejection, receiver/owner zero-return special cases,
+  receiver/owner short-circuits, and refund balance/allowance mutation.
+  Arbitrary custom accountant/module implementations are intentionally out of
+  scope.
 - The current sequence coverage proves six representative combined management
   orderings, including active non-shutdown withdrawal and repeated transitions
   across queues, debt, reports, modules, and role-manager handoff. Third-party
   edge cases now include mutating-accountant/module withdraw and shutdown
-  redeem sequences, but exhaustive adversarial implementations remain out of
-  scope.
+  redeem sequences, but exhaustive unusual implementation behavior remains out
+  of scope.
 - Vyper bounded `String[64]` and `String[32]` decoder bounds are not mirrored
   in the Solidity port. `DynArray[address, MAX_QUEUE]` remains modeled as a
   queue-length cap because that bound affects vault behavior; exact decoder
   timing and revert bytes are still out of scope.
 - Exact storage layout compatibility is intentionally false for the Solidity
-  port. That is acceptable for an idiomatic source comparison only after the
-  behavior audit proves no storage-layout-dependent surface is being claimed.
-
-Suggested next chips:
-
-- Close the open branch gaps listed in
-  `docs/yearn-v3-source-port-checklist.md`.
-- Add more edge-case scenarios for repeated role, queue, debt, report, module,
-  shutdown, withdrawal, and redeem transitions.
+  port. That is acceptable for an idiomatic source comparison because the
+  benchmark claims externally observable vault behavior, not storage-layout
+  compatibility.

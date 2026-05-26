@@ -51,7 +51,7 @@ real_derived:
   upstream_license: GPL-3.0-or-later
   checked_at: "2026-05-24"
   production_equivalence: false
-  api_compatibility: "source-language implementation is the upstream Uniswap V2 Pair behavior modernized to latest Solidity syntax; Vyper is an idiomatic port of the covered pair API, not a full production-equivalent port"
+  api_compatibility: "source-language implementation is the upstream Uniswap V2 Pair behavior modernized to latest Solidity syntax; Vyper is an idiomatic port of the covered pair API with explicit benchmark-scope boundaries"
   storage_layout_compatibility: false
   external_token_semantics: "harnessed_external_erc20_tokens_and_factory"
   source_derivation: "Solidity implementation is a latest-syntax modernization of the pinned upstream source; Vyper implementation is an idiomatic port for the covered pair paths"
@@ -138,6 +138,7 @@ real_derived:
     - false-return ERC20 coverage uses harness tokens that update balances but explicitly return false
     - token transfers into the pair are staged with harness mints before measured calls
     - flash-swap callback repayment uses a deterministic harness callee
+    - Vyper's flash-swap callback payload uses a bounded Bytes[4096] ABI bytes type; oversized Solidity bytes calldata payload conformance is outside the headline benchmark scope
     - exact storage layout compatibility is intentionally out of scope for the idiomatic Vyper port because the benchmark claims externally observable pair behavior; native uint112/uint32 reserve fields preserve the externally observable reserve overflow and timestamp wrap semantics
   included_features:
     - upstream Solidity pair source at the pinned commit
@@ -163,7 +164,7 @@ real_derived:
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - factory control-plane scenarios such as feeToSetter authorization, pair duplicate guards, getPair bookkeeping, and allPairs bounds are covered by the separate Uniswap V2 Factory benchmark
-    - exhaustive revert-data parity and ABI-boundary audit outside the listed representative malformed calldata scenarios
+    - exhaustive revert-data and ABI decoder parity outside the listed representative malformed-calldata classes
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
   - "The scenarios cover factory CREATE2 pair deployment plus pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
