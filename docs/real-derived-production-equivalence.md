@@ -93,7 +93,7 @@ ports are production-equivalent.
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Factory deployment still uses a benchmark helper constructed with the active pair bytecode; final ABI/revert audit still pending. |
-| `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers constructor-driven NG deployments across two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus standard-token coverage for every `N_COINS` value from 2 through 8. | Not every NG action is covered at every coin count; factory/views dependencies are harness fixtures; revert-data and decoder-timing details remain approximate. |
+| `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Full parity audit is still pending for cross-feature sequences and third-party module/accountant/strategy edge cases; exact Vyper bounded `String` decoder behavior is out of scope, while the `MAX_QUEUE` cap remains modeled as vault behavior. |
 
 ## Status Legend
@@ -146,15 +146,15 @@ Immediate chips:
 | --- | --- | --- |
 | Pool source-language original | Latest-syntax original | `CurveStableSwapNG.vy` is a latest-syntax Vyper modernization of the pinned upstream pool source; the pinned upstream file remains provenance/reference input only. |
 | Two-coin constructor setup | Exact counterpart surface for `N_COINS = 2` | The harness deploys matched standard, oracle-rate, rebasing, and ERC4626 two-coin pools. |
-| Dynamic `N_COINS` generality | Partial | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the Solidity port now has dynamic array state plus standard-token coverage for every `N_COINS` value from 2 through 8. Counts 3, 5, and 8 carry representative full action coverage across liquidity, quote, exchange, withdrawal, fee, and oracle paths; counts 4, 6, and 7 now include targeted constructor-sizing plus endpoint quote, midpoint quote/exchange, optimistic-transfer exchange, deposit/withdraw quote, one-coin withdrawal quote/action, imbalanced withdrawal, proportional withdrawal, or dynamic-fee coverage for intermediate coin indexing. |
+| Dynamic `N_COINS` generality | Representative canaries | Upstream supports constructor-driven coin counts up to `MAX_COINS = 8`; the headline benchmark keeps one three-coin setup canary and MAX_COINS canaries for imbalanced add-liquidity, interior exchange, and imbalanced removal. |
 | Add/remove liquidity and exchange paths | Exact counterpart surface for two coins | Balanced, imbalanced, one-coin, standard exchange, and `exchange_received` paths are covered. |
 | NG stored-rate, oracle, rebasing, ERC4626 behavior | Exact counterpart surface for fixtures | Constructor-provided multipliers, oracles, rebasing flags, and ERC4626 rates are covered through deterministic fixtures. |
 | Moving-average oracle decay | Exact counterpart surface | Price and D oracle scenarios advance time and cover exponential decay. |
 | Dynamic/off-peg fees and admin fees | Exact counterpart surface | Fee quotes, exchange accounting, and admin-fee withdrawal are covered. |
 | Admin controls | Exact counterpart surface | Ramp, stop-ramp, fee updates, moving-average windows, public admin-fee withdrawal, and non-admin rejection for factory-admin-gated setters are covered. |
 | LP token and permit | Exact counterpart surface | EOA and ERC1271 permit success plus invalid permit failure are covered. |
-| Factory and views dependencies | Fixture-exact | Both implementations call the benchmark-provided factory/views fixture. |
-| `StableSwapViews` call topology in Solidity | Exact counterpart surface for quote views | The Solidity port now mirrors upstream by routing `get_dy`, `get_dx`, `dynamic_fee`, and `calc_token_amount` through `factory.views_implementation()`. |
+| Factory and views dependencies | Fixture canary | Both implementations call the benchmark-provided factory/views fixture for one delegated `get_dy` quote-view row. Additional delegated quote rows are demoted because they mostly measure topology rather than pool math. |
+| `StableSwapViews` call topology in Solidity | Exact counterpart surface, lightly sampled | The Solidity port mirrors upstream by routing quote views through `factory.views_implementation()`, but the headline scenario set keeps only one delegated topology canary. |
 | Vyper `DynArray[MAX_COINS]` ABI bounds | Idiomatic counterpart divergence | Ignored extra amount entries are covered where both implementations accept them. Too-long Vyper decoder rejections are out of scope for the idiomatic Solidity counterpart. |
 | Storage layout | Tracked separately | The Solidity port is idiomatic and not storage-layout-compatible; this is outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
 
@@ -271,24 +271,20 @@ Exact now:
   one-coin withdrawal, amplification and fee admin controls, LP ERC20
   accounting, permit, moving averages, stored rates, and admin-fee accounting.
 - Scenarios cover standard ERC20s, no-return ERC20s, oracle-rate assets,
-  donation-before-first-deposit handling, initial and imbalanced three-coin,
-  four-coin endpoint `get_dy`/`get_dx`, exchange, one-coin withdrawal quote/action,
-  `calc_token_amount` deposit/withdraw, and dynamic-fee quote,
-  five-coin midpoint `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, exchange, `exchange_received`, one-coin withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths,
-  seven-coin midpoint `get_dy`/`get_dx`, exchange, one-coin withdrawal quote/action, and
-  eight-coin liquidity, three-coin `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quote views, eight-coin quote views including `calc_token_amount` deposit/withdraw, three-coin exchange and
-  `exchange_received`, proportional three-coin and eight-coin withdrawal,
-  imbalanced three-coin and eight-coin withdrawal, three-coin and eight-coin endpoint/interior one-coin withdrawal,
-  eight-coin endpoint/interior exchange and endpoint/interior exchange slippage rejection,
-  eight-coin imbalanced withdrawal slippage rejection,
-  eight-coin endpoint/interior one-coin withdrawal slippage rejection,
-  rebasing asset behavior, ERC4626 rate scaling, dynamic fees, admin controls,
-  slippage and invalid coin reverts, plus ignored extra amount entries where
-  both implementations accept them.
-- Price and D oracle scenarios now advance time and exercise the upstream NG
-  exponential moving-average decay path for two-coin, three-coin, and
-  five-coin midpoint and eight-coin endpoint/interior price slots rather than only same-block oracle
-  upkeep.
+  donation-before-first-deposit handling, two-coin add/remove liquidity,
+  exchange, `exchange_received`, one-coin withdrawal, admin controls, permit,
+  dynamic-fee and admin-fee accounting, slippage and invalid-coin reverts, plus
+  ignored extra amount entries where both implementations accept them.
+- Dynamic-N coverage is intentionally represented by a three-coin
+  initial-liquidity canary and three MAX_COINS canaries: imbalanced
+  add-liquidity, interior exchange, and imbalanced removal.
+- The delegated views topology is intentionally represented by a single
+  `get_dy` quote-view canary, because additional `get_dx`,
+  `calc_token_amount`, and `dynamic_fee` quote rows mostly exercise the
+  benchmark views fixture rather than compiler optimization of pool math.
+- Price and D oracle scenarios advance time and exercise the upstream NG
+  exponential moving-average decay path for the two-coin headline pool rather
+  than only same-block oracle upkeep.
 - Permit scenarios now cover both EOA EIP-712 signatures and the upstream
   ERC1271 smart-contract-wallet validation path.
 - The generated differential harness normalizes deployment-specific pool and
@@ -297,36 +293,12 @@ Exact now:
 Remaining:
 
 - Upstream `CurveStableSwapNG` is generic over `N_COINS` from constructor input
-  up to `MAX_COINS = 8`; the Solidity port now has dynamic array state and
-  three-coin initial-liquidity, imbalanced-liquidity deposit, add-liquidity
-  slippage rejection, `get_dy`/`get_dx`, `calc_token_amount` deposit/withdraw, and `dynamic_fee` quotes, exchange,
-  exchange slippage rejection, `exchange_received`, `exchange_received`
-  slippage rejection, proportional-withdrawal, proportional-withdrawal
-  slippage rejection, imbalanced-withdrawal, imbalanced-withdrawal
-  slippage rejection, one-coin-withdrawal,
-  oracle-update scenarios, five-coin midpoint/endpoint `get_dy`/`get_dx`, midpoint/endpoint exchange and `exchange_received`, `calc_token_amount` deposit/withdraw, proportional withdrawal, imbalanced withdrawal, one-coin-withdrawal, `calc_withdraw_one_coin`, dynamic-fee quote, and oracle-decay paths, and
-  four-coin initial-liquidity, endpoint `get_dy`/`get_dx` quotes, endpoint
-  exchange, endpoint one-coin-withdrawal quote, endpoint one-coin-withdrawal,
-  deposit and withdraw `calc_token_amount` quotes, endpoint `dynamic_fee`, and endpoint
-  `exchange_received`, six-coin endpoint `get_dy`/`get_dx`, midpoint exchange and
-  `exchange_received`, deposit and withdraw `calc_token_amount` quotes, and
-  midpoint one-coin-withdrawal quote/action, seven-coin midpoint `get_dy`/`get_dx`,
-  midpoint exchange, proportional and imbalanced
-  withdrawal plus midpoint one-coin-withdrawal quote, midpoint
-  one-coin-withdrawal, and midpoint `dynamic_fee` quote, and eight-coin
-  initial-liquidity,
-  imbalanced-liquidity deposit, add-liquidity
-  slippage rejection, `get_dy`, endpoint/interior `get_dx`, endpoint/interior `dynamic_fee`,
-  `calc_token_amount` deposit/withdraw, endpoint/interior `calc_withdraw_one_coin`, endpoint/interior exchange,
-  endpoint/interior exchange slippage rejection,
-  endpoint/interior `exchange_received`, endpoint/interior `exchange_received` slippage rejection,
-  proportional-withdrawal, proportional-withdrawal slippage rejection,
-  imbalanced-withdrawal, imbalanced-withdrawal slippage rejection,
-  endpoint/interior one-coin-withdrawal, and
-  endpoint/interior one-coin-withdrawal slippage rejection
-  coverage, plus eight-coin endpoint/interior oracle-decay coverage, but every NG action has not
-  been repeated at every possible
-  constructor coin count.
+  up to `MAX_COINS = 8`; the Solidity port has dynamic array state, but the
+  headline scenario set deliberately keeps only representative dynamic-N
+  canaries instead of repeating every NG action at every possible constructor
+  coin count.
+- The pool exposes multiple delegated quote views through `StableSwapViews`;
+  only `get_dy` remains in the headline set as a topology canary.
 - The factory, admin, fee receiver, rate oracle, rebasing token, and ERC4626
   dependencies are deterministic benchmark fixtures, not full upstream
   deployments.

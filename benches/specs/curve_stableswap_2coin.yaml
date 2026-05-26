@@ -104,10 +104,6 @@ real_derived:
     - exchange_slippage_reverts
     - exchange_received_0_to_1
     - get_dy_quote
-    - get_dx_quote
-    - calc_token_amount_deposit
-    - calc_token_amount_withdraw
-    - dynamic_fee_quote
     - price_oracle_after_time
     - d_oracle_after_time
     - remove_liquidity
@@ -154,7 +150,7 @@ real_derived:
     - representative ignored extra amount entries through add_liquidity
     - both exchange directions
     - exchange_received optimistic-transfer flow
-    - factory-delegated NG quote views for get_dy, get_dx, calc_token_amount, and dynamic_fee
+    - representative factory-delegated NG get_dy quote view canary
     - optional-return ERC20 transfer and transferFrom compatibility
     - proportional and one-coin withdrawal
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
@@ -169,7 +165,7 @@ real_derived:
     - slippage and invalid coin reverts
   excluded_features:
     - exhaustive dynamic N-coin conformance coverage across every N_COINS value and operation; headline rows keep only representative three-coin and MAX_COINS canaries
-    - full upstream factory/views dependency behavior beyond deterministic benchmark fixtures
+    - full upstream factory/views dependency behavior beyond a single delegated quote-view canary
     - Vyper DynArray too-long decoder rejections and exact revert-data parity
 semantics:
   - "Benchmarks upstream Curve Stableswap NG Vyper against a Solidity port over a two-coin headline pool plus representative constructor-driven dynamic-N canaries and oracle-rate, rebasing, and ERC4626 variants."
@@ -224,20 +220,7 @@ scenarios:
     expected: "uses the optimistic incoming token balance and swaps along the invariant"
   - name: get_dy_quote
     call: "get_dy(0, 1, 25_000) after initial liquidity"
-    expected: "quotes output through the factory views implementation"
-  - name: get_dx_quote
-    call: "get_dx(0, 1, 20_000) after initial liquidity"
-    expected: "quotes required input through the factory views implementation"
-  - name: calc_token_amount_deposit
-    call: "calc_token_amount([100_000, 300_000], true) after initial liquidity"
-    expected: "quotes LP minted for an imbalanced deposit with NG dynamic fees"
-  - name: calc_token_amount_withdraw
-    call: "calc_token_amount([40_000, 10_000], false) after initial liquidity"
-    expected: "quotes LP burned for an imbalanced withdrawal with NG dynamic fees"
-
-  - name: dynamic_fee_quote
-    call: "dynamic_fee(0, 1) after imbalanced liquidity"
-    expected: "returns the off-peg dynamic fee through the factory views implementation"
+    expected: "covers the upstream factory-delegated quote-view topology without treating views math as a headline pool-math comparison row"
 
   - name: price_oracle_after_time
     call: "price_oracle(0) after an exchange changes the spot price and time advances by one averaging window"

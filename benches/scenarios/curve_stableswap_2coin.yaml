@@ -243,48 +243,6 @@ scenarios:
       data: 'abi.encodeWithSignature("get_dy(int128,int128,uint256)", int128(0), int128(1), uint256(25_000))'
     expect_success: true
     observers: *curve_observers
-  - name: get_dx_quote
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
-    measured:
-      data: 'abi.encodeWithSignature("get_dx(int128,int128,uint256)", int128(0), int128(1), uint256(20_000))'
-    expect_success: true
-    observers: *curve_observers
-  - name: calc_token_amount_deposit
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
-    measured:
-      data: 'abi.encodeWithSignature("calc_token_amount(uint256[],bool)", curveAmounts(100_000, 300_000), true)'
-    expect_success: true
-    observers: *curve_observers
-  - name: calc_token_amount_withdraw
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
-    measured:
-      data: 'abi.encodeWithSignature("calc_token_amount(uint256[],bool)", curveAmounts(40_000, 10_000), false)'
-    expect_success: true
-    observers: *curve_observers
-
-  - name: dynamic_fee_quote
-    state_access_profile: warm
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(1_000_000, 1_000_000), uint256(0), address(this))'
-      - data: 'abi.encodeWithSignature("add_liquidity(uint256[],uint256,address)", curveAmounts(100_000, 300_000), uint256(0), address(this))'
-    measured:
-      data: 'abi.encodeWithSignature("dynamic_fee(int128,int128)", int128(0), int128(1))'
-    expect_success: true
-    observers: *curve_observers
 
   - name: price_oracle_after_time
     state_access_profile: warm
