@@ -111,7 +111,11 @@ function buildHeadlines() {
 
   const v = (a, b, metric) => {
     const cmp = Bench.compareProfiles(rows, a, b, metric, HEADLINE_SUITES);
-    return { ...Bench.summarize(cmp), cmp };
+    return {
+      ...Bench.summarize(cmp),
+      cmp,
+      coverage: Bench.profilePairCompileCoverage(rows, a, b, HEADLINE_SUITES),
+    };
   };
 
   return {
@@ -231,6 +235,9 @@ function FindingsGrid() {
     if (ratio == null || !isFinite(ratio)) return noun;
     return `${absDelta(ratio)} ${ratio <= 1 ? 'lower' : 'higher'} ${noun}`;
   };
+  const passRate = coverage => coverage?.passRate == null
+    ? '—'
+    : `${(coverage.passRate * 100).toFixed(1)}%`;
   const cards = [
     {
       tag: 'Finding 01',
@@ -242,6 +249,7 @@ function FindingsGrid() {
       altStat: HEADLINES.stableSolVsVyperSize.geomean,
       altLabel: 'runtime bytes',
       count: HEADLINES.stableSolVsVyperGas.count,
+      coverage: HEADLINES.stableSolVsVyperGas.coverage,
     },
     {
       tag: 'Finding 02',
@@ -253,6 +261,7 @@ function FindingsGrid() {
       altStat: HEADLINES.solVsVyperVenomSize.geomean,
       altLabel: 'runtime bytes',
       count: HEADLINES.solVsVyperVenomGas.count,
+      coverage: HEADLINES.solVsVyperVenomGas.coverage,
     },
     {
       tag: 'Finding 03',
@@ -264,6 +273,7 @@ function FindingsGrid() {
       altStat: HEADLINES.venomGas.geomean,
       altLabel: 'runtime gas',
       count: HEADLINES.venomSize.count,
+      coverage: HEADLINES.venomSize.coverage,
     },
     {
       tag: 'Finding 04',
@@ -276,6 +286,7 @@ function FindingsGrid() {
       altLabel: 'compile wall time',
       altInvert: true,
       count: HEADLINES.viaIRGas.count,
+      coverage: HEADLINES.viaIRGas.coverage,
     },
     {
       tag: 'Finding 05',
@@ -286,6 +297,7 @@ function FindingsGrid() {
       statLabel: 'runtime gas (solc 0.4.26 → 0.8.35 legacy)',
       neutral: true,
       count: HEADLINES.solEra.count,
+      coverage: HEADLINES.solEra.coverage,
     },
     {
       tag: 'Finding 06',
@@ -297,6 +309,7 @@ function FindingsGrid() {
       altStat: HEADLINES.nooptSize.geomean,
       altLabel: 'runtime bytes without optimizer',
       count: HEADLINES.nooptGas.count,
+      coverage: HEADLINES.nooptGas.coverage,
     },
   ];
 
@@ -305,7 +318,7 @@ function FindingsGrid() {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 01 · Summary'),
         React.createElement('div', { className: 'section-title' }, 'Six findings from this run.'),
-        React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable measurement units; card headers show the row count.')
+        React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable measurement units; card headers show row count and artifact compile pass rate.')
       )
     ),
     React.createElement('div', { className: 'stories' },
@@ -318,7 +331,7 @@ function FindingsGrid() {
         return React.createElement('div', { key: i, className: `story span-${c.span}` },
           React.createElement('div', { className: 'story-tag' },
             React.createElement('span', null, c.tag),
-            React.createElement('span', null, `n=${c.count}`)
+            React.createElement('span', null, `n=${c.count} · pass ${passRate(c.coverage)}`)
           ),
           React.createElement('h3', { className: 'story-headline' }, c.headline),
           React.createElement('p', { className: 'story-body' }, c.body),

@@ -1,4 +1,4 @@
-I checked the packaged benchmark data and source, not a fresh full rerun. My overall take: **the benchmark is directionally useful and mostly fair for “idiomatic high-level source under compiler optimizer profiles,” but the current report needs several fixes before I’d call the headline comparison publish-ready.** The main remaining issues are weighting/framing clarity, source-compatibility failures, and a small real-derived factory-port caveat.
+I checked the packaged benchmark data and source, not a fresh full rerun. My overall take: **the benchmark is directionally useful and mostly fair for “idiomatic high-level source under compiler optimizer profiles,” but the current report still needs framing clarity before I’d call the headline comparison publish-ready.**
 
 ## Verdict
 
@@ -7,7 +7,7 @@ The **fixed + scale headline comparison is the right idea** because it avoids re
 But I would change the public framing from something like “definitive compiler benchmark” to **“controlled idiomatic-source benchmark.”** It is not yet a clean compiler-optimization championship because:
 
 1. **Scenario weighting changes conclusions.** Scenario-weighted, fixed-only, scale-family-equal, and artifact-deduped numbers can differ meaningfully.
-2. **Source/profile coverage is uneven.** Some historical and Venom profiles compile fewer artifacts, so headline cards should show comparable-row counts and pass rates.
+2. **Source/profile coverage is uneven.** Some historical and Venom profiles compile fewer artifacts, so public comparisons should keep comparable-row counts and pass rates visible.
 
 ## Headline result sanity check
 
@@ -219,8 +219,5 @@ That avoids the criticism that one compiler was compared against an arbitrary op
 
 I would prioritize these:
 
-1. **Show comparable-row denominator and compile pass rate on every card.**
-   Especially important for Vyper Venom and historical profiles.
-
-2. **Soften “definitive” language.**
+1. **Soften “definitive” language.**
    The benchmark is strong, but the current form is better described as a controlled idiomatic-source benchmark with separate stress and real-derived lanes.

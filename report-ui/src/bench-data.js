@@ -96,6 +96,34 @@
     return out.sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
   }
 
+  function profilePairCompileCoverage(rows, pa, pb, suiteSet){
+    const profiles = new Map([
+      [pa, { attempted: new Set(), passed: new Set() }],
+      [pb, { attempted: new Set(), passed: new Set() }],
+    ]);
+    for (const r of rows){
+      if (!profiles.has(r.profile_id)) continue;
+      if (suiteSet && !suiteSet.has(r.suite)) continue;
+      if (r.status !== 'ok' && r.status !== 'compile_error') continue;
+      const bucket = profiles.get(r.profile_id);
+      const key = artifactKey(r);
+      bucket.attempted.add(key);
+      if (r.status === 'ok') bucket.passed.add(key);
+    }
+    let attempted = 0;
+    let passed = 0;
+    for (const bucket of profiles.values()){
+      attempted += bucket.attempted.size;
+      passed += bucket.passed.size;
+    }
+    return {
+      attempted,
+      passed,
+      failed: Math.max(0, attempted - passed),
+      passRate: attempted ? passed / attempted : null,
+    };
+  }
+
   function defaultTieBand(){
     return D.defaults?.tie_band ?? 0.02;
   }
@@ -475,7 +503,7 @@
     D,
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
-    compareProfiles, summarize, bySuite, tieBandForMetric,
+    compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage,
     versionRank, optimizerRank, profileFacets, profilesByLang,
