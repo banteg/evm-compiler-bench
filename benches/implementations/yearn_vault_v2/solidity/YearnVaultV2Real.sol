@@ -24,7 +24,7 @@ interface YearnV2Strategy {
 
 contract YearnVaultV2Real {
     string internal constant API_VERSION = "0.4.6";
-    uint256 public constant MAXIMUM_STRATEGIES = 20;
+    uint256 internal constant MAXIMUM_STRATEGIES = 20;
     uint256 internal constant DEGRADATION_COEFFICIENT = 1e18;
     uint256 internal constant MAX_BPS = 10_000;
     uint256 internal constant SECS_PER_YEAR = 31_556_952;
@@ -55,7 +55,7 @@ contract YearnVaultV2Real {
     address public governance;
     address public management;
     address public guardian;
-    address public pendingGovernance;
+    address pendingGovernance;
     mapping(address => StrategyParams) public strategies;
     address[MAXIMUM_STRATEGIES] public withdrawalQueue;
     bool public emergencyShutdown;
