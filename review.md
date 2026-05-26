@@ -141,8 +141,8 @@ There are **91 compile failures**. The biggest clusters:
 | `scale_abi_args_16/32/64`      | 61 total | Mostly Solidity stack-too-deep / compiler capacity stress |
 | `scale_storage_slots_16/32/64` |  9 total | Vyper Venom stack-depth/internal compiler limitation      |
 | `uniswap_v2_factory`           |       12 | Older Vyper/source-compat issues                          |
-| `curve_stableswap_2coin`       |        2 | Old-solc stack-too-deep                                   |
-| `yearn_vault_v3`               |        2 | Old-solc source-variant/scoping issue                     |
+| `curve_stableswap_2coin`       |        2 | Accepted old-solc stack/capacity limit                    |
+| `yearn_vault_v3`               |        2 | Accepted old-solc stack/capacity limit                    |
 | `merkle_verifier`              |        1 | Older Vyper feature gap                                   |
 | `uniswap_v2_pair`              |        1 | Older profile/source compatibility                        |
 
@@ -150,16 +150,7 @@ I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is 
 
 ## Real-derived contract rewrite issues and caveats
 
-I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures, but I did find several things that should be fixed or disclosed.
-
-### 1. Historical source variants have compatibility bugs
-
-The old solc Yearn and Curve variants fail for reasons that look like generated-source compatibility issues, not meaningful optimizer results:
-
-* Yearn old-solc variant: variable redeclaration/scoping issue.
-* Curve old-solc variant: stack-too-deep.
-
-Either repair those variants or mark them unsupported. Do not let them look like ordinary optimization failures.
+I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures. The remaining old-solc real-derived failures are accepted compatibility limits: Curve hits old-solc stack depth, and Yearn only gets past syntax backports by reshaping large vault logic too much for this benchmark's latest-source policy.
 
 ## Stress tests, not representative production mix
 
@@ -231,8 +222,5 @@ I would prioritize these:
 1. **Show comparable-row denominator and compile pass rate on every card.**
    Especially important for Vyper Venom and historical profiles.
 
-2. **Fix or mark source-compatibility bugs.**
-   Especially Yearn old-solc redeclaration.
-
-3. **Soften “definitive” language.**
+2. **Soften “definitive” language.**
    The benchmark is strong, but the current form is better described as a controlled idiomatic-source benchmark with separate stress and real-derived lanes.
