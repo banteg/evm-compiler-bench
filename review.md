@@ -1,0 +1,377 @@
+I checked the packaged benchmark data and source, not a fresh full rerun. My overall take: **the benchmark is directionally useful and mostly fair for “idiomatic high-level source under compiler optimizer profiles,” but the current report needs several fixes before I’d call the headline comparison publish-ready.** The largest remaining issue is real-derived branch/revert scenarios dominating some outlier stories.
+
+## Verdict
+
+The **fixed + scale headline comparison is the right idea** because it avoids real-contract porting ambiguity and excludes manual/assembly parity tricks. I also like that metadata is stripped, compiler profiles are pinned, compile failures are retained, and real-derived contracts are separated from the headline lane.
+
+But I would change the public framing from something like “definitive compiler benchmark” to **“controlled idiomatic-source benchmark.”** It is not yet a clean compiler-optimization championship because:
+
+1. **Scenario weighting changes conclusions.** Scenario-weighted, fixed-only, scale-family-equal, and artifact-deduped numbers can differ meaningfully.
+2. **Real-derived results contain many revert/decoder/admin branches.** These are good coverage tests, but they should not be blended into “steady-state production gas” claims.
+
+## Headline result sanity check
+
+The headline numbers are plausible, but some report text appears stale.
+
+For **fixed + scale**, comparing `vyper-latest-gas` against `solc-latest-legacy-runs200`:
+
+| Metric                         |                Result |
+| ------------------------------ | --------------------: |
+| Runtime gas geomean            | **Vyper 10.4% lower** |
+| Runtime gas median             |  **Vyper 7.4% lower** |
+| Win / tie / loss, ±0.5% band   |      **102 / 16 / 8** |
+| Fixed-only runtime gas geomean |  **Vyper 9.4% lower** |
+| Scale runtime gas geomean      | **Vyper 10.9% lower** |
+
+So the broad claim that Vyper latest gas profile is often cheaper than solc legacy on this suite is supported. However, the report text I saw says **9.6%**, while the normalized fixed+scale data gives about **10.4%**.
+
+For **`vyper-latest-gas-venom` vs `solc-latest-viair-runs200`**:
+
+| Metric              |                                 Result |
+| ------------------- | -------------------------------------: |
+| Runtime gas geomean |            **Vyper Venom 12.4% lower** |
+| Median              |             **Vyper Venom 4.7% lower** |
+| Win / tie / loss    |                        **97 / 20 / 3** |
+| Comparable rows     | **120**, not full fixed+scale coverage |
+
+The missing rows matter: Vyper Venom fails some storage-slot scale artifacts, so the comparison is on an intersection rather than the full suite. That is fine if disclosed, but the card should show comparable-row count and pass-rate.
+
+For **solc viaIR vs solc legacy**:
+
+| Metric                          |                      Result |
+| ------------------------------- | --------------------------: |
+| Runtime gas geomean             |        **viaIR 3.7% lower** |
+| Runtime gas median              |        **viaIR 1.1% lower** |
+| Compile time, scenario-weighted | **viaIR about 128% slower** |
+| Compile time, artifact-deduped  | **viaIR about 100% slower** |
+
+The report text I saw says viaIR compile time is **+158%**, which does not match the current normalized data.
+
+For **solc no optimizer vs solc viaIR**, the no-optimizer baseline is unsurprisingly much worse:
+
+| Metric                   |           Result |
+| ------------------------ | ---------------: |
+| Runtime gas geomean      | **35.1% higher** |
+| Runtime bytecode geomean |  **109% larger** |
+| Win / tie / loss         |  **0 / 0 / 126** |
+
+That comparison is useful as a sanity check, not as a competitive compiler comparison.
+
+## Biggest outliers
+
+### Vyper gas vs solc legacy, fixed + scale
+
+Largest Vyper gas wins:
+
+| Scenario                                   |      Delta |
+| ------------------------------------------ | ---------: |
+| `scale_abi_args_8 · sum_args`              | **−38.1%** |
+| `scale_abi_args_4 · sum_args`              | **−32.1%** |
+| `scale_external_calls_64`                  | **−30.5%** |
+| `scale_external_calls_32`                  | **−30.2%** |
+| `scale_external_calls_16`                  | **−29.6%** |
+| `scale_external_calls_8`                   | **−28.6%** |
+| `create2_address_hashing · init_code_hash` | **−26.9%** |
+
+Largest Vyper losses are much smaller:
+
+| Scenario                                          |     Delta |
+| ------------------------------------------------- | --------: |
+| `scale_mapping_depth_64 · read_after_write`       | **+4.0%** |
+| `scale_mapping_depth_32 · read_after_write`       | **+1.7%** |
+| `erc20_permit_hashing · hash_current_after_nonce` | **+1.7%** |
+| `erc20_permit_hashing · hash_static`              | **+1.2%** |
+
+These look like valid optimizer/codegen differences, though `scale_abi_args_*` and `scale_external_calls_*` should be labeled as stress tests rather than representative application mix.
+
+### Vyper Venom vs solc viaIR, fixed + scale
+
+Largest Venom wins:
+
+| Scenario                                    |      Delta |
+| ------------------------------------------- | ---------: |
+| `scale_dispatch_64 · first_selector`        | **−69.6%** |
+| `scale_dispatch_64 · last_selector`         | **−56.5%** |
+| `scale_dispatch_32 · first_selector`        | **−53.7%** |
+| `scale_dispatch_32 · last_selector`         | **−52.4%** |
+| fixed `scaling_dispatch_N · first_selector` | **−48.3%** |
+| `scale_abi_args_64`                         | **−42.2%** |
+
+This exposes a likely **local minimum/regression in solc viaIR dispatch codegen**, not a generic production result. I would keep these scenarios, but put them in a “dispatch stress / local minima” section.
+
+Largest Venom losses are modest:
+
+| Scenario                                   |     Delta |
+| ------------------------------------------ | --------: |
+| `merkle_verifier · verify_empty_false`     | **+3.0%** |
+| `vault_deposit_withdraw · withdraw_revert` | **+2.2%** |
+
+### solc viaIR vs solc legacy
+
+This comparison has the most interesting shape. viaIR wins many loop/external-call cases but loses badly on dispatch.
+
+viaIR wins:
+
+| Scenario                  |      Delta |
+| ------------------------- | ---------: |
+| `scale_loop_bound_64`     | **−31.9%** |
+| `scale_loop_bound_32`     | **−29.9%** |
+| `scale_external_calls_64` | **−28.4%** |
+| `scale_external_calls_32` | **−28.2%** |
+| `scale_external_calls_16` | **−27.6%** |
+| `scale_loop_bound_16`     | **−26.8%** |
+
+viaIR losses / local minima:
+
+| Scenario                                    |       Delta |
+| ------------------------------------------- | ----------: |
+| `scale_dispatch_64 · first_selector`        | **+152.7%** |
+| `scale_dispatch_64 · last_selector`         | **+100.3%** |
+| `scale_dispatch_32 · first_selector`        |  **+81.8%** |
+| `scale_dispatch_32 · last_selector`         |  **+64.7%** |
+| fixed `scaling_dispatch_N · first_selector` |  **+52.9%** |
+| `scale_dispatch_16 · first_selector`        |  **+31.8%** |
+
+This should be called out explicitly. It is valuable data, but it should not silently drive a general “viaIR is slower/faster” conclusion.
+
+## Compile failures
+
+There are **91 compile failures**. The biggest clusters:
+
+| Area                           | Failures | Interpretation                                            |
+| ------------------------------ | -------: | --------------------------------------------------------- |
+| `scale_abi_args_16/32/64`      | 61 total | Mostly Solidity stack-too-deep / compiler capacity stress |
+| `scale_storage_slots_16/32/64` |  9 total | Vyper Venom stack-depth/internal compiler limitation      |
+| `uniswap_v2_factory`           |       12 | Older Vyper/source-compat issues                          |
+| `counter`                      |        3 | Benchmark naming bug for older Vyper                      |
+| `curve_stableswap_2coin`       |        2 | Old-solc stack-too-deep                                   |
+| `yearn_vault_v3`               |        2 | Old-solc source-variant/scoping issue                     |
+| `merkle_verifier`              |        1 | Older Vyper feature gap                                   |
+| `uniswap_v2_pair`              |        1 | Older profile/source compatibility                        |
+
+I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is fair compiler capability measurement. Keep them, but show pass rates and geomeans on the intersection. However, the `counter` failure is a benchmark bug: the Vyper function named `add` is reserved on older Vyper profiles. Rename it globally, for example to `addValue`, or mark older Vyper unsupported for that benchmark.
+
+## Real-derived contract rewrite issues and caveats
+
+I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures, but I did find several things that should be fixed or disclosed.
+
+### 1. Uniswap V2 Factory Vyper port: missing post-create code check
+
+In the Solidity version, `createPair` performs a CREATE2 deployment and then checks that the created pair address is nonzero and has code.
+
+In the Vyper port, the relevant flow is essentially:
+
+* `raw_create(self.pair_code, salt=salt)`
+* call `Pair(pair).initialize(token0, token1)`
+
+I would add an explicit post-create code-size/nonzero check to the Vyper version, or at minimum add a negative test with empty/invalid pair init code. Otherwise the Vyper port may not be semantically equivalent to the Solidity version for failed or malformed pair-code deployment paths.
+
+This is not a compiler-optimization issue; it is a real-derived port equivalence issue.
+
+### 2. Yearn V3 constructor / initialization caveat should be made louder
+
+The Solidity Yearn port has a constructor/minimal-proxy pattern where direct implementation initialization is intentionally not representative. The docs mention this, but it is easy to miss.
+
+Do not include direct implementation deployment/initialization behavior in headline comparisons. Treat only the intended minimal-proxy harness flow as comparable.
+
+### 3. Curve StableSwap dynamic-array behavior is not exact decoder parity
+
+The Solidity Curve port accepts dynamic arrays and checks length with `>= N_COINS` in some paths. The docs already mark too-long dynamic-array decoder parity as out of scope.
+
+That is fine for fixture-based gas benchmarking, but it means some malformed-input behavior is not production-equivalent. Keep those cases out of any “real contract equivalence” headline.
+
+### 4. Curve constructor assumptions should be explicit
+
+The Solidity Curve constructor allows `nCoins <= MAX_COINS`, and downstream logic assumes a valid two-or-more coin setup. If this is only ever deployed by the benchmark fixture with valid inputs, that is fine. For an idiomatic robust rewrite, I would add `nCoins >= 2` and stricter length checks.
+
+### 5. Historical source variants have compatibility bugs
+
+The old solc Yearn and Curve variants fail for reasons that look like generated-source compatibility issues, not meaningful optimizer results:
+
+* Yearn old-solc variant: variable redeclaration/scoping issue.
+* Curve old-solc variant: stack-too-deep.
+
+Either repair those variants or mark them unsupported. Do not let them look like ordinary optimization failures.
+
+## Real-derived outliers that should be reclassified
+
+Real-derived results are useful, but many huge deltas come from revert branches, malformed calldata, admin checks, or decoder behavior. These should be shown as **coverage/conformance tests**, not steady-state production gas.
+
+### Vyper gas vs solc legacy, real-derived
+
+Overall real-derived gas geomean is about **Vyper 12.8% lower**, but the largest wins include several branches I would not treat as representative hot paths:
+
+| Scenario                                   |      Delta | Comment                               |
+| ------------------------------------------ | ---------: | ------------------------------------- |
+| Curve `rebasing_exchange_received_reverts` | **−94.2%** | Extreme early-revert/branch behavior  |
+| Yearn `shutdown_rejects_deposit`           | **−67.2%** | Revert branch                         |
+| Curve `price_oracle_after_time`            | **−63.4%** | State/time branch; inspect separately |
+| Curve `d_oracle_after_time`                | **−62.9%** | State/time branch; inspect separately |
+| Curve `remove_one_coin_slippage_reverts`   | **−59.7%** | Revert/slippage branch                |
+| Curve `add_liquidity_slippage_reverts`     | **−43.2%** | Revert/slippage branch                |
+| Uniswap Pair `reinitialize_by_factory`     | **−42.4%** | Initialization/revert-ish branch      |
+
+Largest Vyper losses are also mostly admin/revert/control-path cases:
+
+| Scenario                              |      Delta |
+| ------------------------------------- | ---------: |
+| Curve `set_ma_exp_time_zero_reverts`  | **+57.4%** |
+| Curve `stop_ramp_a_non_admin_reverts` | **+56.6%** |
+| Curve `ramp_a_non_admin_reverts`      | **+56.4%** |
+| Curve `set_ma_exp_time`               | **+54.8%** |
+| Curve `set_new_fee`                   | **+54.5%** |
+| Curve `stop_ramp_a`                   | **+50.4%** |
+| Yearn `initialize`                    | **+47.3%** |
+
+These are good to keep, but not in the same bucket as hot-path swap/mint/burn/deposit/withdraw flows.
+
+### Vyper Venom vs solc viaIR, real-derived
+
+The real-derived Venom comparison only has **74 comparable rows**, essentially Uniswap Factory/Pair. Curve and Yearn are not represented there, so do not generalize that number to all real-derived contracts.
+
+The largest wins are mostly malformed calldata / decoder / revert paths:
+
+| Scenario                               |      Delta |
+| -------------------------------------- | ---------: |
+| `unknown_selector_reverts`             | **−61.7%** |
+| `allowance_truncated_calldata_reverts` | **−60.1%** |
+| `permit_short_signature_tail_reverts`  | **−56.6%** |
+| `permit_truncated_calldata_reverts`    | **−56.6%** |
+| `skim_truncated_calldata_reverts`      | **−53.1%** |
+| `transfer_truncated_calldata_reverts`  | **−52.8%** |
+
+These should be in a decoder/revert coverage pane, not a real-contract production gas headline.
+
+## Scenarios I would trim or re-bucket
+
+I would not delete most of these. I would re-bucket them so the benchmark has clearer claims.
+
+### Keep in coverage, exclude from steady-state headline
+
+Uniswap Pair malformed/decoder paths:
+
+* `unknown_selector_reverts`
+* all `*_truncated_calldata_reverts`
+* `swap_truncated_head_reverts`
+* `permit_short_signature_tail_reverts`
+* `permit_truncated_calldata_reverts`
+
+Curve admin/revert/control paths:
+
+* `ramp_a_non_admin_reverts`
+* `stop_ramp_a_non_admin_reverts`
+* `set_new_fee_non_admin_reverts`
+* `set_ma_exp_time_zero_reverts`
+* `set_ma_exp_time_non_admin_reverts`
+* `invalid_coin_reverts`
+* `rebasing_exchange_received_reverts`
+
+Yearn revert/control paths:
+
+* `shutdown_rejects_deposit`
+* `permission_revert`
+* `deposit_asset_false_return_reverts`
+* `permit_expired_reverts`
+* `permit_invalid_reverts`
+
+Uniswap Factory revert/control paths:
+
+* `set_fee_to_forbidden_reverts`
+* `set_fee_to_setter_forbidden_reverts`
+* `old_setter_after_transfer_forbidden_reverts`
+* `duplicate_pair_reverts`
+* `reverse_duplicate_pair_reverts`
+* `identical_pair_reverts`
+* `zero_address_pair_reverts`
+* `all_pairs_out_of_bounds_reverts`
+
+### Keep as stress tests, not representative production mix
+
+* `scale_dispatch_N`: important local-minimum detector, especially for solc viaIR.
+* `scale_abi_args_N`: compiler-capacity / ABI lowering stress.
+* `scale_external_calls_N`: call-overhead stress.
+* low-N `abi_args` / `loop_bound`: partly dispatch/base-overhead dominated.
+
+## Weighting recommendation
+
+Right now the headline is scenario-weighted. That is defensible, but not sufficient.
+
+I would report four separate aggregates:
+
+1. **Scenario-weighted runtime gas**
+   Useful for “what did the measured scenario set show?”
+
+2. **Benchmark-equal or family-equal runtime gas**
+   Prevents `mapping_depth`, `storage_slots`, or `dispatch` from dominating because they have more branches per N.
+
+3. **Artifact-level bytecode size**
+   Deduped by compiled artifact.
+
+4. **Artifact-level compile time**
+   Deduped by compiled artifact.
+
+This matters. For example:
+
+| Comparison                | Scenario-weighted runtime gas | Family/benchmark-equal runtime gas |
+| ------------------------- | ----------------------------: | ---------------------------------: |
+| Vyper gas vs solc legacy  |                    **−10.4%** |                   **about −11.7%** |
+| Vyper Venom vs solc viaIR |                    **−12.4%** |                   **about −11.5%** |
+| solc viaIR vs solc legacy |                     **−3.7%** |                    **about −6.5%** |
+
+Not disastrous, but enough that the report should not rely on one master number.
+
+## Fairness of compiler-optimization comparison
+
+The comparison is mostly fair **for the specific claim**:
+
+> Given idiomatic Solidity and idiomatic Vyper implementations of similar benchmark tasks, using pinned compiler profiles, how do compiler/codegen outputs compare?
+
+It is less fair for this stronger claim:
+
+> Which compiler has better optimizations overall?
+
+To support the stronger claim, add optimizer-frontier comparisons. `vyper-latest-gas` vs `solc runs=200` is not necessarily comparing two Pareto-optimal settings. I would add a solc runs sweep, for example:
+
+* runs 1
+* runs 20
+* runs 200
+* runs 800
+* runs 10,000
+* runs 1,000,000
+
+Then compare gas/size Pareto frontiers against:
+
+* Vyper gas
+* Vyper codesize
+* Vyper Venom gas
+* Vyper Venom codesize, if supported
+
+That avoids the criticism that one compiler was compared against an arbitrary optimizer setting.
+
+## Concrete pre-publication fixes
+
+I would prioritize these:
+
+1. **Update stale report text.**
+   Current text appears to have old numbers for Vyper gas, viaIR compile overhead, and latest-solc-vs-0.4.26.
+
+2. **Separate headline cohorts.**
+   Use:
+
+   * fixed idiomatic headline
+   * scale stress headline
+   * real-derived hot-path headline
+   * branch/revert/decoder coverage section
+   * compile failure/pass-rate section
+
+3. **Show comparable-row denominator and compile pass rate on every card.**
+   Especially important for Vyper Venom and historical profiles.
+
+4. **Fix or mark source-compatibility bugs.**
+   Especially `Counter.add` for old Vyper and Yearn old-solc redeclaration.
+
+5. **Add the Vyper Factory post-create check or a negative test.**
+   This is the most concrete real-derived semantic caveat I found.
+
+6. **Soften “definitive” language.**
+   The benchmark is strong, but the current form is better described as a controlled idiomatic-source benchmark with separate stress and real-derived lanes.

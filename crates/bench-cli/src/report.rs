@@ -2,7 +2,7 @@ use crate::{
     baselines::baseline_pairs,
     models::{
         CompileFailure, CompileSet, CompiledArtifact, CompilerProfile, GasRecord, Language,
-        Provenance, ScenarioFile, Toolchains,
+        Provenance, Scenario, ScenarioFile, Toolchains,
     },
     scale::ScaleManifest,
     scenarios::ScenarioCatalog,
@@ -364,8 +364,8 @@ fn report_methodology() -> serde_json::Value {
             },
             {
                 "tag": "D",
-                "title": "Geomean over comparable scenarios",
-                "body": "Each summary is a geometric mean of ratios B/A over scenarios where both profiles compiled. Missing scenarios are excluded from the comparison."
+                "title": "Metric-aware geomeans",
+                "body": "Runtime gas is aggregated over matched headline scenarios. Artifact metrics such as bytecode size, deploy gas, and compile time are deduplicated per benchmark artifact before computing ratios."
             },
             {
                 "tag": "E",
@@ -384,6 +384,11 @@ fn report_methodology() -> serde_json::Value {
             },
             {
                 "tag": "H",
+                "title": "Cross-profile behavior checks",
+                "body": "Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario; expected-revert rows are compared by status and observer state, not raw revert bytes."
+            },
+            {
+                "tag": "I",
                 "title": "Vyper Venom and 0.5.0a1",
                 "body": "Vyper Venom rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release."
             }
@@ -691,6 +696,7 @@ fn normalized_rows(
 
     let failure_links = failure_links_by_benchmark(root)?;
     let differential_benchmarks = differential_benchmarks(compiled);
+    let profile_behavior_baselines = profile_behavior_baselines(gas_records, &artifacts);
     let mut rows = Vec::with_capacity(gas_records.len() + compiled.failures.len());
     for gas in gas_records {
         let artifact = artifacts
@@ -717,6 +723,17 @@ fn normalized_rows(
             scenario_file,
             failures,
             differential_benchmarks.contains(&artifact.benchmark_id),
+            profile_behavior_check(
+                gas,
+                profile_behavior_baselines
+                    .get(&profile_behavior_key(gas))
+                    .copied(),
+                scenario_file
+                    .scenarios
+                    .iter()
+                    .find(|scenario| scenario.name == gas.scenario),
+                supports_log_diff(&artifact.benchmark_id),
+            ),
         ));
     }
     for failure in &compiled.failures {
@@ -737,21 +754,12 @@ fn row(
     scenario_file: &ScenarioFile,
     failure_links: Vec<String>,
     differential_available: bool,
+    profile_behavior: ProfileBehaviorCheck,
 ) -> serde_json::Value {
-    let scenario = scenario_file
-        .scenarios
-        .iter()
-        .find(|scenario| scenario.name == gas.scenario);
-    let has_observers = scenario.is_some_and(|scenario| !scenario.observers.is_empty());
     let baseline_status = if differential_available {
         "baseline_only"
     } else {
         "not_applicable"
-    };
-    let log_status = if supports_log_diff(&artifact.benchmark_id) {
-        baseline_status
-    } else {
-        "not_run"
     };
     let randomized_status = correctness_status(
         scenario_file.randomized.is_some(),
@@ -822,14 +830,20 @@ fn row(
             "scenario_status_ok": gas.scenario_status_ok,
             "measurement_scope": "foundry_internal_call_harness"
         },
+        "behavior": {
+            "return_hash": gas.return_hash,
+            "observer_hash": gas.observer_hash,
+            "log_hash": gas.log_hash,
+            "profile_baseline": profile_behavior.baseline_profile
+        },
         "correctness": {
             "scenario_status_check": if gas.scenario_status_ok { "pass" } else { "fail" },
             "golden_behavior_check": "not_run",
             "baseline_differential_check": baseline_status,
-            "profile_behavior_check": "not_run",
-            "observer_check": if has_observers { baseline_status } else { "not_applicable" },
-            "return_data_check": baseline_status,
-            "log_check": log_status,
+            "profile_behavior_check": profile_behavior.profile_behavior_check,
+            "observer_check": profile_behavior.observer_check,
+            "return_data_check": profile_behavior.return_data_check,
+            "log_check": profile_behavior.log_check,
             "randomized_differential_check": randomized_status,
             "property_tests": property_status,
             "properties": scenario_file.properties.iter().map(|property| property.name.clone()).collect::<Vec<_>>(),
@@ -837,6 +851,123 @@ fn row(
             "scenario_status_ok": gas.scenario_status_ok
         }
     })
+}
+
+#[derive(Debug, Clone)]
+struct ProfileBehaviorCheck {
+    baseline_profile: Option<String>,
+    profile_behavior_check: &'static str,
+    return_data_check: &'static str,
+    observer_check: &'static str,
+    log_check: &'static str,
+}
+
+fn profile_behavior_baselines<'a>(
+    gas_records: &'a [GasRecord],
+    artifacts: &BTreeMap<String, &CompiledArtifact>,
+) -> BTreeMap<String, &'a GasRecord> {
+    let mut baselines = BTreeMap::new();
+    for gas in gas_records {
+        let Some(artifact) = artifacts.get(&artifact_key(
+            &gas.benchmark_id,
+            &gas.implementation_id,
+            &gas.profile_id,
+        )) else {
+            continue;
+        };
+        let baseline_profile = match artifact.language {
+            Language::Solidity => SOL_CODEGEN_BASELINE,
+            Language::Vyper => VYPER_GAS_CODEGEN,
+        };
+        if gas.profile_id == baseline_profile {
+            baselines.insert(profile_behavior_key(gas), gas);
+        }
+    }
+    baselines
+}
+
+fn profile_behavior_key(gas: &GasRecord) -> String {
+    format!(
+        "{}\0{}\0{}\0{}\0{}",
+        gas.benchmark_id,
+        gas.implementation_id,
+        gas.scenario,
+        gas.state_access_profile.as_str(),
+        gas.metadata_mode.as_str()
+    )
+}
+
+fn profile_behavior_check(
+    gas: &GasRecord,
+    baseline: Option<&GasRecord>,
+    scenario: Option<&Scenario>,
+    supports_logs: bool,
+) -> ProfileBehaviorCheck {
+    let has_observers = scenario.is_some_and(|scenario| !scenario.observers.is_empty());
+    let compares_return = scenario.is_some_and(|scenario| scenario.compare_return);
+    let Some(baseline) = baseline else {
+        return ProfileBehaviorCheck {
+            baseline_profile: None,
+            profile_behavior_check: "not_run",
+            return_data_check: if compares_return {
+                "not_run"
+            } else {
+                "not_applicable"
+            },
+            observer_check: if has_observers {
+                "not_run"
+            } else {
+                "not_applicable"
+            },
+            log_check: if supports_logs {
+                "not_run"
+            } else {
+                "not_applicable"
+            },
+        };
+    };
+
+    let status_matches = gas.call_succeeded == baseline.call_succeeded;
+    let return_data_check = if compares_return && gas.call_succeeded && baseline.call_succeeded {
+        compare_hashes(gas.return_hash.as_ref(), baseline.return_hash.as_ref())
+    } else {
+        "not_applicable"
+    };
+    let observer_check = if has_observers {
+        compare_hashes(gas.observer_hash.as_ref(), baseline.observer_hash.as_ref())
+    } else {
+        "not_applicable"
+    };
+    let log_check = if supports_logs && gas.call_succeeded && baseline.call_succeeded {
+        compare_hashes(gas.log_hash.as_ref(), baseline.log_hash.as_ref())
+    } else {
+        "not_applicable"
+    };
+
+    let checks = [return_data_check, observer_check, log_check];
+    let profile_behavior_check = if !status_matches || checks.contains(&"fail") {
+        "fail"
+    } else if checks.contains(&"not_run") {
+        "not_run"
+    } else {
+        "pass"
+    };
+
+    ProfileBehaviorCheck {
+        baseline_profile: Some(baseline.profile_id.clone()),
+        profile_behavior_check,
+        return_data_check,
+        observer_check,
+        log_check,
+    }
+}
+
+fn compare_hashes(left: Option<&String>, right: Option<&String>) -> &'static str {
+    match (left, right) {
+        (Some(left), Some(right)) if left == right => "pass",
+        (Some(_), Some(_)) => "fail",
+        _ => "not_run",
+    }
 }
 
 fn differential_benchmarks(compiled: &CompileSet) -> BTreeSet<String> {

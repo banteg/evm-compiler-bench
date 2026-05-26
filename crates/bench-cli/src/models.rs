@@ -530,6 +530,12 @@ pub struct GasRecord {
     pub call_succeeded: bool,
     pub scenario_status_ok: bool,
     #[serde(default)]
+    pub return_hash: Option<String>,
+    #[serde(default)]
+    pub observer_hash: Option<String>,
+    #[serde(default)]
+    pub log_hash: Option<String>,
+    #[serde(default)]
     pub cache: CacheInfo,
 }
 

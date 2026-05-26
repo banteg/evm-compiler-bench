@@ -886,6 +886,11 @@ function Methodology() {
     },
     {
       tag: 'I',
+      title: 'Cross-profile behavior checks',
+      body: 'Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario; expected-revert rows are compared by status and observer state, not raw revert bytes.'
+    },
+    {
+      tag: 'J',
       title: 'Vyper Venom and 0.5.0a1',
       body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
     },

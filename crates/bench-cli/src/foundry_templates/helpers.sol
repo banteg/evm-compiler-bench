@@ -1685,6 +1685,19 @@
         return value ? "true" : "false";
     }
 
+    function _bytes32Hex(bytes32 value) internal pure returns (string memory) {
+        bytes16 symbols = "0123456789abcdef";
+        bytes memory out = new bytes(66);
+        out[0] = "0";
+        out[1] = "x";
+        for (uint256 i = 0; i < 32; i++) {
+            uint8 b = uint8(value[i]);
+            out[2 + i * 2] = symbols[b >> 4];
+            out[3 + i * 2] = symbols[b & 0x0f];
+        }
+        return string(out);
+    }
+
     function _writeRow(
         string memory benchmarkId,
         string memory implementationId,
@@ -1699,7 +1712,10 @@
         uint256 harnessEstimatedTxGas,
         bool expectedSuccess,
         bool callSucceeded,
-        bool scenarioStatusOk
+        bool scenarioStatusOk,
+        bytes32 returnHash,
+        bytes32 observerHash,
+        bytes32 logHash
     ) internal {
         string memory line = string.concat(
             "{\"benchmark_id\":\"", benchmarkId,
@@ -1725,6 +1741,10 @@
             ",\"expected_success\":", _bool(expectedSuccess),
             ",\"call_succeeded\":", _bool(callSucceeded),
             ",\"scenario_status_ok\":", _bool(scenarioStatusOk),
+            ",\"return_hash\":\"", _bytes32Hex(returnHash),
+            "\",\"observer_hash\":\"", _bytes32Hex(observerHash),
+            "\",\"log_hash\":\"", _bytes32Hex(logHash),
+            "\"",
             "}"
         );
         vm.writeLine(GAS_JSONL_PATH, line);

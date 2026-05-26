@@ -19,7 +19,7 @@ use std::{
 };
 
 const FAILURE_DIR: &str = "../results/raw/failures";
-const GAS_CACHE_SCHEMA: &str = "gas-v2";
+const GAS_CACHE_SCHEMA: &str = "gas-v3";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 const MAX_GAS_ROWS_PER_SHARD: usize = 800;
 const MAX_GAS_SHARD_ESTIMATED_BYTES: usize = 1_200_000;
@@ -593,6 +593,7 @@ fn generate_test(
                 scenario.state_access_profile.as_str(),
             );
             if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
+                write_observer_function(&mut body, &artifact.benchmark_id, scenario);
                 write_gas_test(&mut body, index, artifact, scenario);
             }
         }
@@ -898,11 +899,25 @@ fn write_gas_test(
     out.push_str("        uint256 calldataGas = _calldataGas(");
     out.push_str(&call_data(&scenario.measured, "target"));
     out.push_str(");\n");
-    out.push_str("        (bool ok,, uint256 executionGas) = _run(");
-    out.push_str(call_destination(&scenario.measured, "target"));
-    out.push_str(", ");
-    write_call_args(out, &scenario.measured, "target");
-    out.push_str(");\n");
+    if harness::supports_log_diff(&artifact.benchmark_id) {
+        out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = _runWithLogs(target, ");
+        out.push_str(call_destination(&scenario.measured, "target"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "target");
+        out.push_str(");\n");
+    } else {
+        out.push_str("        (bool ok, bytes32 returnHash, uint256 executionGas) = _run(");
+        out.push_str(call_destination(&scenario.measured, "target"));
+        out.push_str(", ");
+        write_call_args(out, &scenario.measured, "target");
+        out.push_str(");\n");
+        out.push_str("        bytes32 logHash = bytes32(0);\n");
+    }
+    out.push_str("        bytes32 observerHash = _observeAll_");
+    out.push_str(&sanitize(&artifact.benchmark_id));
+    out.push('_');
+    out.push_str(&sanitize(&scenario.name));
+    out.push_str("(target);\n");
     out.push_str("        bool scenarioStatusOk = ok == ");
     out.push_str(if scenario.expect_success {
         "true"
@@ -931,7 +946,7 @@ fn write_gas_test(
     } else {
         "false"
     });
-    out.push_str(", ok, scenarioStatusOk);\n");
+    out.push_str(", ok, scenarioStatusOk, returnHash, observerHash, logHash);\n");
     out.push_str("    }\n\n");
 }
 
