@@ -141,48 +141,34 @@ There are **91 compile failures**. The biggest clusters:
 | `scale_abi_args_16/32/64`      | 61 total | Mostly Solidity stack-too-deep / compiler capacity stress |
 | `scale_storage_slots_16/32/64` |  9 total | Vyper Venom stack-depth/internal compiler limitation      |
 | `uniswap_v2_factory`           |       12 | Older Vyper/source-compat issues                          |
-| `counter`                      |        3 | Benchmark naming bug for older Vyper                      |
 | `curve_stableswap_2coin`       |        2 | Old-solc stack-too-deep                                   |
 | `yearn_vault_v3`               |        2 | Old-solc source-variant/scoping issue                     |
 | `merkle_verifier`              |        1 | Older Vyper feature gap                                   |
 | `uniswap_v2_pair`              |        1 | Older profile/source compatibility                        |
 
-I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is fair compiler capability measurement. Keep them, but show pass rates and geomeans on the intersection. However, the `counter` failure is a benchmark bug: the Vyper function named `add` is reserved on older Vyper profiles. Rename it globally, for example to `addValue`, or mark older Vyper unsupported for that benchmark.
+I would **not rewrite away** the stack-too-deep ABI-arity cases if your goal is fair compiler capability measurement. Keep them, but show pass rates and geomeans on the intersection.
 
 ## Real-derived contract rewrite issues and caveats
 
 I did not find an obvious core accounting bug in the main Uniswap Pair / Yearn / Curve scenarios under the documented fixtures, but I did find several things that should be fixed or disclosed.
 
-### 1. Uniswap V2 Factory Vyper port: missing post-create code check
-
-In the Solidity version, `createPair` performs a CREATE2 deployment and then checks that the created pair address is nonzero and has code.
-
-In the Vyper port, the relevant flow is essentially:
-
-* `raw_create(self.pair_code, salt=salt)`
-* call `Pair(pair).initialize(token0, token1)`
-
-I would add an explicit post-create code-size/nonzero check to the Vyper version, or at minimum add a negative test with empty/invalid pair init code. Otherwise the Vyper port may not be semantically equivalent to the Solidity version for failed or malformed pair-code deployment paths.
-
-This is not a compiler-optimization issue; it is a real-derived port equivalence issue.
-
-### 2. Yearn V3 constructor / initialization caveat should be made louder
+### 1. Yearn V3 constructor / initialization caveat should be made louder
 
 The Solidity Yearn port has a constructor/minimal-proxy pattern where direct implementation initialization is intentionally not representative. The docs mention this, but it is easy to miss.
 
 Do not include direct implementation deployment/initialization behavior in headline comparisons. Treat only the intended minimal-proxy harness flow as comparable.
 
-### 3. Curve StableSwap dynamic-array behavior is not exact decoder parity
+### 2. Curve StableSwap dynamic-array behavior is not exact decoder parity
 
 The Solidity Curve port accepts dynamic arrays and checks length with `>= N_COINS` in some paths. The docs already mark too-long dynamic-array decoder parity as out of scope.
 
 That is fine for fixture-based gas benchmarking, but it means some malformed-input behavior is not production-equivalent. Keep those cases out of any “real contract equivalence” headline.
 
-### 4. Curve constructor assumptions should be explicit
+### 3. Curve constructor assumptions should be explicit
 
 The Solidity Curve constructor allows `nCoins <= MAX_COINS`, and downstream logic assumes a valid two-or-more coin setup. If this is only ever deployed by the benchmark fixture with valid inputs, that is fine. For an idiomatic robust rewrite, I would add `nCoins >= 2` and stricter length checks.
 
-### 5. Historical source variants have compatibility bugs
+### 4. Historical source variants have compatibility bugs
 
 The old solc Yearn and Curve variants fail for reasons that look like generated-source compatibility issues, not meaningful optimizer results:
 
@@ -264,8 +250,5 @@ I would prioritize these:
 2. **Fix or mark source-compatibility bugs.**
    Especially Yearn old-solc redeclaration.
 
-3. **Add the Vyper Factory post-create check or a negative test.**
-   This is the most concrete real-derived semantic caveat I found.
-
-4. **Soften “definitive” language.**
+3. **Soften “definitive” language.**
    The benchmark is strong, but the current form is better described as a controlled idiomatic-source benchmark with separate stress and real-derived lanes.
