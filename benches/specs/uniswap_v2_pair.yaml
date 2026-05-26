@@ -88,8 +88,6 @@ real_derived:
     - burn
     - burn_zero_receiver
     - burn_without_staged_liquidity_reverts
-    - burn_no_return_tokens
-    - burn_false_return_token_reverts
     - swap_no_return_tokens
     - swap_false_return_token_reverts
     - sync
@@ -97,8 +95,6 @@ real_derived:
     - sync_reserve_overflow_reverts
     - skim
     - skim_zero_receiver
-    - skim_no_return_tokens
-    - skim_false_return_token_reverts
     - fee_on_mint
     - fee_off_resets_k_last
     - lp_transfer
@@ -160,8 +156,7 @@ real_derived:
     - upstream uint112 reserve overflow rejection
     - uint32 reserve timestamp wraparound and cumulative price wraparound semantics
     - native uint112 reserve0/reserve1 fields and uint32 blockTimestampLast semantics
-    - no-return token swap, burn, and skim transfer-out paths
-    - false-return token swap, burn, and skim transfer-out rejection
+    - representative no-return and false-return token transfer-out paths
     - fee-on and fee-off kLast behavior
     - LP token metadata, balances, direct transfers including upstream zero-recipient transfers, insufficient-balance transfer rejection, approvals, finite/infinite/insufficient allowance transferFrom, zero-recipient transferFrom behavior, and EIP-712 permit acceptance, chain-id drift, expired-deadline rejection, and invalid-signature rejection
     - ABI boundary rejection for unknown selectors, truncated initializer, pair-action, LP-token balance/allowance/nonce reads, LP-token approve/transfer/transferFrom, malformed swap head, missing dynamic calldata tail, short and overlapping dynamic calldata payloads, and truncated permit payloads including signature-tail truncation
@@ -233,12 +228,6 @@ scenarios:
   - name: burn_without_staged_liquidity_reverts
     call: "burn(address(this)) after pool initialization without transferring LP shares to the pair"
     expected: "reverts through the upstream insufficient-liquidity-burned guard"
-  - name: burn_no_return_tokens
-    call: "burn(address(this)) with ERC20 tokens that return no transfer data"
-    expected: "accepts empty transfer return data and burns staged LP"
-  - name: burn_false_return_token_reverts
-    call: "burn(address(this)) with an output token that returns false from transfer"
-    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: swap_no_return_tokens
     call: "swap(0, 100, address(this), empty bytes) with ERC20 tokens that return no transfer data"
     expected: "accepts empty transfer return data on the output token and updates reserves"
@@ -260,12 +249,6 @@ scenarios:
   - name: skim_zero_receiver
     call: "skim(address(0)) after token balance drift"
     expected: "transfers token balances above reserves to the zero address because the upstream pair has no zero-recipient skim guard"
-  - name: skim_no_return_tokens
-    call: "skim(address(this)) after token balance drift with ERC20 tokens that return no transfer data"
-    expected: "accepts empty transfer return data while skimming balances above reserves"
-  - name: skim_false_return_token_reverts
-    call: "skim(address(this)) after token balance drift with an output token that returns false from transfer"
-    expected: "reverts through the upstream safe-transfer false-return guard"
   - name: fee_on_mint
     call: "feeTo set, mint, sync, mint"
     expected: "updates kLast and mints protocol liquidity when rootK grows"

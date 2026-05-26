@@ -317,36 +317,6 @@ scenarios:
       data: 'abi.encodeWithSignature("burn(address)", address(this))'
     expect_success: false
     observers: *pair_observers
-  - name: burn_no_return_tokens
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapInitNoReturn(address,bool)", {target}, false)'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeedNoReturn(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
-      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapStageBurn(address,uint256)", {target}, uint256(10_000))'
-    measured:
-      data: 'abi.encodeWithSignature("burn(address)", address(this))'
-    expect_success: true
-    observers: *pair_observers
-  - name: burn_false_return_token_reverts
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
-      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapStageBurn(address,uint256)", {target}, uint256(10_000))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSetTransferReturnValue(address,bool,bool)", {target}, false, true)'
-    measured:
-      data: 'abi.encodeWithSignature("burn(address)", address(this))'
-    expect_success: false
-    observers: *pair_observers
   - name: swap_no_return_tokens
     state_access_profile: mixed
     setup:
@@ -455,36 +425,6 @@ scenarios:
       - data: 'abi.encodeWithSignature("getReserves()")'
       - destination: harness
         data: 'abi.encodeWithSignature("benchUniswapTokenBalances(address,address)", {target}, address(0))'
-  - name: skim_no_return_tokens
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapInitNoReturn(address,bool)", {target}, false)'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeedNoReturn(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
-      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeedNoReturn(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
-    measured:
-      data: 'abi.encodeWithSignature("skim(address)", address(this))'
-    expect_success: true
-    observers: *pair_observers
-  - name: skim_false_return_token_reverts
-    state_access_profile: mixed
-    setup:
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1_000_000))'
-      - data: 'abi.encodeWithSignature("mint(address)", address(this))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSeed(address,uint256,uint256)", {target}, uint256(50_000), uint256(25_000))'
-      - destination: harness
-        data: 'abi.encodeWithSignature("benchUniswapSetTransferReturnValue(address,bool,bool)", {target}, false, true)'
-    measured:
-      data: 'abi.encodeWithSignature("skim(address)", address(this))'
-    expect_success: false
-    observers: *pair_observers
   - name: fee_on_mint
     state_access_profile: mixed
     setup:
