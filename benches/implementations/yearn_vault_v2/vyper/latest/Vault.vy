@@ -302,17 +302,17 @@ def initialize(
     assert decimals < 256 # dev: see VVE-2020-0001
 
     self.governance = governance
-    log UpdateGovernance(governance)
+    log UpdateGovernance(governance=governance)
     self.management = management
-    log UpdateManagement(management)
+    log UpdateManagement(management=management)
     self.rewards = rewards
-    log UpdateRewards(rewards)
+    log UpdateRewards(rewards=rewards)
     self.guardian = guardian
-    log UpdateGuardian(guardian)
+    log UpdateGuardian(guardian=guardian)
     self.performanceFee = 1000  # 10% of yield (per Strategy)
-    log UpdatePerformanceFee(convert(1000, uint256))
+    log UpdatePerformanceFee(performanceFee=convert(1000, uint256))
     self.managementFee = 200  # 2% per year
-    log UpdateManagementFee(convert(200, uint256))
+    log UpdateManagementFee(managementFee=convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegradation = DEGRADATION_COEFFICIENT * 46 // 10 ** 6 # 6 hours in blocks
@@ -393,7 +393,7 @@ def setGovernance(governance: address):
     @param governance The address requested to take over Vault governance.
     """
     assert msg.sender == self.governance
-    log NewPendingGovernance(governance)
+    log NewPendingGovernance(pendingGovernance=governance)
     self.pendingGovernance = governance
 
 
@@ -412,7 +412,7 @@ def acceptGovernance():
     """
     assert msg.sender == self.pendingGovernance
     self.governance = msg.sender
-    log UpdateGovernance(msg.sender)
+    log UpdateGovernance(governance=msg.sender)
 
 
 @external
@@ -427,7 +427,7 @@ def setManagement(management: address):
     """
     assert msg.sender == self.governance
     self.management = management
-    log UpdateManagement(management)
+    log UpdateManagement(management=management)
 
 
 @external
@@ -447,7 +447,7 @@ def setRewards(rewards: address):
     assert msg.sender == self.governance
     assert not (rewards in [self, empty(address)])
     self.rewards = rewards
-    log UpdateRewards(rewards)
+    log UpdateRewards(rewards=rewards)
 
 
 @external
@@ -461,7 +461,7 @@ def setLockedProfitDegradation(degradation: uint256):
     # Since "degradation" is of type uint256 it can never be less than zero
     assert degradation <= DEGRADATION_COEFFICIENT
     self.lockedProfitDegradation = degradation
-    log LockedProfitDegradationUpdated(degradation) 
+    log LockedProfitDegradationUpdated(value=degradation)
 
 
 @external
@@ -478,7 +478,7 @@ def setDepositLimit(limit: uint256):
     """
     assert msg.sender == self.governance
     self.depositLimit = limit
-    log UpdateDepositLimit(limit)
+    log UpdateDepositLimit(depositLimit=limit)
 
 
 @external
@@ -495,7 +495,7 @@ def setPerformanceFee(fee: uint256):
     assert msg.sender == self.governance
     assert fee <= MAX_BPS // 2
     self.performanceFee = fee
-    log UpdatePerformanceFee(fee)
+    log UpdatePerformanceFee(performanceFee=fee)
 
 
 @external
@@ -510,7 +510,7 @@ def setManagementFee(fee: uint256):
     assert msg.sender == self.governance
     assert fee <= MAX_BPS
     self.managementFee = fee
-    log UpdateManagementFee(fee)
+    log UpdateManagementFee(managementFee=fee)
 
 
 @external
@@ -524,7 +524,7 @@ def setGuardian(guardian: address):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.guardian = guardian
-    log UpdateGuardian(guardian)
+    log UpdateGuardian(guardian=guardian)
 
 
 @external
@@ -553,7 +553,7 @@ def setEmergencyShutdown(active: bool):
     else:
         assert msg.sender == self.governance
     self.emergencyShutdown = active
-    log EmergencyShutdown(active)
+    log EmergencyShutdown(active=active)
 
 
 @external
@@ -613,7 +613,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         assert existsInOldQueue # dev: do not add new strategies
 
         self.withdrawalQueue[i] = queue[i]
-    log UpdateWithdrawalQueue(queue)
+    log UpdateWithdrawalQueue(queue=queue)
 
 
 @internal
@@ -659,7 +659,7 @@ def _transfer(sender: address, receiver: address, amount: uint256):
     assert receiver not in [self, empty(address)]
     self.balanceOf[sender] -= amount
     self.balanceOf[receiver] += amount
-    log Transfer(sender, receiver, amount)
+    log Transfer(sender=sender, receiver=receiver, value=amount)
 
 
 @external
@@ -705,7 +705,7 @@ def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
         allowance: uint256 = self.allowance[sender][msg.sender] - amount
         self.allowance[sender][msg.sender] = allowance
         # NOTE: Allows log filters to have a full accounting of allowance changes
-        log Approval(sender, msg.sender, allowance)
+        log Approval(owner=sender, spender=msg.sender, value=allowance)
     self._transfer(sender, receiver, amount)
     return True
 
@@ -721,7 +721,7 @@ def approve(spender: address, amount: uint256) -> bool:
     @param amount The amount of tokens to be spent.
     """
     self.allowance[msg.sender][spender] = amount
-    log Approval(msg.sender, spender, amount)
+    log Approval(owner=msg.sender, spender=spender, value=amount)
     return True
 
 
@@ -736,7 +736,7 @@ def increaseAllowance(spender: address, amount: uint256) -> bool:
     @param amount The amount of tokens to increase the allowance by.
     """
     self.allowance[msg.sender][spender] += amount
-    log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
+    log Approval(owner=msg.sender, spender=spender, value=self.allowance[msg.sender][spender])
     return True
 
 
@@ -751,7 +751,7 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
     @param amount The amount of tokens to decrease the allowance by.
     """
     self.allowance[msg.sender][spender] -= amount
-    log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
+    log Approval(owner=msg.sender, spender=spender, value=self.allowance[msg.sender][spender])
     return True
 
 
@@ -795,7 +795,7 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     assert ecrecover(digest, v, r, s) == owner  # dev: invalid signature
     self.allowance[owner][spender] = amount
     self.nonces[owner] = nonce + 1
-    log Approval(owner, spender, amount)
+    log Approval(owner=owner, spender=spender, value=amount)
     return True
 
 
@@ -860,7 +860,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Mint new shares
     self.totalSupply = totalSupply + shares
     self.balanceOf[to] += shares
-    log Transfer(empty(address), to, shares)
+    log Transfer(sender=empty(address), receiver=to, value=shares)
 
     return shares
 
@@ -927,7 +927,7 @@ def deposit(_amount: uint256 = max_value(uint256), recipient: address = msg.send
     self.erc20_safe_transferFrom(self.token, msg.sender, self, amount)
     self.totalIdle += amount
 
-    log Deposit(recipient, shares, amount)
+    log Deposit(recipient=recipient, shares=shares, amount=amount)
 
     return shares  # Just in case someone wants them
 
@@ -1131,7 +1131,7 @@ def withdraw(
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
-            log WithdrawFromStrategy(strategy, self.strategies[strategy].totalDebt, loss)
+            log WithdrawFromStrategy(strategy=strategy, totalDebt=self.strategies[strategy].totalDebt, loss=loss)
 
         self.totalIdle = vault_balance
         # NOTE: We have withdrawn everything possible out of the withdrawal queue
@@ -1150,12 +1150,12 @@ def withdraw(
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
     self.balanceOf[msg.sender] -= shares
-    log Transfer(msg.sender, empty(address), shares)
+    log Transfer(sender=msg.sender, receiver=empty(address), value=shares)
     
     self.totalIdle -= value
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.erc20_safe_transfer(self.token, recipient, value)
-    log Withdraw(recipient, shares, value)
+    log Withdraw(recipient=recipient, shares=shares, amount=value)
     
     return value
 
@@ -1243,7 +1243,7 @@ def addStrategy(
         totalGain=0,
         totalLoss=0,
     )
-    log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
+    log StrategyAdded(strategy=strategy, debtRatio=debtRatio, minDebtPerHarvest=minDebtPerHarvest, maxDebtPerHarvest=maxDebtPerHarvest, performanceFee=performanceFee)
 
     # Update Vault parameters
     self.debtRatio += debtRatio
@@ -1273,7 +1273,7 @@ def updateStrategyDebtRatio(
     self.strategies[strategy].debtRatio = debtRatio
     self.debtRatio += debtRatio
     assert self.debtRatio <= MAX_BPS
-    log StrategyUpdateDebtRatio(strategy, debtRatio)
+    log StrategyUpdateDebtRatio(strategy=strategy, debtRatio=debtRatio)
 
 
 @external
@@ -1295,7 +1295,7 @@ def updateStrategyMinDebtPerHarvest(
     assert self.strategies[strategy].activation > 0
     assert self.strategies[strategy].maxDebtPerHarvest >= minDebtPerHarvest
     self.strategies[strategy].minDebtPerHarvest = minDebtPerHarvest
-    log StrategyUpdateMinDebtPerHarvest(strategy, minDebtPerHarvest)
+    log StrategyUpdateMinDebtPerHarvest(strategy=strategy, minDebtPerHarvest=minDebtPerHarvest)
 
 
 @external
@@ -1317,7 +1317,7 @@ def updateStrategyMaxDebtPerHarvest(
     assert self.strategies[strategy].activation > 0
     assert self.strategies[strategy].minDebtPerHarvest <= maxDebtPerHarvest
     self.strategies[strategy].maxDebtPerHarvest = maxDebtPerHarvest
-    log StrategyUpdateMaxDebtPerHarvest(strategy, maxDebtPerHarvest)
+    log StrategyUpdateMaxDebtPerHarvest(strategy=strategy, maxDebtPerHarvest=maxDebtPerHarvest)
 
 
 @external
@@ -1338,14 +1338,14 @@ def updateStrategyPerformanceFee(
     assert performanceFee <= MAX_BPS // 2
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
-    log StrategyUpdatePerformanceFee(strategy, performanceFee)
+    log StrategyUpdatePerformanceFee(strategy=strategy, performanceFee=performanceFee)
 
 
 @internal
 def _revokeStrategy(strategy: address):
     self.debtRatio -= self.strategies[strategy].debtRatio
     self.strategies[strategy].debtRatio = 0
-    log StrategyRevoked(strategy)
+    log StrategyRevoked(strategy=strategy)
 
 
 @external
@@ -1392,7 +1392,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     )
 
     extcall Strategy(oldVersion).migrate(newVersion)
-    log StrategyMigrated(oldVersion, newVersion)
+    log StrategyMigrated(oldVersion=oldVersion, newVersion=newVersion)
 
     for idx: uint256 in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == oldVersion:
@@ -1454,7 +1454,7 @@ def addStrategyToQueue(strategy: address):
 
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
-    log StrategyAddedToQueue(strategy)
+    log StrategyAddedToQueue(strategy=strategy)
 
 
 @external
@@ -1474,7 +1474,7 @@ def removeStrategyFromQueue(strategy: address):
         if self.withdrawalQueue[idx] == strategy:
             self.withdrawalQueue[idx] = empty(address)
             self._organizeWithdrawalQueue()
-            log StrategyRemovedFromQueue(strategy)
+            log StrategyRemovedFromQueue(strategy=strategy)
             return  # We found the right location and cleared it
     raise  # We didn't find the Strategy in the queue
 
@@ -1677,7 +1677,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
-    log FeeReport(management_fee, performance_fee, strategist_fee, duration)
+    log FeeReport(management_fee=management_fee, performance_fee=performance_fee, strategist_fee=strategist_fee, duration=duration)
     return total_fee
 
 
@@ -1781,15 +1781,15 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     self.lastReport = block.timestamp
 
     log StrategyReported(
-        msg.sender,
-        gain,
-        loss,
-        debtPayment,
-        self.strategies[msg.sender].totalGain,
-        self.strategies[msg.sender].totalLoss,
-        self.strategies[msg.sender].totalDebt,
-        credit,
-        self.strategies[msg.sender].debtRatio,
+        strategy=msg.sender,
+        gain=gain,
+        loss=loss,
+        debtPaid=debtPayment,
+        totalGain=self.strategies[msg.sender].totalGain,
+        totalLoss=self.strategies[msg.sender].totalLoss,
+        totalDebt=self.strategies[msg.sender].totalDebt,
+        debtAdded=credit,
+        debtRatio=self.strategies[msg.sender].debtRatio,
     )
 
     if self.strategies[msg.sender].debtRatio == 0 or self.emergencyShutdown:
@@ -1827,5 +1827,5 @@ def sweep(token: address, amount: uint256 = max_value(uint256)):
     if token == self.token:
         value = staticcall IERC20(self.token).balanceOf(self) - self.totalIdle
 
-    log Sweep(token, value)
+    log Sweep(token=token, amount=value)
     self.erc20_safe_transfer(token, self.governance, value)

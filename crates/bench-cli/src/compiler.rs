@@ -826,17 +826,22 @@ fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) 
         Some("solidity-0.6") => {
             let source = add_solidity_abicoder_pragma(&source, "pragma experimental ABIEncoderV2;");
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_07_calldata_bytes_assembly(&source);
             add_constructor_visibility(&source)
         }
         Some("solidity-0.5") => {
             let source = add_solidity_abicoder_pragma(&source, "pragma experimental ABIEncoderV2;");
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_07_calldata_bytes_assembly(&source);
+            let source = rewrite_solidity_pre_06_external_data_locations(&source);
             let source = rewrite_solidity_pre_06_immutables(&source);
             let source = rewrite_solidity_pre_06_call_value(&source);
             add_constructor_visibility(&source)
         }
         Some("solidity-0.4") => {
             let source = rewrite_solidity_pre_08(&source);
+            let source = rewrite_solidity_pre_07_calldata_bytes_assembly(&source);
+            let source = rewrite_solidity_pre_06_external_data_locations(&source);
             let source = rewrite_solidity_pre_06_immutables(&source);
             let source = rewrite_solidity_04_low_level_calls(&source);
             let source = add_constructor_visibility(&source);
@@ -912,6 +917,51 @@ fn rewrite_solidity_pre_08(source: &str) -> String {
         .replace("type(uint112).max", "uint112(-1)")
         .replace("block.chainid", "uint256(1)");
     rewrite_solidity_address_code_length(&source)
+}
+
+fn rewrite_solidity_pre_07_calldata_bytes_assembly(source: &str) -> String {
+    source
+        .replace(
+            "function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes calldata signature)",
+            "function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes memory signature)",
+        )
+        .replace("calldataload(signature.offset)", "mload(add(signature, 32))")
+        .replace(
+            "calldataload(add(signature.offset, 32))",
+            "mload(add(signature, 64))",
+        )
+        .replace(
+            "calldataload(add(signature.offset, 64))",
+            "mload(add(signature, 96))",
+        )
+}
+
+fn rewrite_solidity_pre_06_external_data_locations(source: &str) -> String {
+    source
+        .replace(
+            "string memory nameOverride,\n        string memory symbolOverride\n    ) external",
+            "string calldata nameOverride,\n        string calldata symbolOverride\n    ) external",
+        )
+        .replace(
+            "string memory nameOverride,\n        string memory symbolOverride,\n        address guardian_\n    ) external",
+            "string calldata nameOverride,\n        string calldata symbolOverride,\n        address guardian_\n    ) external",
+        )
+        .replace(
+            "string memory nameOverride,\n        string memory symbolOverride,\n        address guardian_,\n        address management_\n    ) external",
+            "string calldata nameOverride,\n        string calldata symbolOverride,\n        address guardian_,\n        address management_\n    ) external",
+        )
+        .replace(
+            "function setName(string memory name_) external",
+            "function setName(string calldata name_) external",
+        )
+        .replace(
+            "function setSymbol(string memory symbol_) external",
+            "function setSymbol(string calldata symbol_) external",
+        )
+        .replace(
+            "function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes memory signature)\n        external",
+            "function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes memory signature)\n        public",
+        )
 }
 
 fn remove_numeric_separators(source: &str) -> String {
@@ -1100,6 +1150,14 @@ fn rewrite_solidity_pre_06_call_value(source: &str) -> String {
             "YearnBenchERC20.transferFrom.selector",
             "bytes4(keccak256(\"transferFrom(address,address,uint256)\"))",
         )
+        .replace(
+            "YearnV2ERC20.transfer.selector",
+            "bytes4(keccak256(\"transfer(address,uint256)\"))",
+        )
+        .replace(
+            "YearnV2ERC20.transferFrom.selector",
+            "bytes4(keccak256(\"transferFrom(address,address,uint256)\"))",
+        )
 }
 
 fn rewrite_solidity_pre_06_immutables(source: &str) -> String {
@@ -1155,6 +1213,14 @@ fn rewrite_solidity_04_staticcalls(source: &str) -> String {
         .replace(
             "(bool ok, bytes memory returndata) = coin.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
             "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(uint256(returndataWord) != 0, message);\n        }",
+        )
+        .replace(
+            "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
+        )
+        .replace(
+            "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
         )
         .replace(
             "allowance[owner][spender] = value;\n        nonces[owner] = nonce + 1;\n        emit Approval(owner, spender, value);\n        return true;",
@@ -2108,7 +2174,7 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ninterface YearnBenchERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        abi.encodeWithSelector(YearnBenchERC20.transfer.selector, msg.sender, 1);\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ninterface YearnBenchERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ninterface YearnV2ERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        abi.encodeWithSelector(YearnBenchERC20.transfer.selector, msg.sender, 1);\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n    function _safeTransfer(address token_, address receiver, uint256 amount) internal {\n        (bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(YearnV2ERC20.transfer.selector, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");\n    }\n}\n";
         let rewritten = transform_solidity_source(
             source,
             Some("solidity-0.4"),
@@ -2127,12 +2193,16 @@ mod tests {
         assert!(rewritten.contains(
             "abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), msg.sender, 1);"
         ));
+        assert!(rewritten.contains(
+            "_benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));"
+        ));
+        assert!(rewritten.contains("dataSize == 0 || uint256(dataWord) != 0"));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
     }
 
     #[test]
     fn rewrites_solidity_05_abicoder_opt_in() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\nstruct StrategyParams {\n    uint256 debt;\n}\n\ncontract C {\n    uint256 public immutable value;\n    function _addLiquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver) internal {}\n    function f() external pure returns (StrategyParams memory params) {\n        params.debt = 1;\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\nstruct StrategyParams {\n    uint256 debt;\n}\n\ncontract C {\n    uint256 public immutable value;\n    function initialize(\n        string memory nameOverride,\n        string memory symbolOverride\n    ) external {}\n    function setName(string memory name_) external {}\n    function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes calldata signature)\n        external\n        returns (bool)\n    {\n        bytes32 r;\n        assembly {\n            r := calldataload(signature.offset)\n        }\n        owner;\n        spender;\n        amount;\n        expiry;\n        r;\n        return true;\n    }\n    function _addLiquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver) internal {}\n    function f() external pure returns (StrategyParams memory params) {\n        params.debt = 1;\n    }\n}\n";
         let rewritten = transform_solidity_source(
             source,
             Some("solidity-0.5"),
@@ -2147,6 +2217,14 @@ mod tests {
         assert!(rewritten.contains(
             "function _addLiquidity(uint256[] memory amounts, uint256 minMintAmount, address receiver)"
         ));
+        assert!(rewritten.contains(
+            "string calldata nameOverride,\n        string calldata symbolOverride\n    ) external"
+        ));
+        assert!(rewritten.contains("function setName(string calldata name_) external"));
+        assert!(
+            rewritten.contains("function permit(address owner, address spender, uint256 amount, uint256 expiry, bytes memory signature)\n        public")
+        );
+        assert!(rewritten.contains("r := mload(add(signature, 32))"));
         assert!(!rewritten.contains("immutable"));
     }
 

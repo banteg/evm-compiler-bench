@@ -170,8 +170,8 @@ contract YearnVaultV2Real {
         require(activation == 0, "initialized");
         token = token_;
         string memory baseSymbol = YearnV2ERC20(token_).symbol();
-        name = bytes(nameOverride).length == 0 ? string.concat(baseSymbol, " yVault") : nameOverride;
-        symbol = bytes(symbolOverride).length == 0 ? string.concat("yv", baseSymbol) : symbolOverride;
+        name = bytes(nameOverride).length == 0 ? string(abi.encodePacked(baseSymbol, " yVault")) : nameOverride;
+        symbol = bytes(symbolOverride).length == 0 ? string(abi.encodePacked("yv", baseSymbol)) : symbolOverride;
         uint256 decimals_ = YearnV2ERC20(token_).decimals();
         require(decimals_ < 256, "decimals");
         decimals = decimals_;

@@ -83,6 +83,7 @@ upstream historical file, which remains provenance-only for this lane.
 | --- | --- |
 | `uniswap_v2_pair` | `solc-0.5.16-noopt`, `solc-0.5.16-legacy-runs200`, `vyper-0.3.10-none`, `vyper-0.3.10-gas` |
 | `curve_stableswap_2coin` | `vyper-0.3.10-none`, `vyper-0.3.10-gas`, `solc-0.8.20-noopt`, `solc-0.8.20-legacy-runs200` |
+| `yearn_vault_v2` | `solc-0.4.26-noopt`, `solc-0.4.26-legacy-runs200`, `solc-0.8.20-noopt`, `solc-0.8.20-legacy-runs200`, `vyper-latest-none`, `vyper-latest-gas` |
 | `yearn_vault_v3` | `vyper-0.3.7-default`, `vyper-0.3.7-none`, `solc-0.8.20-noopt`, `solc-0.8.20-legacy-runs200` |
 
 These are compile-surface checks only. They prove the current source-variant
@@ -95,6 +96,7 @@ ports cover additional benchmark behavior.
 | --- | --- | --- | --- | --- | --- | --- |
 | `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
+| `yearn_vault_v2` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `contracts/Vault.vy`, with pinned upstream retained for provenance. | Solidity port covers the monolithic V2 vault API, ERC20 share accounting and permit, deposits/withdrawals, governance/management controls, strategy queue/debt/report accounting, locked profit, and optional-return ERC20 transfers. | Intentional boundaries remain for deterministic asset/strategy fixtures, representative common workflows, exact Vyper bounded-string/bytes decoder behavior, revert data, and storage layout. |
 | `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Intentional boundaries remain for representative third-party fixtures, representative common workflow sequences, exact Vyper bounded-string decoder behavior, and storage layout; the `MAX_QUEUE` cap remains modeled as vault behavior. |
 
 ## Status Legend
@@ -164,6 +166,25 @@ Immediate chips:
   count through `MAX_COINS`, or whether the current constructor-driven port
   plus representative three-, five-, and eight-coin coverage is the intended
   production-equivalence boundary.
+
+### `yearn_vault_v2`
+
+| Surface | Status | Notes |
+| --- | --- | --- |
+| Vault source-language original | Latest-syntax original | `Vault.vy` is a latest-syntax Vyper modernization of the pinned upstream Yearn V2 vault source; the pinned upstream file remains provenance/reference input only. |
+| Initialization and mutable metadata | Exact counterpart surface | All three upstream initialization overloads are modeled, including default guardian/management behavior, name/symbol overrides, decimals import from the asset token, and governance-managed metadata setters. |
+| ERC20 shares and permit | Exact counterpart surface | Share balances, approvals, finite/infinite allowance spends, increase/decrease allowance, EIP-712 packed-signature permit, nonces, and transfer receiver guards are implemented. |
+| Deposits and withdrawals | Representative common-path surface | Default, max-amount, receiver-specific, and deposit-limit paths are covered, along with vault share/accounting observations and withdrawal through the strategy queue. |
+| Governance, management, guardian controls | Exact counterpart surface for covered API | Governance handoff, management/rewards/guardian updates, fee/deposit-limit updates, shutdown toggling, sweep, withdrawal queue updates, and strategy parameter updates are implemented. |
+| Strategy lifecycle and accounting | Representative common-path surface | Add/revoke/migrate/queue operations, credit/debt/expected-return views, report gain/loss/debt-payment flows, locked-profit decay, and withdrawal-from-strategy accounting are implemented against deterministic strategy fixtures. Exhaustive strategy implementation behavior is intentionally out of scope. |
+| Optional-return token handling | Exact counterpart surface | The Vyper source uses `default_return_value=True`; the Solidity port accepts no-return and true-return token transfers in the same helper boundary. |
+| Vyper bounds and revert data | Approximate | The source Vyper original retains bounded `String` and `Bytes` ABI behavior. The Solidity counterpart uses idiomatic dynamic types where Solidity naturally does so; exact decoder timing and revert bytes are outside the headline comparison. |
+| Storage layout | Approximate | Full storage-layout compatibility is intentionally false for the idiomatic Solidity port. |
+
+Immediate chips:
+
+- Additional Yearn V2 scenarios should stay focused on common vault workflows,
+  not exhaustive strategy, decoder, or revert-data edge cases.
 
 ### `yearn_vault_v3`
 
