@@ -217,7 +217,7 @@ That avoids the criticism that one compiler was compared against an arbitrary op
 
 ## Concrete pre-publication fixes
 
-I would prioritize these:
+No remaining pre-publication fixes from this review.
 
-1. **Soften “definitive” language.**
-   The benchmark is strong, but the current form is better described as a controlled idiomatic-source benchmark with separate stress and real-derived lanes.
+Dismissed: the report keeps its current public framing instead of softening the
+"definitive" language.
