@@ -26,10 +26,7 @@ interface CurveBenchStableSwapViews {
     function get_dx(int128 i, int128 j, uint256 dy, address pool) external view returns (uint256);
     function get_dy(int128 i, int128 j, uint256 dx, address pool) external view returns (uint256);
     function dynamic_fee(int128 i, int128 j, address pool) external view returns (uint256);
-    function calc_token_amount(uint256[] calldata amounts, bool isDeposit, address pool)
-        external
-        view
-        returns (uint256);
+    function calc_token_amount(uint256[] calldata amounts, bool isDeposit, address pool) external view returns (uint256);
 }
 
 contract CurveStableSwap2CoinReal {
@@ -90,7 +87,9 @@ contract CurveStableSwap2CoinReal {
     event AddLiquidity(
         address indexed provider, uint256[] tokenAmounts, uint256[] fees, uint256 invariant, uint256 tokenSupply
     );
-    event TokenExchange(address indexed buyer, int128 soldId, uint256 tokensSold, int128 boughtId, uint256 tokensBought);
+    event TokenExchange(
+        address indexed buyer, int128 soldId, uint256 tokensSold, int128 boughtId, uint256 tokensBought
+    );
     event TokenExchangeUnderlying(
         address indexed buyer, int128 soldId, uint256 tokensSold, int128 boughtId, uint256 tokensBought
     );
@@ -172,15 +171,17 @@ contract CurveStableSwap2CoinReal {
         pool_contains_rebasing_tokens = containsRebasingToken;
         for (uint256 coinIndex = 0; coinIndex < nCoins; coinIndex++) {
             coins[coinIndex] = coins_[coinIndex];
-            rate_oracles[coinIndex] =
-                (uint256(uint32(methodIds[coinIndex])) << 224) | uint160(oracles[coinIndex]);
+            rate_oracles[coinIndex] = (uint256(uint32(methodIds[coinIndex])) << 224) | uint160(oracles[coinIndex]);
             if (assetTypes[coinIndex] == 3) {
                 call_amount[coinIndex] = 10 ** uint256(CurveBenchERC20Detailed(coins_[coinIndex]).decimals());
                 address underlying = CurveBenchERC4626(coins_[coinIndex]).asset();
                 scale_factor[coinIndex] = 10 ** (18 - uint256(CurveBenchERC20Detailed(underlying).decimals()));
             }
         }
-        uint256 preciseA = amp * A_PRECISION;
+        uint256 preciseA;
+        unchecked {
+            preciseA = amp * A_PRECISION;
+        }
         initial_A = preciseA;
         future_A = preciseA;
         fee = swapFee;
@@ -266,17 +267,25 @@ contract CurveStableSwap2CoinReal {
         } else {
             fees = new uint256[](N_COINS);
             uint256 baseFee = _baseFee();
-            uint256 ys = (d0 + d1) / N_COINS;
+            uint256 ys;
+            unchecked {
+                ys = (d0 + d1) / N_COINS;
+            }
             for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
                 uint256 idealBalance = d1 * oldBalances[feeIndex] / d0;
                 uint256 difference = _absDiff(idealBalance, newBalances[feeIndex]);
-                uint256 xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
-                fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
-                admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
+                uint256 xs;
+                unchecked {
+                    xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
+                    fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
+                    admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
+                }
                 newBalances[feeIndex] -= fees[feeIndex];
             }
             d1 = _getDMem(rates, newBalances);
-            minted = supply * (d1 - d0) / d0;
+            unchecked {
+                minted = supply * (d1 - d0) / d0;
+            }
         }
         require(minted >= minMintAmount, "slippage");
         _mint(receiver, minted);
@@ -294,12 +303,7 @@ contract CurveStableSwap2CoinReal {
         }
     }
 
-    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy)
-        external
-        ready
-        nonReentrant
-        returns (uint256 dy)
-    {
+    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external ready nonReentrant returns (uint256 dy) {
         return _exchange(i, j, dx, minDy, msg.sender, false);
     }
 
@@ -389,12 +393,12 @@ contract CurveStableSwap2CoinReal {
         return _removeLiquidity(lpAmount, minAmounts, receiver, true);
     }
 
-    function remove_liquidity(
-        uint256 lpAmount,
-        uint256[] calldata minAmounts,
-        address receiver,
-        bool claimAdminFees
-    ) external ready nonReentrant returns (uint256[] memory amounts) {
+    function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts, address receiver, bool claimAdminFees)
+        external
+        ready
+        nonReentrant
+        returns (uint256[] memory amounts)
+    {
         return _removeLiquidity(lpAmount, minAmounts, receiver, claimAdminFees);
     }
 
@@ -408,7 +412,9 @@ contract CurveStableSwap2CoinReal {
         uint256[] memory currentBalances = _balances();
         amounts = new uint256[](N_COINS);
         for (uint256 i = 0; i < N_COINS; i++) {
-            amounts[i] = currentBalances[i] * lpAmount / supply;
+            unchecked {
+                amounts[i] = currentBalances[i] * lpAmount / supply;
+            }
             require(amounts[i] >= minAmounts[i], "slippage");
             _transferOut(i, amounts[i], receiver);
         }
@@ -457,19 +463,27 @@ contract CurveStableSwap2CoinReal {
 
         uint256 d1 = _getDMem(rates, newBalances);
         uint256 baseFee = _baseFee();
-        uint256 ys = (d0 + d1) / N_COINS;
+        uint256 ys;
+        unchecked {
+            ys = (d0 + d1) / N_COINS;
+        }
         uint256[] memory fees = new uint256[](N_COINS);
         for (uint256 feeIndex = 0; feeIndex < N_COINS; feeIndex++) {
             uint256 idealBalance = d1 * oldBalances[feeIndex] / d0;
             uint256 difference = _absDiff(idealBalance, newBalances[feeIndex]);
-            uint256 xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
-            fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
-            admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
+            uint256 xs;
+            unchecked {
+                xs = rates[feeIndex] * (oldBalances[feeIndex] + newBalances[feeIndex]) / PRECISION;
+                fees[feeIndex] = _dynamicFee(xs, ys, baseFee) * difference / FEE_DENOMINATOR;
+                admin_balances[feeIndex] += fees[feeIndex] * admin_fee / FEE_DENOMINATOR;
+            }
             newBalances[feeIndex] -= fees[feeIndex];
         }
 
         d1 = _getDMem(rates, newBalances);
-        burnAmount = (d0 - d1) * _totalSupply / d0 + 1;
+        unchecked {
+            burnAmount = (d0 - d1) * _totalSupply / d0 + 1;
+        }
         require(burnAmount > 1, "burn");
         require(burnAmount <= maxBurnAmount, "slippage");
         _burn(msg.sender, burnAmount);
@@ -507,7 +521,10 @@ contract CurveStableSwap2CoinReal {
         uint256 amp;
         uint256 d;
         (userAmount, feeAmount, xp, amp, d) = _calcWithdrawOneCoin(lpAmount, coinIndex);
-        uint256 adminCut = feeAmount * admin_fee / FEE_DENOMINATOR;
+        uint256 adminCut;
+        unchecked {
+            adminCut = feeAmount * admin_fee / FEE_DENOMINATOR;
+        }
         require(userAmount >= minAmount, "slippage");
         admin_balances[coinIndex] += adminCut;
         _burn(msg.sender, lpAmount);
@@ -529,9 +546,9 @@ contract CurveStableSwap2CoinReal {
     }
 
     function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256) {
-        return CurveBenchStableSwapViews(factory.views_implementation()).calc_token_amount(
-            amounts, isDeposit, address(this)
-        );
+        return
+            CurveBenchStableSwapViews(factory.views_implementation())
+                .calc_token_amount(amounts, isDeposit, address(this));
     }
 
     function A() external view returns (uint256) {
@@ -631,7 +648,9 @@ contract CurveStableSwap2CoinReal {
             require(ecrecover(digest, v, r, s) == owner, "signature");
         }
         allowance[owner][spender] = value;
-        nonces[owner] = nonce + 1;
+        unchecked {
+            nonces[owner] = nonce + 1;
+        }
         emit Approval(owner, spender, value);
         return true;
     }
@@ -678,7 +697,11 @@ contract CurveStableSwap2CoinReal {
 
     function set_ma_exp_time(uint256 newMaExpTime, uint256 newDMaTime) external {
         require(msg.sender == factory.admin(), "admin");
-        require(newMaExpTime * newDMaTime > 0, "ma");
+        bool validWindow;
+        unchecked {
+            validWindow = newMaExpTime * newDMaTime > 0;
+        }
+        require(validWindow, "ma");
         ma_exp_time = newMaExpTime;
         D_ma_time = newDMaTime;
         emit SetNewMATime(newMaExpTime, newDMaTime);
@@ -699,9 +722,13 @@ contract CurveStableSwap2CoinReal {
             uint256 a0 = initial_A;
             uint256 t0 = initial_A_time;
             if (a1 > a0) {
-                return a0 + (a1 - a0) * (block.timestamp - t0) / (t1 - t0);
+                unchecked {
+                    return a0 + (a1 - a0) * (block.timestamp - t0) / (t1 - t0);
+                }
             }
-            return a0 - (a0 - a1) * (block.timestamp - t0) / (t1 - t0);
+            unchecked {
+                return a0 - (a0 - a1) * (block.timestamp - t0) / (t1 - t0);
+            }
         }
         return a1;
     }
@@ -733,8 +760,10 @@ contract CurveStableSwap2CoinReal {
         uint256 lastSpot = packedValue & ((uint256(1) << 128) - 1);
         uint256 lastEma = packedValue >> 128;
         if (lastTime < block.timestamp) {
-            uint256 alpha = _wadExp(-int256((block.timestamp - lastTime) * 1e18 / averagingWindow));
-            return (lastSpot * (1e18 - alpha) + lastEma * alpha) / 1e18;
+            unchecked {
+                uint256 alpha = _wadExp(-int256((block.timestamp - lastTime) * 1e18 / averagingWindow));
+                return (lastSpot * (1e18 - alpha) + lastEma * alpha) / 1e18;
+            }
         }
         return lastEma;
     }
@@ -745,38 +774,40 @@ contract CurveStableSwap2CoinReal {
         }
         require(x < 135305999368893231589, "wad_exp overflow");
 
-        int256 value = (x << 78) / int256(5 ** 18);
-        int256 k = (((value << 96) / 54916777467707473351141471128) + (int256(1) << 95)) >> 96;
-        value -= k * 54916777467707473351141471128;
+        unchecked {
+            int256 value = (x << 78) / int256(5 ** 18);
+            int256 k = (((value << 96) / 54916777467707473351141471128) + (int256(1) << 95)) >> 96;
+            value -= k * 54916777467707473351141471128;
 
-        int256 y = (((value + 1346386616545796478920950773328) * value) >> 96)
-            + 57155421227552351082224309758442;
-        int256 p = (((((y + value) - 94201549194550492254356042504812) * y) >> 96)
-            + 28719021644029726153956944680412240) * value
-            + (int256(4385272521454847904659076985693276) << 96);
+            int256 y = (((value + 1346386616545796478920950773328) * value) >> 96) + 57155421227552351082224309758442;
+            int256 p =
+                (((((y + value) - 94201549194550492254356042504812) * y) >> 96) + 28719021644029726153956944680412240)
+                    * value + (int256(4385272521454847904659076985693276) << 96);
 
-        int256 q = (((value - 2855989394907223263936484059900) * value) >> 96)
-            + 50020603652535783019961831881945;
-        q = ((q * value) >> 96) - 533845033583426703283633433725380;
-        q = ((q * value) >> 96) + 3604857256930695427073651918091429;
-        q = ((q * value) >> 96) - 14423608567350463180887372962807573;
-        q = ((q * value) >> 96) + 26449188498355588339934803723976023;
+            int256 q = (((value - 2855989394907223263936484059900) * value) >> 96) + 50020603652535783019961831881945;
+            q = ((q * value) >> 96) - 533845033583426703283633433725380;
+            q = ((q * value) >> 96) + 3604857256930695427073651918091429;
+            q = ((q * value) >> 96) - 14423608567350463180887372962807573;
+            q = ((q * value) >> 96) + 26449188498355588339934803723976023;
 
-        int256 r = p / q;
-        return (uint256(r) * 3822833074963236453042738258902158003155416615667) >> uint256(195 - k);
+            int256 r = p / q;
+            return (uint256(r) * 3822833074963236453042738258902158003155416615667) >> uint256(195 - k);
+        }
     }
 
     function _getP(uint256 i, uint256[] memory xp, uint256 amp, uint256 d) internal view returns (uint256) {
         if (d == 0 || xp[0] == 0 || xp[i + 1] == 0) {
             return PRECISION;
         }
-        uint256 ann = amp * N_COINS;
-        uint256 dr = d / (N_COINS ** N_COINS);
-        for (uint256 idx = 0; idx < N_COINS; idx++) {
-            dr = dr * d / xp[idx];
+        unchecked {
+            uint256 ann = amp * N_COINS;
+            uint256 dr = d / (N_COINS ** N_COINS);
+            for (uint256 idx = 0; idx < N_COINS; idx++) {
+                dr = dr * d / xp[idx];
+            }
+            uint256 xp0A = ann * xp[0] / A_PRECISION;
+            return PRECISION * (xp0A + dr * xp[0] / xp[i + 1]) / (xp0A + dr);
         }
-        uint256 xp0A = ann * xp[0] / A_PRECISION;
-        return PRECISION * (xp0A + dr * xp[0] / xp[i + 1]) / (xp0A + dr);
     }
 
     function _upkeepOracles(uint256[] memory xp, uint256 amp, uint256 d) internal {
@@ -806,7 +837,10 @@ contract CurveStableSwap2CoinReal {
         uint256 dTime = lastTime >> 128;
         uint256 currentPacked = last_D_packed;
         uint256 oldD = currentPacked & ((uint256(1) << 128) - 1);
-        uint256 newD = oldD - oldD * lpAmount / previousSupply;
+        uint256 newD;
+        unchecked {
+            newD = oldD - oldD * lpAmount / previousSupply;
+        }
         last_D_packed = _pack2(newD, _calcMovingAverage(currentPacked, D_ma_time, dTime));
         if (dTime < block.timestamp) {
             dTime = block.timestamp;
@@ -900,10 +934,14 @@ contract CurveStableSwap2CoinReal {
                 (bool ok, bytes memory response) = oracle.staticcall(abi.encodeWithSelector(selector));
                 require(ok && response.length == 32, "rate oracle");
                 uint256 fetchedRate = abi.decode(response, (uint256));
-                rates[i] = rates[i] * fetchedRate / PRECISION;
+                unchecked {
+                    rates[i] = rates[i] * fetchedRate / PRECISION;
+                }
             } else if (asset_types[i] == 3) {
-                rates[i] = rates[i] * CurveBenchERC4626(coins[i]).convertToAssets(call_amount[i]) * scale_factor[i]
-                    / PRECISION;
+                unchecked {
+                    rates[i] = rates[i] * CurveBenchERC4626(coins[i]).convertToAssets(call_amount[i]) * scale_factor[i]
+                        / PRECISION;
+                }
             }
         }
     }
@@ -926,7 +964,9 @@ contract CurveStableSwap2CoinReal {
     {
         xp = new uint256[](N_COINS);
         for (uint256 i = 0; i < N_COINS; i++) {
-            xp[i] = rates[i] * sourceBalances[i] / PRECISION;
+            unchecked {
+                xp[i] = rates[i] * sourceBalances[i] / PRECISION;
+            }
         }
     }
 
@@ -952,8 +992,10 @@ contract CurveStableSwap2CoinReal {
             }
             dP /= N_COINS ** N_COINS;
             uint256 previousD = d;
-            d = (ann * sum / A_PRECISION + dP * N_COINS) * d
-                / ((ann - A_PRECISION) * d / A_PRECISION + (N_COINS + 1) * dP);
+            unchecked {
+                d = (ann * sum / A_PRECISION + dP * N_COINS) * d
+                    / ((ann - A_PRECISION) * d / A_PRECISION + (N_COINS + 1) * dP);
+            }
             if (d > previousD) {
                 if (d - previousD <= 1) return d;
             } else if (previousD - d <= 1) {
@@ -964,7 +1006,9 @@ contract CurveStableSwap2CoinReal {
     }
 
     function _baseFee() internal view returns (uint256) {
-        return fee * N_COINS / (4 * (N_COINS - 1));
+        unchecked {
+            return fee * N_COINS / (4 * (N_COINS - 1));
+        }
     }
 
     function _checkAmountLength(uint256 length) internal view {
@@ -982,13 +1026,17 @@ contract CurveStableSwap2CoinReal {
         if (offpeg_fee_multiplier <= FEE_DENOMINATOR) {
             return base;
         }
-        uint256 xps2 = (xpi + xpj) * (xpi + xpj);
-        return offpeg_fee_multiplier * base
-            / (((offpeg_fee_multiplier - FEE_DENOMINATOR) * 4 * xpi * xpj / xps2) + FEE_DENOMINATOR);
+        unchecked {
+            uint256 xps2 = (xpi + xpj) * (xpi + xpj);
+            return offpeg_fee_multiplier * base
+                / (((offpeg_fee_multiplier - FEE_DENOMINATOR) * 4 * xpi * xpj / xps2) + FEE_DENOMINATOR);
+        }
     }
 
     function _absDiff(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a - b : b - a;
+        unchecked {
+            return a > b ? a - b : b - a;
+        }
     }
 
     function _calcExchange(uint256 coinIn, uint256 coinOut, uint256 dx)
@@ -1009,13 +1057,25 @@ contract CurveStableSwap2CoinReal {
         uint256[] memory rates,
         uint256[] memory xp
     ) internal view returns (uint256 x, uint256 y, uint256 d, uint256 userDy, uint256 adminCut) {
-        x = xp[coinIn] + dx * rates[coinIn] / PRECISION;
+        x = _exchangeInputBalance(xp[coinIn], dx, rates[coinIn]);
         d = _getD(xp);
         y = _getY(coinIn, coinOut, x, xp, d);
         uint256 grossDy = xp[coinOut] - y - 1;
         uint256 feeAmount = _exchangeFeeAmount(coinIn, coinOut, x, y, grossDy, xp);
-        adminCut = feeAmount * admin_fee / FEE_DENOMINATOR * PRECISION / rates[coinOut];
+        adminCut = _exchangeAdminCut(feeAmount, rates[coinOut]);
         userDy = (grossDy - feeAmount) * PRECISION / rates[coinOut];
+    }
+
+    function _exchangeInputBalance(uint256 xpCoinIn, uint256 dx, uint256 rate) internal pure returns (uint256) {
+        unchecked {
+            return xpCoinIn + dx * rate / PRECISION;
+        }
+    }
+
+    function _exchangeAdminCut(uint256 feeAmount, uint256 rate) internal view returns (uint256) {
+        unchecked {
+            return feeAmount * admin_fee / FEE_DENOMINATOR * PRECISION / rate;
+        }
     }
 
     function _exchangeFeeAmount(
@@ -1026,7 +1086,9 @@ contract CurveStableSwap2CoinReal {
         uint256 grossDy,
         uint256[] memory xp
     ) internal view returns (uint256) {
-        return grossDy * _dynamicFee((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, fee) / FEE_DENOMINATOR;
+        unchecked {
+            return grossDy * _dynamicFee((xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2, fee) / FEE_DENOMINATOR;
+        }
     }
 
     function _getY(uint256 i, uint256 j, uint256 x, uint256[] memory xp, uint256 d) internal view returns (uint256) {
@@ -1096,19 +1158,26 @@ contract CurveStableSwap2CoinReal {
         uint256 newY = _getYD(i, xp, d1);
         uint256[] memory xpReduced = _copyArray(xp);
         uint256 baseFee = _baseFee();
-        uint256 ys = (d0 + d1) / (2 * N_COINS);
+        uint256 ys;
+        unchecked {
+            ys = (d0 + d1) / (2 * N_COINS);
+        }
 
         for (uint256 j = 0; j < N_COINS; j++) {
             uint256 dxExpected;
             uint256 xavg;
             if (j == i) {
                 dxExpected = xp[j] * d1 / d0 - newY;
-                xavg = (xp[j] + newY) / 2;
+                unchecked {
+                    xavg = (xp[j] + newY) / 2;
+                }
             } else {
                 dxExpected = xp[j] - xp[j] * d1 / d0;
                 xavg = xp[j];
             }
-            xpReduced[j] = xp[j] - _dynamicFee(xavg, ys, baseFee) * dxExpected / FEE_DENOMINATOR;
+            unchecked {
+                xpReduced[j] = xp[j] - _dynamicFee(xavg, ys, baseFee) * dxExpected / FEE_DENOMINATOR;
+            }
         }
 
         (dy, feeAmount) = _finalizeWithdrawOneCoin(i, newY, d1, rates, xp, xpReduced);
@@ -1124,7 +1193,9 @@ contract CurveStableSwap2CoinReal {
     ) internal view returns (uint256 dy, uint256 feeAmount) {
         uint256 reducedY = _getYD(i, xpReduced, d1);
         uint256 dyNoFee = (xp[i] - newY) * PRECISION / rates[i];
-        dy = (xpReduced[i] - reducedY - 1) * PRECISION / rates[i];
+        unchecked {
+            dy = (xpReduced[i] - reducedY - 1) * PRECISION / rates[i];
+        }
         feeAmount = dyNoFee - dy;
         xp[i] = newY;
     }
