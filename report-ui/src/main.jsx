@@ -602,6 +602,7 @@ const DRILL_AXES = [
   { id: 'version', label: 'Version' },
   { id: 'mode', label: 'Mode' },
   { id: 'profile', label: 'Profile' },
+  { id: 'status', label: 'Status' },
   { id: 'scenario', label: 'Scenario' },
   { id: 'state', label: 'State' },
 ];
@@ -633,6 +634,7 @@ function drillField(row, profile, metric, axis) {
     case 'version': return Bench.profileVersionLabel(profile || {});
     case 'mode': return drillModeLabel(profile);
     case 'profile': return row.profile_id;
+    case 'status': return row.status === 'ok' ? 'ok' : 'compile_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
     case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
     default: return 'unknown';
@@ -644,6 +646,7 @@ function drillValueLabel(axis, value) {
   if (axis === 'family') return scaleFamilyLabel(value);
   if (axis === 'language') return value === 'solidity' ? 'Solidity' : value === 'vyper' ? 'Vyper' : value;
   if (axis === 'profile') return Bench.profileCompactLabel(value);
+  if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value;
   return value;
 }
 
@@ -651,6 +654,7 @@ function drillValueRank(axis, value) {
   if (value === 'none') return Number.POSITIVE_INFINITY;
   if (axis === 'n') return Number(value);
   if (axis === 'version') return Bench.versionRank(value);
+  if (axis === 'status') return value === 'ok' ? 0 : 1;
   if (axis === 'mode') {
     const [mode] = value.split(' ');
     return Bench.optimizerRank(mode) + (value.includes('venom') ? 0.25 : 0);
@@ -673,20 +677,27 @@ function buildDrillRecords(metric) {
   const seenArtifacts = new Set();
   const records = [];
   for (const row of Bench.D.rows) {
-    if (row.status !== 'ok') continue;
+    if (row.status !== 'ok' && row.status !== 'compile_error') continue;
     const value = Bench.valueAt(row, metric);
-    if (value == null || !isFinite(value)) continue;
     if (artifactLevel) {
       const key = [row.suite, row.benchmark_id, row.parameter_value ?? '', row.profile_id].join('|');
       if (seenArtifacts.has(key)) continue;
       seenArtifacts.add(key);
     }
+    const failed = row.status !== 'ok';
+    if (!failed && (value == null || !isFinite(value))) continue;
     const profile = Bench.profileById(row.profile_id);
     const fields = Object.fromEntries(DRILL_AXES.map(axis => [
       axis.id,
       drillField(row, profile, metric, axis.id),
     ]));
-    records.push({ row, value, fields });
+    records.push({
+      row,
+      value: failed ? null : value,
+      failed,
+      failureReason: failed ? Bench.failureReason(row.compile?.error) : null,
+      fields,
+    });
   }
   return records;
 }
@@ -719,7 +730,7 @@ function DrillFilter({ axis, value, options, onChange, onSetX, onSetY, disabled 
       value,
       onChange: event => onChange(axis, event.target.value),
     },
-      React.createElement('option', { value: ALL_FILTER }, `all (${options.length}) · median`),
+      React.createElement('option', { value: ALL_FILTER }, `all (${options.length})`),
       options.map(option => React.createElement('option', { key: option, value: option }, drillValueLabel(axis, option)))
     ),
     React.createElement('div', { className: 'drill-filter-actions' },
@@ -746,6 +757,7 @@ function DrilldownMatrix({ metric, setMetric }) {
     version: ALL_FILTER,
     mode: ALL_FILTER,
     profile: ALL_FILTER,
+    status: ALL_FILTER,
     scenario: ALL_FILTER,
     state: 'cold',
   }));
@@ -766,6 +778,7 @@ function DrilldownMatrix({ metric, setMetric }) {
     DRILL_AXES.every(axis => {
       if (axis.id === xAxis || axis.id === yAxis) return true;
       const filter = safeFilters[axis.id] ?? ALL_FILTER;
+      if (record.failed && (axis.id === 'scenario' || axis.id === 'state')) return true;
       return filter === ALL_FILTER || record.fields[axis.id] === filter;
     })
   ), [records, xAxis, yAxis, safeFilters]);
@@ -775,19 +788,33 @@ function DrilldownMatrix({ metric, setMetric }) {
     const grouped = new Map();
     for (const record of filtered) {
       const key = `${record.fields[yAxis]}\0${record.fields[xAxis]}`;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(record.value);
+      if (!grouped.has(key)) grouped.set(key, { values: [], failures: 0, reasons: new Map() });
+      const group = grouped.get(key);
+      if (record.failed) {
+        group.failures += 1;
+        if (record.failureReason) {
+          group.reasons.set(record.failureReason, (group.reasons.get(record.failureReason) || 0) + 1);
+        }
+      } else if (record.value != null && isFinite(record.value)) {
+        group.values.push(record.value);
+      }
     }
     const out = new Map();
-    for (const [key, values] of grouped) {
+    for (const [key, group] of grouped) {
+      const reasons = [...group.reasons.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([reason, count]) => `${reason} (${count})`);
       out.set(key, {
-        value: Bench.median(values),
-        count: values.length,
+        value: Bench.median(group.values),
+        count: group.values.length,
+        failures: group.failures,
+        reasons,
       });
     }
     return out;
   }, [filtered, xAxis, yAxis]);
   const values = [...cells.values()].map(cell => cell.value).filter(value => value != null && isFinite(value));
+  const failureRows = filtered.filter(record => record.failed).length;
   const min = values.length ? Math.min(...values) : null;
   const max = values.length ? Math.max(...values) : null;
   const metricInfo = METRICS.find(item => item.id === metric) || METRICS[0];
@@ -805,6 +832,17 @@ function DrilldownMatrix({ metric, setMetric }) {
     return {
       background: `color-mix(in srgb, ${tone} ${strength}%, var(--bg-elev) 72%)`,
     };
+  };
+  const cellTitle = cell => {
+    const parts = [];
+    if (cell.value != null && isFinite(cell.value)) {
+      parts.push(`${Bench.fmtNum(cell.value)} ${metricInfo.unit} · ${cell.count} measured row${cell.count === 1 ? '' : 's'}`);
+    }
+    if (cell.failures) {
+      parts.push(`${cell.failures} compile failure${cell.failures === 1 ? '' : 's'}`);
+      if (cell.reasons.length) parts.push(cell.reasons.slice(0, 3).join(' · '));
+    }
+    return parts.join(' · ') || 'no matching rows';
   };
 
   return React.createElement('section', { id: 'drilldown', className: 'shell section', 'data-screen-label': '04 Drilldown' },
@@ -862,14 +900,18 @@ function DrilldownMatrix({ metric, setMetric }) {
                 const cell = cells.get(`${y}\0${x}`);
                 return React.createElement('td', {
                   key: x,
-                  className: cell ? 'has-value' : 'empty',
-                  style: cell ? cellStyle(cell.value) : {},
-                  title: cell ? `${Bench.fmtNum(cell.value)} ${metricInfo.unit} · ${cell.count} row${cell.count === 1 ? '' : 's'}` : 'no matching rows',
+                  className: cell ? `has-value ${cell.failures ? 'has-failure' : ''} ${cell.count ? '' : 'failure-only'}` : 'empty',
+                  style: cell && cell.count ? cellStyle(cell.value) : {},
+                  title: cell ? cellTitle(cell) : 'no matching rows',
                 },
-                  cell ? React.createElement(React.Fragment, null,
+                  cell && cell.count ? React.createElement(React.Fragment, null,
                     React.createElement('span', null, Bench.fmtNum(cell.value)),
                     cell.count > 1 ? React.createElement('sup', null, cell.count) : null
-                  ) : '—'
+                  ) : cell && cell.failures ? React.createElement(React.Fragment, null,
+                    React.createElement('span', { className: 'fail-label' }, 'fail'),
+                    React.createElement('sup', null, cell.failures)
+                  ) : '—',
+                  cell && cell.count && cell.failures ? React.createElement('span', { className: 'fail-badge' }, `${cell.failures} fail`) : null
                 );
               })
             ))
@@ -880,7 +922,7 @@ function DrilldownMatrix({ metric, setMetric }) {
         React.createElement('span', null, min == null ? '— min' : `${Bench.fmtNum(min)} min`),
         React.createElement('span', { className: 'legend-ramp' }),
         React.createElement('span', null, max == null ? '— max' : `${Bench.fmtNum(max)} max`),
-        React.createElement('span', null, `${filtered.length.toLocaleString()} rows · cell = median`)
+        React.createElement('span', null, `${filtered.length.toLocaleString()} rows · ${failureRows.toLocaleString()} failed · cell = median`)
       )
     )
   );

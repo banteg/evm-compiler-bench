@@ -557,7 +557,7 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
 }
 .drill-filter-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   border-bottom: 1px solid var(--line);
 }
 .drill-filter {
@@ -566,8 +566,6 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
-.drill-filter:nth-child(5n) { border-right: 0; }
-.drill-filter:nth-last-child(-n+5) { border-bottom: 0; }
 .drill-filter.axis-active {
   background: var(--bg-elev-2);
 }
@@ -670,6 +668,26 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
 .drill-table td.empty {
   color: var(--fg-4);
   background: var(--bg);
+}
+.drill-table td.has-failure {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 54%, transparent);
+}
+.drill-table td.failure-only {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 18%, var(--bg-elev) 82%);
+}
+.drill-table .fail-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.drill-table .fail-badge {
+  display: block;
+  margin-top: 4px;
+  color: var(--bad);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .drill-table td sup {
   margin-left: 5px;
