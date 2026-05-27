@@ -604,7 +604,7 @@ const DRILL_AXES = [
   { id: 'profile', label: 'Profile' },
   { id: 'status', label: 'Status' },
   { id: 'scenario', label: 'Scenario' },
-  { id: 'state', label: 'State' },
+  { id: 'state', label: 'Access' },
 ];
 const DRILL_AXIS_BY_ID = Object.fromEntries(DRILL_AXES.map(axis => [axis.id, axis]));
 const DRILL_AGGREGATIONS = [
@@ -691,7 +691,31 @@ function drillBenchmarkLabel(row) {
 function drillModeLabel(profile) {
   if (!profile) return 'unknown';
   const mode = Bench.profileOptimizer(profile);
-  return profile.experimental_codegen ? `${mode} venom` : mode;
+  return profile.experimental_codegen ? `${mode} + Venom` : mode;
+}
+
+function drillCompilerKey(profile, row) {
+  const lang = profile?.language || row?.language;
+  const compiler = profile?.compiler_name || row?.compiler?.name;
+  if (lang === 'solidity' || compiler === 'solc') return 'solc';
+  if (lang === 'vyper' || compiler === 'vyper') return 'vyper';
+  return compiler || lang || 'unknown';
+}
+
+function drillCompilerLabel(value) {
+  if (value === 'solc') return 'solc';
+  if (value === 'vyper') return 'Vyper';
+  return value;
+}
+
+function drillVersionKey(profile, row) {
+  const compiler = drillCompilerKey(profile, row);
+  return `${compiler}|${Bench.profileVersionKey(profile || {})}`;
+}
+
+function drillModeKey(profile, row) {
+  const compiler = drillCompilerKey(profile, row);
+  return `${compiler}|${drillModeLabel(profile)}`;
 }
 
 function drillField(row, profile, metric, axis) {
@@ -702,8 +726,8 @@ function drillField(row, profile, metric, axis) {
     case 'family': return row.family || 'none';
     case 'n': return row.parameter_value == null ? 'none' : String(row.parameter_value);
     case 'language': return row.language || profile?.language || 'unknown';
-    case 'version': return Bench.profileVersionLabel(profile || {});
-    case 'mode': return drillModeLabel(profile);
+    case 'version': return drillVersionKey(profile, row);
+    case 'mode': return drillModeKey(profile, row);
     case 'profile': return row.profile_id;
     case 'status': return row.status === 'ok' ? 'ok' : 'compile_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
@@ -716,7 +740,15 @@ function drillValueLabel(axis, value) {
   if (value === ALL_FILTER) return 'all';
   if (axis === 'family') return scaleFamilyLabel(value);
   if (axis === 'language') return value === 'solidity' ? 'Solidity' : value === 'vyper' ? 'Vyper' : value;
-  if (axis === 'profile') return Bench.profileCompactLabel(value);
+  if (axis === 'version') {
+    const [compiler, version] = String(value).split('|');
+    return `${drillCompilerLabel(compiler)} ${version}`;
+  }
+  if (axis === 'mode') {
+    const [compiler, mode] = String(value).split('|');
+    return `${drillCompilerLabel(compiler)} ${mode || 'unknown'}`;
+  }
+  if (axis === 'profile') return Bench.profileLabel(value);
   if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value;
   return value;
 }
@@ -724,11 +756,15 @@ function drillValueLabel(axis, value) {
 function drillValueRank(axis, value) {
   if (value === 'none') return Number.POSITIVE_INFINITY;
   if (axis === 'n') return Number(value);
-  if (axis === 'version') return Bench.versionRank(value);
+  if (axis === 'version') {
+    const [, version] = String(value).split('|');
+    return Bench.versionRank(version || value);
+  }
   if (axis === 'status') return value === 'ok' ? 0 : 1;
   if (axis === 'mode') {
-    const [mode] = value.split(' ');
-    return Bench.optimizerRank(mode) + (value.includes('venom') ? 0.25 : 0);
+    const [, modeValue = ''] = String(value).split('|');
+    const [mode] = modeValue.split(' ');
+    return Bench.optimizerRank(mode) + (modeValue.toLowerCase().includes('venom') ? 0.25 : 0);
   }
   return null;
 }
@@ -738,7 +774,6 @@ function sortDrillValues(axis, values) {
     const ar = drillValueRank(axis, a);
     const br = drillValueRank(axis, b);
     if (ar != null && br != null && ar !== br) return ar - br;
-    if (axis === 'version') return Bench.versionRank(a) - Bench.versionRank(b);
     return drillValueLabel(axis, a).localeCompare(drillValueLabel(axis, b), undefined, { numeric: true });
   });
 }
