@@ -607,6 +607,77 @@ const DRILL_AXES = [
   { id: 'state', label: 'State' },
 ];
 const DRILL_AXIS_BY_ID = Object.fromEntries(DRILL_AXES.map(axis => [axis.id, axis]));
+const DRILL_AGGREGATIONS = [
+  { id: 'median', label: 'Median', needsMetric: true, lowerBetter: true },
+  { id: 'mean', label: 'Mean', needsMetric: true, lowerBetter: true },
+  { id: 'min', label: 'Min', needsMetric: true, lowerBetter: true },
+  { id: 'max', label: 'Max', needsMetric: true, lowerBetter: true },
+  { id: 'p90', label: 'P90', needsMetric: true, lowerBetter: true },
+  { id: 'count', label: 'Row count', needsMetric: false, lowerBetter: false, unit: 'rows' },
+  { id: 'failure_count', label: 'Failure count', needsMetric: false, lowerBetter: true, unit: 'fails' },
+  { id: 'failure_rate', label: 'Failure rate', needsMetric: false, lowerBetter: true, unit: '%' },
+];
+const DRILL_AGG_BY_ID = Object.fromEntries(DRILL_AGGREGATIONS.map(agg => [agg.id, agg]));
+const DEFAULT_DRILL_VIEW = {
+  rows: ['version'],
+  columns: ['n'],
+  aggregation: 'median',
+  filters: {
+    language: { op: 'in', values: ['solidity'] },
+    state: { op: 'in', values: ['cold'] },
+    family: { op: 'in', values: ['dispatch_N'] },
+  },
+};
+const DRILL_PRESETS = [
+  {
+    label: 'Scale by N',
+    metric: 'harness_call_gas',
+    view: DEFAULT_DRILL_VIEW,
+  },
+  {
+    label: 'Compiler by suite',
+    metric: 'harness_call_gas',
+    view: {
+      rows: ['suite'],
+      columns: ['language'],
+      aggregation: 'median',
+      filters: { state: { op: 'in', values: ['cold'] } },
+    },
+  },
+  {
+    label: 'Version trend',
+    metric: 'harness_call_gas',
+    view: {
+      rows: ['version'],
+      columns: ['language'],
+      aggregation: 'median',
+      filters: {
+        state: { op: 'in', values: ['cold'] },
+        status: { op: 'in', values: ['ok'] },
+      },
+    },
+  },
+  {
+    label: 'Optimizer mode',
+    metric: 'harness_call_gas',
+    view: {
+      rows: ['mode'],
+      columns: ['language'],
+      aggregation: 'median',
+      filters: { state: { op: 'in', values: ['cold'] } },
+    },
+  },
+  {
+    label: 'Failures',
+    metric: 'compile_wall_ms',
+    view: {
+      rows: ['profile'],
+      columns: ['status'],
+      aggregation: 'failure_count',
+      filters: {},
+    },
+  },
+];
 
 function scaleFamilyLabel(family) {
   if (!family) return 'none';
@@ -702,94 +773,224 @@ function buildDrillRecords(metric) {
   return records;
 }
 
+function cloneDrillView(view) {
+  return {
+    rows: [...(view.rows || DEFAULT_DRILL_VIEW.rows)],
+    columns: [...(view.columns || DEFAULT_DRILL_VIEW.columns)],
+    aggregation: view.aggregation || DEFAULT_DRILL_VIEW.aggregation,
+    filters: Object.fromEntries(Object.entries(view.filters || {}).map(([axis, filter]) => [
+      axis,
+      { op: filter.op || 'in', values: [...(filter.values || [])] },
+    ])),
+  };
+}
+
 function drillOptions(records, axis) {
   return sortDrillValues(axis, new Set(records.map(record => record.fields[axis])));
 }
 
-function normalizeDrillFilters(filters, records) {
-  const next = { ...filters };
-  for (const axis of DRILL_AXES) {
-    const options = drillOptions(records, axis.id);
-    if (next[axis.id] !== ALL_FILTER && !options.includes(next[axis.id])) {
-      next[axis.id] = ALL_FILTER;
+function normalizeDrillView(view, records) {
+  const next = cloneDrillView(view);
+  if (!DRILL_AXIS_BY_ID[next.rows[0]]) next.rows = [...DEFAULT_DRILL_VIEW.rows];
+  if (!DRILL_AXIS_BY_ID[next.columns[0]]) next.columns = [...DEFAULT_DRILL_VIEW.columns];
+  if (!DRILL_AGG_BY_ID[next.aggregation]) next.aggregation = DEFAULT_DRILL_VIEW.aggregation;
+  for (const [axis, filter] of Object.entries(next.filters)) {
+    if (!DRILL_AXIS_BY_ID[axis]) {
+      delete next.filters[axis];
+      continue;
+    }
+    const allowed = new Set(drillOptions(records, axis));
+    const values = [...new Set(filter.values || [])].filter(value => allowed.has(value));
+    if (values.length) {
+      next.filters[axis] = { op: filter.op || 'in', values };
+    } else {
+      delete next.filters[axis];
     }
   }
   return next;
 }
 
-function DrillFilter({ axis, value, options, onChange, onSetX, onSetY, disabled }) {
-  const label = DRILL_AXIS_BY_ID[axis].label;
-  return React.createElement('div', { className: `drill-filter ${disabled ? 'axis-active' : ''}` },
-    React.createElement('div', { className: 'drill-filter-head' },
-      React.createElement('div', { className: 'drill-filter-label' }, label),
-      disabled ? React.createElement('span', { className: 'drill-axis-badge' }, 'axis') : null
-    ),
-    React.createElement('select', {
-      className: 'knob',
-      disabled,
-      value,
-      onChange: event => onChange(axis, event.target.value),
-    },
-      React.createElement('option', { value: ALL_FILTER }, `all (${options.length})`),
-      options.map(option => React.createElement('option', { key: option, value: option }, drillValueLabel(axis, option)))
-    ),
-    React.createElement('div', { className: 'drill-filter-actions' },
-      React.createElement('button', { type: 'button', disabled: disabled, onClick: () => onSetX(axis) }, 'set X'),
-      React.createElement('button', { type: 'button', disabled: disabled, onClick: () => onSetY(axis) }, 'set Y')
+function drillFilterLabel(axis, filter) {
+  const values = filter?.values || [];
+  if (!values.length) return `${DRILL_AXIS_BY_ID[axis].label}: all`;
+  if (values.length === 1) return `${DRILL_AXIS_BY_ID[axis].label}: ${drillValueLabel(axis, values[0])}`;
+  return `${DRILL_AXIS_BY_ID[axis].label}: ${values.length} selected`;
+}
+
+function passesDrillFilters(record, filters, skipAxis = null) {
+  return Object.entries(filters).every(([axis, filter]) => {
+    if (axis === skipAxis) return true;
+    const values = filter?.values || [];
+    if (!values.length) return true;
+    if (record.failed && (axis === 'scenario' || axis === 'state')) return true;
+    const includes = values.includes(record.fields[axis]);
+    return filter.op === 'not-in' ? !includes : includes;
+  });
+}
+
+function drillOptionCounts(records, axis, filters) {
+  const counts = new Map();
+  for (const record of records) {
+    if (!passesDrillFilters(record, filters, axis)) continue;
+    const value = record.fields[axis];
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return sortDrillValues(axis, counts.keys()).map(value => ({ value, count: counts.get(value) || 0 }));
+}
+
+function DrillSelect({ label, value, onChange, axes = DRILL_AXES }) {
+  return React.createElement('label', { className: 'drill-query-field' },
+    React.createElement('span', null, label),
+    React.createElement('select', { className: 'knob', value, onChange: event => onChange(event.target.value) },
+      axes.map(axis => React.createElement('option', { key: axis.id, value: axis.id }, axis.label))
     )
   );
 }
 
+function DrillFilterPopover({ axis, records, filters, setFilterValues, onClose }) {
+  const [search, setSearch] = useState('');
+  const selected = filters[axis]?.values || [];
+  const selectedSet = new Set(selected);
+  const options = useMemo(() => drillOptionCounts(records, axis, filters), [records, axis, filters]);
+  const visible = options.filter(option =>
+    drillValueLabel(axis, option.value).toLowerCase().includes(search.trim().toLowerCase())
+  );
+  const toggle = value => {
+    const next = selectedSet.has(value)
+      ? selected.filter(item => item !== value)
+      : [...selected, value];
+    setFilterValues(axis, next);
+  };
+  const selectVisible = () => setFilterValues(axis, sortDrillValues(axis, new Set([...selected, ...visible.map(option => option.value)])));
+  return React.createElement('div', { className: 'filter-popover' },
+    React.createElement('div', { className: 'filter-popover-head' },
+      React.createElement('div', null,
+        React.createElement('div', { className: 'drill-mini-label' }, 'Filter'),
+        React.createElement('div', { className: 'filter-popover-title' }, DRILL_AXIS_BY_ID[axis].label)
+      ),
+      React.createElement('button', { type: 'button', onClick: onClose, 'aria-label': 'Close filter' }, '×')
+    ),
+    React.createElement('input', {
+      className: 'filter-search',
+      placeholder: 'search values',
+      value: search,
+      onChange: event => setSearch(event.target.value),
+    }),
+    React.createElement('div', { className: 'filter-options' },
+      visible.map(option => {
+        const id = `filter-${axis}-${String(option.value).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+        return React.createElement('label', { key: option.value, className: 'filter-option', htmlFor: id },
+          React.createElement('input', {
+            checked: selectedSet.has(option.value),
+            id,
+            onChange: () => toggle(option.value),
+            type: 'checkbox',
+          }),
+          React.createElement('span', null, drillValueLabel(axis, option.value)),
+          React.createElement('em', null, option.count.toLocaleString())
+        );
+      })
+    ),
+    React.createElement('div', { className: 'filter-popover-actions' },
+      React.createElement('button', { type: 'button', onClick: selectVisible }, 'select visible'),
+      React.createElement('button', { type: 'button', onClick: () => setFilterValues(axis, []) }, 'clear'),
+      React.createElement('button', { type: 'button', onClick: onClose }, 'apply')
+    )
+  );
+}
+
+function percentile(sorted, p) {
+  if (!sorted.length) return null;
+  const index = (sorted.length - 1) * p;
+  const lo = Math.floor(index);
+  const hi = Math.ceil(index);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (index - lo);
+}
+
+function summarizeDrillCell(group, aggregation) {
+  const sorted = [...group.values].sort((a, b) => a - b);
+  let value = null;
+  switch (aggregation) {
+    case 'mean':
+      value = sorted.length ? sorted.reduce((sum, item) => sum + item, 0) / sorted.length : null;
+      break;
+    case 'min':
+      value = sorted.length ? sorted[0] : null;
+      break;
+    case 'max':
+      value = sorted.length ? sorted[sorted.length - 1] : null;
+      break;
+    case 'p90':
+      value = percentile(sorted, 0.9);
+      break;
+    case 'count':
+      value = group.total;
+      break;
+    case 'failure_count':
+      value = group.failures;
+      break;
+    case 'failure_rate':
+      value = group.total ? (group.failures / group.total) * 100 : null;
+      break;
+    case 'median':
+    default:
+      value = Bench.median(sorted);
+      break;
+  }
+  return value;
+}
+
+function drillAggregationInfo(aggregation, metricInfo) {
+  const agg = DRILL_AGG_BY_ID[aggregation] || DRILL_AGG_BY_ID.median;
+  return {
+    ...agg,
+    unit: agg.needsMetric ? metricInfo.unit : agg.unit,
+    lowerBetter: agg.needsMetric ? metricInfo.lowerBetter : agg.lowerBetter,
+  };
+}
+
+function formatDrillCellValue(value, aggregation, aggInfo) {
+  if (value == null || !isFinite(value)) return null;
+  if (aggregation === 'failure_rate') return `${value.toFixed(1)}%`;
+  if (aggregation === 'count' || aggregation === 'failure_count') return Math.round(value).toLocaleString();
+  return Bench.fmtNum(value);
+}
+
 function DrilldownMatrix({ metric, setMetric }) {
   const records = useMemo(() => buildDrillRecords(metric), [metric]);
-  const defaultFamily = useMemo(() => {
-    const families = drillOptions(records, 'family');
-    return families.includes('dispatch_N') ? 'dispatch_N' : ALL_FILTER;
-  }, [records]);
-  const [xAxis, setXAxis] = useState('n');
-  const [yAxis, setYAxis] = useState('version');
-  const [filters, setFilters] = useState(() => ({
-    suite: ALL_FILTER,
-    benchmark: ALL_FILTER,
-    family: 'dispatch_N',
-    n: ALL_FILTER,
-    language: 'solidity',
-    version: ALL_FILTER,
-    mode: ALL_FILTER,
-    profile: ALL_FILTER,
-    status: ALL_FILTER,
-    scenario: ALL_FILTER,
-    state: 'cold',
-  }));
-  const safeFilters = useMemo(() => {
-    const normalized = normalizeDrillFilters({ ...filters, family: filters.family === 'dispatch_N' ? defaultFamily : filters.family }, records);
-    return normalized;
-  }, [filters, records, defaultFamily]);
-  const setFilter = (axis, value) => setFilters(current => ({ ...current, [axis]: value }));
-  const chooseX = axis => {
-    if (axis === yAxis) setYAxis(xAxis);
-    setXAxis(axis);
+  const [view, setView] = useState(() => cloneDrillView(DEFAULT_DRILL_VIEW));
+  const [activeFilterAxis, setActiveFilterAxis] = useState(null);
+  const safeView = useMemo(() => normalizeDrillView(view, records), [view, records]);
+  const xAxis = safeView.columns[0];
+  const yAxis = safeView.rows[0];
+  const filters = safeView.filters;
+  const aggregation = safeView.aggregation;
+  const metricInfo = METRICS.find(item => item.id === metric) || METRICS[0];
+  const aggInfo = drillAggregationInfo(aggregation, metricInfo);
+  const setViewPatch = patch => setView(current => cloneDrillView({ ...current, ...patch }));
+  const setFilterValues = (axis, values) => setView(current => {
+    const next = cloneDrillView(current);
+    const unique = sortDrillValues(axis, new Set(values));
+    if (unique.length) next.filters[axis] = { op: 'in', values: unique };
+    else delete next.filters[axis];
+    return next;
+  });
+  const applyPreset = preset => {
+    setMetric(preset.metric);
+    setActiveFilterAxis(null);
+    setView(cloneDrillView(preset.view));
   };
-  const chooseY = axis => {
-    if (axis === xAxis) setXAxis(yAxis);
-    setYAxis(axis);
-  };
-  const filtered = useMemo(() => records.filter(record =>
-    DRILL_AXES.every(axis => {
-      if (axis.id === xAxis || axis.id === yAxis) return true;
-      const filter = safeFilters[axis.id] ?? ALL_FILTER;
-      if (record.failed && (axis.id === 'scenario' || axis.id === 'state')) return true;
-      return filter === ALL_FILTER || record.fields[axis.id] === filter;
-    })
-  ), [records, xAxis, yAxis, safeFilters]);
+  const filtered = useMemo(() => records.filter(record => passesDrillFilters(record, filters)), [records, filters]);
   const xValues = useMemo(() => sortDrillValues(xAxis, new Set(filtered.map(record => record.fields[xAxis]))), [filtered, xAxis]);
   const yValues = useMemo(() => sortDrillValues(yAxis, new Set(filtered.map(record => record.fields[yAxis]))), [filtered, yAxis]);
   const cells = useMemo(() => {
     const grouped = new Map();
     for (const record of filtered) {
       const key = `${record.fields[yAxis]}\0${record.fields[xAxis]}`;
-      if (!grouped.has(key)) grouped.set(key, { values: [], failures: 0, reasons: new Map() });
+      if (!grouped.has(key)) grouped.set(key, { values: [], failures: 0, total: 0, reasons: new Map() });
       const group = grouped.get(key);
+      group.total += 1;
       if (record.failed) {
         group.failures += 1;
         if (record.failureReason) {
@@ -805,28 +1006,26 @@ function DrilldownMatrix({ metric, setMetric }) {
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .map(([reason, count]) => `${reason} (${count})`);
       out.set(key, {
-        value: Bench.median(group.values),
+        value: summarizeDrillCell(group, aggregation),
         count: group.values.length,
         failures: group.failures,
+        total: group.total,
         reasons,
       });
     }
     return out;
-  }, [filtered, xAxis, yAxis]);
+  }, [filtered, xAxis, yAxis, aggregation]);
   const values = [...cells.values()].map(cell => cell.value).filter(value => value != null && isFinite(value));
   const failureRows = filtered.filter(record => record.failed).length;
   const min = values.length ? Math.min(...values) : null;
   const max = values.length ? Math.max(...values) : null;
-  const metricInfo = METRICS.find(item => item.id === metric) || METRICS[0];
-  const activeFilters = DRILL_AXES
-    .filter(axis => axis.id !== xAxis && axis.id !== yAxis)
-    .filter(axis => (safeFilters[axis.id] ?? ALL_FILTER) !== ALL_FILTER)
-    .map(axis => `${axis.label.toLowerCase()}=${drillValueLabel(axis.id, safeFilters[axis.id])}`);
+  const activeFilters = Object.entries(filters);
+  const addableAxes = DRILL_AXES.filter(axis => !filters[axis.id]);
 
   const cellStyle = value => {
     if (value == null || min == null || max == null || min === max) return {};
     const t = (value - min) / (max - min);
-    const better = metricInfo.lowerBetter ? 1 - t : t;
+    const better = aggInfo.lowerBetter ? 1 - t : t;
     const tone = better >= 0.5 ? 'var(--accent)' : 'var(--bad)';
     const strength = 16 + Math.round(Math.abs(better - 0.5) * 74);
     return {
@@ -836,7 +1035,9 @@ function DrilldownMatrix({ metric, setMetric }) {
   const cellTitle = cell => {
     const parts = [];
     if (cell.value != null && isFinite(cell.value)) {
-      parts.push(`${Bench.fmtNum(cell.value)} ${metricInfo.unit} · ${cell.count} measured row${cell.count === 1 ? '' : 's'}`);
+      const unit = aggInfo.unit && aggregation !== 'failure_rate' ? ` ${aggInfo.unit}` : '';
+      parts.push(`${aggInfo.label}: ${formatDrillCellValue(cell.value, aggregation, aggInfo)}${unit}`);
+      parts.push(`${cell.total} matching row${cell.total === 1 ? '' : 's'}`);
     }
     if (cell.failures) {
       parts.push(`${cell.failures} compile failure${cell.failures === 1 ? '' : 's'}`);
@@ -850,36 +1051,85 @@ function DrilldownMatrix({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Arbitrary axes'),
         React.createElement('div', { className: 'section-title' }, 'Drill into any two dimensions.'),
-        React.createElement('div', { className: 'section-sub' }, 'Pick X and Y axes, then filter the remaining dimensions. Cells use the median when filters span multiple rows.')
-      ),
-      React.createElement(SectionMetricControl, { metric, setMetric })
+        React.createElement('div', { className: 'section-sub' }, 'Build a comparison, narrow the dataset, and choose how matching rows roll up into each cell.')
+      )
     ),
     React.createElement('div', { className: 'drill-panel' },
-      React.createElement('div', { className: 'drill-axis-summary' },
-        React.createElement('div', null,
-          React.createElement('div', { className: 'drill-mini-label' }, 'Axes'),
-          React.createElement('div', { className: 'drill-axis-title' },
-            React.createElement('span', { className: 'axis-x' }, DRILL_AXIS_BY_ID[xAxis].label),
-            React.createElement('span', null, ' × '),
-            React.createElement('span', { className: 'axis-y' }, DRILL_AXIS_BY_ID[yAxis].label)
+      React.createElement('div', { className: 'drill-query' },
+        React.createElement('div', { className: 'drill-query-top' },
+          React.createElement(SectionMetricControl, { metric, setMetric }),
+          React.createElement('label', { className: 'drill-query-field' },
+            React.createElement('span', null, 'Cell value'),
+            React.createElement('select', {
+              className: 'knob',
+              value: aggregation,
+              onChange: event => setViewPatch({ aggregation: event.target.value }),
+            },
+              DRILL_AGGREGATIONS.map(agg => React.createElement('option', { key: agg.id, value: agg.id }, agg.label))
+            )
           ),
-          React.createElement('div', { className: 'drill-axis-sub' }, 'X · columns   Y · rows')
+          React.createElement(DrillSelect, {
+            label: 'Rows',
+            value: yAxis,
+            onChange: axis => setViewPatch({ rows: [axis] }),
+          }),
+          React.createElement(DrillSelect, {
+            label: 'Columns',
+            value: xAxis,
+            onChange: axis => setViewPatch({ columns: [axis] }),
+          }),
+          React.createElement('button', {
+            className: 'drill-swap',
+            type: 'button',
+            onClick: () => setViewPatch({ rows: [xAxis], columns: [yAxis] }),
+          }, 'swap')
         ),
+        React.createElement('div', { className: 'drill-presets' },
+          React.createElement('span', null, 'Presets'),
+          DRILL_PRESETS.map(preset => React.createElement('button', {
+            key: preset.label,
+            type: 'button',
+            onClick: () => applyPreset(preset),
+          }, preset.label))
+        ),
+        React.createElement('div', { className: 'drill-filter-bar' },
+          React.createElement('span', { className: 'drill-filter-bar-label' }, 'Filters'),
+          activeFilters.map(([axis, filter]) => React.createElement('button', {
+            key: axis,
+            className: 'filter-chip',
+            type: 'button',
+            onClick: () => setActiveFilterAxis(axis),
+          },
+            React.createElement('span', null, drillFilterLabel(axis, filter)),
+            React.createElement('em', {
+              onClick: event => {
+                event.stopPropagation();
+                setFilterValues(axis, []);
+                if (activeFilterAxis === axis) setActiveFilterAxis(null);
+              },
+            }, '×')
+          )),
+          React.createElement('select', {
+            className: 'filter-add',
+            value: '',
+            onChange: event => {
+              if (event.target.value) setActiveFilterAxis(event.target.value);
+            },
+          },
+            React.createElement('option', { value: '' }, '+ Add filter'),
+            addableAxes.map(axis => React.createElement('option', { key: axis.id, value: axis.id }, axis.label))
+          )
+        ),
+        activeFilterAxis ? React.createElement(DrillFilterPopover, {
+          axis: activeFilterAxis,
+          records,
+          filters,
+          setFilterValues,
+          onClose: () => setActiveFilterAxis(null),
+        }) : null,
         React.createElement('div', { className: 'drill-active-filters' },
-          activeFilters.length ? activeFilters.join(' · ') : 'no active filters'
+          `${DRILL_AXIS_BY_ID[yAxis].label} × ${DRILL_AXIS_BY_ID[xAxis].label} · ${aggInfo.label.toLowerCase()}${aggInfo.needsMetric ? ` ${metricInfo.short.toLowerCase()}` : ''}`
         )
-      ),
-      React.createElement('div', { className: 'drill-filter-grid' },
-        DRILL_AXES.map(axis => React.createElement(DrillFilter, {
-          key: axis.id,
-          axis: axis.id,
-          value: safeFilters[axis.id] ?? ALL_FILTER,
-          options: drillOptions(records, axis.id),
-          disabled: axis.id === xAxis || axis.id === yAxis,
-          onChange: setFilter,
-          onSetX: chooseX,
-          onSetY: chooseY,
-        }))
       ),
       React.createElement('div', { className: 'drill-table-wrap' },
         React.createElement('table', { className: 'drill-table' },
@@ -904,14 +1154,14 @@ function DrilldownMatrix({ metric, setMetric }) {
                   style: cell && cell.count ? cellStyle(cell.value) : {},
                   title: cell ? cellTitle(cell) : 'no matching rows',
                 },
-                  cell && cell.count ? React.createElement(React.Fragment, null,
-                    React.createElement('span', null, Bench.fmtNum(cell.value)),
-                    cell.count > 1 ? React.createElement('sup', null, cell.count) : null
+                  cell && cell.value != null && isFinite(cell.value) ? React.createElement(React.Fragment, null,
+                    React.createElement('span', null, formatDrillCellValue(cell.value, aggregation, aggInfo)),
+                    aggInfo.needsMetric && cell.total > 1 ? React.createElement('sup', null, cell.total) : null
                   ) : cell && cell.failures ? React.createElement(React.Fragment, null,
                     React.createElement('span', { className: 'fail-label' }, 'fail'),
                     React.createElement('sup', null, cell.failures)
                   ) : '—',
-                  cell && cell.count && cell.failures ? React.createElement('span', { className: 'fail-badge' }, `${cell.failures} fail`) : null
+                  aggInfo.needsMetric && cell && cell.value != null && isFinite(cell.value) && cell.failures ? React.createElement('span', { className: 'fail-badge' }, `${cell.failures} fail`) : null
                 );
               })
             ))
@@ -922,7 +1172,7 @@ function DrilldownMatrix({ metric, setMetric }) {
         React.createElement('span', null, min == null ? '— min' : `${Bench.fmtNum(min)} min`),
         React.createElement('span', { className: 'legend-ramp' }),
         React.createElement('span', null, max == null ? '— max' : `${Bench.fmtNum(max)} max`),
-        React.createElement('span', null, `${filtered.length.toLocaleString()} rows · ${failureRows.toLocaleString()} failed · cell = median`)
+        React.createElement('span', null, `${filtered.length.toLocaleString()} rows · ${failureRows.toLocaleString()} failed · cell = ${aggInfo.label.toLowerCase()}`)
       )
     )
   );
