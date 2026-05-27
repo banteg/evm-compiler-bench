@@ -923,30 +923,32 @@ function Methodology() {
 function RealDerivedProvenance() {
   const models = Bench.D.real_derived_models || [];
   if (!models.length) return null;
+  const laneLabel = value => ({
+    latest_syntax_original: 'latest syntax',
+    latest_idiomatic: 'idiomatic',
+    fixture_scoped_port: 'scoped port',
+    production_conformance: 'prod conformance',
+  }[value] || value || 'n/a');
   return React.createElement('div', { className: 'card' },
     React.createElement('div', { className: 'card-head' },
         React.createElement('div', null,
           React.createElement('div', { className: 'card-title' }, 'Real-derived source lanes'),
-          React.createElement('div', { className: 'card-sub' }, 'Pinned upstream files are reference inputs; compiled rows use materialized source variants for the active source and counterpart lanes.')
+          React.createElement('div', { className: 'card-sub' }, 'Pinned upstream files are reference inputs; compiled rows use generated source variants.')
       )
     ),
-    React.createElement('table', { className: 'tbl' },
+    React.createElement('table', { className: 'tbl source-lanes-table' },
       React.createElement('thead', null,
         React.createElement('tr', null,
           React.createElement('th', null, 'Benchmark'),
-          React.createElement('th', null, 'Comparison lane'),
-          React.createElement('th', null, 'Source lane'),
-          React.createElement('th', null, 'Counterpart lane'),
-          React.createElement('th', null, 'Source profiles'),
-          React.createElement('th', null, 'Compiled sources'),
-          React.createElement('th', null, 'Reference path'),
-          React.createElement('th', { style: { textAlign: 'right' } }, 'Prod eq')
+          React.createElement('th', null, 'Source'),
+          React.createElement('th', null, 'Port'),
+          React.createElement('th', null, 'Profiles'),
+          React.createElement('th', null, 'Sources')
         )
       ),
       React.createElement('tbody', null,
         models.map(model => {
           const p = model.provenance || {};
-          const referencePath = p.source_reference_path || p.source_path || 'n/a';
           const sourceProfiles = Array.isArray(p.source_profiles) ? p.source_profiles : [];
           const sourceProfileTitle = sourceProfiles.length ? sourceProfiles.join('\n') : 'n/a';
           const sourceProfileLabel = sourceProfiles.length
@@ -963,13 +965,10 @@ function RealDerivedProvenance() {
             : 'n/a';
           return React.createElement('tr', { key: model.benchmark_id },
             React.createElement('td', { className: 'scenario' }, model.benchmark_id),
-            React.createElement('td', null, p.comparison_lane || 'n/a'),
-            React.createElement('td', null, p.source_lane || 'n/a'),
-            React.createElement('td', null, p.counterpart_lane || 'n/a'),
+            React.createElement('td', null, laneLabel(p.source_lane)),
+            React.createElement('td', null, laneLabel(p.counterpart_lane)),
             React.createElement('td', { className: 'path-cell', title: sourceProfileTitle }, sourceProfileLabel),
-            React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel),
-            React.createElement('td', { className: 'path-cell', title: referencePath }, referencePath),
-            React.createElement('td', { className: 'num' }, p.production_equivalence ? 'yes' : 'no')
+            React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel)
           );
         })
       )

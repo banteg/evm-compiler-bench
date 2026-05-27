@@ -670,6 +670,28 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
 .tbl td.delta.tie { color: var(--fg-3); }
 .tbl td.scenario { color: var(--fg); max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
 .tbl td.path-cell { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-lanes-table {
+  table-layout: fixed;
+}
+.source-lanes-table th,
+.source-lanes-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-lanes-table th:nth-child(1),
+.source-lanes-table td:nth-child(1) { width: 34%; }
+.source-lanes-table th:nth-child(2),
+.source-lanes-table td:nth-child(2),
+.source-lanes-table th:nth-child(3),
+.source-lanes-table td:nth-child(3) { width: 19%; }
+.source-lanes-table th:nth-child(4),
+.source-lanes-table td:nth-child(4),
+.source-lanes-table th:nth-child(5),
+.source-lanes-table td:nth-child(5) {
+  width: 14%;
+  text-align: right;
+}
 
 /* ---------- Version chart ---------- */
 .evo-grid {
