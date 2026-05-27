@@ -150,6 +150,7 @@ function TopBar() {
       React.createElement('nav', null,
         React.createElement('a', { href: '#findings' }, 'Findings'),
         React.createElement('a', { href: '#compare' }, 'Compare'),
+        React.createElement('a', { href: '#drilldown' }, 'Drilldown'),
         React.createElement('a', { href: '#versions' }, 'Versions'),
         React.createElement('a', { href: '#scale' }, 'Scale'),
         React.createElement('a', { href: '#reliability' }, 'Reliability'),
@@ -585,6 +586,303 @@ function SectionMetricControl({ metric, setMetric }) {
   return React.createElement('div', { className: 'section-metric-control' },
     React.createElement('div', { className: 'metric-label' }, 'metric'),
     React.createElement(MetricToggle, { value: metric, onChange: setMetric }),
+  );
+}
+
+// ============================================================
+// Drilldown matrix
+// ============================================================
+const ALL_FILTER = '__all__';
+const DRILL_AXES = [
+  { id: 'suite', label: 'Suite' },
+  { id: 'benchmark', label: 'Benchmark' },
+  { id: 'family', label: 'Family' },
+  { id: 'n', label: 'N' },
+  { id: 'language', label: 'Compiler' },
+  { id: 'version', label: 'Version' },
+  { id: 'mode', label: 'Mode' },
+  { id: 'profile', label: 'Profile' },
+  { id: 'scenario', label: 'Scenario' },
+  { id: 'state', label: 'State' },
+];
+const DRILL_AXIS_BY_ID = Object.fromEntries(DRILL_AXES.map(axis => [axis.id, axis]));
+
+function scaleFamilyLabel(family) {
+  if (!family) return 'none';
+  return family.replace(/_N$/, ' (N=1…64)').replace(/_/g, ' ');
+}
+
+function drillBenchmarkLabel(row) {
+  return row.family ? scaleFamilyLabel(row.family) : row.benchmark_id;
+}
+
+function drillModeLabel(profile) {
+  if (!profile) return 'unknown';
+  const mode = Bench.profileOptimizer(profile);
+  return profile.experimental_codegen ? `${mode} venom` : mode;
+}
+
+function drillField(row, profile, metric, axis) {
+  const artifactLevel = Bench.comparisonLevel(metric) === 'artifact';
+  switch (axis) {
+    case 'suite': return row.suite || 'unknown';
+    case 'benchmark': return drillBenchmarkLabel(row);
+    case 'family': return row.family || 'none';
+    case 'n': return row.parameter_value == null ? 'none' : String(row.parameter_value);
+    case 'language': return row.language || profile?.language || 'unknown';
+    case 'version': return Bench.profileVersionLabel(profile || {});
+    case 'mode': return drillModeLabel(profile);
+    case 'profile': return row.profile_id;
+    case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
+    case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
+    default: return 'unknown';
+  }
+}
+
+function drillValueLabel(axis, value) {
+  if (value === ALL_FILTER) return 'all';
+  if (axis === 'family') return scaleFamilyLabel(value);
+  if (axis === 'language') return value === 'solidity' ? 'Solidity' : value === 'vyper' ? 'Vyper' : value;
+  if (axis === 'profile') return Bench.profileCompactLabel(value);
+  return value;
+}
+
+function drillValueRank(axis, value) {
+  if (value === 'none') return Number.POSITIVE_INFINITY;
+  if (axis === 'n') return Number(value);
+  if (axis === 'version') return Bench.versionRank(value);
+  if (axis === 'mode') {
+    const [mode] = value.split(' ');
+    return Bench.optimizerRank(mode) + (value.includes('venom') ? 0.25 : 0);
+  }
+  return null;
+}
+
+function sortDrillValues(axis, values) {
+  return [...values].sort((a, b) => {
+    const ar = drillValueRank(axis, a);
+    const br = drillValueRank(axis, b);
+    if (ar != null && br != null && ar !== br) return ar - br;
+    if (axis === 'version') return Bench.versionRank(a) - Bench.versionRank(b);
+    return drillValueLabel(axis, a).localeCompare(drillValueLabel(axis, b), undefined, { numeric: true });
+  });
+}
+
+function buildDrillRecords(metric) {
+  const artifactLevel = Bench.comparisonLevel(metric) === 'artifact';
+  const seenArtifacts = new Set();
+  const records = [];
+  for (const row of Bench.D.rows) {
+    if (row.status !== 'ok') continue;
+    const value = Bench.valueAt(row, metric);
+    if (value == null || !isFinite(value)) continue;
+    if (artifactLevel) {
+      const key = [row.suite, row.benchmark_id, row.parameter_value ?? '', row.profile_id].join('|');
+      if (seenArtifacts.has(key)) continue;
+      seenArtifacts.add(key);
+    }
+    const profile = Bench.profileById(row.profile_id);
+    const fields = Object.fromEntries(DRILL_AXES.map(axis => [
+      axis.id,
+      drillField(row, profile, metric, axis.id),
+    ]));
+    records.push({ row, value, fields });
+  }
+  return records;
+}
+
+function drillOptions(records, axis) {
+  return sortDrillValues(axis, new Set(records.map(record => record.fields[axis])));
+}
+
+function normalizeDrillFilters(filters, records) {
+  const next = { ...filters };
+  for (const axis of DRILL_AXES) {
+    const options = drillOptions(records, axis.id);
+    if (next[axis.id] !== ALL_FILTER && !options.includes(next[axis.id])) {
+      next[axis.id] = ALL_FILTER;
+    }
+  }
+  return next;
+}
+
+function DrillFilter({ axis, value, options, onChange, onSetX, onSetY, disabled }) {
+  const label = DRILL_AXIS_BY_ID[axis].label;
+  return React.createElement('div', { className: `drill-filter ${disabled ? 'axis-active' : ''}` },
+    React.createElement('div', { className: 'drill-filter-head' },
+      React.createElement('div', { className: 'drill-filter-label' }, label),
+      disabled ? React.createElement('span', { className: 'drill-axis-badge' }, 'axis') : null
+    ),
+    React.createElement('select', {
+      className: 'knob',
+      disabled,
+      value,
+      onChange: event => onChange(axis, event.target.value),
+    },
+      React.createElement('option', { value: ALL_FILTER }, `all (${options.length}) · median`),
+      options.map(option => React.createElement('option', { key: option, value: option }, drillValueLabel(axis, option)))
+    ),
+    React.createElement('div', { className: 'drill-filter-actions' },
+      React.createElement('button', { type: 'button', disabled: disabled, onClick: () => onSetX(axis) }, 'set X'),
+      React.createElement('button', { type: 'button', disabled: disabled, onClick: () => onSetY(axis) }, 'set Y')
+    )
+  );
+}
+
+function DrilldownMatrix({ metric, setMetric }) {
+  const records = useMemo(() => buildDrillRecords(metric), [metric]);
+  const defaultFamily = useMemo(() => {
+    const families = drillOptions(records, 'family');
+    return families.includes('dispatch_N') ? 'dispatch_N' : ALL_FILTER;
+  }, [records]);
+  const [xAxis, setXAxis] = useState('n');
+  const [yAxis, setYAxis] = useState('version');
+  const [filters, setFilters] = useState(() => ({
+    suite: ALL_FILTER,
+    benchmark: ALL_FILTER,
+    family: 'dispatch_N',
+    n: ALL_FILTER,
+    language: 'solidity',
+    version: ALL_FILTER,
+    mode: ALL_FILTER,
+    profile: ALL_FILTER,
+    scenario: ALL_FILTER,
+    state: 'cold',
+  }));
+  const safeFilters = useMemo(() => {
+    const normalized = normalizeDrillFilters({ ...filters, family: filters.family === 'dispatch_N' ? defaultFamily : filters.family }, records);
+    return normalized;
+  }, [filters, records, defaultFamily]);
+  const setFilter = (axis, value) => setFilters(current => ({ ...current, [axis]: value }));
+  const chooseX = axis => {
+    if (axis === yAxis) setYAxis(xAxis);
+    setXAxis(axis);
+  };
+  const chooseY = axis => {
+    if (axis === xAxis) setXAxis(yAxis);
+    setYAxis(axis);
+  };
+  const filtered = useMemo(() => records.filter(record =>
+    DRILL_AXES.every(axis => {
+      if (axis.id === xAxis || axis.id === yAxis) return true;
+      const filter = safeFilters[axis.id] ?? ALL_FILTER;
+      return filter === ALL_FILTER || record.fields[axis.id] === filter;
+    })
+  ), [records, xAxis, yAxis, safeFilters]);
+  const xValues = useMemo(() => sortDrillValues(xAxis, new Set(filtered.map(record => record.fields[xAxis]))), [filtered, xAxis]);
+  const yValues = useMemo(() => sortDrillValues(yAxis, new Set(filtered.map(record => record.fields[yAxis]))), [filtered, yAxis]);
+  const cells = useMemo(() => {
+    const grouped = new Map();
+    for (const record of filtered) {
+      const key = `${record.fields[yAxis]}\0${record.fields[xAxis]}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(record.value);
+    }
+    const out = new Map();
+    for (const [key, values] of grouped) {
+      out.set(key, {
+        value: Bench.median(values),
+        count: values.length,
+      });
+    }
+    return out;
+  }, [filtered, xAxis, yAxis]);
+  const values = [...cells.values()].map(cell => cell.value).filter(value => value != null && isFinite(value));
+  const min = values.length ? Math.min(...values) : null;
+  const max = values.length ? Math.max(...values) : null;
+  const metricInfo = METRICS.find(item => item.id === metric) || METRICS[0];
+  const activeFilters = DRILL_AXES
+    .filter(axis => axis.id !== xAxis && axis.id !== yAxis)
+    .filter(axis => (safeFilters[axis.id] ?? ALL_FILTER) !== ALL_FILTER)
+    .map(axis => `${axis.label.toLowerCase()}=${drillValueLabel(axis.id, safeFilters[axis.id])}`);
+
+  const cellStyle = value => {
+    if (value == null || min == null || max == null || min === max) return {};
+    const t = (value - min) / (max - min);
+    const better = metricInfo.lowerBetter ? 1 - t : t;
+    const tone = better >= 0.5 ? 'var(--accent)' : 'var(--bad)';
+    const strength = 16 + Math.round(Math.abs(better - 0.5) * 74);
+    return {
+      background: `color-mix(in srgb, ${tone} ${strength}%, var(--bg-elev) 72%)`,
+    };
+  };
+
+  return React.createElement('section', { id: 'drilldown', className: 'shell section', 'data-screen-label': '04 Drilldown' },
+    React.createElement('div', { className: 'section-head' },
+      React.createElement('div', null,
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Arbitrary axes'),
+        React.createElement('div', { className: 'section-title' }, 'Drill into any two dimensions.'),
+        React.createElement('div', { className: 'section-sub' }, 'Pick X and Y axes, then filter the remaining dimensions. Cells use the median when filters span multiple rows.')
+      ),
+      React.createElement(SectionMetricControl, { metric, setMetric })
+    ),
+    React.createElement('div', { className: 'drill-panel' },
+      React.createElement('div', { className: 'drill-axis-summary' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'drill-mini-label' }, 'Axes'),
+          React.createElement('div', { className: 'drill-axis-title' },
+            React.createElement('span', { className: 'axis-x' }, DRILL_AXIS_BY_ID[xAxis].label),
+            React.createElement('span', null, ' × '),
+            React.createElement('span', { className: 'axis-y' }, DRILL_AXIS_BY_ID[yAxis].label)
+          ),
+          React.createElement('div', { className: 'drill-axis-sub' }, 'X · columns   Y · rows')
+        ),
+        React.createElement('div', { className: 'drill-active-filters' },
+          activeFilters.length ? activeFilters.join(' · ') : 'no active filters'
+        )
+      ),
+      React.createElement('div', { className: 'drill-filter-grid' },
+        DRILL_AXES.map(axis => React.createElement(DrillFilter, {
+          key: axis.id,
+          axis: axis.id,
+          value: safeFilters[axis.id] ?? ALL_FILTER,
+          options: drillOptions(records, axis.id),
+          disabled: axis.id === xAxis || axis.id === yAxis,
+          onChange: setFilter,
+          onSetX: chooseX,
+          onSetY: chooseY,
+        }))
+      ),
+      React.createElement('div', { className: 'drill-table-wrap' },
+        React.createElement('table', { className: 'drill-table' },
+          React.createElement('thead', null,
+            React.createElement('tr', null,
+              React.createElement('th', { className: 'corner' },
+                React.createElement('span', { className: 'axis-y' }, DRILL_AXIS_BY_ID[yAxis].label),
+                ' / ',
+                React.createElement('span', { className: 'axis-x' }, DRILL_AXIS_BY_ID[xAxis].label)
+              ),
+              xValues.map(value => React.createElement('th', { key: value }, drillValueLabel(xAxis, value)))
+            )
+          ),
+          React.createElement('tbody', null,
+            yValues.map(y => React.createElement('tr', { key: y },
+              React.createElement('th', null, drillValueLabel(yAxis, y)),
+              xValues.map(x => {
+                const cell = cells.get(`${y}\0${x}`);
+                return React.createElement('td', {
+                  key: x,
+                  className: cell ? 'has-value' : 'empty',
+                  style: cell ? cellStyle(cell.value) : {},
+                  title: cell ? `${Bench.fmtNum(cell.value)} ${metricInfo.unit} · ${cell.count} row${cell.count === 1 ? '' : 's'}` : 'no matching rows',
+                },
+                  cell ? React.createElement(React.Fragment, null,
+                    React.createElement('span', null, Bench.fmtNum(cell.value)),
+                    cell.count > 1 ? React.createElement('sup', null, cell.count) : null
+                  ) : '—'
+                );
+              })
+            ))
+          )
+        )
+      ),
+      React.createElement('div', { className: 'drill-legend' },
+        React.createElement('span', null, min == null ? '— min' : `${Bench.fmtNum(min)} min`),
+        React.createElement('span', { className: 'legend-ramp' }),
+        React.createElement('span', null, max == null ? '— max' : `${Bench.fmtNum(max)} max`),
+        React.createElement('span', null, `${filtered.length.toLocaleString()} rows · cell = median`)
+      )
+    )
   );
 }
 
@@ -1083,7 +1381,7 @@ function SectionScale({ metric, setMetric }) {
   return React.createElement('section', { id: 'scale', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Cost vs. shape of the contract'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 05 · Cost vs. shape of the contract'),
         React.createElement('div', { className: 'section-title' }, 'How the metric scales with structural N.'),
         React.createElement('div', { className: 'section-sub' }, 'In dispatch_N, Vyper selector dispatch stays nearly flat as function count grows, while solc viaIR rises with the selector surface. The other panels show how storage, ABI, loop, event, and external-call shapes scale.')
       ),
@@ -1097,7 +1395,7 @@ function SectionReliability() {
   return React.createElement('section', { id: 'reliability', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 05 · Reliability'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 06 · Reliability'),
         React.createElement('div', { className: 'section-title' }, 'Compile failures are first-class data.'),
         React.createElement('div', { className: 'section-sub' }, 'Profile comparisons include both successful artifacts and the benchmark shapes each compiler failed to build. Tracked here per profile.')
       )
@@ -1114,7 +1412,7 @@ function SectionMethodology() {
   return React.createElement('section', { id: 'methodology', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 07 · How to read this'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 08 · How to read this'),
         React.createElement('div', { className: 'section-title' }, 'Methodology and caveats.'),
         React.createElement('div', { className: 'section-sub' }, 'A compact reference for units, aggregation, and scope behind the report numbers.')
       )
@@ -1141,7 +1439,7 @@ function SectionCompilerConfigurations() {
   return React.createElement('section', { id: 'configs', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 06 · Compiler configurations'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 07 · Compiler configurations'),
         React.createElement('div', { className: 'section-title' }, 'Compiler configurations.'),
         React.createElement('div', { className: 'section-sub' },
           React.createElement('p', null, 'A profile is a compiler version paired with exactly one codegen or optimizer mode. Vyper adds Venom as an independent codegen switch.'),
@@ -1168,6 +1466,7 @@ function App() {
     React.createElement(Hero),
     React.createElement(FindingsGrid),
     React.createElement(Comparator, { profileA, profileB, setProfileA, setProfileB, metric, setMetric }),
+    React.createElement(DrilldownMatrix, { metric, setMetric }),
     React.createElement(SectionVersions, { metric, setMetric }),
     React.createElement(SectionScale, { metric, setMetric }),
     React.createElement(SectionReliability),
