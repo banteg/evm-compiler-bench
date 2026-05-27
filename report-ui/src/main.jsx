@@ -1148,6 +1148,12 @@ function DrilldownMatrix({ metric, setMetric }) {
               React.createElement('th', null, drillValueLabel(yAxis, y)),
               xValues.map(x => {
                 const cell = cells.get(`${y}\0${x}`);
+                const meta = cell && aggInfo.needsMetric
+                  ? [
+                      cell.total > 1 ? `${cell.total} rows` : null,
+                      cell.failures ? `${cell.failures} fail${cell.failures === 1 ? '' : 's'}` : null,
+                    ].filter(Boolean).join(' · ')
+                  : '';
                 return React.createElement('td', {
                   key: x,
                   className: cell ? `has-value ${cell.failures ? 'has-failure' : ''} ${cell.count ? '' : 'failure-only'}` : 'empty',
@@ -1156,12 +1162,11 @@ function DrilldownMatrix({ metric, setMetric }) {
                 },
                   cell && cell.value != null && isFinite(cell.value) ? React.createElement(React.Fragment, null,
                     React.createElement('span', { className: 'cell-main' }, formatDrillCellValue(cell.value, aggregation, aggInfo)),
-                    aggInfo.needsMetric && cell.total > 1 ? React.createElement('span', { className: 'cell-rows' }, `${cell.total} rows`) : null
+                    meta ? React.createElement('span', { className: 'cell-meta' }, meta) : null
                   ) : cell && cell.failures ? React.createElement(React.Fragment, null,
                     React.createElement('span', { className: 'fail-label' }, 'fail'),
-                    React.createElement('span', { className: 'cell-rows' }, `${cell.failures} fail${cell.failures === 1 ? '' : 's'}`)
-                  ) : '—',
-                  aggInfo.needsMetric && cell && cell.value != null && isFinite(cell.value) && cell.failures ? React.createElement('span', { className: 'fail-badge' }, `${cell.failures} fail`) : null
+                    meta ? React.createElement('span', { className: 'cell-meta' }, meta) : null
+                  ) : '—'
                 );
               })
             ))

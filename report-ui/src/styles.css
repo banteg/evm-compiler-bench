@@ -756,14 +756,14 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
   font-variant-numeric: tabular-nums;
 }
 .drill-table .cell-main,
-.drill-table .cell-rows {
+.drill-table .cell-meta {
   display: block;
 }
-.drill-table .cell-rows {
-  margin-top: 3px;
-  color: var(--fg-4);
-  font-size: 9px;
-  letter-spacing: 0.05em;
+.drill-table .cell-meta {
+  margin-top: 4px;
+  color: var(--fg);
+  font-size: 10px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .drill-table td.empty {
@@ -774,20 +774,14 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 54%, transparent);
 }
 .drill-table td.failure-only {
-  color: var(--bad);
-  background: color-mix(in srgb, var(--bad) 18%, var(--bg-elev) 82%);
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bad) 72%, var(--bg-elev) 28%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 32%, transparent);
 }
 .drill-table .fail-label {
-  font-size: 11px;
+  color: var(--fg);
+  font-size: 13px;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.drill-table .fail-badge {
-  display: block;
-  margin-top: 4px;
-  color: var(--bad);
-  font-size: 10px;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .drill-table td sup {
