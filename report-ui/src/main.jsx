@@ -1155,11 +1155,11 @@ function DrilldownMatrix({ metric, setMetric }) {
                   title: cell ? cellTitle(cell) : 'no matching rows',
                 },
                   cell && cell.value != null && isFinite(cell.value) ? React.createElement(React.Fragment, null,
-                    React.createElement('span', null, formatDrillCellValue(cell.value, aggregation, aggInfo)),
-                    aggInfo.needsMetric && cell.total > 1 ? React.createElement('sup', null, cell.total) : null
+                    React.createElement('span', { className: 'cell-main' }, formatDrillCellValue(cell.value, aggregation, aggInfo)),
+                    aggInfo.needsMetric && cell.total > 1 ? React.createElement('span', { className: 'cell-rows' }, `${cell.total} rows`) : null
                   ) : cell && cell.failures ? React.createElement(React.Fragment, null,
                     React.createElement('span', { className: 'fail-label' }, 'fail'),
-                    React.createElement('sup', null, cell.failures)
+                    React.createElement('span', { className: 'cell-rows' }, `${cell.failures} fail${cell.failures === 1 ? '' : 's'}`)
                   ) : '—',
                   aggInfo.needsMetric && cell && cell.value != null && isFinite(cell.value) && cell.failures ? React.createElement('span', { className: 'fail-badge' }, `${cell.failures} fail`) : null
                 );

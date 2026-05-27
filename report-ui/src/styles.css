@@ -755,6 +755,17 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+.drill-table .cell-main,
+.drill-table .cell-rows {
+  display: block;
+}
+.drill-table .cell-rows {
+  margin-top: 3px;
+  color: var(--fg-4);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 .drill-table td.empty {
   color: var(--fg-4);
   background: var(--bg);
