@@ -646,7 +646,6 @@ const DEFAULT_DRILL_VIEW = {
   aggregation: 'median',
   filters: {
     language: { op: 'in', values: ['solidity'] },
-    state: { op: 'in', values: ['cold'] },
     family: { op: 'in', values: ['dispatch_N'] },
     runs: BALANCED_RUN_FILTER,
   },
@@ -664,7 +663,7 @@ const DRILL_PRESETS = [
       rows: ['suite'],
       columns: ['language'],
       aggregation: 'median',
-      filters: { state: { op: 'in', values: ['cold'] }, runs: BALANCED_RUN_FILTER },
+      filters: { runs: BALANCED_RUN_FILTER },
     },
   },
   {
@@ -675,7 +674,6 @@ const DRILL_PRESETS = [
       columns: ['language'],
       aggregation: 'median',
       filters: {
-        state: { op: 'in', values: ['cold'] },
         status: { op: 'in', values: ['ok'] },
         runs: BALANCED_RUN_FILTER,
       },
@@ -688,7 +686,7 @@ const DRILL_PRESETS = [
       rows: ['mode'],
       columns: ['language'],
       aggregation: 'median',
-      filters: { state: { op: 'in', values: ['cold'] }, runs: BALANCED_RUN_FILTER },
+      filters: { runs: BALANCED_RUN_FILTER },
     },
   },
   {
