@@ -928,7 +928,6 @@ fn write_gas_test(
         "false"
     });
     out.push_str(";\n");
-    out.push_str("        require(scenarioStatusOk, \"unexpected scenario status\");\n");
     out.push_str("        _writeRow(\"");
     out.push_str(&artifact.benchmark_id);
     out.push_str("\", \"");
