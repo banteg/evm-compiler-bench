@@ -1173,10 +1173,6 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
         .replace(
             "(bool ok,) = msg.sender.call.value(amount)(\"\");",
             "bool ok = msg.sender.call.value(amount)();",
-        )
-        .replace(
-            "(bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));",
-            "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));",
         );
     rewrite_solidity_04_staticcalls(&source)
 }
@@ -2163,7 +2159,7 @@ mod tests {
 
     #[test]
     fn rewrites_solidity_historical_compatibility_syntax() {
-        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ninterface YearnBenchERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ninterface YearnV2ERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(bytes4(0x773acdef), i));\n        abi.encodeWithSelector(YearnBenchERC20.transfer.selector, msg.sender, 1);\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n    function _safeTransfer(address token_, address receiver, uint256 amount) internal {\n        (bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(YearnV2ERC20.transfer.selector, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");\n    }\n}\n";
+        let source = "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.35;\n\ninterface YearnBenchERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ninterface YearnV2ERC20 {\n    function transfer(address receiver, uint256 amount) external returns (bool);\n}\n\ncontract C {\n    uint256 public constant FEE_DENOMINATOR = 10_000_000_000;\n    constructor(uint256 initial) {\n    }\n    function f(bytes32[] calldata proof) external pure returns (uint256) {\n        (bool ok,) = msg.sender.call{value: amount}(\"\");\n        abi.encodeWithSelector(YearnBenchERC20.transfer.selector, msg.sender, 1);\n        return type(uint256).max + type(uint112).max + proof.length + 1_000_000;\n    }\n    function _safeTransfer(address token_, address receiver, uint256 amount) internal {\n        (bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(YearnV2ERC20.transfer.selector, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");\n    }\n}\n";
         let rewritten = transform_solidity_source(
             source,
             Some("solidity-0.4"),
@@ -2176,9 +2172,6 @@ mod tests {
         assert!(rewritten.contains("constructor(uint256 initial) public {"));
         assert!(rewritten.contains("bytes32[] proof"));
         assert!(rewritten.contains("bool ok = msg.sender.call.value(amount)();"));
-        assert!(rewritten.contains(
-            "bool ok = address(this).call(abi.encodeWithSelector(bytes4(0x773acdef), i));"
-        ));
         assert!(rewritten.contains(
             "abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), msg.sender, 1);"
         ));
