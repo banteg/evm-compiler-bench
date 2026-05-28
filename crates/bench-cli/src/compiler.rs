@@ -169,19 +169,8 @@ pub fn compile_all(
     })
 }
 
-fn profile_applies_to_benchmark(benchmark: &Benchmark, profile: &CompilerProfile) -> bool {
-    let Some(provenance) = benchmark.provenance.as_ref() else {
-        return true;
-    };
-
-    if profile.language != provenance.source_language {
-        return true;
-    }
-
-    provenance
-        .source_profiles
-        .iter()
-        .any(|source_profile| source_profile == &profile.id)
+fn profile_applies_to_benchmark(_benchmark: &Benchmark, _profile: &CompilerProfile) -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -2121,7 +2110,7 @@ mod tests {
     }
 
     #[test]
-    fn real_derived_source_language_uses_declared_profiles() {
+    fn real_derived_source_language_profiles_are_not_allowlisted() {
         let benchmark = crate::catalog::real_derived_benchmarks()
             .into_iter()
             .find(|benchmark| benchmark.id == "uniswap_v2_factory")
@@ -2131,7 +2120,7 @@ mod tests {
             &benchmark,
             &profile("solc-0.5.16-noopt", Language::Solidity)
         ));
-        assert!(!profile_applies_to_benchmark(
+        assert!(profile_applies_to_benchmark(
             &benchmark,
             &profile("solc-0.4.26-noopt", Language::Solidity)
         ));

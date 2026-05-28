@@ -971,7 +971,6 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
         validate_real_derived_manifest_source_profiles(benchmark, path)?;
         validate_real_derived_manifest_excluded_features(benchmark, path)?;
         require_bool_pointer(benchmark, "/production_equivalence", path)?;
-        let source_profiles = real_derived_source_profile_set(benchmark, path)?;
         let source_language = string_at(benchmark, "/source_language", path)?;
         let variants = benchmark
             .get("source_variants")
@@ -1007,12 +1006,7 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             validate_real_derived_source_variant_path(variant, path)?;
             validate_real_derived_unique_source_variant(variant, &mut seen_variants, path)?;
             validate_real_derived_source_variant_profile(variant, &profile_metadata, path)?;
-            validate_real_derived_source_variant_declared_profile(
-                variant,
-                source_language,
-                &source_profiles,
-                path,
-            )?;
+            validate_real_derived_source_variant_language(variant, source_language, path)?;
         }
     }
     Ok(())
@@ -1209,22 +1203,20 @@ fn validate_real_derived_source_variant_profile(
     Ok(())
 }
 
-fn validate_real_derived_source_variant_declared_profile(
+fn validate_real_derived_source_variant_language(
     variant: &Value,
     source_language: &str,
-    source_profiles: &BTreeSet<String>,
     path: &Path,
 ) -> Result<()> {
     let language = string_at(variant, "/language", path)?;
-    if language != source_language {
-        return Ok(());
-    }
     let profile_id = string_at(variant, "/profile_id", path)?;
-    if !source_profiles.contains(profile_id) {
-        bail!(
-            "{} real-derived source-language variant profile {profile_id} is not declared in source_profiles",
-            path.display()
-        );
+    if language == source_language {
+        validate_real_derived_source_profile_language(
+            source_language,
+            &[Value::String(profile_id.to_string())],
+            path,
+            "manifest source variant",
+        )?;
     }
     Ok(())
 }
@@ -1282,20 +1274,6 @@ fn validate_real_derived_manifest_source_profiles(benchmark: &Value, path: &Path
         }
     }
     Ok(())
-}
-
-fn real_derived_source_profile_set(benchmark: &Value, path: &Path) -> Result<BTreeSet<String>> {
-    real_derived_source_profiles(benchmark, path)?
-        .iter()
-        .map(|profile| {
-            profile.as_str().map(str::to_string).with_context(|| {
-                format!(
-                    "{} JSON pointer /source_profiles must be a non-empty string array",
-                    path.display()
-                )
-            })
-        })
-        .collect()
 }
 
 fn real_derived_source_profiles<'a>(benchmark: &'a Value, path: &Path) -> Result<&'a Vec<Value>> {
