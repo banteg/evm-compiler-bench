@@ -164,7 +164,13 @@ pub fn write_outputs(
     ensure_dir(&normalized_dir)?;
     ensure_dir(&reports_dir)?;
 
-    let rows = normalized_rows(root, compiled, gas_records, scenarios)?;
+    let rows = normalized_rows(
+        root,
+        compiled,
+        gas_records,
+        scenarios,
+        &toolchains.evm_version,
+    )?;
     let normalized_results = normalized_dir.join("results.json");
     fs::write(&normalized_results, serde_json::to_string_pretty(&rows)?)?;
 
@@ -686,6 +692,7 @@ fn normalized_rows(
     compiled: &CompileSet,
     gas_records: &[GasRecord],
     scenarios: &ScenarioCatalog,
+    harness_evm_version: &str,
 ) -> Result<Vec<serde_json::Value>> {
     let mut artifacts = BTreeMap::new();
     for artifact in &compiled.artifacts {
@@ -727,6 +734,7 @@ fn normalized_rows(
             gas,
             scenario_file,
             failures,
+            harness_evm_version,
             differential_benchmarks.contains(&artifact.benchmark_id),
             profile_behavior_check(
                 gas,
@@ -758,6 +766,7 @@ fn row(
     gas: &GasRecord,
     scenario_file: &ScenarioFile,
     failure_links: Vec<String>,
+    harness_evm_version: &str,
     differential_available: bool,
     profile_behavior: ProfileBehaviorCheck,
 ) -> serde_json::Value {
@@ -821,7 +830,7 @@ fn row(
         "bytecode": artifact.bytecode,
         "gas": {
             "scenario": gas.scenario,
-            "evm_fork": artifact.compiler_settings.get("evmVersion").cloned().unwrap_or_else(|| json!("unknown")),
+            "evm_fork": harness_evm_version,
             "state_access_profile": gas.state_access_profile.as_str(),
             "metadata_mode": gas.metadata_mode.as_str(),
             "internal_create_gas": gas.internal_create_gas,
