@@ -464,7 +464,7 @@ function ScaleStrip({ metric }) {
 // ============================================================
 const CONFIG_EXPLAINERS = {
   'solidity:noopt': 'Optimizer disabled; useful as a control, not a production setting.',
-  'solidity:legacy': 'Solidity legacy EVM codegen with optimizer runs=200.',
+  'solidity:legacy': 'Solidity legacy EVM codegen. The balanced default is optimizer runs=200.',
   'solidity:viaIR': 'Solidity through the IR/Yul pipeline; often better optimized, slower to compile.',
   'vyper:none': 'Vyper optimizer disabled.',
   'vyper:default': 'Historical Vyper default where explicit optimize modes were not available.',
@@ -502,7 +502,10 @@ function SegmentedControl({ name, value, options, onChange }) {
 function ProfilePicker({ title, selected, onChange }) {
   const p = Bench.profileById(selected) || Bench.D.profiles[0];
   const knobs = Bench.profileKnobs(p);
-  const facets = Bench.profileFacets(knobs.language, knobs.versionKey);
+  const facets = Bench.profileFacets(knobs.language, knobs.versionKey, knobs.optimizer);
+  const showRuns = knobs.language === 'solidity'
+    && (knobs.optimizer === 'legacy' || knobs.optimizer === 'viaIR')
+    && facets.runs.length > 1;
   const venomAvailable = Bench.profileOptionExists({
     language: knobs.language,
     versionKey: knobs.versionKey,
@@ -515,7 +518,12 @@ function ProfilePicker({ title, selected, onChange }) {
   const chooseLang = (l) => onChange(Bench.defaultProfileForLanguage(l));
   const chooseVersion = (versionKey) => {
     const optimizer = Bench.defaultOptimizerForVersion(knobs.language, versionKey);
-    onChange(Bench.resolveProfile({ ...knobs, versionKey, optimizer, experimental: false }));
+    const runs = Bench.defaultOptimizerRuns(knobs.language, versionKey, optimizer);
+    onChange(Bench.resolveProfile({ ...knobs, versionKey, optimizer, runs, experimental: false }));
+  };
+  const chooseOptimizer = (optimizer) => {
+    const runs = Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, optimizer);
+    choose({ optimizer, runs });
   };
   return React.createElement('div', { className: 'compare-side' },
     React.createElement('div', { className: 'lbl' }, title),
@@ -547,8 +555,18 @@ function ProfilePicker({ title, selected, onChange }) {
           label: o,
           title: CONFIG_EXPLAINERS[`${knobs.language}:${o}`] || '',
         })),
-        onChange: optimizer => choose({ optimizer }),
+        onChange: chooseOptimizer,
       }),
+      showRuns ? React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'knob-l' }, 'Runs'),
+        React.createElement('select', {
+          className: 'knob',
+          value: knobs.runs ?? Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, knobs.optimizer) ?? '',
+          onChange: event => choose({ runs: Number(event.target.value) }),
+        },
+          facets.runs.map(runs => React.createElement('option', { key: runs, value: runs }, `runs${runs}`))
+        ),
+      ) : null,
       knobs.language === 'vyper' && facets.supportsExperimental ? React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'knob-l' }, 'Venom'),
         React.createElement(SegmentedControl, {
@@ -593,6 +611,7 @@ function SectionMetricControl({ metric, setMetric }) {
 // Drilldown matrix
 // ============================================================
 const ALL_FILTER = '__all__';
+const BALANCED_RUN_FILTER = { op: 'in', values: ['200', 'n/a'] };
 const DRILL_AXES = [
   { id: 'suite', label: 'Suite' },
   { id: 'benchmark', label: 'Benchmark' },
@@ -601,6 +620,7 @@ const DRILL_AXES = [
   { id: 'language', label: 'Compiler' },
   { id: 'version', label: 'Version' },
   { id: 'mode', label: 'Mode' },
+  { id: 'runs', label: 'Runs' },
   { id: 'profile', label: 'Profile' },
   { id: 'status', label: 'Status' },
   { id: 'scenario', label: 'Scenario' },
@@ -627,6 +647,7 @@ const DEFAULT_DRILL_VIEW = {
     language: { op: 'in', values: ['solidity'] },
     state: { op: 'in', values: ['cold'] },
     family: { op: 'in', values: ['dispatch_N'] },
+    runs: BALANCED_RUN_FILTER,
   },
 };
 const DRILL_PRESETS = [
@@ -642,7 +663,7 @@ const DRILL_PRESETS = [
       rows: ['suite'],
       columns: ['language'],
       aggregation: 'median',
-      filters: { state: { op: 'in', values: ['cold'] } },
+      filters: { state: { op: 'in', values: ['cold'] }, runs: BALANCED_RUN_FILTER },
     },
   },
   {
@@ -655,6 +676,7 @@ const DRILL_PRESETS = [
       filters: {
         state: { op: 'in', values: ['cold'] },
         status: { op: 'in', values: ['ok'] },
+        runs: BALANCED_RUN_FILTER,
       },
     },
   },
@@ -665,7 +687,7 @@ const DRILL_PRESETS = [
       rows: ['mode'],
       columns: ['language'],
       aggregation: 'median',
-      filters: { state: { op: 'in', values: ['cold'] } },
+      filters: { state: { op: 'in', values: ['cold'] }, runs: BALANCED_RUN_FILTER },
     },
   },
   {
@@ -675,7 +697,7 @@ const DRILL_PRESETS = [
       rows: ['profile'],
       columns: ['status'],
       aggregation: 'failure_count',
-      filters: {},
+      filters: { runs: BALANCED_RUN_FILTER },
     },
   },
 ];
@@ -719,6 +741,11 @@ function drillModeKey(profile, row) {
   return `${compiler}|${drillModeLabel(profile)}`;
 }
 
+function drillRunsKey(profile) {
+  const runs = profile ? Bench.profileOptimizerRuns(profile) : null;
+  return runs == null ? 'n/a' : String(runs);
+}
+
 function deploymentVariantLabel(value) {
   if (!value || value === 'artifact') return value || 'artifact';
   if (value === 'standard') return 'standard';
@@ -735,6 +762,7 @@ function drillField(row, profile, metric, axis) {
     case 'language': return row.language || profile?.language || 'unknown';
     case 'version': return drillVersionKey(profile, row);
     case 'mode': return drillModeKey(profile, row);
+    case 'runs': return drillRunsKey(profile);
     case 'profile': return row.profile_id;
     case 'status': return row.status === 'ok' ? 'ok' : 'compile_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
@@ -756,6 +784,7 @@ function drillValueLabel(axis, value) {
     const [compiler, mode] = String(value).split('|');
     return `${drillCompilerLabel(compiler)} ${mode || 'unknown'}`;
   }
+  if (axis === 'runs') return value === 'n/a' ? 'n/a' : `runs${value}`;
   if (axis === 'deployment') return deploymentVariantLabel(value);
   if (axis === 'profile') return Bench.profileLabel(value);
   if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value;
@@ -765,6 +794,7 @@ function drillValueLabel(axis, value) {
 function drillValueRank(axis, value) {
   if (value === 'none') return Number.POSITIVE_INFINITY;
   if (axis === 'n') return Number(value);
+  if (axis === 'runs') return value === 'n/a' ? Number.POSITIVE_INFINITY : Number(value);
   if (axis === 'version') {
     const [, version] = String(value).split('|');
     return Bench.versionRank(version || value);
@@ -857,6 +887,10 @@ function normalizeDrillView(view, records) {
 function drillFilterLabel(axis, filter) {
   const values = filter?.values || [];
   if (!values.length) return `${DRILL_AXIS_BY_ID[axis].label}: all`;
+  const stringValues = values.map(String);
+  if (axis === 'runs' && stringValues.includes('200') && stringValues.includes('n/a') && values.length === 2) {
+    return `${DRILL_AXIS_BY_ID[axis].label}: balanced (runs200)`;
+  }
   if (values.length === 1) return `${DRILL_AXIS_BY_ID[axis].label}: ${drillValueLabel(axis, values[0])}`;
   return `${DRILL_AXIS_BY_ID[axis].label}: ${values.length} selected`;
 }
@@ -1631,12 +1665,12 @@ function CompilerConfigurations() {
       key: 'solidity',
       compiler: 'Solidity',
       engine: 'solc',
-      axis: 'Codegen axis',
+      axis: 'Codegen axis · optimizer-runs axis',
       meta: compilerMeta('solidity', ['noopt', 'legacy', 'viaIR']),
       modes: [
         ['noopt', '--no-optimize', CONFIG_EXPLAINERS['solidity:noopt']],
-        ['legacy', '--optimize=200', CONFIG_EXPLAINERS['solidity:legacy']],
-        ['viaIR', '--via-ir', CONFIG_EXPLAINERS['solidity:viaIR']],
+        ['legacy', '--optimize --optimize-runs N', CONFIG_EXPLAINERS['solidity:legacy']],
+        ['viaIR', '--via-ir --optimize-runs N', CONFIG_EXPLAINERS['solidity:viaIR']],
       ],
     },
     {

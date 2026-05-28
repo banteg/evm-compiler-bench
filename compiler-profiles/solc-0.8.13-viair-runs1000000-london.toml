@@ -1,0 +1,8 @@
+id = "solc-0.8.13-viair-runs1000000"
+language = "solidity"
+compiler = "solc-0.8.13"
+optimizer = true
+optimizer_runs = 1000000
+via_ir = true
+source_variant = "solidity-0.8"
+evm_version = "london"

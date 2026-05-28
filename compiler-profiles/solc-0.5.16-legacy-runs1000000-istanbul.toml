@@ -1,0 +1,8 @@
+id = "solc-0.5.16-legacy-runs1000000"
+language = "solidity"
+compiler = "solc-0.5.16"
+optimizer = true
+optimizer_runs = 1000000
+via_ir = false
+source_variant = "solidity-0.5"
+evm_version = "istanbul"

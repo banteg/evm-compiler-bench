@@ -1,0 +1,7 @@
+id = "solc-latest-viair-runs10000"
+language = "solidity"
+compiler = "solc"
+optimizer = true
+optimizer_runs = 10000
+via_ir = true
+evm_version = "latest-shared"

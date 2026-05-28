@@ -187,8 +187,10 @@
   }
   function profileDisplayLabel(p){
     const opt = profileOptimizer(p);
+    const runs = profileOptimizerRuns(p);
+    const runsLabel = runs == null ? '' : ` runs${runs}`;
     const venom = p.experimental_codegen ? ' + Venom' : '';
-    return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)} ${opt}${venom}`;
+    return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)} ${opt}${runsLabel}${venom}`;
   }
   function profileVersionKey(p){
     const prefix = p.language === 'solidity' ? 'solc-latest-' : 'vyper-latest-';
@@ -209,8 +211,8 @@
   function profileOptimizer(p){
     const id = String(p.id);
     if (p.language === 'solidity'){
-      if (id.includes('viair-runs200')) return 'viaIR';
-      if (id.includes('legacy-runs200')) return 'legacy';
+      if (id.match(/viair-runs\d+/)) return 'viaIR';
+      if (id.match(/legacy-runs\d+/)) return 'legacy';
       if (id.includes('noopt')) return 'noopt';
     }
     if (p.language === 'vyper'){
@@ -221,11 +223,21 @@
     }
     return 'default';
   }
+  function optimizerUsesRuns(lang, optimizer){
+    return lang === 'solidity' && (optimizer === 'legacy' || optimizer === 'viaIR');
+  }
+  function profileOptimizerRuns(p){
+    if (!optimizerUsesRuns(p.language, profileOptimizer(p))) return null;
+    const m = String(p.id).match(/-runs(\d+)/);
+    const runs = m ? Number(m[1]) : Number(p.optimizer_runs);
+    return Number.isFinite(runs) && runs > 0 ? runs : null;
+  }
   function profileKnobs(p){
     return {
       language: p.language,
       versionKey: profileVersionKey(p),
       optimizer: profileOptimizer(p),
+      runs: profileOptimizerRuns(p),
       experimental: !!p.experimental_codegen,
     };
   }
@@ -235,6 +247,7 @@
       return (!desired.language || k.language === desired.language)
         && (!desired.versionKey || k.versionKey === desired.versionKey)
         && (!desired.optimizer || k.optimizer === desired.optimizer)
+        && (desired.runs == null || k.runs === Number(desired.runs))
         && (desired.experimental == null || k.experimental === desired.experimental);
     });
   }
@@ -246,16 +259,21 @@
   }
   function resolveProfile(desired){
     const cands = matchingProfiles({ language: desired.language });
+    const wantedRuns = desired.runs == null
+      ? defaultOptimizerRuns(desired.language, desired.versionKey, desired.optimizer)
+      : Number(desired.runs);
+    const runsMatch = k => !optimizerUsesRuns(k.language, k.optimizer) || wantedRuns == null || k.runs === wantedRuns;
     const exact = cands.find(p => {
       const k = profileKnobs(p);
       return k.versionKey === desired.versionKey
           && k.optimizer === desired.optimizer
+          && runsMatch(k)
           && k.experimental === desired.experimental;
     });
     if (exact) return exact.id;
     const fallback1 = cands.find(p => {
       const k = profileKnobs(p);
-      return k.versionKey === desired.versionKey && k.optimizer === desired.optimizer;
+      return k.versionKey === desired.versionKey && k.optimizer === desired.optimizer && runsMatch(k);
     });
     if (fallback1) return fallback1.id;
     const fallback2 = cands.find(p => profileVersionKey(p) === desired.versionKey);
@@ -292,6 +310,8 @@
     const ids = new Set(D.profiles.map(p => p.id));
     const out = [];
     for (const p of D.profiles){
+      const runs = profileOptimizerRuns(p);
+      if (p.language === 'solidity' && runs != null && runs !== 200) continue;
       if (p.language === 'vyper' && profileOptimizer(p) === 'default') {
         const hasExplicitNone = D.profiles.some(candidate =>
           candidate.language === 'vyper'
@@ -365,7 +385,7 @@
   }
 
   // List allowed versions / optimizers for a selected language/version.
-  function profileFacets(lang, versionKey){
+  function profileFacets(lang, versionKey, optimizer){
     const ps = matchingProfiles({ language: lang });
     const versionProfiles = versionKey ? ps.filter(p => profileVersionKey(p) === versionKey) : ps;
     const versions = [...new Set(ps.map(profileVersionKey))]
@@ -374,13 +394,21 @@
     for (const p of ps) versionLabels.set(profileVersionKey(p), profileVersionLabel(p));
     const optimizers = [...new Set(versionProfiles.map(profileOptimizer))]
       .sort((a,b) => optimizerRank(a) - optimizerRank(b));
+    const runProfiles = optimizer ? versionProfiles.filter(p => profileOptimizer(p) === optimizer) : versionProfiles;
+    const runs = [...new Set(runProfiles.map(profileOptimizerRuns).filter(v => v != null))]
+      .sort((a,b) => a - b);
     const supportsExperimental = versionProfiles.some(p => p.experimental_codegen);
-    return { versions, versionLabels, optimizers, supportsExperimental };
+    return { versions, versionLabels, optimizers, runs, supportsExperimental };
   }
   function defaultOptimizerForVersion(lang, versionKey){
     const optimizers = [...new Set(matchingProfiles({ language: lang, versionKey }).map(profileOptimizer))]
       .sort((a,b) => optimizerRank(a) - optimizerRank(b));
     return preferredOptimizer(lang, optimizers);
+  }
+  function defaultOptimizerRuns(lang, versionKey, optimizer){
+    if (!optimizerUsesRuns(lang, optimizer)) return null;
+    const runs = profileFacets(lang, versionKey, optimizer).runs;
+    return runs.includes(200) ? 200 : (runs[0] ?? null);
   }
   function profileOptionExists(desired){
     return matchingProfiles(desired).length > 0;
@@ -447,8 +475,10 @@
     if (!p) return id;
     const version = p.compiler_version || profileVersionKey(p);
     const opt = profileOptimizer(p);
+    const runs = profileOptimizerRuns(p);
+    const runsLabel = runs == null ? '' : ` runs${runs}`;
     const venom = p.experimental_codegen ? ' venom' : '';
-    return `${version} ${opt}${venom}`;
+    return `${version} ${opt}${runsLabel}${venom}`;
   }
 
   function failureGroups(){
@@ -516,8 +546,8 @@
     compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage,
-    versionRank, optimizerRank, profileFacets, profilesByLang,
-    defaultOptimizerForVersion, profileOptionExists,
+    profileOptimizerRuns, versionRank, optimizerRank, profileFacets, profilesByLang,
+    defaultOptimizerForVersion, defaultOptimizerRuns, profileOptionExists,
     versionAxisRows, latestBaselineProfile,
     failureGroups, failureCompilerGroups, failureReason, profileCompactLabel,
     profileDisplayLabel,

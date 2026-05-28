@@ -1,0 +1,7 @@
+id = "solc-latest-legacy-runs50"
+language = "solidity"
+compiler = "solc"
+optimizer = true
+optimizer_runs = 50
+via_ir = false
+evm_version = "latest-shared"

@@ -1,0 +1,8 @@
+id = "solc-0.8.30-viair-runs50"
+language = "solidity"
+compiler = "solc-0.8.30"
+optimizer = true
+optimizer_runs = 50
+via_ir = true
+source_variant = "solidity-0.8"
+evm_version = "cancun"
