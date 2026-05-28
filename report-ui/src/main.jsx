@@ -136,6 +136,7 @@ function buildHeadlines() {
 }
 
 const HEADLINES = buildHeadlines();
+const REPORT_VERSION = 'v2';
 
 // ============================================================
 // Top bar
@@ -177,7 +178,7 @@ function Hero() {
   return React.createElement('section', { className: 'shell hero' },
     React.createElement('div', { className: 'hero-eyebrow' },
       React.createElement('span', { className: 'dot' }),
-      `Compiler bench · v${Bench.D.schema_version} · ${gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
+      `Compiler bench · ${REPORT_VERSION} · ${gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
     ),
     React.createElement('h1', { className: 'hero-title' },
       'The ',
