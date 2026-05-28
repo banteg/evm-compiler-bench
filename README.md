@@ -172,9 +172,8 @@ just zip-design
   to the checked-in latest syntax baseline,
   `production_conformance` is for broad real-contract behavior checks that
   preserve upstream scope without claiming a latest-vs-latest shootout,
-  `diagnostic_layout_matched` is for manual parity tricks, and
-  `fixture_scoped_port` is for deterministic harness-dependent ports. Real-derived
-  specs distinguish `source_lane` from `counterpart_lane`; pinned
+  and `diagnostic_layout_matched` is for manual parity tricks. Real-derived
+  specs still distinguish `source_lane` from `counterpart_lane`; pinned
   upstream-historical sources are not treated as latest-stable shootout
   sources.
 - `cargo run --release -- validate` enforces latest-lane pragmas on checked-in

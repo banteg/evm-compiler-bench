@@ -57,15 +57,12 @@ Every real-derived spec also declares lane metadata:
   for latest-vs-latest headline comparisons.
 - `diagnostic_layout_matched`: manual packing, assembly, unsafe math, or other
   parity tricks useful for diagnosis but not headline comparison.
-- `fixture_scoped_port`: real contract behavior over deterministic benchmark
-  fixtures. This is a source/counterpart lane for harness-dependent ports, not
-  a benchmark-level headline lane.
 
 `source_lane` is the checked-in source-language original side,
 `counterpart_lane` is the cross-language port side, and `comparison_lane` is the
 benchmark-level lane used by legacy report consumers. Current real-derived
 specs use `comparison_lane: production_conformance` and
-`counterpart_lane: fixture_scoped_port`. The target source side is
+`counterpart_lane: latest_idiomatic`. The target source side is
 `source_lane: latest_syntax_original`, with pinned upstream files retained only
 as provenance/reference inputs.
 
@@ -94,10 +91,10 @@ ports cover additional benchmark behavior.
 
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
-| `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
-| `yearn_vault_v2` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `contracts/Vault.vy`, with pinned upstream retained for provenance. | Solidity port covers the monolithic V2 vault API, ERC20 share accounting and permit, deposits/withdrawals, governance/management controls, strategy queue/debt/report accounting, locked profit, and optional-return ERC20 transfers. | Intentional boundaries remain for deterministic asset/strategy fixtures, representative common workflows, exact Vyper bounded-string/bytes decoder behavior, revert data, and storage layout. |
-| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `fixture_scoped_port` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Intentional boundaries remain for representative third-party fixtures, representative common workflow sequences, exact Vyper bounded-string decoder behavior, and storage layout; the `MAX_QUEUE` cap remains modeled as vault behavior. |
+| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
+| `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
+| `yearn_vault_v2` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `contracts/Vault.vy`, with pinned upstream retained for provenance. | Solidity port covers the monolithic V2 vault API, ERC20 share accounting and permit, deposits/withdrawals, governance/management controls, strategy queue/debt/report accounting, locked profit, and optional-return ERC20 transfers. | Intentional boundaries remain for deterministic asset/strategy fixtures, representative common workflows, exact Vyper bounded-string/bytes decoder behavior, revert data, and storage layout. |
+| `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Intentional boundaries remain for representative third-party fixtures, representative common workflow sequences, exact Vyper bounded-string decoder behavior, and storage layout; the `MAX_QUEUE` cap remains modeled as vault behavior. |
 
 ## Status Legend
 

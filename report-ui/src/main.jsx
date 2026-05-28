@@ -1600,7 +1600,7 @@ function RealDerivedProvenance() {
   const laneLabel = value => ({
     latest_syntax_original: 'latest syntax',
     latest_idiomatic: 'idiomatic',
-    fixture_scoped_port: 'scoped port',
+    fixture_scoped_port: 'idiomatic',
     production_conformance: 'prod conformance',
   }[value] || value || 'n/a');
   return React.createElement('div', { className: 'card' },

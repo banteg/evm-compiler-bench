@@ -33,7 +33,7 @@ real_derived:
   model_kind: real_derived_model
   comparison_lane: production_conformance
   source_lane: latest_syntax_original
-  counterpart_lane: fixture_scoped_port
+  counterpart_lane: latest_idiomatic
   upstream_project: Uniswap V2 Core
   repository_url: "https://github.com/Uniswap/v2-core"
   source_commit: "6a9e7c97860676e0992f22a49665760444c1cdf5"

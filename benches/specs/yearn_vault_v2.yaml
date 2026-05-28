@@ -54,7 +54,7 @@ real_derived:
   model_kind: real_derived_model
   comparison_lane: production_conformance
   source_lane: latest_syntax_original
-  counterpart_lane: fixture_scoped_port
+  counterpart_lane: latest_idiomatic
   upstream_project: Yearn Vaults V2
   repository_url: "https://github.com/yearn/yearn-vaults"
   source_commit: "97ca1b2e4fcf20f4be0ff456dabd020bfeb6697b"
