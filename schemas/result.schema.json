@@ -327,6 +327,7 @@
       "required": [
         "scenario",
         "evm_fork",
+        "deployment_variant",
         "state_access_profile",
         "metadata_mode",
         "internal_create_gas",
@@ -343,6 +344,21 @@
       "properties": {
         "scenario": { "type": "string" },
         "evm_fork": { "type": "string" },
+        "deployment_variant": {
+          "enum": [
+            "standard",
+            "curve_oracle",
+            "curve_rebasing",
+            "curve_erc4626",
+            "curve_three_coin",
+            "curve_eight_coin",
+            "curve_five_coin",
+            "curve_four_coin",
+            "curve_six_coin",
+            "curve_seven_coin",
+            "uniswap_create2"
+          ]
+        },
         "state_access_profile": { "enum": ["cold", "warm", "mixed"] },
         "metadata_mode": { "enum": ["on", "off"] },
         "internal_create_gas": { "type": "integer", "minimum": 0 },

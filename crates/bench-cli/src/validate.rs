@@ -2718,6 +2718,7 @@ mod tests {
             "gas": {
                 "scenario": "noop",
                 "evm_fork": "prague",
+                "deployment_variant": "standard",
                 "state_access_profile": "cold",
                 "metadata_mode": "off",
                 "internal_create_gas": 0,

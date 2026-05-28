@@ -5,7 +5,7 @@
   const METRICS = [
     { id: 'harness_call_gas',       label: 'Harness call gas', short: 'Runtime gas',  unit: 'gas',  lowerBetter: true, hero: true },
     { id: 'runtime_bytes_stripped', label: 'Runtime bytes',    short: 'Code size',    unit: 'B',    lowerBetter: true },
-    { id: 'internal_create_gas',    label: 'Internal create gas', short: 'Deploy gas', unit: 'gas', lowerBetter: true },
+    { id: 'internal_create_gas',    label: 'Harness deployment gas', short: 'Scenario deploy', unit: 'gas', lowerBetter: true },
     { id: 'compile_wall_ms',        label: 'Compile wall time',short: 'Compile time', unit: 'ms',   lowerBetter: true },
   ];
 
@@ -33,20 +33,30 @@
     }
   }
   function scenarioKey(r){
-    return [r.suite, r.benchmark_id, r.gas?.scenario ?? 'artifact', r.gas?.state_access_profile ?? 'artifact', r.parameter_value ?? ''].join('|');
+    return [
+      r.suite,
+      r.benchmark_id,
+      r.gas?.scenario ?? 'artifact',
+      r.gas?.state_access_profile ?? 'artifact',
+      r.gas?.deployment_variant ?? 'artifact',
+      r.parameter_value ?? '',
+    ].join('|');
   }
   function scenarioLabel(r){
     const sc = r.gas?.scenario ?? 'artifact';
     const st = r.gas?.state_access_profile ?? 'artifact';
+    const variant = r.gas?.deployment_variant && r.gas.deployment_variant !== 'standard'
+      ? ` · ${r.gas.deployment_variant}`
+      : '';
     const n  = r.parameter_value == null ? '' : ` N=${r.parameter_value}`;
-    return `${r.benchmark_id}${n} · ${sc} · ${st}`;
+    return `${r.benchmark_id}${n} · ${sc} · ${st}${variant}`;
   }
   function comparisonLevel(metric){
-    return metric === 'harness_call_gas' ? 'scenario' : 'artifact';
+    return metric === 'harness_call_gas' || metric === 'internal_create_gas' ? 'scenario' : 'artifact';
   }
   function comparisonUnit(metric){
     if (comparisonLevel(metric) === 'scenario') {
-      return { singular: 'scenario', plural: 'scenarios', match: 'suite/benchmark/scenario/state' };
+      return { singular: 'scenario', plural: 'scenarios', match: 'suite/benchmark/scenario/access/deployment' };
     }
     return { singular: 'artifact', plural: 'artifacts', match: 'suite/benchmark/artifact' };
   }

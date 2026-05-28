@@ -25,6 +25,9 @@
               "curve_three_coin",
               "curve_eight_coin",
               "curve_five_coin",
+              "curve_four_coin",
+              "curve_six_coin",
+              "curve_seven_coin",
               "uniswap_create2"
             ]
           },

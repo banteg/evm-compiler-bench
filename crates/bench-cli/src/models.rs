@@ -237,6 +237,22 @@ impl DeploymentVariant {
             Self::UniswapCreate2 => "1",
         }
     }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::CurveOracle => "curve_oracle",
+            Self::CurveRebasing => "curve_rebasing",
+            Self::CurveErc4626 => "curve_erc4626",
+            Self::CurveThreeCoin => "curve_three_coin",
+            Self::CurveEightCoin => "curve_eight_coin",
+            Self::CurveFiveCoin => "curve_five_coin",
+            Self::CurveFourCoin => "curve_four_coin",
+            Self::CurveSixCoin => "curve_six_coin",
+            Self::CurveSevenCoin => "curve_seven_coin",
+            Self::UniswapCreate2 => "uniswap_create2",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]

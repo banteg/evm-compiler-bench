@@ -604,6 +604,7 @@ const DRILL_AXES = [
   { id: 'profile', label: 'Profile' },
   { id: 'status', label: 'Status' },
   { id: 'scenario', label: 'Scenario' },
+  { id: 'deployment', label: 'Deployment' },
   { id: 'state', label: 'Access' },
 ];
 const DRILL_AXIS_BY_ID = Object.fromEntries(DRILL_AXES.map(axis => [axis.id, axis]));
@@ -718,6 +719,12 @@ function drillModeKey(profile, row) {
   return `${compiler}|${drillModeLabel(profile)}`;
 }
 
+function deploymentVariantLabel(value) {
+  if (!value || value === 'artifact') return value || 'artifact';
+  if (value === 'standard') return 'standard';
+  return value.replace(/_/g, ' ');
+}
+
 function drillField(row, profile, metric, axis) {
   const artifactLevel = Bench.comparisonLevel(metric) === 'artifact';
   switch (axis) {
@@ -731,6 +738,7 @@ function drillField(row, profile, metric, axis) {
     case 'profile': return row.profile_id;
     case 'status': return row.status === 'ok' ? 'ok' : 'compile_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
+    case 'deployment': return artifactLevel ? 'artifact' : (row.gas?.deployment_variant || 'standard');
     case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
     default: return 'unknown';
   }
@@ -748,6 +756,7 @@ function drillValueLabel(axis, value) {
     const [compiler, mode] = String(value).split('|');
     return `${drillCompilerLabel(compiler)} ${mode || 'unknown'}`;
   }
+  if (axis === 'deployment') return deploymentVariantLabel(value);
   if (axis === 'profile') return Bench.profileLabel(value);
   if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value;
   return value;
@@ -1505,7 +1514,7 @@ function Methodology() {
     {
       tag: 'D',
       title: 'Metric-aware geomeans',
-      body: 'Runtime gas is aggregated over matched headline scenarios. Artifact metrics such as bytecode size, deploy gas, and compile time are deduplicated per benchmark artifact before computing ratios.'
+      body: 'Runtime gas is aggregated over matched headline scenarios. Current harness deployment gas is scenario/deployment-variant scoped; bytecode size and compile time are deduplicated per benchmark artifact before computing ratios.'
     },
     {
       tag: 'E',

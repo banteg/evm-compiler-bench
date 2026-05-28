@@ -371,7 +371,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "D",
                 "title": "Metric-aware geomeans",
-                "body": "Runtime gas is aggregated over matched headline scenarios. Artifact metrics such as bytecode size, deploy gas, and compile time are deduplicated per benchmark artifact before computing ratios."
+                "body": "Runtime gas is aggregated over matched headline scenarios. Current harness deployment gas is scenario/deployment-variant scoped; bytecode size and compile time are deduplicated per benchmark artifact before computing ratios."
             },
             {
                 "tag": "E",
@@ -785,6 +785,12 @@ fn row(
         &failure_links,
         "property",
     );
+    let deployment_variant = scenario_file
+        .scenarios
+        .iter()
+        .find(|scenario| scenario.name == gas.scenario)
+        .map(|scenario| scenario.deployment_variant.as_str())
+        .unwrap_or("standard");
     json!({
         "status": "ok",
         "benchmark_id": gas.benchmark_id,
@@ -831,6 +837,7 @@ fn row(
         "gas": {
             "scenario": gas.scenario,
             "evm_fork": harness_evm_version,
+            "deployment_variant": deployment_variant,
             "state_access_profile": gas.state_access_profile.as_str(),
             "metadata_mode": gas.metadata_mode.as_str(),
             "internal_create_gas": gas.internal_create_gas,
