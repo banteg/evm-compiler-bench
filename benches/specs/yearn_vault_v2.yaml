@@ -61,9 +61,6 @@ real_derived:
   source_path: "contracts/Vault.vy"
   source_language: vyper
   source_compiler: vyper
-  source_profiles:
-    - vyper-latest-gas
-    - vyper-latest-none
   source_contract: Vault
   source_blob: "1159912c093b12cf8d758f71d2d568cda69990af"
   upstream_license: GNU AGPLv3

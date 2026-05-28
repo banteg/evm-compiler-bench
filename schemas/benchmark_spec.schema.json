@@ -43,7 +43,6 @@
         "source_path",
         "source_language",
         "source_compiler",
-        "source_profiles",
         "source_contract",
         "source_blob",
         "upstream_license",
@@ -98,11 +97,6 @@
         "source_path": { "type": "string" },
         "source_language": { "enum": ["solidity", "vyper"] },
         "source_compiler": { "type": "string" },
-        "source_profiles": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 1
-        },
         "source_contract": { "type": "string" },
         "source_blob": { "type": "string" },
         "upstream_license": { "type": "string" },
@@ -182,42 +176,6 @@
           "then": {
             "properties": {
               "source_lane": { "const": "latest_idiomatic" }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": ["source_lane", "source_language"],
-            "properties": {
-              "source_lane": {
-                "enum": ["latest_syntax_original", "latest_idiomatic"]
-              },
-              "source_language": { "const": "solidity" }
-            }
-          },
-          "then": {
-            "properties": {
-              "source_profiles": {
-                "items": { "pattern": "^solc" }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": ["source_lane", "source_language"],
-            "properties": {
-              "source_lane": {
-                "enum": ["latest_syntax_original", "latest_idiomatic"]
-              },
-              "source_language": { "const": "vyper" }
-            }
-          },
-          "then": {
-            "properties": {
-              "source_profiles": {
-                "items": { "pattern": "^vyper" }
-              }
             }
           }
         }

@@ -198,10 +198,10 @@ just zip-design
   source rows from being mistaken for the benchmark comparison lane.
 - During compilation, profile-specific source variants rewrite version pragmas
   to the resolved compiler patch range and apply backward syntax rewrites where
-  the older language version has enough features. `source_profiles` records
-  intended source-language coverage; it may include historical compiler
-  profiles, but those profiles compile generated compatibility variants of the
-  checked-in latest source rather than the pinned upstream historical source.
+  the older language version has enough features. Per-profile source coverage is
+  recorded by `source_variants`; those profiles compile generated compatibility
+  variants of the checked-in latest source rather than the pinned upstream
+  historical source.
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The corpus targets faithful idiomatic ports under explicit scope boundaries;
   `excluded_features` document what is intentionally outside the benchmark and

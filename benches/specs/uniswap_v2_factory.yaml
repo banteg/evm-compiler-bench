@@ -21,12 +21,6 @@ real_derived:
   source_path: "contracts/UniswapV2Factory.sol"
   source_language: solidity
   source_compiler: solc
-  source_profiles:
-    - solc-latest-legacy-runs200
-    - solc-latest-noopt
-    - solc-latest-viair-runs200
-    - solc-0.5.16-legacy-runs200
-    - solc-0.5.16-noopt
   source_contract: UniswapV2Factory
   source_blob: "a66ad8247b88cbd4e547b0f9dee8fceede51a358"
   upstream_license: GPL-3.0-or-later

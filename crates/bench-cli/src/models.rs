@@ -50,8 +50,6 @@ pub struct Provenance {
     pub source_path: String,
     pub source_language: Language,
     pub source_compiler: String,
-    #[serde(default)]
-    pub source_profiles: Vec<String>,
     pub source_contract: String,
     #[serde(default)]
     pub source_blob: Option<String>,

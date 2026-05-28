@@ -1615,18 +1615,12 @@ function RealDerivedProvenance() {
           React.createElement('th', null, 'Benchmark'),
           React.createElement('th', null, 'Source'),
           React.createElement('th', null, 'Port'),
-          React.createElement('th', null, 'Profiles'),
           React.createElement('th', null, 'Sources')
         )
       ),
       React.createElement('tbody', null,
         models.map(model => {
           const p = model.provenance || {};
-          const sourceProfiles = Array.isArray(p.source_profiles) ? p.source_profiles : [];
-          const sourceProfileTitle = sourceProfiles.length ? sourceProfiles.join('\n') : 'n/a';
-          const sourceProfileLabel = sourceProfiles.length
-            ? `${sourceProfiles.length} profile${sourceProfiles.length === 1 ? '' : 's'}`
-            : 'n/a';
           const compiledSources = model.compiled_sources || [];
           const compiledTitle = compiledSources.length
             ? compiledSources
@@ -1640,7 +1634,6 @@ function RealDerivedProvenance() {
             React.createElement('td', { className: 'scenario' }, model.benchmark_id),
             React.createElement('td', null, laneLabel(p.source_lane)),
             React.createElement('td', null, laneLabel(p.counterpart_lane)),
-            React.createElement('td', { className: 'path-cell', title: sourceProfileTitle }, sourceProfileLabel),
             React.createElement('td', { className: 'path-cell', title: compiledTitle }, compiledLabel)
           );
         })
