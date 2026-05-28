@@ -421,29 +421,73 @@
 
   function failureReason(error){
     const e = normalizedFailureText(error);
-    if (e.includes('YulException') && e.includes('too deep in the stack')) {
+    const diagnostic = primaryFailureDiagnostic(e);
+    const focused = diagnostic ? `${diagnostic}\n${e}` : e;
+    if (focused.includes('YulException') && focused.includes('too deep in the stack')) {
       return 'Yul stack depth while lowering viaIR';
     }
-    if (e.includes('Stack too deep')) {
+    if (focused.includes('Stack too deep')) {
       return 'Stack too deep';
     }
-    if (e.includes('Unsupported dup depth')) {
-      const m = e.match(/Unsupported dup depth\s+\d+/);
-      return m ? m[0] : 'Unsupported dup depth';
+    if (focused.includes('Unsupported dup depth') || focused.includes('Unsupported swap depth')) {
+      const m = focused.match(/Unsupported (?:dup|swap) depth\s+\d+/);
+      return m ? m[0] : 'Unsupported dup/swap depth';
     }
-    if (e.includes('reserved keyword')) {
-      const m = e.match(/'[^']+' is a reserved keyword/);
+    if (focused.includes('reserved keyword')) {
+      const m = focused.match(/'[^']+' is a reserved keyword/);
       return m ? m[0] : 'Reserved keyword syntax gap';
     }
-    if (e.includes('UnknownType') && e.includes('DynArray')) {
+    if (focused.includes('UnknownType') && focused.includes('DynArray')) {
       return 'DynArray unsupported in this Vyper version';
     }
-    if (e.includes('CompilerPanic')) {
-      const m = e.match(/CompilerPanic:\s*([^\n]+)/);
+    if (focused.includes('`isqrt` builtin was removed')) {
+      return '`isqrt` builtin removed in this Vyper version';
+    }
+    if (focused.includes('CompilerPanic')) {
+      const m = focused.match(/CompilerPanic:\s*([^\n]+)/);
       return m ? `CompilerPanic: ${m[1]}` : 'Compiler panic';
     }
-    const first = e.split('\n').map(s => s.trim()).find(Boolean);
+    if (focused.includes('AssertionError')) {
+      return 'Compiler assertion failure';
+    }
+    const first = diagnostic || firstUsefulFailureLine(e);
     return first ? first.slice(0, 96) : 'Compiler error';
+  }
+
+  function primaryFailureDiagnostic(text){
+    const diagnostics = failureLines(text)
+      .map(cleanDiagnosticPrefix)
+      .filter(line => isCompilerDiagnostic(line));
+    return diagnostics.find(line => !isContainerDiagnostic(line)) || diagnostics[0] || '';
+  }
+
+  function firstUsefulFailureLine(text){
+    return failureLines(text)
+      .map(cleanDiagnosticPrefix)
+      .find(line => !isFailureWrapperLine(line)) || '';
+  }
+
+  function failureLines(text){
+    return String(text || '').split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
+  function cleanDiagnosticPrefix(line){
+    return line.replace(/^(?:vyper\.exceptions\.|solcx\.exceptions\.)/, '').replace(/\.$/, '');
+  }
+
+  function isCompilerDiagnostic(line){
+    return /^(?:[A-Za-z_][\w]*(?:Exception|Error|Panic)|CompilerPanic|UnknownType|UndeclaredDefinition|StackTooDeep|YulException|ParserError|TypeError|DeclarationError):/.test(line);
+  }
+
+  function isContainerDiagnostic(line){
+    return /^(?:VyperException|UnknownType|StructureException): Compilation failed with the following errors:/.test(line);
+  }
+
+  function isFailureWrapperLine(line){
+    return /^(?:solc|vyper|command) compile failed with status /.test(line)
+      || line === 'stdout:'
+      || line === 'stderr:'
+      || line.startsWith('Error compiling:');
   }
 
   function normalizedFailureText(error){
