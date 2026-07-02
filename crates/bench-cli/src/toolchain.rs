@@ -20,8 +20,12 @@ const VYPER_ALPHA_VERSION: &str = "0.5.0a1";
 const LEGACY_VYPER_PYTHON: &str = "3.11";
 const EVM_ORDER: &[&str] = &["osaka", "prague", "cancun", "shanghai", "paris", "london"];
 
-pub fn resolve_toolchains(root: &Path, offline: bool) -> Result<Toolchains> {
-    let compiler_refs = compiler_refs_from_profiles(root)?;
+pub fn resolve_toolchains(
+    root: &Path,
+    offline: bool,
+    profile_filter: &[String],
+) -> Result<Toolchains> {
+    let compiler_refs = compiler_refs_from_profiles(root, profile_filter)?;
     let extra_compilers: BTreeSet<_> = compiler_refs
         .iter()
         .map(|compiler_ref| compiler_ref.compiler.clone())
@@ -333,20 +337,19 @@ fn cached_fe_latest(root: &Path) -> Result<Option<Toolchain>> {
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
         .filter(|path| path.is_dir())
         .collect();
-    versions.sort_by(|a, b| fe_version_sort_key(a).cmp(&fe_version_sort_key(b)));
-    let Some(latest) = versions.into_iter().next_back() else {
-        return Ok(None);
-    };
-    let binary = latest.join(asset_name);
-    if !binary.exists() {
-        return Ok(None);
+    versions.sort_by_key(|path| fe_version_sort_key(path));
+    for version in versions.into_iter().rev() {
+        let binary = version.join(asset_name);
+        if binary.exists() {
+            return Ok(Some(fe_toolchain(
+                binary,
+                "github_release_cache".to_string(),
+                "github_release_cache",
+                "stable",
+            )?));
+        }
     }
-    Ok(Some(fe_toolchain(
-        binary,
-        "github_release_cache".to_string(),
-        "github_release_cache",
-        "stable",
-    )?))
+    Ok(None)
 }
 
 fn fe_version_sort_key(path: &Path) -> (u64, u64, u64) {
@@ -613,11 +616,15 @@ fn version_tuple_loose(version: &str) -> Option<(u64, u64, u64)> {
 
 #[derive(Debug, Deserialize)]
 struct ProfileCompilerRef {
+    id: String,
     language: Language,
     compiler: String,
 }
 
-fn compiler_refs_from_profiles(root: &Path) -> Result<Vec<ProfileCompilerRef>> {
+fn compiler_refs_from_profiles(
+    root: &Path,
+    profile_filter: &[String],
+) -> Result<Vec<ProfileCompilerRef>> {
     let mut refs = Vec::new();
     let profiles_dir = root.join("compiler-profiles");
     if !profiles_dir.exists() {
@@ -632,6 +639,29 @@ fn compiler_refs_from_profiles(root: &Path) -> Result<Vec<ProfileCompilerRef>> {
         let compiler_ref: ProfileCompilerRef =
             toml::from_str(&text).with_context(|| format!("parsing {}", entry.path().display()))?;
         refs.push(compiler_ref);
+    }
+    if !profile_filter.is_empty() {
+        let available = refs
+            .iter()
+            .map(|compiler_ref| compiler_ref.id.as_str())
+            .collect::<BTreeSet<_>>();
+        let requested = profile_filter
+            .iter()
+            .map(|profile| profile.as_str())
+            .collect::<BTreeSet<_>>();
+        let unknown = requested
+            .iter()
+            .filter(|profile| !available.contains(**profile))
+            .copied()
+            .collect::<Vec<_>>();
+        if !unknown.is_empty() {
+            let available = available.into_iter().collect::<Vec<_>>().join(", ");
+            bail!(
+                "unknown compiler profile(s): {}; available profiles: {available}",
+                unknown.join(", ")
+            );
+        }
+        refs.retain(|compiler_ref| requested.contains(compiler_ref.id.as_str()));
     }
     Ok(refs)
 }
@@ -743,7 +773,11 @@ struct GithubAsset {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_solc_version, parse_vyper_version, stable_version_tuple};
+    use super::{
+        cached_fe_latest, compiler_refs_from_profiles, fe_release_asset_name, make_executable,
+        parse_solc_version, parse_vyper_version, stable_version_tuple,
+    };
+    use std::fs;
 
     #[test]
     fn parses_solc_version() {
@@ -769,5 +803,57 @@ mod tests {
     fn classifies_stable_vyper_versions() {
         assert_eq!(stable_version_tuple("0.4.3"), Some((0, 4, 3)));
         assert_eq!(stable_version_tuple("0.5.0a1"), None);
+    }
+
+    #[test]
+    fn filters_compiler_refs_by_requested_profiles() {
+        let dir = tempfile::tempdir().unwrap();
+        let profiles = dir.path().join("compiler-profiles");
+        fs::create_dir(&profiles).unwrap();
+        fs::write(
+            profiles.join("solc.toml"),
+            r#"
+id = "solc-latest-noopt"
+language = "solidity"
+compiler = "solc"
+"#,
+        )
+        .unwrap();
+        fs::write(
+            profiles.join("fe.toml"),
+            r#"
+id = "fe-latest-O2"
+language = "fe"
+compiler = "fe"
+"#,
+        )
+        .unwrap();
+
+        let filter = vec!["solc-latest-noopt".to_string()];
+        let refs = compiler_refs_from_profiles(dir.path(), &filter).unwrap();
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].id, "solc-latest-noopt");
+        assert_eq!(refs[0].compiler, "solc");
+
+        let missing = vec!["missing".to_string()];
+        assert!(compiler_refs_from_profiles(dir.path(), &missing).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cached_fe_latest_skips_incomplete_newer_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let asset_name = fe_release_asset_name().unwrap();
+        let old_dir = dir.path().join(".cache/toolchains/fe/1.0.0");
+        let new_dir = dir.path().join(".cache/toolchains/fe/2.0.0");
+        fs::create_dir_all(&old_dir).unwrap();
+        fs::create_dir_all(&new_dir).unwrap();
+        let binary = old_dir.join(asset_name);
+        fs::write(&binary, "#!/bin/sh\necho 'fe 1.0.0'\n").unwrap();
+        make_executable(&binary).unwrap();
+
+        let cached = cached_fe_latest(dir.path()).unwrap().unwrap();
+        assert_eq!(cached.version, "1.0.0");
+        assert_eq!(cached.binary_path, binary);
     }
 }

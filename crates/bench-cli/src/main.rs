@@ -92,7 +92,7 @@ fn main() -> Result<()> {
             no_cache,
         } => {
             eprintln!("pipeline: resolving toolchains");
-            let toolchains = resolve_toolchains(&root, offline)?;
+            let toolchains = resolve_toolchains(&root, offline, &profile)?;
             eprintln!("pipeline: generating scale suite");
             let generated = generate_scale_suite(&root, benchmark.as_deref())?;
             let benchmarks = all_benchmarks(generated.benchmarks.clone(), benchmark.as_deref());
@@ -167,7 +167,7 @@ fn main() -> Result<()> {
             no_cache,
         } => {
             eprintln!("pipeline: resolving toolchains");
-            let toolchains = resolve_toolchains(&root, offline)?;
+            let toolchains = resolve_toolchains(&root, offline, &profile)?;
             eprintln!("pipeline: generating scale suite");
             let generated = generate_scale_suite(&root, benchmark.as_deref())?;
             let benchmarks = all_benchmarks(generated.benchmarks, benchmark.as_deref());
@@ -204,7 +204,7 @@ fn main() -> Result<()> {
             }
         }
         Command::Toolchains { offline } => {
-            let toolchains = resolve_toolchains(&root, offline)?;
+            let toolchains = resolve_toolchains(&root, offline, &[])?;
             println!("evm_version={}", toolchains.evm_version);
             for (key, toolchain) in &toolchains.compilers {
                 println!(
