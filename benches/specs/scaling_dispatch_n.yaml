@@ -24,3 +24,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/scaling_dispatch_N/solidity/ScalingDispatchN.sol"
   vyper: "benches/implementations/scaling_dispatch_N/vyper/ScalingDispatchN.vy"
+  fe: "benches/implementations/scaling_dispatch_N/fe/ScalingDispatchN.fe"

@@ -1,0 +1,73 @@
+use std::evm::{Call, Ctx, Log, StorageMap}
+
+msg VaultMsg {
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { account: Address } -> u256,
+    #[selector = sol("totalShares()")]
+    TotalShares -> u256,
+    #[selector = sol("deposit()")]
+    Deposit -> u256,
+    #[selector = sol("withdraw(uint256)")]
+    Withdraw { amount: u256 } -> u256,
+    #[selector = sol("totalAssets()")]
+    TotalAssets -> u256,
+}
+
+#[event]
+struct Deposit {
+    #[indexed]
+    account: Address,
+    amount: u256,
+}
+
+#[event]
+struct Withdraw {
+    #[indexed]
+    account: Address,
+    amount: u256,
+}
+
+struct VaultStore {
+    balances: StorageMap<Address, u256>,
+    total_shares: u256,
+}
+
+pub contract VaultDepositWithdraw uses (ctx: Ctx, log: mut Log, call: mut Call) {
+    mut store: VaultStore
+
+    recv VaultMsg {
+        BalanceOf { account } -> u256 uses store { store.balances.get(key: account) }
+        TotalShares -> u256 uses store { store.total_shares }
+
+        #[payable]
+        Deposit -> u256 uses (mut store, ctx, mut log) {
+            let amount = ctx.value()
+            assert!(amount > 0, "value")
+            let sender = ctx.caller()
+            store.balances.set(key: sender, value: store.balances.get(key: sender) + amount)
+            store.total_shares += amount
+            log.emit(Deposit { account: sender, amount })
+            amount
+        }
+
+        Withdraw { amount } -> u256 uses (mut store, ctx, mut log, mut call) {
+            let sender = ctx.caller()
+            let balance = store.balances.get(key: sender)
+            assert!(balance >= amount, "shares")
+            store.balances.set(key: sender, value: balance - amount)
+            store.total_shares -= amount
+            let ok = call.raw_call(
+                addr: sender,
+                gas: ctx.gas(),
+                value: amount,
+                args_offset: 0,
+                args_len: 0,
+            )
+            assert!(ok, "eth")
+            log.emit(Withdraw { account: sender, amount })
+            amount
+        }
+
+        TotalAssets -> u256 uses ctx { ctx.selfbalance() }
+    }
+}

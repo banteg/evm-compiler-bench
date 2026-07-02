@@ -223,7 +223,7 @@
         }
       ]
     },
-    "language": { "enum": ["solidity", "vyper"] },
+    "language": { "enum": ["solidity", "vyper", "fe"] },
     "compiler": {
       "type": "object",
       "required": ["name", "version", "settings", "metadata"],

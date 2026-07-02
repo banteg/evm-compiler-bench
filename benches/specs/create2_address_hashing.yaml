@@ -21,3 +21,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/create2_address_hashing/solidity/Create2AddressHashing.sol"
   vyper: "benches/implementations/create2_address_hashing/vyper/Create2AddressHashing.vy"
+  fe: "benches/implementations/create2_address_hashing/fe/Create2AddressHashing.fe"

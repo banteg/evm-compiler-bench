@@ -1,0 +1,16 @@
+msg LoopBoundMsg {
+    #[selector = sol("runLoop()")]
+    RunLoop -> u256,
+}
+
+pub contract {{CONTRACT_NAME}} {
+    recv LoopBoundMsg {
+        RunLoop -> u256 {
+            let mut total: u256 = 0
+            for i in 0..{{N}} {
+                total += i as u256
+            }
+            total
+        }
+    }
+}

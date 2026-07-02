@@ -1,0 +1,88 @@
+use std::evm::{Ctx, Log}
+
+msg OwnableMsg {
+    #[selector = sol("owner()")]
+    Owner -> Address,
+    #[selector = sol("counter()")]
+    Counter -> u256,
+    #[selector = sol("paused()")]
+    Paused -> bool,
+    #[selector = sol("transferOwnership(address)")]
+    TransferOwnership { new_owner: Address } -> bool,
+    #[selector = sol("pause()")]
+    Pause -> bool,
+    #[selector = sol("unpause()")]
+    Unpause -> bool,
+    #[selector = sol("guardedIncrement()")]
+    GuardedIncrement -> u256,
+}
+
+#[event]
+struct OwnershipTransferred {
+    #[indexed]
+    previousOwner: Address,
+    #[indexed]
+    newOwner: Address,
+}
+
+#[event]
+struct Paused {
+    #[indexed]
+    account: Address,
+}
+
+#[event]
+struct Unpaused {
+    #[indexed]
+    account: Address,
+}
+
+struct OwnableStore {
+    owner: Address,
+    counter: u256,
+    paused: bool,
+}
+
+pub contract OwnablePausable uses (ctx: Ctx, log: mut Log) {
+    mut store: OwnableStore
+
+    init() uses (mut store, ctx, mut log) {
+        let sender = ctx.caller()
+        store.owner = sender
+        log.emit(OwnershipTransferred { previousOwner: Address::zero(), newOwner: sender })
+    }
+
+    recv OwnableMsg {
+        Owner -> Address uses store { store.owner }
+        Counter -> u256 uses store { store.counter }
+        Paused -> bool uses store { store.paused }
+
+        TransferOwnership { new_owner } -> bool uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.owner, "owner")
+            assert!(new_owner != Address::zero(), "zero")
+            log.emit(OwnershipTransferred { previousOwner: store.owner, newOwner: new_owner })
+            store.owner = new_owner
+            true
+        }
+
+        Pause -> bool uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.owner, "owner")
+            store.paused = true
+            log.emit(Paused { account: ctx.caller() })
+            true
+        }
+
+        Unpause -> bool uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.owner, "owner")
+            store.paused = false
+            log.emit(Unpaused { account: ctx.caller() })
+            true
+        }
+
+        GuardedIncrement -> u256 uses (mut store) {
+            assert!(!store.paused, "paused")
+            store.counter += 1
+            store.counter
+        }
+    }
+}

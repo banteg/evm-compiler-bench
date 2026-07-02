@@ -14,12 +14,18 @@ use std::{
 
 const SOLC_INDEX_ROOT: &str = "https://binaries.soliditylang.org";
 const PYPI_VYPER_JSON: &str = "https://pypi.org/pypi/vyper/json";
+const FE_RELEASES_REPO: &str = "argotorg/fe";
+const FE_RELEASES_LATEST: &str = "https://api.github.com/repos/argotorg/fe/releases/latest";
 const VYPER_ALPHA_VERSION: &str = "0.5.0a1";
 const LEGACY_VYPER_PYTHON: &str = "3.11";
 const EVM_ORDER: &[&str] = &["osaka", "prague", "cancun", "shanghai", "paris", "london"];
 
-pub fn resolve_toolchains(root: &Path, offline: bool) -> Result<Toolchains> {
-    let compiler_refs = compiler_refs_from_profiles(root)?;
+pub fn resolve_toolchains(
+    root: &Path,
+    offline: bool,
+    profile_filter: &[String],
+) -> Result<Toolchains> {
+    let compiler_refs = compiler_refs_from_profiles(root, profile_filter)?;
     let extra_compilers: BTreeSet<_> = compiler_refs
         .iter()
         .map(|compiler_ref| compiler_ref.compiler.clone())
@@ -77,6 +83,12 @@ pub fn resolve_toolchains(root: &Path, offline: bool) -> Result<Toolchains> {
                     &env_var_for_version("EVM_BENCH_VYPER", version),
                     "historical",
                 )?
+            }
+            Language::Fe => {
+                if compiler_ref.compiler != "fe" {
+                    bail!("unsupported fe compiler {}", compiler_ref.compiler);
+                }
+                resolve_fe(root, offline)?
             }
         };
         resolved += 1;
@@ -225,6 +237,153 @@ fn cached_solc_toolchain(root: &Path, version: &str, channel: &str) -> Result<Op
             ("channel".to_string(), channel.to_string()),
         ]),
     }))
+}
+
+fn resolve_fe(root: &Path, offline: bool) -> Result<Toolchain> {
+    // A local binary always wins, used for testing an unreleased Fe build.
+    if let Some(path) = env::var_os("EVM_BENCH_FE").map(PathBuf::from) {
+        return fe_toolchain(path, "local".to_string(), "local_path", "local");
+    }
+    if offline {
+        return cached_fe_latest(root)?
+            .context("cached fe toolchain not found; run online once or set EVM_BENCH_FE");
+    }
+    match resolve_fe_release(root) {
+        Ok(toolchain) => Ok(toolchain),
+        // The anonymous GitHub API is rate-limited to 60 requests/hour; a
+        // cached binary keeps the whole run alive when the lookup fails.
+        Err(error) => match cached_fe_latest(root)? {
+            Some(toolchain) => {
+                eprintln!(
+                    "warning: fe release lookup failed ({error:#}); using cached fe {}",
+                    toolchain.version
+                );
+                Ok(toolchain)
+            }
+            None => Err(error),
+        },
+    }
+}
+
+fn resolve_fe_release(root: &Path) -> Result<Toolchain> {
+    let release = fetch_fe_latest_release()?;
+    let asset_name = fe_release_asset_name()?;
+    let asset = release
+        .assets
+        .iter()
+        .find(|asset| asset.name == asset_name)
+        .with_context(|| {
+            format!(
+                "fe release {} is missing asset {asset_name}",
+                release.tag_name
+            )
+        })?;
+    let version = release.tag_name.trim_start_matches('v').to_string();
+    let target_dir = root.join(".cache/toolchains/fe").join(&version);
+    let target = target_dir.join(asset_name);
+    if !target.exists() {
+        ensure_dir(&target_dir)?;
+        let bytes = github_client()?
+            .get(&asset.browser_download_url)
+            .send()
+            .with_context(|| format!("downloading {}", asset.browser_download_url))?
+            .error_for_status()?
+            .bytes()?;
+        // Stage and rename so an interrupted download never leaves a
+        // truncated binary at the path later runs trust via `exists()`.
+        let staging = target_dir.join(format!("{asset_name}.partial"));
+        fs::write(&staging, &bytes)?;
+        make_executable(&staging)?;
+        fs::rename(&staging, &target)?;
+    }
+    fe_toolchain(
+        target,
+        asset.browser_download_url.clone(),
+        "github_release",
+        "stable",
+    )
+}
+
+fn fe_toolchain(
+    binary_path: PathBuf,
+    download_source: String,
+    resolver: &str,
+    channel: &str,
+) -> Result<Toolchain> {
+    let version_output = command_stdout(Command::new(&binary_path).arg("--version"))?;
+    let version = parse_fe_version(&version_output)?;
+    Ok(Toolchain {
+        name: "fe".to_string(),
+        version,
+        binary_sha256: sha256_file(&binary_path)?,
+        binary_path,
+        download_source,
+        version_output,
+        metadata: BTreeMap::from([
+            ("resolver".to_string(), resolver.to_string()),
+            ("channel".to_string(), channel.to_string()),
+            ("repository".to_string(), FE_RELEASES_REPO.to_string()),
+        ]),
+    })
+}
+
+fn cached_fe_latest(root: &Path) -> Result<Option<Toolchain>> {
+    let dir = root.join(".cache/toolchains/fe");
+    if !dir.exists() {
+        return Ok(None);
+    }
+    let asset_name = fe_release_asset_name()?;
+    let mut versions: Vec<PathBuf> = fs::read_dir(&dir)?
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.is_dir())
+        .collect();
+    versions.sort_by_key(|path| fe_version_sort_key(path));
+    for version in versions.into_iter().rev() {
+        let binary = version.join(asset_name);
+        if binary.exists() {
+            return Ok(Some(fe_toolchain(
+                binary,
+                "github_release_cache".to_string(),
+                "github_release_cache",
+                "stable",
+            )?));
+        }
+    }
+    Ok(None)
+}
+
+fn fe_version_sort_key(path: &Path) -> (u64, u64, u64) {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .and_then(stable_version_tuple)
+        .unwrap_or((0, 0, 0))
+}
+
+fn fetch_fe_latest_release() -> Result<GithubRelease> {
+    Ok(github_client()?
+        .get(FE_RELEASES_LATEST)
+        .send()
+        .with_context(|| format!("fetching {FE_RELEASES_LATEST}"))?
+        .error_for_status()?
+        .json()?)
+}
+
+fn github_client() -> Result<reqwest::blocking::Client> {
+    reqwest::blocking::Client::builder()
+        .user_agent("evm-compiler-bench")
+        .build()
+        .context("building github http client")
+}
+
+fn fe_release_asset_name() -> Result<&'static str> {
+    Ok(match (env::consts::OS, env::consts::ARCH) {
+        ("linux", "x86_64") => "fe_linux_amd64",
+        ("linux", "aarch64") => "fe_linux_arm64",
+        ("macos", "x86_64") => "fe_mac_amd64",
+        ("macos", "aarch64") => "fe_mac_arm64",
+        ("windows", "x86_64") => "fe_windows_amd64.exe",
+        (os, arch) => bail!("unsupported fe release platform {os}/{arch}"),
+    })
 }
 
 fn resolve_vyper(root: &Path, offline: bool) -> Result<Toolchain> {
@@ -457,11 +616,15 @@ fn version_tuple_loose(version: &str) -> Option<(u64, u64, u64)> {
 
 #[derive(Debug, Deserialize)]
 struct ProfileCompilerRef {
+    id: String,
     language: Language,
     compiler: String,
 }
 
-fn compiler_refs_from_profiles(root: &Path) -> Result<Vec<ProfileCompilerRef>> {
+fn compiler_refs_from_profiles(
+    root: &Path,
+    profile_filter: &[String],
+) -> Result<Vec<ProfileCompilerRef>> {
     let mut refs = Vec::new();
     let profiles_dir = root.join("compiler-profiles");
     if !profiles_dir.exists() {
@@ -476,6 +639,29 @@ fn compiler_refs_from_profiles(root: &Path) -> Result<Vec<ProfileCompilerRef>> {
         let compiler_ref: ProfileCompilerRef =
             toml::from_str(&text).with_context(|| format!("parsing {}", entry.path().display()))?;
         refs.push(compiler_ref);
+    }
+    if !profile_filter.is_empty() {
+        let available = refs
+            .iter()
+            .map(|compiler_ref| compiler_ref.id.as_str())
+            .collect::<BTreeSet<_>>();
+        let requested = profile_filter
+            .iter()
+            .map(|profile| profile.as_str())
+            .collect::<BTreeSet<_>>();
+        let unknown = requested
+            .iter()
+            .filter(|profile| !available.contains(**profile))
+            .copied()
+            .collect::<Vec<_>>();
+        if !unknown.is_empty() {
+            let available = available.into_iter().collect::<Vec<_>>().join(", ");
+            bail!(
+                "unknown compiler profile(s): {}; available profiles: {available}",
+                unknown.join(", ")
+            );
+        }
+        refs.retain(|compiler_ref| requested.contains(compiler_ref.id.as_str()));
     }
     Ok(refs)
 }
@@ -505,6 +691,10 @@ fn parse_solc_version(output: &str) -> Result<String> {
 
 fn parse_vyper_version(output: &str) -> Result<String> {
     parse_version(output, r"([0-9]+\.[0-9]+\.[0-9]+(?:[a-zA-Z][0-9]+)?)")
+}
+
+fn parse_fe_version(output: &str) -> Result<String> {
+    parse_version(output, r"fe\s+([0-9]+\.[0-9]+\.[0-9]+)")
 }
 
 fn parse_version(output: &str, pattern: &str) -> Result<String> {
@@ -569,9 +759,25 @@ struct PypiPackage {
     releases: BTreeMap<String, serde_json::Value>,
 }
 
+#[derive(Debug, Deserialize)]
+struct GithubRelease {
+    tag_name: String,
+    assets: Vec<GithubAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GithubAsset {
+    name: String,
+    browser_download_url: String,
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{parse_solc_version, parse_vyper_version, stable_version_tuple};
+    use super::{
+        cached_fe_latest, compiler_refs_from_profiles, fe_release_asset_name, make_executable,
+        parse_solc_version, parse_vyper_version, stable_version_tuple,
+    };
+    use std::fs;
 
     #[test]
     fn parses_solc_version() {
@@ -597,5 +803,57 @@ mod tests {
     fn classifies_stable_vyper_versions() {
         assert_eq!(stable_version_tuple("0.4.3"), Some((0, 4, 3)));
         assert_eq!(stable_version_tuple("0.5.0a1"), None);
+    }
+
+    #[test]
+    fn filters_compiler_refs_by_requested_profiles() {
+        let dir = tempfile::tempdir().unwrap();
+        let profiles = dir.path().join("compiler-profiles");
+        fs::create_dir(&profiles).unwrap();
+        fs::write(
+            profiles.join("solc.toml"),
+            r#"
+id = "solc-latest-noopt"
+language = "solidity"
+compiler = "solc"
+"#,
+        )
+        .unwrap();
+        fs::write(
+            profiles.join("fe.toml"),
+            r#"
+id = "fe-latest-O2"
+language = "fe"
+compiler = "fe"
+"#,
+        )
+        .unwrap();
+
+        let filter = vec!["solc-latest-noopt".to_string()];
+        let refs = compiler_refs_from_profiles(dir.path(), &filter).unwrap();
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].id, "solc-latest-noopt");
+        assert_eq!(refs[0].compiler, "solc");
+
+        let missing = vec!["missing".to_string()];
+        assert!(compiler_refs_from_profiles(dir.path(), &missing).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cached_fe_latest_skips_incomplete_newer_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let asset_name = fe_release_asset_name().unwrap();
+        let old_dir = dir.path().join(".cache/toolchains/fe/1.0.0");
+        let new_dir = dir.path().join(".cache/toolchains/fe/2.0.0");
+        fs::create_dir_all(&old_dir).unwrap();
+        fs::create_dir_all(&new_dir).unwrap();
+        let binary = old_dir.join(asset_name);
+        fs::write(&binary, "#!/bin/sh\necho 'fe 1.0.0'\n").unwrap();
+        make_executable(&binary).unwrap();
+
+        let cached = cached_fe_latest(dir.path()).unwrap().unwrap();
+        assert_eq!(cached.version, "1.0.0");
+        assert_eq!(cached.binary_path, binary);
     }
 }

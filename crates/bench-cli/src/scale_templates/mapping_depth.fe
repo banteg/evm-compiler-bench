@@ -1,0 +1,29 @@
+use std::evm::StorageMap
+
+msg MappingDepthMsg {
+    #[selector = sol("writeChain(uint256)")]
+    WriteChain { seed: u256 } -> u256,
+    #[selector = sol("readChain(uint256)")]
+    ReadChain { seed: u256 } -> u256,
+}
+
+struct LinkStore {
+{{LINKS}}
+}
+
+pub contract {{CONTRACT_NAME}} {
+    mut store: LinkStore
+
+    recv MappingDepthMsg {
+        WriteChain { seed } -> u256 uses (mut store) {
+            let mut current = seed
+{{WRITE_BODY}}
+            current
+        }
+        ReadChain { seed } -> u256 uses store {
+            let mut current = seed
+{{READ_BODY}}
+            current
+        }
+    }
+}

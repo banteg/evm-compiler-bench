@@ -126,7 +126,7 @@
                 "source_hash"
               ],
               "properties": {
-                "language": { "enum": ["solidity", "vyper"] },
+                "language": { "enum": ["solidity", "vyper", "fe"] },
                 "implementation_id": { "type": "string" },
                 "profile_id": { "type": "string" },
                 "source_variant": { "$ref": "#/$defs/sourceVariantLabel" },

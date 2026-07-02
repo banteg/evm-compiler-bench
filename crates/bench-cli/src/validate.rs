@@ -248,6 +248,17 @@ fn expected_profile_source_variant(
             expected_solidity_source_variant(&profile.compiler, path)
         }
         crate::models::Language::Vyper => expected_vyper_source_variant(&profile.compiler, path),
+        crate::models::Language::Fe => {
+            if profile.compiler == "fe" {
+                Ok(None)
+            } else {
+                bail!(
+                    "{} Fe compiler profile must use compiler \"fe\", got {}",
+                    path.display(),
+                    profile.compiler
+                )
+            }
+        }
     }
 }
 
@@ -329,16 +340,26 @@ fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> R
     if !manifest_path.exists() {
         return Ok(0);
     }
-    let manifest: ScaleManifest = serde_json::from_str(&fs::read_to_string(&manifest_path)?)
+    let manifest_text = fs::read_to_string(&manifest_path)?;
+    // Check the generator version on a loose value first: a manifest from an
+    // older generator may not deserialize into the current ScaleManifest, and
+    // the version mismatch is the actionable error, not the parse failure.
+    let loose: Value = serde_json::from_str(&manifest_text)
         .with_context(|| format!("parsing {}", manifest_path.display()))?;
-    if manifest.generator_version != SCALE_GENERATOR_VERSION {
+    let generator_version = loose
+        .get("generator_version")
+        .and_then(Value::as_str)
+        .unwrap_or("missing");
+    if generator_version != SCALE_GENERATOR_VERSION {
         bail!(
-            "{} generator version {} does not match {}",
+            "{} generator version {} does not match {}; re-run generation",
             manifest_path.display(),
-            manifest.generator_version,
+            generator_version,
             SCALE_GENERATOR_VERSION
         );
     }
+    let manifest: ScaleManifest = serde_json::from_str(&manifest_text)
+        .with_context(|| format!("parsing {}", manifest_path.display()))?;
     if manifest.parameter_name != config.parameter_name {
         bail!(
             "{} parameter_name does not match scale config",
@@ -413,6 +434,7 @@ fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> R
             &benchmark.vyper_hash,
             "vyper source",
         )?;
+        validate_generated_path(root, &benchmark.fe_path, &benchmark.fe_hash, "fe source")?;
         let spec_path =
             validate_generated_path(root, &benchmark.spec_path, &benchmark.spec_hash, "spec")?;
         let scenario_path = validate_generated_path(
@@ -457,6 +479,7 @@ fn validate_generated_outputs_if_present(root: &Path, config: &ScaleConfig) -> R
             &benchmark.solidity_path,
         )?;
         require_yaml_string(implementations, "vyper", &spec_path, &benchmark.vyper_path)?;
+        require_yaml_string(implementations, "fe", &spec_path, &benchmark.fe_path)?;
 
         let scenario_file = serde_yaml::from_str(&fs::read_to_string(&scenario_path)?)
             .with_context(|| format!("parsing {}", scenario_path.display()))?;
@@ -810,7 +833,7 @@ fn validate_report_real_derived_models(
             ] {
                 require_string_pointer(source, pointer, path)?;
             }
-            require_enum(source, "/language", &["solidity", "vyper"], path)?;
+            require_enum(source, "/language", &["solidity", "vyper", "fe"], path)?;
             require_enum(source, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             validate_real_derived_source_variant_path(source, path)?;
             validate_real_derived_unique_compiled_source(source, &mut seen_sources, path)?;
@@ -908,7 +931,7 @@ fn validate_manifest_profiles(value: &Value, path: &Path) -> Result<()> {
         for pointer in ["/id", "/language", "/compiler", "/source_variant"] {
             require_string_pointer(profile, pointer, path)?;
         }
-        require_enum(profile, "/language", &["solidity", "vyper"], path)?;
+        require_enum(profile, "/language", &["solidity", "vyper", "fe"], path)?;
         require_enum(profile, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
     }
     Ok(())
@@ -998,7 +1021,7 @@ fn validate_real_derived_manifest(value: &Value, path: &Path) -> Result<()> {
             ] {
                 require_string_pointer(variant, pointer, path)?;
             }
-            require_enum(variant, "/language", &["solidity", "vyper"], path)?;
+            require_enum(variant, "/language", &["solidity", "vyper", "fe"], path)?;
             require_enum(variant, "/source_variant", SOURCE_VARIANT_LABELS, path)?;
             require_enum(variant, "/compile_status", &["ok", "compile_error"], path)?;
             validate_real_derived_source_variant_path(variant, path)?;
@@ -1295,6 +1318,7 @@ fn validate_checked_in_spec_metadata(
     path: &Path,
     benchmark: &Benchmark,
 ) -> Result<()> {
+    validate_checked_in_spec_implementations(root, value, path, benchmark)?;
     match benchmark.suite {
         BenchmarkSuite::Fixed => {
             if value.get("real_derived").is_some() {
@@ -1319,6 +1343,52 @@ fn validate_checked_in_spec_metadata(
                 "{} scale benchmarks must be generated, not checked in",
                 path.display()
             );
+        }
+    }
+    Ok(())
+}
+
+fn validate_checked_in_spec_implementations(
+    root: &Path,
+    value: &serde_yaml::Value,
+    path: &Path,
+    benchmark: &Benchmark,
+) -> Result<()> {
+    let implementations = value
+        .get("implementations")
+        .with_context(|| format!("{} missing implementations", path.display()))?;
+    for (language, expected) in [
+        ("solidity", Some(benchmark.solidity_path.as_str())),
+        ("vyper", Some(benchmark.vyper_path.as_str())),
+        ("fe", benchmark.fe_path.as_deref()),
+    ] {
+        let actual = implementations
+            .get(language)
+            .and_then(|value| value.as_str());
+        match (expected, actual) {
+            (Some(expected), Some(actual)) if actual == expected => {
+                let implementation_path = root.join(actual);
+                if !implementation_path.exists() {
+                    bail!(
+                        "{} references missing {language} implementation {}",
+                        path.display(),
+                        implementation_path.display()
+                    );
+                }
+            }
+            (Some(expected), Some(actual)) => bail!(
+                "{} {language} implementation {actual} does not match catalog path {expected}",
+                path.display()
+            ),
+            (Some(expected), None) => bail!(
+                "{} missing {language} implementation {expected}",
+                path.display()
+            ),
+            (None, Some(actual)) => bail!(
+                "{} declares unsupported {language} implementation {actual}",
+                path.display()
+            ),
+            (None, None) => {}
         }
     }
     Ok(())
@@ -1463,6 +1533,10 @@ fn validate_source_language_implementation(
     let implementation = match provenance.source_language {
         crate::models::Language::Solidity => &benchmark.solidity_path,
         crate::models::Language::Vyper => &benchmark.vyper_path,
+        crate::models::Language::Fe => bail!(
+            "{} fe is not supported as a real-derived source language",
+            path.display()
+        ),
     };
     let implementation_path = Path::new(implementation);
 
@@ -1541,6 +1615,10 @@ fn validate_source_blob(
             let implementation = match provenance.source_language {
                 crate::models::Language::Solidity => &benchmark.solidity_path,
                 crate::models::Language::Vyper => &benchmark.vyper_path,
+                crate::models::Language::Fe => bail!(
+                    "{} fe is not supported as a real-derived source language",
+                    path.display()
+                ),
             };
             if !implementation.ends_with(&provenance.source_path) {
                 bail!(
@@ -2105,6 +2183,72 @@ mod tests {
         let generated_count = super::validate_generated_outputs_if_present(root, &config).unwrap();
         let expected_generated_count = config.families.len() * config.values.len();
         assert!(generated_count == 0 || generated_count == expected_generated_count);
+    }
+
+    #[test]
+    fn validates_checked_in_spec_implementation_catalog_paths() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap();
+        let path = Path::new("benches/specs/counter.yaml");
+        let benchmark = crate::models::Benchmark::fixed(
+            "counter",
+            "Counter",
+            "benches/implementations/counter/solidity/Counter.sol",
+            "benches/implementations/counter/vyper/Counter.vy",
+        )
+        .with_fe("benches/implementations/counter/fe/Counter.fe");
+        let valid: serde_yaml::Value = serde_yaml::from_str(
+            r#"
+implementations:
+  solidity: benches/implementations/counter/solidity/Counter.sol
+  vyper: benches/implementations/counter/vyper/Counter.vy
+  fe: benches/implementations/counter/fe/Counter.fe
+"#,
+        )
+        .unwrap();
+        super::validate_checked_in_spec_implementations(root, &valid, path, &benchmark).unwrap();
+
+        let missing_fe: serde_yaml::Value = serde_yaml::from_str(
+            r#"
+implementations:
+  solidity: benches/implementations/counter/solidity/Counter.sol
+  vyper: benches/implementations/counter/vyper/Counter.vy
+"#,
+        )
+        .unwrap();
+        assert!(
+            super::validate_checked_in_spec_implementations(root, &missing_fe, path, &benchmark)
+                .is_err()
+        );
+
+        let mismatched_fe: serde_yaml::Value = serde_yaml::from_str(
+            r#"
+implementations:
+  solidity: benches/implementations/counter/solidity/Counter.sol
+  vyper: benches/implementations/counter/vyper/Counter.vy
+  fe: benches/implementations/erc20_minimal/fe/Erc20Minimal.fe
+"#,
+        )
+        .unwrap();
+        assert!(
+            super::validate_checked_in_spec_implementations(root, &mismatched_fe, path, &benchmark)
+                .is_err()
+        );
+
+        let no_fe_benchmark = crate::models::Benchmark::fixed(
+            "counter",
+            "Counter",
+            "benches/implementations/counter/solidity/Counter.sol",
+            "benches/implementations/counter/vyper/Counter.vy",
+        );
+        super::validate_checked_in_spec_implementations(root, &missing_fe, path, &no_fe_benchmark)
+            .unwrap();
+        assert!(
+            super::validate_checked_in_spec_implementations(root, &valid, path, &no_fe_benchmark)
+                .is_err()
+        );
     }
 
     #[test]

@@ -1,0 +1,110 @@
+use std::evm::Log
+
+msg AmmMsg {
+    #[selector = sol("reserve0()")]
+    Reserve0 -> u256,
+    #[selector = sol("reserve1()")]
+    Reserve1 -> u256,
+    #[selector = sol("totalLiquidity()")]
+    TotalLiquidity -> u256,
+    #[selector = sol("mint(uint256,uint256)")]
+    Mint { amount0: u256, amount1: u256 } -> u256,
+    #[selector = sol("burn(uint256)")]
+    Burn { liquidity: u256 } -> (u256, u256),
+    #[selector = sol("swap(uint256,uint256,uint256,uint256)")]
+    Swap { amount0_out: u256, amount1_out: u256, amount0_in: u256, amount1_in: u256 } -> bool,
+    #[selector = sol("sync(uint256,uint256)")]
+    Sync { balance0: u256, balance1: u256 } -> bool,
+    #[selector = sol("getReserves()")]
+    GetReserves -> (u256, u256),
+}
+
+#[event]
+struct Mint {
+    amount0: u256,
+    amount1: u256,
+    liquidity: u256,
+}
+
+#[event]
+struct Burn {
+    liquidity: u256,
+    amount0: u256,
+    amount1: u256,
+}
+
+#[event]
+struct Swap {
+    amount0Out: u256,
+    amount1Out: u256,
+    amount0In: u256,
+    amount1In: u256,
+}
+
+#[event]
+struct Sync {
+    reserve0: u256,
+    reserve1: u256,
+}
+
+struct PairStore {
+    reserve0: u256,
+    reserve1: u256,
+    total_liquidity: u256,
+}
+
+pub contract AmmPairSubset uses (log: mut Log) {
+    mut store: PairStore
+
+    recv AmmMsg {
+        Reserve0 -> u256 uses store { store.reserve0 }
+        Reserve1 -> u256 uses store { store.reserve1 }
+        TotalLiquidity -> u256 uses store { store.total_liquidity }
+
+        Mint { amount0, amount1 } -> u256 uses (mut store, mut log) {
+            assert!(amount0 > 0 && amount1 > 0, "amount")
+            let liquidity = amount0 + amount1
+            store.reserve0 += amount0
+            store.reserve1 += amount1
+            store.total_liquidity += liquidity
+            log.emit(Mint { amount0, amount1, liquidity })
+            liquidity
+        }
+
+        Burn { liquidity } -> (u256, u256) uses (mut store, mut log) {
+            assert!(store.total_liquidity >= liquidity && liquidity > 0, "liquidity")
+            let amount0 = store.reserve0 * liquidity / store.total_liquidity
+            let amount1 = store.reserve1 * liquidity / store.total_liquidity
+            store.reserve0 -= amount0
+            store.reserve1 -= amount1
+            store.total_liquidity -= liquidity
+            log.emit(Burn { liquidity, amount0, amount1 })
+            (amount0, amount1)
+        }
+
+        Swap { amount0_out, amount1_out, amount0_in, amount1_in } -> bool uses (mut store, mut log) {
+            assert!(amount0_out <= store.reserve0 && amount1_out <= store.reserve1, "reserve")
+            assert!(amount0_in > 0 || amount1_in > 0, "input")
+            store.reserve0 = store.reserve0 + amount0_in - amount0_out
+            store.reserve1 = store.reserve1 + amount1_in - amount1_out
+            log.emit(Swap {
+                amount0Out: amount0_out,
+                amount1Out: amount1_out,
+                amount0In: amount0_in,
+                amount1In: amount1_in,
+            })
+            true
+        }
+
+        Sync { balance0, balance1 } -> bool uses (mut store, mut log) {
+            store.reserve0 = balance0
+            store.reserve1 = balance1
+            log.emit(Sync { reserve0: balance0, reserve1: balance1 })
+            true
+        }
+
+        GetReserves -> (u256, u256) uses store {
+            (store.reserve0, store.reserve1)
+        }
+    }
+}

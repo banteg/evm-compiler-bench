@@ -261,6 +261,7 @@ import React from "react";
       'vyper-latest-gas-venom': 'var(--accent)',
       'vyper-latest-codesize': '#d089d4',
       'vyper-latest-none': '#7e5a82',
+      'fe-latest-O2': 'var(--fe)',
     };
     return React.createElement('div', { ref, style: { width: '100%' } },
       React.createElement('svg', { width, height, viewBox: `0 0 ${width} ${height}` },

@@ -169,8 +169,11 @@ pub fn compile_all(
     })
 }
 
-fn profile_applies_to_benchmark(_benchmark: &Benchmark, _profile: &CompilerProfile) -> bool {
-    true
+fn profile_applies_to_benchmark(benchmark: &Benchmark, profile: &CompilerProfile) -> bool {
+    match profile.language {
+        Language::Fe => benchmark.fe_path.is_some(),
+        _ => true,
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -228,6 +231,7 @@ fn compile_and_record(
     let result = match profile.language {
         Language::Solidity => compile_solidity(root, benchmark, profile, toolchain, evm_version),
         Language::Vyper => compile_vyper(root, benchmark, profile, toolchain, evm_version),
+        Language::Fe => compile_fe(root, benchmark, profile, toolchain, evm_version),
     };
     let (cache_input, cache_info) = cache_state
         .map(|(input, info)| (Some(input), info))
@@ -310,6 +314,7 @@ fn compile_cache_input(
     let compiler_settings = match profile.language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
         Language::Vyper => vyper_compiler_settings(profile, evm_version),
+        Language::Fe => fe_compiler_settings(profile, evm_version),
     };
     let implementation = implementation_id(profile);
     let fingerprint = json!({
@@ -350,7 +355,7 @@ fn compile_cache_input(
 fn source_fingerprint(language: Language, source_path: &Path) -> Result<serde_json::Value> {
     match language {
         Language::Solidity => solidity_source_bundle_fingerprint(source_path),
-        Language::Vyper => {
+        Language::Vyper | Language::Fe => {
             let source = fs::read(source_path)?;
             Ok(json!({
                 "path": source_path.display().to_string(),
@@ -686,6 +691,81 @@ fn compile_vyper(
     )
 }
 
+fn fe_compiler_settings(profile: &CompilerProfile, evm_version: &str) -> serde_json::Value {
+    json!({
+        // `fe build` has no EVM-version or metadata flags; these describe the
+        // measurement lane (and fe's no-metadata output), not compiler flags.
+        "evmVersion": evm_version,
+        "compiler": profile.compiler,
+        "metadataMode": profile.metadata_mode.as_str(),
+        "backend": "sonatina",
+        // compile_fe omits -O when the profile sets no mode; fe's CLI default
+        // is 1, so record what actually runs.
+        "optimize": profile.optimizer_mode.as_deref().unwrap_or("1"),
+        "sourceVariant": source_variant_label(profile)
+    })
+}
+
+fn compile_fe(
+    root: &Path,
+    benchmark: &Benchmark,
+    profile: &CompilerProfile,
+    fe: &Toolchain,
+    evm_version: &str,
+) -> Result<CompiledArtifact> {
+    let source_path = source_path_for_profile(root, benchmark, profile, fe)?;
+    let out_dir = root
+        .join("target/fe-build")
+        .join(&profile.id)
+        .join(&benchmark.id);
+    fs::create_dir_all(&out_dir)?;
+    let measured = repeat_compile_samples(
+        || {
+            let mut command = Command::new(&fe.binary_path);
+            command
+                .arg("build")
+                .arg(&source_path)
+                .arg("--standalone")
+                .arg("--contract")
+                .arg(&benchmark.contract_name)
+                .arg("--emit")
+                .arg("bytecode,runtime-bytecode,abi")
+                .arg("--out-dir")
+                .arg(&out_dir);
+            if let Some(optimizer_mode) = profile.optimizer_mode.as_deref() {
+                command.arg("-O").arg(optimizer_mode);
+            }
+            command
+        },
+        None,
+        "fe build",
+    )?;
+    let read_artifact = |file_name: String| -> Result<String> {
+        let path = out_dir.join(&file_name);
+        Ok(fs::read_to_string(&path)
+            .with_context(|| format!("missing fe output {}", path.display()))?
+            .trim()
+            .to_string())
+    };
+    let creation = read_artifact(format!("{}.bin", benchmark.contract_name))?;
+    let runtime = read_artifact(format!("{}.runtime.bin", benchmark.contract_name))?;
+    let abi_text = read_artifact(format!("{}.abi.json", benchmark.contract_name))?;
+    let abi: serde_json::Value = serde_json::from_str(&abi_text).context("parsing fe abi json")?;
+    artifact(
+        benchmark,
+        profile,
+        fe,
+        &source_path,
+        abi,
+        creation,
+        runtime,
+        measured.wall_ms_samples,
+        measured.cpu_ms_samples,
+        measured.peak_rss_kib,
+        fe_compiler_settings(profile, evm_version),
+    )
+}
+
 fn vyper_optimizer_args(vyper: &Toolchain, optimizer_mode: &str) -> Vec<String> {
     if matches!(vyper_version_tuple(vyper), Some((0, 3, patch)) if patch < 10) {
         return if optimizer_mode == "none" {
@@ -783,6 +863,14 @@ fn source_path_for_profile(
                 )
             })?;
             materialize_source_variant(root, &profile.id, &benchmark.vyper_path, transformed)
+        }
+        Language::Fe => {
+            let fe_path = benchmark
+                .fe_path
+                .as_deref()
+                .with_context(|| format!("benchmark {} has no fe implementation", benchmark.id))?;
+            let source = fs::read_to_string(root.join(fe_path))?;
+            materialize_source_variant(root, &profile.id, fe_path, source)
         }
     }
 }
@@ -1169,11 +1257,10 @@ fn rewrite_solidity_pre_06_immutables(source: &str) -> String {
 }
 
 fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
-    let source = rewrite_solidity_pre_06_call_value(source)
-        .replace(
-            "(bool ok,) = msg.sender.call.value(amount)(\"\");",
-            "bool ok = msg.sender.call.value(amount)();",
-        );
+    let source = rewrite_solidity_pre_06_call_value(source).replace(
+        "(bool ok,) = msg.sender.call.value(amount)(\"\");",
+        "bool ok = msg.sender.call.value(amount)();",
+    );
     rewrite_solidity_04_staticcalls(&source)
 }
 
@@ -1964,6 +2051,7 @@ fn compile_failure(
     let compiler_settings = match language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
         Language::Vyper => vyper_compiler_settings(profile, evm_version),
+        Language::Fe => fe_compiler_settings(profile, evm_version),
     };
     Ok(CompileFailure {
         benchmark_id: benchmark.id.clone(),

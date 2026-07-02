@@ -22,3 +22,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/vault_deposit_withdraw/solidity/VaultDepositWithdraw.sol"
   vyper: "benches/implementations/vault_deposit_withdraw/vyper/VaultDepositWithdraw.vy"
+  fe: "benches/implementations/vault_deposit_withdraw/fe/VaultDepositWithdraw.fe"

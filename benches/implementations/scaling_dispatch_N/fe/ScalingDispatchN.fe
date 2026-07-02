@@ -1,0 +1,114 @@
+msg DispatchMsg {
+    #[selector = sol("sink()")]
+    Sink -> u256,
+    #[selector = sol("setSink(uint256)")]
+    SetSink { value: u256 } -> u256,
+    #[selector = sol("f00()")]
+    F00 -> u256,
+    #[selector = sol("f01()")]
+    F01 -> u256,
+    #[selector = sol("f02()")]
+    F02 -> u256,
+    #[selector = sol("f03()")]
+    F03 -> u256,
+    #[selector = sol("f04()")]
+    F04 -> u256,
+    #[selector = sol("f05()")]
+    F05 -> u256,
+    #[selector = sol("f06()")]
+    F06 -> u256,
+    #[selector = sol("f07()")]
+    F07 -> u256,
+    #[selector = sol("f08()")]
+    F08 -> u256,
+    #[selector = sol("f09()")]
+    F09 -> u256,
+    #[selector = sol("f10()")]
+    F10 -> u256,
+    #[selector = sol("f11()")]
+    F11 -> u256,
+    #[selector = sol("f12()")]
+    F12 -> u256,
+    #[selector = sol("f13()")]
+    F13 -> u256,
+    #[selector = sol("f14()")]
+    F14 -> u256,
+    #[selector = sol("f15()")]
+    F15 -> u256,
+    #[selector = sol("f16()")]
+    F16 -> u256,
+    #[selector = sol("f17()")]
+    F17 -> u256,
+    #[selector = sol("f18()")]
+    F18 -> u256,
+    #[selector = sol("f19()")]
+    F19 -> u256,
+    #[selector = sol("f20()")]
+    F20 -> u256,
+    #[selector = sol("f21()")]
+    F21 -> u256,
+    #[selector = sol("f22()")]
+    F22 -> u256,
+    #[selector = sol("f23()")]
+    F23 -> u256,
+    #[selector = sol("f24()")]
+    F24 -> u256,
+    #[selector = sol("f25()")]
+    F25 -> u256,
+    #[selector = sol("f26()")]
+    F26 -> u256,
+    #[selector = sol("f27()")]
+    F27 -> u256,
+    #[selector = sol("f28()")]
+    F28 -> u256,
+    #[selector = sol("f29()")]
+    F29 -> u256,
+    #[selector = sol("f30()")]
+    F30 -> u256,
+    #[selector = sol("f31()")]
+    F31 -> u256,
+}
+
+pub contract ScalingDispatchN {
+    mut sink: u256
+
+    recv DispatchMsg {
+        Sink -> u256 uses sink { sink }
+        SetSink { value } -> u256 uses (mut sink) {
+            sink = value
+            value
+        }
+        F00 -> u256 { 0 }
+        F01 -> u256 { 1 }
+        F02 -> u256 { 2 }
+        F03 -> u256 { 3 }
+        F04 -> u256 { 4 }
+        F05 -> u256 { 5 }
+        F06 -> u256 { 6 }
+        F07 -> u256 { 7 }
+        F08 -> u256 { 8 }
+        F09 -> u256 { 9 }
+        F10 -> u256 { 10 }
+        F11 -> u256 { 11 }
+        F12 -> u256 { 12 }
+        F13 -> u256 { 13 }
+        F14 -> u256 { 14 }
+        F15 -> u256 { 15 }
+        F16 -> u256 { 16 }
+        F17 -> u256 { 17 }
+        F18 -> u256 { 18 }
+        F19 -> u256 { 19 }
+        F20 -> u256 { 20 }
+        F21 -> u256 { 21 }
+        F22 -> u256 { 22 }
+        F23 -> u256 { 23 }
+        F24 -> u256 { 24 }
+        F25 -> u256 { 25 }
+        F26 -> u256 { 26 }
+        F27 -> u256 { 27 }
+        F28 -> u256 { 28 }
+        F29 -> u256 { 29 }
+        F30 -> u256 { 30 }
+        F31 -> u256 { 31 }
+    }
+}

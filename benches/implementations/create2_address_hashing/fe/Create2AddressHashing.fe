@@ -1,0 +1,70 @@
+use std::evm::{Ctx, Log, RawMem, StorageMap}
+use std::evm::crypto
+use std::evm::mem
+use std::abi::Bytes32
+
+msg Create2Msg {
+    #[selector = sol("saltValue(bytes32)")]
+    SaltValue { salt: Bytes32 } -> u256,
+    #[selector = sol("initCodeHash(uint256)")]
+    InitCodeHash { value: u256 } -> Bytes32,
+    #[selector = sol("computeAddress(bytes32,uint256)")]
+    ComputeAddress { salt: Bytes32, value: u256 } -> Address,
+    #[selector = sol("record(bytes32,uint256)")]
+    Record { salt: Bytes32, value: u256 } -> u256,
+}
+
+#[event]
+struct Recorded {
+    #[indexed]
+    salt: Bytes32,
+    predicted: Address,
+    value: u256,
+}
+
+struct Create2Store {
+    salt_value: StorageMap<u256, u256>,
+}
+
+const ADDRESS_MASK: u256 = 0xffffffffffffffffffffffffffffffffffffffff
+
+fn init_code_hash(value: u256) -> u256 uses (raw: mut RawMem) {
+    let ptr = mem::alloc(32)
+    raw.mstore(addr: ptr, value: value)
+    crypto::keccak256(ptr, 32)
+}
+
+fn compute_address(self_addr: u256, salt: u256, value: u256) -> u256 uses (raw: mut RawMem) {
+    let code_hash = init_code_hash(value)
+    let ptr = mem::alloc(96)
+    raw.mstore8(addr: ptr, value: 0xff)
+    raw.mstore(addr: ptr + 1, value: self_addr << 96)
+    raw.mstore(addr: ptr + 21, value: salt)
+    raw.mstore(addr: ptr + 53, value: code_hash)
+    crypto::keccak256(ptr, 85) & ADDRESS_MASK
+}
+
+pub contract Create2AddressHashing uses (ctx: Ctx, log: mut Log, raw: mut RawMem) {
+    mut store: Create2Store
+
+    recv Create2Msg {
+        SaltValue { salt } -> u256 uses store { store.salt_value.get(key: salt.val) }
+
+        InitCodeHash { value } -> Bytes32 uses (mut raw) {
+            Bytes32 { val: init_code_hash(value) }
+        }
+
+        ComputeAddress { salt, value } -> Address uses (ctx, mut raw) {
+            Address {
+                inner: compute_address(self_addr: ctx.address().inner, salt: salt.val, value),
+            }
+        }
+
+        Record { salt, value } -> u256 uses (mut store, ctx, mut log, mut raw) {
+            let predicted = compute_address(self_addr: ctx.address().inner, salt: salt.val, value)
+            store.salt_value.set(key: salt.val, value: value)
+            log.emit(Recorded { salt, predicted: Address { inner: predicted }, value })
+            value
+        }
+    }
+}

@@ -35,6 +35,9 @@ pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize
             Language::Vyper => {
                 update_candidate(&mut entry.vyper, index, score, &artifact.profile_id)
             }
+            // Baseline pairs drive the Solidity-vs-Vyper pairwise lane; Fe rows
+            // are reported standalone and do not form baseline pairs.
+            Language::Fe => {}
         }
     }
 
@@ -84,6 +87,7 @@ fn baseline_score(language: Language, profile_id: &str) -> usize {
     let preferences = match language {
         Language::Solidity => SOLIDITY_BASELINE_PREFERENCES,
         Language::Vyper => VYPER_BASELINE_PREFERENCES,
+        Language::Fe => &[],
     };
     preferences
         .iter()
@@ -100,6 +104,7 @@ fn fallback_score(language: Language, profile_id: &str) -> usize {
         Language::Vyper if profile_id.contains("-default") => 200,
         Language::Vyper if profile_id.contains("-none") && !profile_id.contains("-venom") => 300,
         Language::Vyper => 400,
+        Language::Fe => 100,
     }
 }
 

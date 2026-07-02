@@ -1,0 +1,12 @@
+msg AbiArgsMsg {
+    #[selector = sol("sum({{SIGNATURE}})")]
+    Sum { {{PARAMS}} } -> u256,
+}
+
+pub contract {{CONTRACT_NAME}} {
+    recv AbiArgsMsg {
+        Sum { {{FIELDS}} } -> u256 {
+            {{SUM}}
+        }
+    }
+}

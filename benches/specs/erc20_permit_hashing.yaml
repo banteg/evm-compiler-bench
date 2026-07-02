@@ -21,3 +21,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/erc20_permit_hashing/solidity/Erc20PermitHashing.sol"
   vyper: "benches/implementations/erc20_permit_hashing/vyper/Erc20PermitHashing.vy"
+  fe: "benches/implementations/erc20_permit_hashing/fe/Erc20PermitHashing.fe"

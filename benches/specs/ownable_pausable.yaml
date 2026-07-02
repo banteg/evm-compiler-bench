@@ -28,3 +28,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/ownable_pausable/solidity/OwnablePausable.sol"
   vyper: "benches/implementations/ownable_pausable/vyper/OwnablePausable.vy"
+  fe: "benches/implementations/ownable_pausable/fe/OwnablePausable.fe"

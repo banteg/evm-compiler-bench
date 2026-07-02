@@ -183,6 +183,7 @@
   }
   function compilerDisplayName(p){
     if (p.language === 'vyper' || p.compiler_name === 'vyper') return 'Vyper';
+    if (p.language === 'fe' || p.compiler_name === 'fe') return 'Fe';
     return p.compiler_name || (p.language === 'solidity' ? 'solc' : p.language);
   }
   function profileDisplayLabel(p){
@@ -193,7 +194,9 @@
     return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)} ${opt}${runsLabel}${venom}`;
   }
   function profileVersionKey(p){
-    const prefix = p.language === 'solidity' ? 'solc-latest-' : 'vyper-latest-';
+    const prefix = p.language === 'solidity' ? 'solc-latest-'
+      : p.language === 'fe' ? 'fe-latest-'
+      : 'vyper-latest-';
     if (String(p.id).startsWith(prefix)) return 'latest';
     return String(p.compiler_version ?? 'unknown');
   }
@@ -220,6 +223,10 @@
       if (id.includes('gas')) return 'gas';
       if (id.includes('none')) return 'none';
       if (id.includes('default')) return 'default';
+    }
+    if (p.language === 'fe'){
+      const m = id.match(/-O([0-9s]+)\b/);
+      if (m) return `O${m[1]}`;
     }
     return 'default';
   }
@@ -254,7 +261,9 @@
   function preferredOptimizer(lang, optimizers){
     const preferred = lang === 'solidity'
       ? ['viaIR','legacy','noopt']
-      : ['gas','codesize','none','default'];
+      : lang === 'fe'
+        ? ['O2','O1','Os','O0']
+        : ['gas','codesize','none','default'];
     return preferred.find(o => optimizers.includes(o)) ?? optimizers[0];
   }
   function resolveProfile(desired){
@@ -281,7 +290,9 @@
     return cands[0]?.id ?? D.profiles[0].id;
   }
   function defaultProfileForLanguage(lang){
-    const pref = lang === 'solidity' ? 'solc-latest-viair-runs200' : 'vyper-latest-gas';
+    const pref = lang === 'solidity' ? 'solc-latest-viair-runs200'
+      : lang === 'fe' ? 'fe-latest-O2'
+      : 'vyper-latest-gas';
     if (D.profiles.some(p => p.id === pref)) return pref;
     return D.profiles.find(p => p.language === lang)?.id ?? D.profiles[0].id;
   }
@@ -433,6 +444,10 @@
       const m = focused.match(/Unsupported (?:dup|swap) depth\s+\d+/);
       return m ? m[0] : 'Unsupported dup/swap depth';
     }
+    if (focused.includes('EVM backend supports at most')) {
+      const m = focused.match(/EVM backend supports at most \d+ [a-z ]+/);
+      return m ? m[0] : 'Sonatina backend operand limit';
+    }
     if (focused.includes('reserved keyword')) {
       const m = focused.match(/'[^']+' is a reserved keyword/);
       return m ? m[0] : 'Reserved keyword syntax gap';
@@ -485,6 +500,7 @@
 
   function isFailureWrapperLine(line){
     return /^(?:solc|vyper|command) compile failed with status /.test(line)
+      || /^fe build failed with status /.test(line)
       || line === 'stdout:'
       || line === 'stderr:'
       || line.startsWith('Error compiling:');

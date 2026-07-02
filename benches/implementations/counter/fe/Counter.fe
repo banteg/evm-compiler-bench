@@ -1,0 +1,43 @@
+msg CounterMsg {
+    #[selector = sol("value()")]
+    Value -> u256,
+    #[selector = sol("increment()")]
+    Increment -> u256,
+    #[selector = sol("add_value(uint256)")]
+    AddValue { amount: u256 } -> u256,
+    #[selector = sol("reset()")]
+    Reset -> u256,
+}
+
+struct CounterStore {
+    value: u256,
+}
+
+pub contract Counter {
+    mut store: CounterStore
+
+    init(initial_value: u256) uses (mut store) {
+        store.value = initial_value
+    }
+
+    recv CounterMsg {
+        Value -> u256 uses store {
+            store.value
+        }
+
+        Increment -> u256 uses (mut store) {
+            store.value += 1
+            store.value
+        }
+
+        AddValue { amount } -> u256 uses (mut store) {
+            store.value += amount
+            store.value
+        }
+
+        Reset -> u256 uses (mut store) {
+            store.value = 0
+            store.value
+        }
+    }
+}

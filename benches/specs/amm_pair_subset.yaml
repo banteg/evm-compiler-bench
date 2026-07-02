@@ -29,3 +29,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/amm_pair_subset/solidity/AmmPairSubset.sol"
   vyper: "benches/implementations/amm_pair_subset/vyper/AmmPairSubset.vy"
+  fe: "benches/implementations/amm_pair_subset/fe/AmmPairSubset.fe"

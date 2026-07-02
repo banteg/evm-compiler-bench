@@ -1,0 +1,27 @@
+msg StorageSlotsMsg {
+    #[selector = sol("writeAll(uint256)")]
+    WriteAll { seed: u256 } -> u256,
+    #[selector = sol("readAll()")]
+    ReadAll -> u256,
+}
+
+struct SlotStore {
+{{SLOTS}}
+}
+
+pub contract {{CONTRACT_NAME}} {
+    mut store: SlotStore
+
+    recv StorageSlotsMsg {
+        WriteAll { seed } -> u256 uses (mut store) {
+            let mut total: u256 = 0
+{{WRITE_BODY}}
+            total
+        }
+        ReadAll -> u256 uses store {
+            let mut total: u256 = 0
+{{READ_BODY}}
+            total
+        }
+    }
+}

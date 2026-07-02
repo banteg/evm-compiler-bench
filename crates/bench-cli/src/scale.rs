@@ -15,7 +15,7 @@ use std::{
     process,
 };
 
-pub const SCALE_GENERATOR_VERSION: &str = "scale-v1";
+pub const SCALE_GENERATOR_VERSION: &str = "scale-v2";
 const GENERATED_ROOT: &str = "target/bench-generated";
 const DISPATCH_SOL_TEMPLATE: &str = include_str!("scale_templates/dispatch.sol");
 const DISPATCH_VY_TEMPLATE: &str = include_str!("scale_templates/dispatch.vy");
@@ -31,6 +31,13 @@ const EXTERNAL_CALLS_SOL_TEMPLATE: &str = include_str!("scale_templates/external
 const EXTERNAL_CALLS_VY_TEMPLATE: &str = include_str!("scale_templates/external_calls.vy");
 const EVENTS_SOL_TEMPLATE: &str = include_str!("scale_templates/events.sol");
 const EVENTS_VY_TEMPLATE: &str = include_str!("scale_templates/events.vy");
+const DISPATCH_FE_TEMPLATE: &str = include_str!("scale_templates/dispatch.fe");
+const STORAGE_SLOTS_FE_TEMPLATE: &str = include_str!("scale_templates/storage_slots.fe");
+const MAPPING_DEPTH_FE_TEMPLATE: &str = include_str!("scale_templates/mapping_depth.fe");
+const ABI_ARGS_FE_TEMPLATE: &str = include_str!("scale_templates/abi_args.fe");
+const LOOP_BOUND_FE_TEMPLATE: &str = include_str!("scale_templates/loop_bound.fe");
+const EXTERNAL_CALLS_FE_TEMPLATE: &str = include_str!("scale_templates/external_calls.fe");
+const EVENTS_FE_TEMPLATE: &str = include_str!("scale_templates/events.fe");
 const EXPECTED_FAMILIES: [&str; 7] = [
     "dispatch_N",
     "storage_slots_N",
@@ -84,6 +91,8 @@ pub struct ScaleBenchmarkManifest {
     pub solidity_hash: String,
     pub vyper_path: String,
     pub vyper_hash: String,
+    pub fe_path: String,
+    pub fe_hash: String,
     pub spec_path: String,
     pub spec_hash: String,
     pub scenario_path: String,
@@ -94,6 +103,7 @@ struct GeneratedSource {
     contract_name: String,
     solidity: String,
     vyper: String,
+    fe: String,
     scenarios: Vec<Scenario>,
     abi: Vec<String>,
     semantics: Vec<String>,
@@ -122,8 +132,12 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
             let vyper_path = family_dir
                 .join("vyper")
                 .join(format!("{}.vy", generated.contract_name));
+            let fe_path = family_dir
+                .join("fe")
+                .join(format!("{}.fe", generated.contract_name));
             write_file(&solidity_path, &generated.solidity)?;
             write_file(&vyper_path, &generated.vyper)?;
+            write_file(&fe_path, &generated.fe)?;
 
             let spec_path = generated_root
                 .join("specs")
@@ -133,6 +147,7 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
                 .join(format!("{benchmark_id}.yaml"));
             let solidity_rel = rel(root, &solidity_path)?;
             let vyper_rel = rel(root, &vyper_path)?;
+            let fe_rel = rel(root, &fe_path)?;
             let spec_rel = rel(root, &spec_path)?;
             let scenario_rel = rel(root, &scenario_path)?;
 
@@ -162,7 +177,8 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
                 })).collect::<Vec<_>>(),
                 "implementations": {
                     "solidity": solidity_rel,
-                    "vyper": vyper_rel
+                    "vyper": vyper_rel,
+                    "fe": fe_rel
                 }
             });
             let spec_text = serde_yaml::to_string(&spec)?;
@@ -170,6 +186,7 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
 
             let solidity_hash = sha256_bytes(generated.solidity.as_bytes());
             let vyper_hash = sha256_bytes(generated.vyper.as_bytes());
+            let fe_hash = sha256_bytes(generated.fe.as_bytes());
             let spec_hash = sha256_bytes(spec_text.as_bytes());
             let scenario_hash = sha256_bytes(scenario_text.as_bytes());
 
@@ -183,6 +200,8 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
                 solidity_hash,
                 vyper_path: vyper_rel.clone(),
                 vyper_hash,
+                fe_path: fe_rel.clone(),
+                fe_hash,
                 spec_path: spec_rel,
                 spec_hash,
                 scenario_path: scenario_rel.clone(),
@@ -195,6 +214,7 @@ pub fn generate_scale_suite(root: &Path, only_benchmark: Option<&str>) -> Result
                     contract_name: generated.contract_name,
                     solidity_path: solidity_rel,
                     vyper_path: vyper_rel,
+                    fe_path: Some(fe_rel),
                     suite: BenchmarkSuite::Scale,
                     family: Some(family.id.clone()),
                     parameter_name: Some(config.parameter_name.clone()),
@@ -317,6 +337,22 @@ fn dispatch_family(n: u64) -> GeneratedSource {
         ],
     );
     let vy = render_template(DISPATCH_VY_TEMPLATE, &[("FUNCTIONS", &vy_functions)]);
+    let fe_variants = (0..n)
+        .map(|i| format!("    #[selector = sol(\"f{i:03}()\")]\n    F{i:03} -> u256,"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe_arms = (0..n)
+        .map(|i| format!("        F{i:03} -> u256 {{ {i} }}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe = render_template(
+        DISPATCH_FE_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("MSG_VARIANTS", &fe_variants),
+            ("RECV_ARMS", &fe_arms),
+        ],
+    );
 
     let mut scenarios = vec![scenario(
         "first_selector",
@@ -352,6 +388,7 @@ fn dispatch_family(n: u64) -> GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios,
         abi: vec![
             "sink() returns (uint256)".to_string(),
@@ -409,10 +446,37 @@ fn storage_slots_family(n: u64) -> GeneratedSource {
         ],
     );
 
+    let fe_slots = (0..n)
+        .map(|i| format!("    slot{i:03}: u256,"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe_writes = (0..n)
+        .map(|i| {
+            format!(
+                "            store.slot{i:03} = seed + {i}\n            total += store.slot{i:03}"
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe_reads = (0..n)
+        .map(|i| format!("            total += store.slot{i:03}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe = render_template(
+        STORAGE_SLOTS_FE_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("SLOTS", &fe_slots),
+            ("WRITE_BODY", &fe_writes),
+            ("READ_BODY", &fe_reads),
+        ],
+    );
+
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: standard_read_write_scenarios("readAll()", "writeAll(uint256)"),
         abi: vec![
             "readAll() returns (uint256)".to_string(),
@@ -479,10 +543,38 @@ fn mapping_depth_family(n: u64) -> GeneratedSource {
         ],
     );
 
+    let fe_links = (0..n)
+        .map(|i| format!("    link{i:03}: StorageMap<u256, u256>,"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe_writes = (0..n)
+        .map(|i| {
+            format!(
+                "            store.link{i:03}.set(key: current, value: current + {add})\n            current = store.link{i:03}.get(key: current)",
+                add = i + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe_reads = (0..n)
+        .map(|i| format!("            current = store.link{i:03}.get(key: current)"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let fe = render_template(
+        MAPPING_DEPTH_FE_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("LINKS", &fe_links),
+            ("WRITE_BODY", &fe_writes),
+            ("READ_BODY", &fe_reads),
+        ],
+    );
+
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: vec![
             scenario(
                 "read_empty_chain",
@@ -560,10 +652,30 @@ fn abi_args_family(n: u64) -> GeneratedSource {
         .join(" + ");
     let vy = render_template(ABI_ARGS_VY_TEMPLATE, &[("PARAMS", &params), ("SUM", &sum)]);
 
+    let fe_params = (0..n)
+        .map(|i| format!("a{i:03}: u256"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let fe_fields = (0..n)
+        .map(|i| format!("a{i:03}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let fe = render_template(
+        ABI_ARGS_FE_TEMPLATE,
+        &[
+            ("CONTRACT_NAME", &contract_name),
+            ("SIGNATURE", &signature),
+            ("PARAMS", &fe_params),
+            ("FIELDS", &fe_fields),
+            ("SUM", &sum),
+        ],
+    );
+
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: vec![scenario(
             "sum_args",
             StateAccessProfile::Cold,
@@ -590,11 +702,16 @@ fn loop_bound_family(n: u64) -> GeneratedSource {
         &[("CONTRACT_NAME", &contract_name), ("N", &n)],
     );
     let vy = render_template(LOOP_BOUND_VY_TEMPLATE, &[("N", &n)]);
+    let fe = render_template(
+        LOOP_BOUND_FE_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
 
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: vec![simple_scenario("run_loop", "runLoop()")],
         abi: vec!["runLoop() returns (uint256)".to_string()],
         semantics: vec![format!(
@@ -611,11 +728,16 @@ fn external_calls_family(n: u64) -> GeneratedSource {
         &[("CONTRACT_NAME", &contract_name), ("N", &n)],
     );
     let vy = render_template(EXTERNAL_CALLS_VY_TEMPLATE, &[("N", &n)]);
+    let fe = render_template(
+        EXTERNAL_CALLS_FE_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
 
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: vec![simple_scenario("call_many", "callMany()")],
         abi: vec![
             "ping(uint256)".to_string(),
@@ -635,11 +757,16 @@ fn events_family(n: u64) -> GeneratedSource {
         &[("CONTRACT_NAME", &contract_name), ("N", &n)],
     );
     let vy = render_template(EVENTS_VY_TEMPLATE, &[("N", &n)]);
+    let fe = render_template(
+        EVENTS_FE_TEMPLATE,
+        &[("CONTRACT_NAME", &contract_name), ("N", &n)],
+    );
 
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
+        fe,
         scenarios: vec![simple_scenario("emit_many", "emitMany()")],
         abi: vec![
             "event Tick(uint256 indexed index, uint256 value)".to_string(),
@@ -811,6 +938,8 @@ mod tests {
             assert_eq!(first.contract_name, second.contract_name);
             assert_eq!(first.solidity, second.solidity);
             assert_eq!(first.vyper, second.vyper);
+            assert_eq!(first.fe, second.fe);
+            assert!(!first.fe.is_empty());
             assert!(!first.scenarios.is_empty());
         }
     }
