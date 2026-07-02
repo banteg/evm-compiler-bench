@@ -7,6 +7,7 @@ use std::{collections::BTreeMap, path::PathBuf};
 pub enum Language {
     Solidity,
     Vyper,
+    Fe,
 }
 
 impl Language {
@@ -14,6 +15,7 @@ impl Language {
         match self {
             Self::Solidity => "solidity",
             Self::Vyper => "vyper",
+            Self::Fe => "fe",
         }
     }
 }
@@ -115,6 +117,8 @@ pub struct Benchmark {
     pub contract_name: String,
     pub solidity_path: String,
     pub vyper_path: String,
+    #[serde(default)]
+    pub fe_path: Option<String>,
     pub suite: BenchmarkSuite,
     pub family: Option<String>,
     pub parameter_name: Option<String>,
@@ -132,6 +136,7 @@ impl Benchmark {
             contract_name: contract_name.to_string(),
             solidity_path: solidity_path.to_string(),
             vyper_path: vyper_path.to_string(),
+            fe_path: None,
             suite: BenchmarkSuite::Fixed,
             family: None,
             parameter_name: None,
@@ -141,6 +146,11 @@ impl Benchmark {
             generator_version: None,
             provenance: None,
         }
+    }
+
+    pub fn with_fe(mut self, fe_path: &str) -> Self {
+        self.fe_path = Some(fe_path.to_string());
+        self
     }
 
     pub fn real_derived(
@@ -155,6 +165,7 @@ impl Benchmark {
             contract_name: contract_name.to_string(),
             solidity_path: solidity_path.to_string(),
             vyper_path: vyper_path.to_string(),
+            fe_path: None,
             suite: BenchmarkSuite::RealDerived,
             family: None,
             parameter_name: None,

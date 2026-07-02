@@ -100,6 +100,7 @@ const SOL_NOOPT = 'solc-latest-noopt';
 const SOL_0426_LEGACY = 'solc-0.4.26-legacy-runs200';
 const VYPER_0310_GAS = 'vyper-0.3.10-gas';
 const VYPER_GAS = 'vyper-latest-gas';
+const FE_O2 = 'fe-latest-O2';
 const VYPER_GAS_VENOM = 'vyper-latest-gas-venom';
 const HEADLINE_SUITES = new Set(['fixed', 'scale']);
 
@@ -429,11 +430,12 @@ function ScaleStrip({ metric }) {
   const families = ['dispatch_N', 'storage_slots_N', 'mapping_depth_N', 'abi_args_N',
                     'loop_bound_N', 'events_N', 'external_calls_N']
     .filter(f => Bench.D.rows.some(r => r.family === f));
-  const profiles = ['solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom'];
+  const profiles = ['solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2'];
   const palette = {
     'solc-latest-viair-runs200': 'var(--solidity)',
     'vyper-latest-gas': 'var(--vyper)',
     'vyper-latest-gas-venom': 'var(--accent)',
+    'fe-latest-O2': 'var(--fe)',
   };
   return React.createElement('div', null,
     React.createElement('div', {
@@ -468,6 +470,10 @@ const CONFIG_EXPLAINERS = {
   'solidity:legacy': 'Solidity legacy EVM codegen. The balanced default is optimizer runs=200.',
   'solidity:viaIR': 'Solidity through the IR/Yul pipeline; often better optimized, slower to compile.',
   'vyper:none': 'Vyper optimizer disabled.',
+  'fe:O0': 'Fe sonatina pipeline without optimization.',
+  'fe:O1': 'Fe sonatina fast-compilation optimization; the compiler default.',
+  'fe:O2': 'Fe sonatina pipeline tuned for runtime gas.',
+  'fe:Os': 'Fe sonatina pipeline tuned for bytecode size.',
   'vyper:default': 'Historical Vyper default where explicit optimize modes were not available.',
   'vyper:gas': 'Vyper optimizer mode tuned for runtime gas.',
   'vyper:codesize': 'Vyper optimizer mode tuned for smaller bytecode.',
@@ -536,6 +542,7 @@ function ProfilePicker({ title, selected, onChange }) {
         options: [
           { value: 'solidity', label: 'Solidity' },
           { value: 'vyper', label: 'Vyper' },
+          { value: 'fe', label: 'Fe' },
         ],
         onChange: chooseLang,
       }),
@@ -1279,6 +1286,8 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
     [VYPER_GAS,        VYPER_GAS_VENOM, 'Vyper backend switch'],
     [SOL_0426_LEGACY,  SOL_LEGACY,      'solc version drift'],
     [VYPER_0310_GAS,   VYPER_GAS,       'Vyper version drift'],
+    [SOL_LEGACY,       FE_O2,           'solc vs Fe'],
+    [VYPER_GAS,        FE_O2,           'Vyper vs Fe'],
   ];
 
   const totalBuilt = (profA?.successful_artifacts ?? 0) + (profB?.successful_artifacts ?? 0);
@@ -1678,6 +1687,16 @@ function CompilerConfigurations() {
       ],
       independent: ['Venom', '--experimental-codegen', CONFIG_EXPLAINERS.venom],
     },
+    {
+      key: 'fe',
+      compiler: 'Fe',
+      engine: 'sonatina',
+      axis: 'Optimizer axis',
+      meta: compilerMeta('fe', ['O2']),
+      modes: [
+        ['O2', '-O 2', CONFIG_EXPLAINERS['fe:O2']],
+      ],
+    },
   ];
   return React.createElement('div', { className: 'config-glossary' },
     React.createElement('div', { className: 'compiler-config-grid' },
@@ -1686,7 +1705,7 @@ function CompilerConfigurations() {
           React.createElement('div', null,
             React.createElement('div', { className: 'config-label' }, 'Compiler'),
             React.createElement('div', { className: 'compiler-name' },
-              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : 'vy'}` }, group.compiler),
+              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : group.key === 'fe' ? 'fe' : 'vy'}` }, group.compiler),
               group.engine ? React.createElement(React.Fragment, null, ' · ', group.engine) : null,
             )
           ),

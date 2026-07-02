@@ -1,0 +1,6 @@
+id = "fe-latest-O2"
+language = "fe"
+compiler = "fe"
+optimizer = true
+optimizer_mode = "2"
+evm_version = "latest-shared"

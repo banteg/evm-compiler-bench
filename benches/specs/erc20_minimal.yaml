@@ -31,3 +31,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/erc20_minimal/solidity/Erc20Minimal.sol"
   vyper: "benches/implementations/erc20_minimal/vyper/Erc20Minimal.vy"
+  fe: "benches/implementations/erc20_minimal/fe/Erc20Minimal.fe"

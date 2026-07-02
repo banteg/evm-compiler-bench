@@ -8,61 +8,71 @@ pub fn fixed_benchmarks() -> Vec<Benchmark> {
             "Counter",
             "benches/implementations/counter/solidity/Counter.sol",
             "benches/implementations/counter/vyper/Counter.vy",
-        ),
+        )
+        .with_fe("benches/implementations/counter/fe/Counter.fe"),
         Benchmark::fixed(
             "erc20_minimal",
             "Erc20Minimal",
             "benches/implementations/erc20_minimal/solidity/Erc20Minimal.sol",
             "benches/implementations/erc20_minimal/vyper/Erc20Minimal.vy",
-        ),
+        )
+        .with_fe("benches/implementations/erc20_minimal/fe/Erc20Minimal.fe"),
         Benchmark::fixed(
             "erc20_permit_hashing",
             "Erc20PermitHashing",
             "benches/implementations/erc20_permit_hashing/solidity/Erc20PermitHashing.sol",
             "benches/implementations/erc20_permit_hashing/vyper/Erc20PermitHashing.vy",
-        ),
+        )
+        .with_fe("benches/implementations/erc20_permit_hashing/fe/Erc20PermitHashing.fe"),
         Benchmark::fixed(
             "ownable_pausable",
             "OwnablePausable",
             "benches/implementations/ownable_pausable/solidity/OwnablePausable.sol",
             "benches/implementations/ownable_pausable/vyper/OwnablePausable.vy",
-        ),
+        )
+        .with_fe("benches/implementations/ownable_pausable/fe/OwnablePausable.fe"),
         Benchmark::fixed(
             "vault_deposit_withdraw",
             "VaultDepositWithdraw",
             "benches/implementations/vault_deposit_withdraw/solidity/VaultDepositWithdraw.sol",
             "benches/implementations/vault_deposit_withdraw/vyper/VaultDepositWithdraw.vy",
-        ),
+        )
+        .with_fe("benches/implementations/vault_deposit_withdraw/fe/VaultDepositWithdraw.fe"),
         Benchmark::fixed(
             "create2_address_hashing",
             "Create2AddressHashing",
             "benches/implementations/create2_address_hashing/solidity/Create2AddressHashing.sol",
             "benches/implementations/create2_address_hashing/vyper/Create2AddressHashing.vy",
-        ),
+        )
+        .with_fe("benches/implementations/create2_address_hashing/fe/Create2AddressHashing.fe"),
         Benchmark::fixed(
             "eip1167_codehash_bookkeeping",
             "Eip1167CodehashBookkeeping",
             "benches/implementations/eip1167_codehash_bookkeeping/solidity/Eip1167CodehashBookkeeping.sol",
             "benches/implementations/eip1167_codehash_bookkeeping/vyper/Eip1167CodehashBookkeeping.vy",
-        ),
+        )
+        .with_fe("benches/implementations/eip1167_codehash_bookkeeping/fe/Eip1167CodehashBookkeeping.fe"),
         Benchmark::fixed(
             "merkle_verifier",
             "MerkleVerifier",
             "benches/implementations/merkle_verifier/solidity/MerkleVerifier.sol",
             "benches/implementations/merkle_verifier/vyper/MerkleVerifier.vy",
-        ),
+        )
+        .with_fe("benches/implementations/merkle_verifier/fe/MerkleVerifier.fe"),
         Benchmark::fixed(
             "amm_pair_subset",
             "AmmPairSubset",
             "benches/implementations/amm_pair_subset/solidity/AmmPairSubset.sol",
             "benches/implementations/amm_pair_subset/vyper/AmmPairSubset.vy",
-        ),
+        )
+        .with_fe("benches/implementations/amm_pair_subset/fe/AmmPairSubset.fe"),
         Benchmark::fixed(
             "scaling_dispatch_N",
             "ScalingDispatchN",
             "benches/implementations/scaling_dispatch_N/solidity/ScalingDispatchN.sol",
             "benches/implementations/scaling_dispatch_N/vyper/ScalingDispatchN.vy",
-        ),
+        )
+        .with_fe("benches/implementations/scaling_dispatch_N/fe/ScalingDispatchN.fe"),
     ]
 }
 

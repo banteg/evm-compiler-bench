@@ -1,0 +1,24 @@
+use std::evm::{Call, Ctx}
+
+msg ExternalCallsMsg {
+    #[selector = sol("ping(uint256)")]
+    Ping { x: u256 },
+    #[selector = sol("callMany()")]
+    CallMany -> u256,
+}
+
+pub contract {{CONTRACT_NAME}} uses (ctx: Ctx, call: mut Call) {
+    recv ExternalCallsMsg {
+        Ping { x } {}
+
+        CallMany -> u256 uses (ctx, mut call) {
+            let me = ctx.address()
+            let mut total: u256 = 0
+            for i in 0..{{N}} {
+                me.call(ExternalCallsMsg::Ping { x: i as u256 })
+                total += i as u256
+            }
+            total
+        }
+    }
+}

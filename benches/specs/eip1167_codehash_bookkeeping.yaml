@@ -21,3 +21,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/eip1167_codehash_bookkeeping/solidity/Eip1167CodehashBookkeeping.sol"
   vyper: "benches/implementations/eip1167_codehash_bookkeeping/vyper/Eip1167CodehashBookkeeping.vy"
+  fe: "benches/implementations/eip1167_codehash_bookkeeping/fe/Eip1167CodehashBookkeeping.fe"

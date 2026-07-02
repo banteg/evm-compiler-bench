@@ -27,3 +27,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/merkle_verifier/solidity/MerkleVerifier.sol"
   vyper: "benches/implementations/merkle_verifier/vyper/MerkleVerifier.vy"
+  fe: "benches/implementations/merkle_verifier/fe/MerkleVerifier.fe"

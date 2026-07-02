@@ -42,7 +42,7 @@
         "required": ["id", "language", "compiler", "source_variant"],
         "properties": {
           "id": { "type": "string" },
-          "language": { "enum": ["solidity", "vyper"] },
+          "language": { "enum": ["solidity", "vyper", "fe"] },
           "compiler": { "type": "string" },
           "source_variant": { "$ref": "#/$defs/sourceVariantLabel" }
         }
@@ -70,6 +70,8 @@
               "solidity_hash",
               "vyper_path",
               "vyper_hash",
+              "fe_path",
+              "fe_hash",
               "spec_path",
               "spec_hash",
               "scenario_path",
@@ -85,6 +87,8 @@
               "solidity_hash": { "type": "string" },
               "vyper_path": { "type": "string" },
               "vyper_hash": { "type": "string" },
+              "fe_path": { "type": "string" },
+              "fe_hash": { "type": "string" },
               "spec_path": { "type": "string" },
               "spec_hash": { "type": "string" },
               "scenario_path": { "type": "string" },
@@ -200,7 +204,7 @@
                     "compile_status"
                   ],
                   "properties": {
-                    "language": { "enum": ["solidity", "vyper"] },
+                    "language": { "enum": ["solidity", "vyper", "fe"] },
                     "implementation_id": { "type": "string" },
                     "profile_id": { "type": "string" },
                     "source_variant": { "$ref": "#/$defs/sourceVariantLabel" },

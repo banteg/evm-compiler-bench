@@ -1,8 +1,8 @@
 # EVM Compiler Bench
 
 Head-to-head benchmark harness for EVM compiler profiles. The project compares
-Solidity and Vyper implementations under pinned compiler versions, optimizer
-settings, codegen backends, and EVM targets.
+Solidity, Vyper, and Fe implementations under pinned compiler versions,
+optimizer settings, codegen backends, and EVM targets.
 
 The report is meant to show compiler tradeoffs, not crown a language winner.
 Runtime gas, stripped bytecode size, deploy gas, compile time, and compile
@@ -48,8 +48,10 @@ isolating generated runtime code costs, but it is not end-user transaction gas.
 - `uv` for Vyper toolchain resolution.
 - Wrangler only for publishing or deploying the Cloudflare Worker.
 
-The runner downloads missing solc and Vyper compilers unless `--offline` is
-used. Resolved compilers and run outputs are cached locally.
+The runner downloads missing solc, Vyper, and Fe compilers unless `--offline`
+is used. Fe is resolved from the latest GitHub release of `argotorg/fe`; set
+`EVM_BENCH_FE=<path>` to override with a local Fe binary (for example an
+unreleased build). Resolved compilers and run outputs are cached locally.
 
 ## Running locally
 
@@ -85,8 +87,10 @@ Ignore result caches for a fresh run:
 cargo run --release -- run --no-cache
 ```
 
-The full current matrix is large: 48 compiler profiles across 62 benchmarks,
-which means 2,976 compile attempts before gas scenarios are measured.
+The full current matrix is large: 119 compiler profiles across 64 benchmarks.
+Because Fe is skipped for the five real-derived benchmarks without an `fe/`
+implementation, this yields 7,611 compile attempts before gas scenarios are
+measured.
 
 ## Report UI
 
@@ -214,3 +218,22 @@ just zip-design
   contract exposes or depends on them.
 - Vyper Venom rows use `--experimental-codegen`.
 - Vyper 0.5.0a1 is pre-release.
+- Fe rows compile with the latest released Fe toolchain (sonatina backend) and
+  exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no
+  historical version axis. Fe implementations cover the fixed benchmark suite
+  and all seven generated scale families; benchmarks without an `fe/`
+  implementation are skipped for Fe profiles rather than reported as compile
+  failures. Fe rows do not participate in the Solidity-vs-Vyper baseline pairs.
+  The Fe release ships no checksum file, so the resolver records the downloaded
+  binary's SHA-256 in the run manifest but cannot verify it against an upstream
+  digest the way solc downloads are verified.
+- Like the Solidity stack-too-deep limit on the `abi_args_N` family, Fe's
+  sonatina backend caps internal-call operands at 16, so generated
+  `abi_args_N` rows for N>16 remain Fe compile failures rather than being
+  reshaped to fit. They are shown as compile failures, not omitted.
+- In the `external_calls_N` family, Solidity's `this.ping(i)` and Vyper's
+  `extcall` each perform a per-call EXTCODESIZE contract-existence check that
+  Fe's typed `call` (bare CALL with revert bubbling) does not. Each language
+  uses its idiomatic call construct, so the Fe curve sits roughly one warm
+  EXTCODESIZE (~100 gas) per iteration below the others for reasons that are
+  call semantics, not codegen quality.

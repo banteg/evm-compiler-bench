@@ -1,0 +1,86 @@
+use std::evm::{Ctx, Log, RawMem, StorageMap}
+use std::evm::crypto
+use std::evm::mem
+use std::abi::Bytes32
+
+msg Eip1167Msg {
+    #[selector = sol("cloneValue(bytes32)")]
+    CloneValue { salt: Bytes32 } -> u256,
+    #[selector = sol("proxyCodeHash(address)")]
+    ProxyCodeHash { implementation: Address } -> Bytes32,
+    #[selector = sol("predictClone(address,bytes32)")]
+    PredictClone { implementation: Address, salt: Bytes32 } -> Address,
+    #[selector = sol("recordClone(address,bytes32,uint256)")]
+    RecordClone { implementation: Address, salt: Bytes32, value: u256 } -> u256,
+}
+
+#[event]
+struct Cloned {
+    #[indexed]
+    salt: Bytes32,
+    predicted: Address,
+    value: u256,
+}
+
+struct CloneStore {
+    clone_value: StorageMap<u256, u256>,
+}
+
+const ADDRESS_MASK: u256 = 0xffffffffffffffffffffffffffffffffffffffff
+// EIP-1167 prefix: 3d602d80600a3d3981f3 ++ 363d3d373d3d3d363d73 (20 bytes, left-aligned)
+const PROXY_PREFIX: u256 = 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
+// EIP-1167 suffix: 5af43d82803e903d91602b57fd5bf3 (15 bytes, left-aligned)
+const PROXY_SUFFIX: u256 = 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
+
+fn proxy_code_hash(implementation: u256) -> u256 uses (raw: mut RawMem) {
+    let ptr = mem::alloc(96)
+    raw.mstore(addr: ptr, value: PROXY_PREFIX)
+    raw.mstore(addr: ptr + 20, value: implementation << 96)
+    raw.mstore(addr: ptr + 40, value: PROXY_SUFFIX)
+    crypto::keccak256(ptr, 55)
+}
+
+fn predict_clone(self_addr: u256, implementation: u256, salt: u256) -> u256
+    uses (raw: mut RawMem)
+{
+    let code_hash = proxy_code_hash(implementation)
+    let ptr = mem::alloc(96)
+    raw.mstore8(addr: ptr, value: 0xff)
+    raw.mstore(addr: ptr + 1, value: self_addr << 96)
+    raw.mstore(addr: ptr + 21, value: salt)
+    raw.mstore(addr: ptr + 53, value: code_hash)
+    crypto::keccak256(ptr, 85) & ADDRESS_MASK
+}
+
+pub contract Eip1167CodehashBookkeeping uses (ctx: Ctx, log: mut Log, raw: mut RawMem) {
+    mut store: CloneStore
+
+    recv Eip1167Msg {
+        CloneValue { salt } -> u256 uses store { store.clone_value.get(key: salt.val) }
+
+        ProxyCodeHash { implementation } -> Bytes32 uses (mut raw) {
+            Bytes32 { val: proxy_code_hash(implementation: implementation.inner) }
+        }
+
+        PredictClone { implementation, salt } -> Address uses (ctx, mut raw) {
+            Address {
+                inner: predict_clone(
+                    self_addr: ctx.address().inner,
+                    implementation: implementation.inner,
+                    salt: salt.val,
+                ),
+            }
+        }
+
+        RecordClone { implementation, salt, value } -> u256 uses (mut store, ctx, mut log, mut raw) {
+            let predicted = predict_clone(
+                self_addr: ctx.address().inner,
+                implementation: implementation.inner,
+                salt: salt.val,
+            )
+            store.clone_value.set(key: salt.val, value: value)
+            log.emit(Cloned { salt, predicted: Address { inner: predicted }, value })
+            value
+        }
+    }
+}

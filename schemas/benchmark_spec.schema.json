@@ -186,7 +186,8 @@
       "required": ["solidity", "vyper"],
       "properties": {
         "solidity": { "type": "string" },
-        "vyper": { "type": "string" }
+        "vyper": { "type": "string" },
+        "fe": { "type": "string" }
       }
     }
   }

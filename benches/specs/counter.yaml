@@ -24,3 +24,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/counter/solidity/Counter.sol"
   vyper: "benches/implementations/counter/vyper/Counter.vy"
+  fe: "benches/implementations/counter/fe/Counter.fe"

@@ -1,0 +1,20 @@
+msg DispatchMsg {
+    #[selector = sol("sink()")]
+    Sink -> u256,
+    #[selector = sol("setSink(uint256)")]
+    SetSink { new_value: u256 } -> u256,
+{{MSG_VARIANTS}}
+}
+
+pub contract {{CONTRACT_NAME}} {
+    mut sink: u256
+
+    recv DispatchMsg {
+        Sink -> u256 uses sink { sink }
+        SetSink { new_value } -> u256 uses (mut sink) {
+            sink = new_value
+            new_value
+        }
+{{RECV_ARMS}}
+    }
+}

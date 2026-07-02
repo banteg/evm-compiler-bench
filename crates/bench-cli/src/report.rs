@@ -21,6 +21,7 @@ use std::{
 const SOL_CODEGEN_BASELINE: &str = "solc-latest-legacy-runs200";
 const SOL_VIAIR_CODEGEN: &str = "solc-latest-viair-runs200";
 const VYPER_GAS_CODEGEN: &str = "vyper-latest-gas";
+const FE_CODEGEN_BASELINE: &str = "fe-latest-O2";
 const VYPER_GAS_VENOM_CODEGEN: &str = "vyper-latest-gas-venom";
 const VYPER_ALPHA_GAS_CODEGEN: &str = "vyper-0.5.0a1-gas";
 const SCORECARD_TIE_BAND: f64 = 0.02;
@@ -899,6 +900,7 @@ fn profile_behavior_baselines<'a>(
         let baseline_profile = match artifact.language {
             Language::Solidity => SOL_CODEGEN_BASELINE,
             Language::Vyper => VYPER_GAS_CODEGEN,
+            Language::Fe => FE_CODEGEN_BASELINE,
         };
         if gas.profile_id == baseline_profile {
             baselines.insert(profile_behavior_key(gas), gas);
