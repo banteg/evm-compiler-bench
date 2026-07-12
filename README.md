@@ -220,8 +220,9 @@ just zip-design
 - Vyper 0.5.0a1 is pre-release.
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
   exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no
-  historical version axis. Fe implementations cover the fixed benchmark suite
-  and all seven generated scale families; benchmarks without an `fe/`
+  historical version axis. Fe implementations cover the fixed benchmark suite,
+  the Uniswap V2 Factory production-conformance benchmark, and all seven
+  generated scale families; benchmarks without an `fe/`
   implementation are skipped for Fe profiles rather than reported as compile
   failures. Fe rows do not participate in the Solidity-vs-Vyper baseline pairs.
   The Fe release ships no checksum file, so the resolver records the downloaded

@@ -1854,7 +1854,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             require_enum(
                 row,
                 "/provenance/port_language",
-                &["solidity", "vyper"],
+                &["solidity", "vyper", "fe"],
                 path,
             )?;
             for pointer in [
@@ -2313,6 +2313,16 @@ implementations:
                 "port_language": "vyper"
             }
         });
+        let fe_counterpart_row = json!({
+            "provenance": {
+                "comparison_lane": "production_conformance",
+                "source_lane": "latest_syntax_original",
+                "counterpart_lane": "fixture_scoped_port",
+                "implementation_lane": "fixture_scoped_port",
+                "source_language": "solidity",
+                "port_language": "fe"
+            }
+        });
         let stale_row = json!({
             "provenance": {
                 "comparison_lane": "production_conformance",
@@ -2346,6 +2356,7 @@ implementations:
 
         super::validate_real_derived_row_lanes(&row, path).unwrap();
         super::validate_real_derived_row_lanes(&counterpart_row, path).unwrap();
+        super::validate_real_derived_row_lanes(&fe_counterpart_row, path).unwrap();
         assert!(super::validate_real_derived_row_lanes(&stale_row, path).is_err());
         assert!(super::validate_real_derived_row_lanes(&historical_source, path).is_err());
         assert!(super::validate_real_derived_row_lanes(&comparison_as_source_lane, path).is_err());
