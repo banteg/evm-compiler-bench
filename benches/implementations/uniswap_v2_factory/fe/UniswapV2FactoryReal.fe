@@ -1,0 +1,175 @@
+use std::abi::Bytes
+use std::evm::{Address, Call, Create, Ctx, Log, RawMem, StorageMap}
+use std::evm::crypto
+use std::evm::mem
+
+msg PairMsg {
+    #[selector = sol("initialize(address,address)")]
+    Initialize { token0: Address, token1: Address },
+}
+
+msg FactoryMsg {
+    #[selector = sol("createPair(address,address)")]
+    CreatePair { token_a: Address, token_b: Address } -> Address,
+    #[selector = sol("getPair(address,address)")]
+    GetPair { token0: Address, token1: Address } -> Address,
+    #[selector = sol("allPairs(uint256)")]
+    AllPairs { index: u256 } -> Address,
+    #[selector = sol("allPairsLength()")]
+    AllPairsLength -> u256,
+    #[selector = sol("setFeeTo(address)")]
+    SetFeeTo { fee_to: Address },
+    #[selector = sol("setFeeToSetter(address)")]
+    SetFeeToSetter { fee_to_setter: Address },
+    #[selector = sol("feeTo()")]
+    FeeTo -> Address,
+    #[selector = sol("feeToSetter()")]
+    FeeToSetter -> Address,
+}
+
+#[event]
+struct PairCreated {
+    #[indexed]
+    token0: Address,
+    #[indexed]
+    token1: Address,
+    pair: Address,
+    pair_count: u256,
+}
+
+struct FactoryStore {
+    fee_to: Address,
+    fee_to_setter: Address,
+    get_pair: StorageMap<(Address, Address), Address>,
+    all_pairs: StorageMap<u256, Address>,
+    all_pairs_length: u256,
+    pair_code_len: u256,
+    pair_code_words: StorageMap<u256, u256>,
+}
+
+fn pair_salt(token0: Address, token1: Address) -> u256 uses (raw: mut RawMem) {
+    let ptr = mem::alloc(64)
+    raw.mstore(addr: ptr, value: token0.inner << 96)
+    raw.mstore(addr: ptr + 20, value: token1.inner << 96)
+    crypto::keccak256(ptr, 40)
+}
+
+fn materialize_pair_code(store: FactoryStore) -> (u256, u256)
+uses (raw: mut RawMem)
+{
+    let len = store.pair_code_len
+    let ptr = mem::alloc(len)
+    let word_count = (len + 31) / 32
+    let mut i: u256 = 0
+    while i < word_count {
+        raw.mstore(
+            addr: ptr + i * 32,
+            value: store.pair_code_words.get(key: i),
+        )
+        i += 1
+    }
+    (ptr, len)
+}
+
+pub contract UniswapV2FactoryReal uses (
+    ctx: Ctx,
+    log: mut Log,
+    call: mut Call,
+    create: mut Create,
+    raw: mut RawMem,
+) {
+    mut store: FactoryStore,
+
+    init(pair_code: Bytes, fee_to_setter: Address)
+    uses (mut store)
+    {
+        store.fee_to = Address::zero()
+        store.fee_to_setter = fee_to_setter
+        store.all_pairs_length = 0
+        store.pair_code_len = pair_code.len()
+
+        let word_count = (pair_code.len() + 31) / 32
+        let mut i: u256 = 0
+        while i < word_count {
+            store.pair_code_words.set(key: i, value: pair_code.word_at(i * 32))
+            i += 1
+        }
+    }
+
+    recv FactoryMsg {
+        FeeTo -> Address uses store {
+            store.fee_to
+        }
+        FeeToSetter -> Address uses store {
+            store.fee_to_setter
+        }
+        GetPair { token0, token1 } -> Address uses store {
+            store.get_pair.get(key: (token0, token1))
+        }
+        AllPairs { index } -> Address uses store {
+            assert!(index < store.all_pairs_length)
+            store.all_pairs.get(key: index)
+        }
+        AllPairsLength -> u256 uses store {
+            store.all_pairs_length
+        }
+
+        SetFeeTo { fee_to } uses (mut store, ctx) {
+            assert!(
+                ctx.caller() == store.fee_to_setter,
+                "UniswapV2: FORBIDDEN",
+            )
+            store.fee_to = fee_to
+        }
+
+        SetFeeToSetter { fee_to_setter } uses (mut store, ctx) {
+            assert!(
+                ctx.caller() == store.fee_to_setter,
+                "UniswapV2: FORBIDDEN",
+            )
+            store.fee_to_setter = fee_to_setter
+        }
+
+        CreatePair { token_a, token_b } -> Address
+        uses (mut store, ctx, mut log, mut call, mut create, mut raw)
+        {
+            assert!(token_a != token_b, "UniswapV2: IDENTICAL_ADDRESSES")
+
+            let mut token0 = token_a
+            let mut token1 = token_b
+            if token_b.inner < token_a.inner {
+                token0 = token_b
+                token1 = token_a
+            }
+
+            assert!(token0 != Address::zero(), "UniswapV2: ZERO_ADDRESS")
+            assert!(
+                store.get_pair.get(key: (token0, token1)) == Address::zero(),
+                "UniswapV2: PAIR_EXISTS",
+            )
+
+            let salt = pair_salt(token0, token1)
+            let code = materialize_pair_code(store)
+            let pair = create.create2_raw(value: 0, offset: code.0, len: code.1, salt: salt)
+            assert!(
+                pair != Address::zero() && ctx.extcodesize(pair) != 0,
+                "pair create2",
+            )
+
+            call.call(
+                addr: pair,
+                gas: ctx.gas(),
+                value: 0,
+                message: PairMsg::Initialize { token0, token1 },
+            )
+
+            store.get_pair.set(key: (token0, token1), value: pair)
+            store.get_pair.set(key: (token1, token0), value: pair)
+            let pair_count = store.all_pairs_length + 1
+            store.all_pairs.set(key: store.all_pairs_length, value: pair)
+            store.all_pairs_length = pair_count
+            log.emit(PairCreated { token0, token1, pair, pair_count })
+            pair
+        }
+    }
+}
