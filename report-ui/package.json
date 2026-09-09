@@ -1,9 +1,10 @@
 {
   "name": "evm-compiler-bench-report",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
+    "test": "node --test",
     "build": "vite build",
     "dev": "vite --host 127.0.0.1"
   },

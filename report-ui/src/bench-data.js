@@ -1,6 +1,30 @@
 // Data helpers — all globals on `window.Bench`
 (function(){
   const D = window.__BENCH_DATA || window.__EVM_BENCH_REPORT_DATA;
+  const failedArtifacts = new Set(D.rows.filter(hasCorrectnessFailure)
+    .map(r => `${r.profile_id}|${artifactKey(r)}`));
+
+  function hasCorrectnessFailure(row){
+    return row.status === 'ok' && (row.gas?.scenario_status_ok === false
+      || Object.values(row.correctness || {}).some(status => status === 'fail'));
+  }
+  function isComparableArtifact(row){
+    return row.status === 'ok' && !failedArtifacts.has(`${row.profile_id}|${artifactKey(row)}`);
+  }
+  function correctnessFailureGroups(){
+    const groups = new Map();
+    for (const row of D.rows.filter(hasCorrectnessFailure)) {
+      const checks = Object.entries(row.correctness || {}).filter(([,v]) => v === 'fail').map(([k]) => k);
+      if (!checks.length) checks.push('scenario_status_check');
+      const key = [row.benchmark_id, ...checks].join('|');
+      if (!groups.has(key)) groups.set(key, {benchmark:row.benchmark_id, checks, count:0, profiles:new Set(), scenarios:new Set()});
+      const group = groups.get(key);
+      group.count++;
+      group.profiles.add(row.profile_id);
+      group.scenarios.add(row.gas?.scenario || 'artifact');
+    }
+    return [...groups.values()].map(g => ({...g, profiles:[...g.profiles].sort(), scenarios:[...g.scenarios].sort()}));
+  }
 
   const METRICS = [
     { id: 'harness_call_gas',       label: 'Harness call gas', short: 'Runtime gas',  unit: 'gas',  lowerBetter: true, hero: true },
@@ -23,7 +47,7 @@
   }
 
   function valueAt(row, metric){
-    if (row.status !== 'ok') return undefined;
+    if (!isComparableArtifact(row)) return undefined;
     switch(metric){
       case 'harness_call_gas': return row.gas?.harness_call_gas;
       case 'runtime_bytes_stripped': return row.bytecode?.runtime_bytes_stripped ?? row.bytecode?.runtime_bytes;
@@ -81,7 +105,7 @@
       if (v == null) continue;
       const k = comparisonKey(r, metric);
       if (r.profile_id === pa && !L.has(k)){ Ra.set(k, r); L.set(k, v); }
-      else if (r.profile_id === pb && !Rb.has(k)){ Rb.set(k, r); }
+      if (r.profile_id === pb && !Rb.has(k)){ Rb.set(k, r); }
     }
     const out = [];
     for (const [k, va] of L){
@@ -186,6 +210,14 @@
     if (p.language === 'fe' || p.compiler_name === 'fe') return 'Fe';
     return p.compiler_name || (p.language === 'solidity' ? 'solc' : p.language);
   }
+  function profileCompilerKey(p){
+    return p.compiler_name || (String(p.id).startsWith('solx-') ? 'solx'
+      : p.language === 'solidity' ? 'solc' : p.language);
+  }
+  function compilerOptions(){
+    return ['solc', 'solx', 'vyper', 'fe'].filter(key => D.profiles.some(p => profileCompilerKey(p) === key))
+      .map(value => ({ value, label: value === 'vyper' ? 'Vyper' : value === 'fe' ? 'Fe' : value }));
+  }
   function profileDisplayLabel(p){
     const opt = profileOptimizer(p);
     const runs = profileOptimizerRuns(p);
@@ -194,9 +226,7 @@
     return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)} ${opt}${runsLabel}${venom}`;
   }
   function profileVersionKey(p){
-    const prefix = p.language === 'solidity' ? 'solc-latest-'
-      : p.language === 'fe' ? 'fe-latest-'
-      : 'vyper-latest-';
+    const prefix = `${profileCompilerKey(p)}-latest-`;
     if (String(p.id).startsWith(prefix)) return 'latest';
     return String(p.compiler_version ?? 'unknown');
   }
@@ -213,6 +243,10 @@
   }
   function profileOptimizer(p){
     const id = String(p.id);
+    if (profileCompilerKey(p) === 'solx') {
+      const mode = id.match(/-O([123sz])(?:-|$)/)?.[1];
+      return p.optimizer || (mode ? `O${mode}` : 'unknown');
+    }
     if (p.language === 'solidity'){
       if (id.match(/viair-runs\d+/)) return 'viaIR';
       if (id.match(/legacy-runs\d+/)) return 'legacy';
@@ -242,6 +276,7 @@
   function profileKnobs(p){
     return {
       language: p.language,
+      compiler: profileCompilerKey(p),
       versionKey: profileVersionKey(p),
       optimizer: profileOptimizer(p),
       runs: profileOptimizerRuns(p),
@@ -252,6 +287,7 @@
     return D.profiles.filter(p => {
       const k = profileKnobs(p);
       return (!desired.language || k.language === desired.language)
+        && (!desired.compiler || k.compiler === desired.compiler)
         && (!desired.versionKey || k.versionKey === desired.versionKey)
         && (!desired.optimizer || k.optimizer === desired.optimizer)
         && (desired.runs == null || k.runs === Number(desired.runs))
@@ -267,9 +303,9 @@
     return preferred.find(o => optimizers.includes(o)) ?? optimizers[0];
   }
   function resolveProfile(desired){
-    const cands = matchingProfiles({ language: desired.language });
+    const cands = matchingProfiles({ language: desired.language, compiler: desired.compiler });
     const wantedRuns = desired.runs == null
-      ? defaultOptimizerRuns(desired.language, desired.versionKey, desired.optimizer)
+      ? defaultOptimizerRuns(desired.language, desired.versionKey, desired.optimizer, desired.compiler)
       : Number(desired.runs);
     const runsMatch = k => !optimizerUsesRuns(k.language, k.optimizer) || wantedRuns == null || k.runs === wantedRuns;
     const exact = cands.find(p => {
@@ -296,8 +332,14 @@
     if (D.profiles.some(p => p.id === pref)) return pref;
     return D.profiles.find(p => p.language === lang)?.id ?? D.profiles[0].id;
   }
+  function defaultProfileForCompiler(compiler){
+    const pref = {solc: 'solc-latest-viair-runs200', solx: 'solx-0.1.8-O3', vyper: 'vyper-latest-gas', fe: 'fe-latest-O2'}[compiler];
+    return D.profiles.find(p => p.id === pref)?.id
+      ?? D.profiles.find(p => profileCompilerKey(p) === compiler)?.id ?? D.profiles[0].id;
+  }
 
   function latestBaselineProfile(p){
+    if (profileCompilerKey(p) === 'solx') return undefined;
     const config = profileOptimizer(p);
     const venom = p.experimental_codegen ? '-venom' : '';
     if (p.language === 'solidity'){
@@ -396,8 +438,8 @@
   }
 
   // List allowed versions / optimizers for a selected language/version.
-  function profileFacets(lang, versionKey, optimizer){
-    const ps = matchingProfiles({ language: lang });
+  function profileFacets(lang, versionKey, optimizer, compiler){
+    const ps = matchingProfiles({ language: lang, compiler });
     const versionProfiles = versionKey ? ps.filter(p => profileVersionKey(p) === versionKey) : ps;
     const versions = [...new Set(ps.map(profileVersionKey))]
       .sort((a,b) => versionRank(b) - versionRank(a));
@@ -411,21 +453,22 @@
     const supportsExperimental = versionProfiles.some(p => p.experimental_codegen);
     return { versions, versionLabels, optimizers, runs, supportsExperimental };
   }
-  function defaultOptimizerForVersion(lang, versionKey){
-    const optimizers = [...new Set(matchingProfiles({ language: lang, versionKey }).map(profileOptimizer))]
+  function defaultOptimizerForVersion(lang, versionKey, compiler){
+    const optimizers = [...new Set(matchingProfiles({ language: lang, versionKey, compiler }).map(profileOptimizer))]
       .sort((a,b) => optimizerRank(a) - optimizerRank(b));
+    if (compiler === 'solx') return optimizers.includes('O3') ? 'O3' : optimizers[0];
     return preferredOptimizer(lang, optimizers);
   }
-  function defaultOptimizerRuns(lang, versionKey, optimizer){
+  function defaultOptimizerRuns(lang, versionKey, optimizer, compiler){
     if (!optimizerUsesRuns(lang, optimizer)) return null;
-    const runs = profileFacets(lang, versionKey, optimizer).runs;
+    const runs = profileFacets(lang, versionKey, optimizer, compiler).runs;
     return runs.includes(200) ? 200 : (runs[0] ?? null);
   }
   function profileOptionExists(desired){
     return matchingProfiles(desired).length > 0;
   }
   function optimizerRank(o){
-    const order = ['noopt','none','legacy','default','gas','codesize','viaIR'];
+    const order = ['noopt','none','legacy','default','gas','codesize','viaIR','O3','Oz'];
     const i = order.indexOf(o);
     return i === -1 ? 99 : i;
   }
@@ -603,9 +646,11 @@
     D,
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
+    hasCorrectnessFailure, isComparableArtifact, correctnessFailureGroups,
     compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
-    profileOptimizer, resolveProfile, defaultProfileForLanguage,
+    profileOptimizer, resolveProfile, defaultProfileForLanguage, defaultProfileForCompiler,
+    profileCompilerKey, compilerOptions,
     profileOptimizerRuns, versionRank, optimizerRank, profileFacets, profilesByLang,
     defaultOptimizerForVersion, defaultOptimizerRuns, profileOptionExists,
     versionAxisRows, latestBaselineProfile,

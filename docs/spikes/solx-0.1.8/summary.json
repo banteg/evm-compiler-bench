@@ -1,0 +1,97 @@
+[
+  {
+    "benchmark": "erc20_minimal",
+    "runtime_bytes": {
+      "solc-legacy-200": 1474,
+      "solc-viair-200": 1277,
+      "solx-O3": 1005,
+      "solx-Oz": 991
+    },
+    "solx-O3": {
+      "successful_scenarios": 4,
+      "median_gas_delta_pct": -1.2393538599679066,
+      "runtime_delta_pct": -21.299921691464373
+    },
+    "solx-Oz": {
+      "successful_scenarios": 4,
+      "median_gas_delta_pct": -0.33856610766904716,
+      "runtime_delta_pct": -22.396241190289746
+    }
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "runtime_bytes": {
+      "solc-legacy-200": 835,
+      "solc-viair-200": 732,
+      "solx-O3": 594,
+      "solx-Oz": 588
+    },
+    "solx-O3": {
+      "successful_scenarios": 2,
+      "median_gas_delta_pct": -1.0449141853566823,
+      "runtime_delta_pct": -18.852459016393443
+    },
+    "solx-Oz": {
+      "successful_scenarios": 2,
+      "median_gas_delta_pct": -1.1070658520650811,
+      "runtime_delta_pct": -19.672131147540984
+    }
+  },
+  {
+    "benchmark": "amm_pair_subset",
+    "runtime_bytes": {
+      "solc-legacy-200": 1364,
+      "solc-viair-200": 1174,
+      "solx-O3": 958,
+      "solx-Oz": 1025
+    },
+    "solx-O3": {
+      "successful_scenarios": 4,
+      "median_gas_delta_pct": -4.267672019999358,
+      "runtime_delta_pct": -18.39863713798978
+    },
+    "solx-Oz": {
+      "successful_scenarios": 4,
+      "median_gas_delta_pct": -0.2459645937518795,
+      "runtime_delta_pct": -12.691652470187398
+    }
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "runtime_bytes": {
+      "solc-legacy-200": 571,
+      "solc-viair-200": 438,
+      "solx-O3": 350,
+      "solx-Oz": 329
+    },
+    "solx-O3": {
+      "successful_scenarios": 6,
+      "median_gas_delta_pct": -7.217054263565892,
+      "runtime_delta_pct": -20.091324200913242
+    },
+    "solx-Oz": {
+      "successful_scenarios": 6,
+      "median_gas_delta_pct": -4.136950904392767,
+      "runtime_delta_pct": -24.885844748858442
+    }
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "runtime_bytes": {
+      "solc-legacy-200": 8243,
+      "solc-viair-200": 7631,
+      "solx-O3": 6938,
+      "solx-Oz": 6334
+    },
+    "solx-O3": {
+      "successful_scenarios": 22,
+      "median_gas_delta_pct": -1.6723434123641523,
+      "runtime_delta_pct": -9.081378587341105
+    },
+    "solx-Oz": {
+      "successful_scenarios": 22,
+      "median_gas_delta_pct": -1.4970705876720114,
+      "runtime_delta_pct": -16.99646180055039
+    }
+  }
+]

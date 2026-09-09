@@ -395,6 +395,9 @@ fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerP
         let text = fs::read_to_string(entry.path())?;
         let base: CompilerProfile =
             toml::from_str(&text).with_context(|| format!("parsing {}", entry.path().display()))?;
+        if crate::solx::profile_version(&base.compiler).is_some() {
+            crate::solx::validate_profile(&base)?;
+        }
         profiles.push(no_metadata_profile(&base));
     }
     profiles.sort_by(|a, b| a.id.cmp(&b.id));
@@ -441,47 +444,25 @@ fn compile_solidity(
 ) -> Result<CompiledArtifact> {
     let source_path = source_path_for_profile(root, benchmark, profile, solc)?;
     let (file_name, sources) = solidity_sources(&source_path)?;
-    let metadata_settings = solidity_metadata_settings(profile.metadata_mode, solc);
-    let mut input = json!({
+    let input = json!({
         "language": "Solidity",
         "sources": sources,
-        "settings": {
-            "evmVersion": evm_version,
-            "metadata": metadata_settings,
-            "optimizer": {
-                "enabled": profile.optimizer,
-                "runs": profile.optimizer_runs
-            },
-            "viaIR": profile.via_ir,
-            "outputSelection": {
-                "*": {
-                    "*": ["abi", "evm.bytecode.object", "evm.deployedBytecode.object"]
-                }
-            }
-        }
+        "settings": solidity_standard_json_settings(profile, solc, evm_version)
     });
-    let settings = input
-        .pointer_mut("/settings")
-        .and_then(|value| value.as_object_mut())
-        .context("solidity settings object")?;
-    if metadata_settings
-        .as_object()
-        .is_some_and(|object| object.is_empty())
-    {
-        settings.remove("metadata");
-    }
-    if !profile.via_ir {
-        settings.remove("viaIR");
-    }
     let input = serde_json::to_vec(&input)?;
     let measured = repeat_compile_samples(
         || {
             let mut command = Command::new(&solc.binary_path);
             command.arg("--standard-json");
+            if solc.name == "solx" {
+                command
+                    .arg("--threads")
+                    .arg(crate::solx::WORKER_THREADS.to_string());
+            }
             command
         },
         Some(&input),
-        "solc --standard-json",
+        &format!("{} --standard-json", solc.name),
     )?;
     let output: serde_json::Value = serde_json::from_slice(&measured.output_stdout)?;
     reject_solc_errors(&output)?;
@@ -490,7 +471,7 @@ fn compile_solidity(
             "/contracts/{file_name}/{}",
             benchmark.contract_name
         ))
-        .with_context(|| format!("missing solc contract {}", benchmark.contract_name))?;
+        .with_context(|| format!("missing {} contract {}", solc.name, benchmark.contract_name))?;
     let abi = contract
         .pointer("/abi")
         .context("missing solidity abi")?
@@ -518,6 +499,30 @@ fn compile_solidity(
         measured.peak_rss_kib,
         solidity_compiler_settings(profile, solc, evm_version),
     )
+}
+
+fn solidity_standard_json_settings(
+    profile: &CompilerProfile,
+    toolchain: &Toolchain,
+    evm: &str,
+) -> serde_json::Value {
+    let metadata = solidity_metadata_settings(profile.metadata_mode, toolchain);
+    let optimizer = if toolchain.name == "solx" {
+        json!({"mode": profile.optimizer_mode, "sizeFallback": false})
+    } else {
+        json!({"enabled": profile.optimizer, "runs": profile.optimizer_runs})
+    };
+    let mut settings = json!({
+        "evmVersion": evm, "metadata": metadata, "optimizer": optimizer,
+        "outputSelection": {"*": {"*": ["abi", "evm.bytecode.object", "evm.deployedBytecode.object"]}}
+    });
+    if metadata.as_object().is_some_and(|value| value.is_empty()) {
+        settings.as_object_mut().unwrap().remove("metadata");
+    }
+    if profile.via_ir {
+        settings["viaIR"] = json!(true);
+    }
+    settings
 }
 
 fn reject_solc_errors(output: &serde_json::Value) -> Result<()> {
@@ -595,6 +600,23 @@ fn solidity_compiler_settings(
     solc: &Toolchain,
     evm_version: &str,
 ) -> serde_json::Value {
+    if solc.name == "solx" {
+        return json!({
+            "evmVersion": evm_version,
+            "compiler": profile.compiler,
+            "metadataMode": profile.metadata_mode.as_str(),
+            "metadata": solidity_metadata_settings(profile.metadata_mode, solc),
+            "optimizer": {"mode": profile.optimizer_mode, "sizeFallback": false},
+            "optimize": format!("O{}", profile.optimizer_mode.as_deref().unwrap_or("unknown")),
+            "viaIR": false,
+            "threads": crate::solx::WORKER_THREADS,
+            "frontend": solc.metadata.get("frontend"),
+            "frontendVersion": solc.metadata.get("frontend_version"),
+            "frontendCommit": solc.metadata.get("frontend_commit"),
+            "llvmBuild": solc.metadata.get("llvm_build"),
+            "sourceVariant": source_variant_label(profile),
+        });
+    }
     json!({
         "evmVersion": evm_version,
         "compiler": profile.compiler,
@@ -608,7 +630,12 @@ fn solidity_compiler_settings(
 }
 
 fn solidity_version_tuple(solc: &Toolchain) -> Option<(u64, u64, u64)> {
-    let mut parts = solc.version.split('.');
+    let version = if solc.name == "solx" {
+        solc.metadata.get("frontend_version")?
+    } else {
+        &solc.version
+    };
+    let mut parts = version.split('.');
     let major = parts.next()?.parse().ok()?;
     let minor = parts.next()?.parse().ok()?;
     let patch = parts.next()?.parse().ok()?;
@@ -825,6 +852,13 @@ fn source_path_for_profile(
                 .join(&profile.id)
                 .join(&benchmark.solidity_path);
             let variant_root = variant_path.parent().context("solidity variant parent")?;
+            // A removed or renamed import must not survive in a previous
+            // materialization and accidentally enter the next source bundle.
+            if variant_root.exists() {
+                for stale in solidity_files(variant_root)? {
+                    fs::remove_file(stale)?;
+                }
+            }
             for path in solidity_files(source_root)? {
                 let relative = path.strip_prefix(source_root)?;
                 let target = variant_root.join(relative);
@@ -1855,21 +1889,14 @@ fn vyper_internal_order(name: &str) -> usize {
 
 fn rewrite_vyper_event_log_block(block: &str) -> Option<String> {
     let first_line = block.lines().next()?;
-    let Some(log_index) = first_line.find("log ") else {
-        return None;
-    };
-    let Some(open_index) = first_line[log_index..]
+    let log_index = first_line.find("log ")?;
+    let open_index = first_line[log_index..]
         .find('(')
-        .map(|index| log_index + index)
-    else {
-        return None;
-    };
+        .map(|index| log_index + index)?;
     if !block.trim_end().ends_with(')') {
         return None;
     }
-    let Some(close_index) = block.rfind(')') else {
-        return None;
-    };
+    let close_index = block.rfind(')')?;
     let args = &block[open_index + 1..close_index];
     if !args.contains('=') {
         return None;
@@ -2110,6 +2137,63 @@ mod tests {
     };
     use crate::models::{CompilerProfile, Language, MetadataMode, Toolchain};
     use std::{collections::BTreeMap, fs, path::PathBuf};
+
+    #[test]
+    fn solx_uses_embedded_frontend_and_llvm_settings() {
+        let mut compiler = toolchain("solx", "0.1.8");
+        assert!(solidity_pragma_for_toolchain(&compiler).is_err());
+        compiler
+            .metadata
+            .insert("frontend_version".into(), "0.8.34".into());
+        assert_eq!(
+            solidity_pragma_for_toolchain(&compiler).unwrap(),
+            "pragma solidity >=0.8.34 <0.9.0;"
+        );
+        let mut p = profile("solx-0.1.8-Oz", Language::Solidity);
+        p.compiler = "solx-0.1.8".into();
+        p.optimizer = true;
+        p.optimizer_mode = Some("z".into());
+        crate::solx::validate_profile(&p).unwrap();
+        let settings = super::solidity_standard_json_settings(&p, &compiler, "cancun");
+        assert_eq!(
+            settings["optimizer"],
+            serde_json::json!({"mode":"z", "sizeFallback":false})
+        );
+        assert_eq!(settings["metadata"]["appendCBOR"], false);
+        assert!(settings.get("viaIR").is_none());
+        let report = super::solidity_compiler_settings(&p, &compiler, "cancun");
+        assert_eq!(report["frontendVersion"], "0.8.34");
+        assert_eq!(report["optimize"], "Oz");
+        assert!(report.get("optimizerRuns").is_none());
+        p.optimizer_runs = 200;
+        assert!(crate::solx::validate_profile(&p).is_err());
+    }
+
+    #[test]
+    fn source_materialization_removes_deleted_imports() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("source")).unwrap();
+        fs::write(
+            root.path().join("source/Main.sol"),
+            "pragma solidity ^0.8.35; contract Main {}",
+        )
+        .unwrap();
+        fs::write(
+            root.path().join("source/Deleted.sol"),
+            "contract Deleted {}",
+        )
+        .unwrap();
+        let b = crate::models::Benchmark::fixed("main", "Main", "source/Main.sol", "unused.vy");
+        let p = profile("solc", Language::Solidity);
+        let t = toolchain("solc", "0.8.35");
+        let path = super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        assert!(path.parent().unwrap().join("Deleted.sol").exists());
+        fs::remove_file(root.path().join("source/Deleted.sol")).unwrap();
+        super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        let (_, sources) = super::solidity_sources(&path).unwrap();
+        assert_eq!(sources.len(), 1);
+        assert!(!sources.contains_key("Deleted.sol"));
+    }
 
     #[test]
     fn computes_bytecode_metrics() {

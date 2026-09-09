@@ -47,7 +47,6 @@ pub fn resolve_toolchains(
         "alpha",
     )?;
     progress.update(3, format!("resolved vyper alpha {}", vyper_alpha.version));
-    let evm_version = latest_shared_evm(&solc, &[&vyper, &vyper_alpha])?;
     let mut compilers = BTreeMap::from([
         ("solc".to_string(), solc.clone()),
         ("vyper".to_string(), vyper.clone()),
@@ -60,6 +59,15 @@ pub fn resolve_toolchains(
         }
         progress.update(resolved, format!("resolving {}", compiler_ref.compiler));
         let toolchain = match compiler_ref.language {
+            Language::Solidity
+                if crate::solx::profile_version(&compiler_ref.compiler).is_some() =>
+            {
+                crate::solx::resolve(
+                    root,
+                    offline,
+                    crate::solx::profile_version(&compiler_ref.compiler).unwrap(),
+                )?
+            }
             Language::Solidity => {
                 let Some(version) = compiler_ref.compiler.strip_prefix("solc-") else {
                     bail!("unsupported solidity compiler {}", compiler_ref.compiler);
@@ -97,6 +105,21 @@ pub fn resolve_toolchains(
             format!("resolved {} {}", compiler_ref.compiler, toolchain.version),
         );
         compilers.insert(compiler_ref.compiler, toolchain);
+    }
+    let mut evm_version = latest_shared_evm(&solc, &[&vyper, &vyper_alpha])?;
+    for toolchain in compilers.values().filter(|t| t.name == "solx") {
+        let start = EVM_ORDER
+            .iter()
+            .position(|evm| *evm == evm_version)
+            .context("shared EVM order")?;
+        let mut shared = None;
+        for evm in &EVM_ORDER[start..] {
+            if crate::solx::supports_evm(toolchain, evm)? {
+                shared = Some((*evm).to_string());
+                break;
+            }
+        }
+        evm_version = shared.context("no shared EVM target supported by solx")?;
     }
     progress.finish(format!(
         "resolved {} compilers; shared EVM {}",

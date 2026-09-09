@@ -14,14 +14,6 @@ publish-dev-results:
     node scripts/publish-results.mjs --upload --channel=dev
 
 publish-prod-results:
-    #!/usr/bin/env zsh
-    set -euo pipefail
-    if [[ "$(git branch --show-current)" != "master" ]]; then
-      echo "prod publish must run from master" >&2
-      exit 1
-    fi
-    git diff --quiet
-    git diff --cached --quiet
     node scripts/publish-results.mjs --upload --channel=prod
 
 deploy-site:

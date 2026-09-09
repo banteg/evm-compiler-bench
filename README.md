@@ -1,7 +1,7 @@
 # EVM Compiler Bench
 
 Head-to-head benchmark harness for EVM compiler profiles. The project compares
-Solidity, Vyper, and Fe implementations under pinned compiler versions,
+solc and solx on Solidity source, plus Vyper and Fe implementations, under pinned compiler versions,
 optimizer settings, codegen backends, and EVM targets.
 
 The report is meant to show compiler tradeoffs, not crown a language winner.
@@ -22,6 +22,8 @@ Published report: https://evm.banteg.xyz/
   recorded in specs.
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
+- Solidity compiler axis: solx 0.1.8 with LLVM O3/Oz, alongside matched
+  solc 0.8.34 legacy/via-IR profiles and the existing solc version matrix.
 
 Gas is measured through the Foundry internal-call harness. It is useful for
 isolating generated runtime code costs, but it is not end-user transaction gas.
@@ -48,10 +50,16 @@ isolating generated runtime code costs, but it is not end-user transaction gas.
 - `uv` for Vyper toolchain resolution.
 - Wrangler only for publishing or deploying the Cloudflare Worker.
 
-The runner downloads missing solc, Vyper, and Fe compilers unless `--offline`
+The runner downloads missing solc, solx, Vyper, and Fe compilers unless `--offline`
 is used. Fe is resolved from the latest GitHub release of `argotorg/fe`; set
 `EVM_BENCH_FE=<path>` to override with a local Fe binary (for example an
 unreleased build). Resolved compilers and run outputs are cached locally.
+Solx profiles pin release 0.1.8, verify upstream SHA-256 checksums on download
+and cache hits, and support macOS, Linux x86-64/ARM64, and Windows x86-64.
+Set `EVM_BENCH_SOLX=<path>` (or `EVM_BENCH_SOLX_0_1_8=<path>`) for a local
+build reporting that release. Overrides record the actual binary hash but are
+not authenticated against an upstream checksum. The shared EVM target is
+probed against the selected solx binary as well as solc and Vyper.
 
 ## Running locally
 
@@ -74,6 +82,12 @@ Run one benchmark while iterating:
 cargo run --release -- run --benchmark counter
 ```
 
+Compare the Solidity backends with the same source version:
+
+```sh
+cargo run --release -- run --profile solc-0.8.34-viair-runs200 --profile solx-0.1.8-O3 --profile solx-0.1.8-Oz
+```
+
 Run one benchmark on only a small unoptimized profile pair while iterating on
 parity:
 
@@ -87,10 +101,16 @@ Ignore result caches for a fresh run:
 cargo run --release -- run --no-cache
 ```
 
-The full current matrix is large: 119 compiler profiles across 64 benchmarks.
+The full current matrix is large: 123 compiler profiles across 64 benchmarks.
 Because Fe is skipped for the five real-derived benchmarks without an `fe/`
-implementation, this yields 7,611 compile attempts before gas scenarios are
+implementation, this yields 7,867 compile attempts before gas scenarios are
 measured.
+
+Foundry gas shards run in isolated projects under `target/foundry-jobs/`, with
+up to four workers by default. Set `EVM_BENCH_FOUNDRY_JOBS=1` for serial execution
+or a value up to 8 for more concurrency. Each job keeps its own compiler cache
+and raw outputs; generated Solidity and relative evidence paths are unchanged.
+Compiler timing samples are collected separately, before these harness jobs.
 
 ## Report UI
 
@@ -108,6 +128,7 @@ benchmark run, the most useful local files are:
 - `results/normalized/results.json`
 - `results/normalized/run-manifest.json`
 - `results/raw/foundry-gas.jsonl`
+- `results/raw/behavior-checks.json`
 
 The report model carries the methodology notes and real-derived source policy
 used by the UI, including the rule that compiled source variants come from
@@ -217,6 +238,24 @@ just zip-design
   timing and revert bytes are tracked as approximations unless the upstream
   contract exposes or depends on them.
 - Vyper Venom rows use `--experimental-codegen`.
+- Solx rows remain Solidity-language implementations but have compiler identity
+  `solx`. Its release version (0.1.8), embedded modified Solidity frontend
+  version/commit (0.8.34), and LLVM build are recorded independently. Profiles
+  use the legacy frontend path, LLVM O3 or Oz, one compiler worker, no automatic
+  size fallback, and disabled bytecode metadata. LLVM modes do not map to solc
+  optimizer-runs values. Per-contract compile times here are not a reproduction
+  of the announcement's whole-project parallel build measurements.
+- Same-source solx/solc pairs run scenario differential tests and applicable
+  randomized/property checks. The matched baseline must share source hash,
+  Solidity frontend version, metadata mode, and EVM target. The report records
+  exactly which compiler pairs passed. Gas cache hits do not imply behavioral
+  test coverage; verified pair evidence has its own cache tied to bytecode,
+  scenario, harness source, and Foundry version. Untested profiles show
+  `not_run` for randomized/property checks. The UI excludes any artifact with an
+  observed correctness failure from performance comparisons and lists the
+  failure in Reliability; raw measurements are retained. Gas caches also track
+  harness source and Foundry version so harness edits do not silently reuse
+  stale measurements.
 - Vyper 0.5.0a1 is pre-release.
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
   exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no

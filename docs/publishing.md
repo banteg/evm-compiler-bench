@@ -41,8 +41,15 @@ uncompressed in R2; Cloudflare handles HTTP compression for browser requests.
 
 Use `just publish-prod-results` only after the report is ready for the public
 site. The prod publish recipe refuses to run unless the current branch is
-`master` and the worktree is clean, then updates
+`master` and the worktree is clean (including untracked files), and the measured
+run comes from that same clean commit and uses the full matrix, then updates
 `evm-compiler-bench/channels/prod/latest.json`.
+
+After merging a release PR, rerun the pipeline and validation from clean
+`master` before publishing. Valid compile, gas, and behavioral-evidence cache
+entries may be reused; the new manifest still records the merged commit.
+The production checks apply to the Node upload command as well as the Just
+recipe. Filtered development runs are never production publication inputs.
 
 The Worker falls back to the legacy `evm-compiler-bench/latest.json` only for
 the prod channel, so the current public report keeps working until a prod

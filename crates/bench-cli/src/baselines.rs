@@ -29,6 +29,7 @@ pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize
         let entry = candidates.entry(artifact.benchmark_id.clone()).or_default();
         let score = baseline_score(artifact.language, &artifact.profile_id);
         match artifact.language {
+            Language::Solidity if artifact.compiler.name == "solx" => {}
             Language::Solidity => {
                 update_candidate(&mut entry.solidity, index, score, &artifact.profile_id)
             }
@@ -50,6 +51,46 @@ pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize
             ))
         })
         .collect()
+}
+
+/// Cross-language baselines plus same-source solx/solc comparisons. A solx
+/// release is never treated as a Solidity language version or a solc baseline.
+pub fn comparison_pairs(artifacts: &[CompiledArtifact]) -> Vec<(String, usize, usize)> {
+    let mut pairs: Vec<_> = baseline_pairs(artifacts)
+        .into_iter()
+        .map(|(benchmark, (a, b))| (benchmark, a, b))
+        .collect();
+    for (candidate, artifact) in artifacts
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| a.compiler.name == "solx")
+    {
+        let Some(frontend) = artifact.compiler.metadata.get("frontend_version") else {
+            continue;
+        };
+        let baseline = artifacts
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| {
+                a.benchmark_id == artifact.benchmark_id
+                    && a.compiler.name == "solc"
+                    && a.compiler.version == *frontend
+                    && a.source_hash == artifact.source_hash
+                    && a.metadata_mode == artifact.metadata_mode
+                    && a.compiler_settings["evmVersion"] == artifact.compiler_settings["evmVersion"]
+            })
+            .min_by_key(|(_, a)| {
+                (
+                    a.compiler_settings["viaIR"].as_bool() != Some(true),
+                    a.compiler_settings["optimizerRuns"].as_u64() != Some(200),
+                    &a.profile_id,
+                )
+            });
+        if let Some((baseline, _)) = baseline {
+            pairs.push((artifact.benchmark_id.clone(), baseline, candidate));
+        }
+    }
+    pairs
 }
 
 #[derive(Default)]
@@ -110,6 +151,25 @@ fn fallback_score(language: Language, profile_id: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn solx_pairs_only_with_the_matching_solidity_source_and_frontend() {
+        use crate::test_support::artifact;
+        let solx = artifact("solx", "solx-0.1.8-O3");
+        let solc = artifact("solc", "solc-0.8.34-viair-runs200");
+        let mut vyper = artifact("vyper", "vyper-latest-gas");
+        vyper.language = crate::models::Language::Vyper;
+        assert!(super::baseline_pairs(&[solx.clone(), vyper]).is_empty());
+        assert_eq!(
+            super::comparison_pairs(&[solc.clone(), solx.clone()]),
+            vec![("erc20_minimal".into(), 0, 1)]
+        );
+        let mut different = solc.clone();
+        different.source_hash = "different-source".into();
+        assert!(super::comparison_pairs(&[different, solx.clone()]).is_empty());
+        let mut different = solc;
+        different.compiler.version = "0.8.35".into();
+        assert!(super::comparison_pairs(&[different, solx]).is_empty());
+    }
     use super::baseline_score;
     use crate::models::Language;
 

@@ -354,8 +354,9 @@
         "observer_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "return_data_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "log_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
-        "randomized_differential_check": { "enum": ["pass", "fail", "not_applicable"] },
-        "property_tests": { "enum": ["pass", "fail", "not_applicable"] },
+        "randomized_differential_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
+        "property_tests": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
+        "behavior_pairs": { "type": "array", "items": { "type": "object" }, "description": "Verified compiler-pair evidence for this profile; absence does not imply passing tests." },
         "properties": { "type": "array", "items": { "type": "string" } },
         "failure_artifacts": { "type": "array", "items": { "type": "string" } },
         "scenario_status_ok": { "type": "boolean" }
