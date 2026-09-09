@@ -193,7 +193,7 @@ pub fn write_outputs(
             "benchmarks": real_derived_manifest(root, compiled)
         },
         "environment": environment_manifest(root),
-        "harness_config": crate::runner::harness_config(root, &toolchains.evm_version)?,
+        "harness_config": public_harness_config(&crate::runner::harness_config(root, &toolchains.evm_version)?)?,
         "harness_shards": serde_json::from_slice::<serde_json::Value>(&fs::read(root.join("results/raw/harness-shards.json"))?)?,
         "artifacts": compiled.artifacts.len(),
         "compile_failures": compiled.failures.len(),
@@ -1349,6 +1349,54 @@ fn provenance_value(
     })
 }
 
+fn public_harness_config(config: &serde_json::Value) -> Result<serde_json::Value> {
+    // Foundry's effective config can contain account credentials from global
+    // configuration. Publish only the compiler/EVM controls, plus a hash of the
+    // full configuration used by the local measurement cache.
+    let fields = [
+        "solc",
+        "auto_detect_solc",
+        "evm_version",
+        "optimizer",
+        "optimizer_runs",
+        "optimizer_details",
+        "via_ir",
+        "bytecode_hash",
+        "cbor_metadata",
+        "revert_strings",
+        "libraries",
+        "gas_limit",
+        "code_size_limit",
+        "chain_id",
+        "block_number",
+        "block_timestamp",
+        "block_base_fee_per_gas",
+        "block_coinbase",
+        "block_difficulty",
+        "block_prevrandao",
+        "block_gas_limit",
+        "initial_balance",
+        "sender",
+        "tx_origin",
+        "gas_price",
+        "memory_limit",
+        "disable_block_gas_limit",
+        "disable_eip3607",
+        "enable_tx_gas_limit",
+    ];
+    let mut public = serde_json::Map::new();
+    for field in fields {
+        if let Some(value) = config.get(field) {
+            public.insert(field.into(), value.clone());
+        }
+    }
+    public.insert(
+        "config_sha256".into(),
+        json!(crate::cache::key_for(config)?),
+    );
+    Ok(serde_json::Value::Object(public))
+}
+
 fn environment_manifest(root: &Path) -> serde_json::Value {
     json!({
         "os": env::consts::OS,
@@ -1485,6 +1533,19 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn published_harness_config_keeps_build_flags_and_excludes_credentials() {
+        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true,
+            "etherscan_api_key":"private-account-key", "rpc_endpoints":{"mainnet":"private-rpc-token"}});
+        let public = super::public_harness_config(&config).unwrap();
+        assert_eq!(public["solc"], "0.8.34");
+        assert_eq!(public["optimizer"], true);
+        assert!(public["config_sha256"].as_str().is_some());
+        assert!(public.get("etherscan_api_key").is_none());
+        assert!(public.get("rpc_endpoints").is_none());
+        assert!(!public.to_string().contains("private-"));
+    }
+
     #[test]
     fn property_credit_requires_evidence_for_this_exact_profile() {
         use crate::{

@@ -51,6 +51,7 @@ def main():
     manifest = read("results/normalized/run-manifest.json")
     model = read("results/normalized/report-model.json")
     assert manifest["harness_config"]["solc"] == "0.8.34"
+    assert not ({"etherscan_api_key", "rpc_endpoints", "etherscan"} & manifest["harness_config"].keys())
     assert manifest["harness_config"]["optimizer"] and manifest["harness_config"]["via_ir"]
     solar = [r for r in rows if r["compiler"]["name"] == "solar"]
     assert len(model["profiles"]) == 127
