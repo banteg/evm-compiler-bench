@@ -194,6 +194,7 @@ pub fn write_outputs(
         },
         "environment": environment_manifest(root),
         "harness_config": crate::runner::harness_config(root, &toolchains.evm_version)?,
+        "harness_shards": serde_json::from_slice::<serde_json::Value>(&fs::read(root.join("results/raw/harness-shards.json"))?)?,
         "artifacts": compiled.artifacts.len(),
         "compile_failures": compiled.failures.len(),
         "gas_records": gas_records.len(),
@@ -424,7 +425,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "N",
                 "title": "Solar source build and optimizer modes",
-                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. The measurement harness pins solc 0.8.34; the spike used 0.8.36, so wrapper overhead differs even with identical compiled contract bytecode. Effective harness configuration is recorded and hashed into gas and behavior caches. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
+                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. The measurement harness pins solc 0.8.34; the spike used 0.8.36, so harness and fixture overhead can differ even with identical compiled contract bytecode. Generated shard layout also affects optimized harness code; gas cache keys include exact generated source, and reruns preserve the complete shard. Effective harness configuration is recorded and hashed into gas and behavior caches. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
             }
         ]
     })

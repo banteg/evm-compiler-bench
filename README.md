@@ -84,7 +84,11 @@ under test. Gas and behavior cache keys include the effective Foundry configurat
 (including compiler selection and environment overrides), and the run manifest
 preserves that configuration. The Solar spike used harness solc 0.8.36: its contract
 bytecode is identical to the integrated build, but measured wrapper overhead differs.
-Use v4's integrated dataset for comparisons within the main matrix.
+Gas cache keys also include the exact generated shard source. Each shard always
+contains its complete test set, including when one missing cache entry triggers
+its rerun. The run manifest lists shard hashes and their artifact membership.
+Generated shard layout can also change harness overhead, so use v4's integrated
+dataset for comparisons within the main matrix.
 
 ## Running locally
 

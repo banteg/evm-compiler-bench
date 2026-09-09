@@ -1361,7 +1361,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 02 · Pick any two configurations'),
         React.createElement('div', { className: 'section-title' }, compareTitle),
-        React.createElement('div', { className: 'section-sub' }, `Comparisons match on ${unit.match} - different compilers, identical surface. Negative deltas favor the compared profile.`),
+        React.createElement('div', { className: 'section-sub' }, `Comparisons match on ${unit.match} across compiler configurations. Negative deltas favor the compared profile.`),
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -1731,7 +1731,7 @@ function RealDerivedProvenance() {
 function CompilerConfigurations() {
   const compilerMeta = (compiler, modes) => {
     const profiles = Bench.D.profiles.filter(p => Bench.profileCompilerKey(p) === compiler);
-    const versions = new Set(profiles.map(p => Bench.profileVersionKey(p)));
+    const versions = new Set(profiles.map(p => p.source_revision || p.compiler_version || Bench.profileVersionLabel(p)));
     return {
       profiles: profiles.length,
       versions: versions.size,

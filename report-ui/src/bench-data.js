@@ -233,6 +233,7 @@
   }
   function profileVersionLabel(p){
     const key = profileVersionKey(p);
+    if (key === 'latest') return `latest (${p.compiler_version})`;
     return p.source_revision ? `${p.compiler_version} @${p.source_revision.slice(0, 8)}` : p.compiler_version || key;
   }
   function versionRank(v){
