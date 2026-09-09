@@ -14,8 +14,8 @@ const rows = profiles.flatMap((p, i) => ['transfer', 'approve'].map(scenario => 
   bytecode: {runtime_bytes_stripped: 1000 - 100*i},
   gas: {scenario, state_access_profile: 'cold', deployment_variant: 'standard', harness_call_gas: 2000 - 100*i},
 })));
-function load(extraProfiles = []) {
-  const context = {window: {__BENCH_DATA: {profiles: [...profiles, ...extraProfiles], rows}}};
+function load(extraProfiles = [], dataRows = rows) {
+  const context = {window: {__BENCH_DATA: {profiles: [...profiles, ...extraProfiles], rows: dataRows}}};
   vm.runInNewContext(readFileSync(new URL('./bench-data.js', import.meta.url), 'utf8'), context);
   return context.window.Bench;
 }
@@ -54,4 +54,17 @@ test('code-size comparisons count each artifact once, independent of scenario co
   const cmp = b.compareProfiles(rows, profiles[0].id, profiles[1].id, 'runtime_bytes_stripped');
   assert.equal(cmp.length, 1);
   assert.equal(cmp[0].ratio, 0.9);
+});
+
+test('a cheap unexpected revert cannot become a gas or size win, even through another passing scenario', () => {
+  const data = structuredClone(rows);
+  const broken = data.find(r => r.profile_id === profiles[1].id);
+  broken.gas.harness_call_gas = 1;
+  broken.correctness = {scenario_status_check: 'fail'};
+  const b = load([], data);
+  assert.equal(b.correctnessFailureGroups().length, 1);
+  for (const metric of ['harness_call_gas', 'runtime_bytes_stripped']) {
+    assert.equal(b.compareProfiles(data, profiles[0].id, profiles[1].id, metric).length, 0);
+    assert.ok(b.compareProfiles(data, profiles[0].id, profiles[2].id, metric).length > 0);
+  }
 });

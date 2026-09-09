@@ -685,12 +685,14 @@
         address reversePair = factory.getPair(token1, token0);
         uint256 pairCount = factory.allPairsLength();
         bool firstPairMatches = false;
-        bytes32 pairCodehash = bytes32(0);
+        bool pairCodeMatches = false;
         if (pairCount > 0) {
             firstPairMatches = factory.allPairs(0) == pair;
         }
         if (pair != address(0)) {
-            pairCodehash = pair.codehash;
+            // The fixture's CBOR metadata depends on the generated shard.
+            // Certify its exact local runtime, then hash the stable verdict.
+            pairCodeMatches = pair.codehash == keccak256(type(BenchUniswapFactoryPair).runtimeCode);
         }
         return keccak256(
             abi.encode(
@@ -700,7 +702,7 @@
                 pair != address(0),
                 pair == reversePair,
                 firstPairMatches,
-                pairCodehash
+                pairCodeMatches
             )
         );
     }

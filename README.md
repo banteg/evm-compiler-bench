@@ -251,8 +251,11 @@ just zip-design
   exactly which compiler pairs passed. Gas cache hits do not imply behavioral
   test coverage; verified pair evidence has its own cache tied to bytecode,
   scenario, harness source, and Foundry version. Untested profiles show
-  `not_run` for randomized/property checks. Gas caches also track harness source
-  and Foundry version so harness edits do not silently reuse stale measurements.
+  `not_run` for randomized/property checks. The UI excludes any artifact with an
+  observed correctness failure from performance comparisons and lists the
+  failure in Reliability; raw measurements are retained. Gas caches also track
+  harness source and Foundry version so harness edits do not silently reuse
+  stale measurements.
 - Vyper 0.5.0a1 is pre-release.
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
   exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no

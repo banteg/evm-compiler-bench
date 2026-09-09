@@ -414,6 +414,11 @@ fn report_methodology() -> serde_json::Value {
                 "tag": "L",
                 "title": "Evidence for behavioral tests",
                 "body": "Differential, randomized, and property-test credit applies only to the compiler pairs listed in the run manifest. Evidence is cached against bytecode, scenario, harness source, and Foundry version. Other profiles show not_run even if another profile passed that benchmark's tests. Per-scenario return, state, and log hashes remain separate checks across profiles."
+            },
+            {
+                "tag": "M",
+                "title": "Correctness exclusions",
+                "body": "An observed scenario or behavior-check failure excludes the entire benchmark/profile artifact from interactive performance comparisons, including size and compile-time rankings. The reliability panel lists those failures, while raw outputs preserve every measured value and correctness status for diagnosis. Compilation coverage remains a separate statistic."
             }
         ]
     })

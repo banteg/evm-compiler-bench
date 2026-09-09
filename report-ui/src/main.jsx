@@ -201,7 +201,7 @@ function Hero() {
     React.createElement('div', { className: 'hero-strip' },
       React.createElement('div', null,
         React.createElement('div', { className: 'k' }, 'Comparable rows'),
-        React.createElement('div', { className: 'v tabular' }, s.ok_rows.toLocaleString()),
+        React.createElement('div', { className: 'v tabular' }, Bench.D.rows.filter(r => Bench.valueAt(r, 'harness_call_gas') != null).length.toLocaleString()),
         React.createElement('div', { className: 'vs' }, 'fixed · scale · real-derived'),
       ),
       React.createElement('div', null,
@@ -214,8 +214,9 @@ function Hero() {
           `${s.failed_artifacts} failures · ${((s.successful_artifacts/s.attempted_artifacts)*100).toFixed(1)}% pass`),
       ),
       React.createElement('div', null,
-        React.createElement('div', { className: 'k' }, 'Correctness'),
+        React.createElement('div', { className: 'k' }, 'Scenario checks passed'),
         React.createElement('div', { className: 'v tabular' }, s.correctness.scenario_status_pass.toLocaleString()),
+        React.createElement('div', { className: 'vs' }, `${s.correctness.scenario_status_fail} unexpected outcomes`),
         React.createElement('div', { className: 'vs' }, `${s.correctness.property_rows} property · ${s.correctness.randomized_rows} randomized`),
       ),
       React.createElement('div', null,
@@ -800,7 +801,7 @@ function drillField(row, profile, metric, axis) {
     case 'mode': return drillModeKey(profile, row);
     case 'runs': return drillRunsKey(profile);
     case 'profile': return row.profile_id;
-    case 'status': return row.status === 'ok' ? 'ok' : 'compile_error';
+    case 'status': return row.status !== 'ok' ? 'compile_error' : Bench.isComparableArtifact(row) ? 'ok' : 'correctness_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
     case 'deployment': return artifactLevel ? 'artifact' : (row.gas?.deployment_variant || 'standard');
     case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
@@ -824,7 +825,7 @@ function drillValueLabel(axis, value) {
   if (axis === 'runs') return value === 'n/a' ? 'n/a' : `runs${value}`;
   if (axis === 'deployment') return deploymentVariantLabel(value);
   if (axis === 'profile') return Bench.profileLabel(value);
-  if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value;
+  if (axis === 'status') return value === 'compile_error' ? 'compile failed' : value === 'correctness_error' ? 'artifact failed correctness' : value;
   return value;
 }
 
@@ -866,7 +867,7 @@ function buildDrillRecords(metric) {
       if (seenArtifacts.has(key)) continue;
       seenArtifacts.add(key);
     }
-    const failed = row.status !== 'ok';
+    const failed = !Bench.isComparableArtifact(row);
     if (!failed && (value == null || !isFinite(value))) continue;
     const profile = Bench.profileById(row.profile_id);
     const fields = Object.fromEntries(DRILL_AXES.map(axis => [
@@ -877,7 +878,7 @@ function buildDrillRecords(metric) {
       row,
       value: failed ? null : value,
       failed,
-      failureReason: failed ? Bench.failureReason(row.compile?.error) : null,
+      failureReason: failed ? (row.status === 'ok' ? 'Observed correctness failure in this artifact' : Bench.failureReason(row.compile?.error)) : null,
       fields,
     });
   }
@@ -1488,10 +1489,25 @@ function InlineList({ items, max = 6, formatter = x => x }) {
 function ReliabilityPanel() {
   const groups = Bench.failureGroups();
   const compilerGroups = Bench.failureCompilerGroups();
+  const runtimeGroups = Bench.correctnessFailureGroups();
   const cleanProfiles = Bench.D.profiles
     .filter(p => p.failed_artifacts === 0)
     .sort((a,b) => a.label.localeCompare(b.label));
   return React.createElement('div', { className: 'reliability-grid' },
+    runtimeGroups.length ? React.createElement('div', { className: 'card', style: {gridColumn:'1 / -1'} },
+      React.createElement('div', { className: 'card-head' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'card-title' }, 'Observed runtime correctness failures'),
+          React.createElement('div', { className: 'card-sub' }, 'Artifacts with a failed scenario or behavior check are excluded from performance comparisons. Their raw measurements remain available for diagnosis.')
+        )
+      ),
+      runtimeGroups.map(group => React.createElement('div', { className:'failure-group', key:`${group.benchmark}-${group.checks.join()}` },
+        React.createElement('div', { className:'failure-reason' }, group.benchmark),
+        React.createElement('div', { className:'failure-meta' }, `${group.count} scenario rows · ${group.checks.map(c => c.replaceAll('_', ' ')).join(', ')}`),
+        React.createElement('div', { className:'chip-row' }, React.createElement(InlineList, {items:group.profiles, max:6, formatter:Bench.profileLabel})),
+        React.createElement('div', { className:'chip-row' }, React.createElement(InlineList, {items:group.scenarios, max:6}))
+      ))
+    ) : null,
     React.createElement('div', { className: 'card' },
       React.createElement('div', { className: 'card-head' },
         React.createElement('div', null,
@@ -1827,8 +1843,8 @@ function SectionReliability() {
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 06 · Reliability'),
-        React.createElement('div', { className: 'section-title' }, 'Compile failures are first-class data.'),
-        React.createElement('div', { className: 'section-sub' }, 'Profile comparisons include both successful artifacts and the benchmark shapes each compiler failed to build. Tracked here per profile.')
+        React.createElement('div', { className: 'section-title' }, 'Compilation and runtime correctness.'),
+        React.createElement('div', { className: 'section-sub' }, 'Inspect build failures and observed behavior failures by profile. A cheap failing execution does not count as a performance win.')
       )
     ),
     React.createElement(ReliabilityPanel)

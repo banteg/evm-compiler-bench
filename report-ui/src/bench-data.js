@@ -1,6 +1,30 @@
 // Data helpers — all globals on `window.Bench`
 (function(){
   const D = window.__BENCH_DATA || window.__EVM_BENCH_REPORT_DATA;
+  const failedArtifacts = new Set(D.rows.filter(hasCorrectnessFailure)
+    .map(r => `${r.profile_id}|${artifactKey(r)}`));
+
+  function hasCorrectnessFailure(row){
+    return row.status === 'ok' && (row.gas?.scenario_status_ok === false
+      || Object.values(row.correctness || {}).some(status => status === 'fail'));
+  }
+  function isComparableArtifact(row){
+    return row.status === 'ok' && !failedArtifacts.has(`${row.profile_id}|${artifactKey(row)}`);
+  }
+  function correctnessFailureGroups(){
+    const groups = new Map();
+    for (const row of D.rows.filter(hasCorrectnessFailure)) {
+      const checks = Object.entries(row.correctness || {}).filter(([,v]) => v === 'fail').map(([k]) => k);
+      if (!checks.length) checks.push('scenario_status_check');
+      const key = [row.benchmark_id, ...checks].join('|');
+      if (!groups.has(key)) groups.set(key, {benchmark:row.benchmark_id, checks, count:0, profiles:new Set(), scenarios:new Set()});
+      const group = groups.get(key);
+      group.count++;
+      group.profiles.add(row.profile_id);
+      group.scenarios.add(row.gas?.scenario || 'artifact');
+    }
+    return [...groups.values()].map(g => ({...g, profiles:[...g.profiles].sort(), scenarios:[...g.scenarios].sort()}));
+  }
 
   const METRICS = [
     { id: 'harness_call_gas',       label: 'Harness call gas', short: 'Runtime gas',  unit: 'gas',  lowerBetter: true, hero: true },
@@ -23,7 +47,7 @@
   }
 
   function valueAt(row, metric){
-    if (row.status !== 'ok') return undefined;
+    if (!isComparableArtifact(row)) return undefined;
     switch(metric){
       case 'harness_call_gas': return row.gas?.harness_call_gas;
       case 'runtime_bytes_stripped': return row.bytecode?.runtime_bytes_stripped ?? row.bytecode?.runtime_bytes;
@@ -622,6 +646,7 @@
     D,
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
+    hasCorrectnessFailure, isComparableArtifact, correctnessFailureGroups,
     compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage, defaultProfileForCompiler,
