@@ -176,3 +176,12 @@ uv run scripts/solar_spike.py summarize
 - [toolchains.json](toolchains.json), [environment.json](environment.json), and
   [input-provenance.json](input-provenance.json): exact compiler identities,
   source/scenario/harness hashes, and execution environment.
+
+## Integrated release
+
+[Version 4](../../releases/v4.md) integrates this compiler into the full matrix.
+The [artifact hashes](artifact-hashes.json) preserve source, creation-bytecode, and
+runtime-bytecode identities for all 253 spike compilations. The integrated audit
+reproduces them exactly. Gas values also depend on the measurement harness compiler
+and generated shard context; v4 records those contexts and reports its own full-run
+measurements separately from this spike.
