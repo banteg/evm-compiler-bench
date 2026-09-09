@@ -193,6 +193,7 @@ pub fn write_outputs(
             "benchmarks": real_derived_manifest(root, compiled)
         },
         "environment": environment_manifest(root),
+        "harness_config": crate::runner::harness_config(root, &toolchains.evm_version)?,
         "artifacts": compiled.artifacts.len(),
         "compile_failures": compiled.failures.len(),
         "gas_records": gas_records.len(),
@@ -423,7 +424,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "N",
                 "title": "Solar source build and optimizer modes",
-                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
+                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. The measurement harness pins solc 0.8.34; the spike used 0.8.36, so wrapper overhead differs even with identical compiled contract bytecode. Effective harness configuration is recorded and hashed into gas and behavior caches. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
             }
         ]
     })

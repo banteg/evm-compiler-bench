@@ -1,0 +1,1773 @@
+[
+  {
+    "benchmark_id": "amm_pair_subset",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "bbb90365e3a15aeb86fd025e0859ac876c0be61518309cc2cfd31b25e01be4a6",
+    "creation_bytecode_sha256": "39859a7627510e169436b375bcce2773078b089a1133288b1f8a9e04f0052dc2",
+    "runtime_bytecode_sha256": "f2660ec6bc100e4d9df11d4b682a9d60d93e793fb04f1283f640a3b9254367a7"
+  },
+  {
+    "benchmark_id": "amm_pair_subset",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "bbb90365e3a15aeb86fd025e0859ac876c0be61518309cc2cfd31b25e01be4a6",
+    "creation_bytecode_sha256": "229a821ad6d131271cc7d37c6a01b17e1ad1a994e398e17ff12049d964f89476",
+    "runtime_bytecode_sha256": "706c2a43ca189836680b4a0d7efe759db726c24f0c1e571945360d31b433e644"
+  },
+  {
+    "benchmark_id": "amm_pair_subset",
+    "profile_id": "solar-gas-200",
+    "source_hash": "bbb90365e3a15aeb86fd025e0859ac876c0be61518309cc2cfd31b25e01be4a6",
+    "creation_bytecode_sha256": "f9610f75e852851fd5a058801d567afb2d8d67ac4107f5b338df0144fed68c10",
+    "runtime_bytecode_sha256": "d9788bc0e96f303d7177840abc20dcd3d0252029a67e87f01f71dcffe4669ee9"
+  },
+  {
+    "benchmark_id": "amm_pair_subset",
+    "profile_id": "solar-size-1",
+    "source_hash": "bbb90365e3a15aeb86fd025e0859ac876c0be61518309cc2cfd31b25e01be4a6",
+    "creation_bytecode_sha256": "64e8c4199ef24980bbb1e5f5289614c1fb401f2a4e5851c3e2e87bb0d118cbab",
+    "runtime_bytecode_sha256": "0a434dbc5434f715077077e383d21ba63ac859ab5712a9e1659d94aa8da140ac"
+  },
+  {
+    "benchmark_id": "counter",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "ac7d51c9e51f025a60abc7940b1d2bcee03c76b2e92ff17732cbd079cbdea635",
+    "creation_bytecode_sha256": "b9e5b345979d4730debc19c49eec2f97a59e96e40a71209a559fb78369f392bb",
+    "runtime_bytecode_sha256": "8c2b4973a7e5c2f5eba2eaf97d94989e65ef8a941a8aba0ce43510d2b7e677b7"
+  },
+  {
+    "benchmark_id": "counter",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "ac7d51c9e51f025a60abc7940b1d2bcee03c76b2e92ff17732cbd079cbdea635",
+    "creation_bytecode_sha256": "421a951081a106dfe2b383799a172e2e6542dd5b615becfe997fb69bd741c1d2",
+    "runtime_bytecode_sha256": "9381f6e140a7c4fbf2448a1f89b88b44c9bac5a606fcded260be891156c6bd00"
+  },
+  {
+    "benchmark_id": "counter",
+    "profile_id": "solar-gas-200",
+    "source_hash": "ac7d51c9e51f025a60abc7940b1d2bcee03c76b2e92ff17732cbd079cbdea635",
+    "creation_bytecode_sha256": "20ea5f959d49067768968e5ecd3494f834e4d0155f6e7839a46b0d8c04204f94",
+    "runtime_bytecode_sha256": "7682bf9bebd4b89a44306ad9e4d84dc134ba8cc55916baa9ddd8eff2f1f6a937"
+  },
+  {
+    "benchmark_id": "counter",
+    "profile_id": "solar-size-1",
+    "source_hash": "ac7d51c9e51f025a60abc7940b1d2bcee03c76b2e92ff17732cbd079cbdea635",
+    "creation_bytecode_sha256": "20ea5f959d49067768968e5ecd3494f834e4d0155f6e7839a46b0d8c04204f94",
+    "runtime_bytecode_sha256": "7682bf9bebd4b89a44306ad9e4d84dc134ba8cc55916baa9ddd8eff2f1f6a937"
+  },
+  {
+    "benchmark_id": "create2_address_hashing",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "e3e59926d22fe4fa046dc118298b7afa8fee577c098b3fce65ad998cc9b8d660",
+    "creation_bytecode_sha256": "e520061ac184f345aa65bc23f158bdc3694c5659aab29ef5473d893651d61a81",
+    "runtime_bytecode_sha256": "dcdd141feb972c931a0414db0d2a476a6a854800967c5ea314230fa25cefef18"
+  },
+  {
+    "benchmark_id": "create2_address_hashing",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "e3e59926d22fe4fa046dc118298b7afa8fee577c098b3fce65ad998cc9b8d660",
+    "creation_bytecode_sha256": "fb77974883811c01605f44f6c74c54f90dc8fb257f7612f20913fb0b70b59c72",
+    "runtime_bytecode_sha256": "f05baaa887ff18738683bf20d92b3e16a0f8d3660b0f2dc7815fb76a2178e654"
+  },
+  {
+    "benchmark_id": "create2_address_hashing",
+    "profile_id": "solar-gas-200",
+    "source_hash": "e3e59926d22fe4fa046dc118298b7afa8fee577c098b3fce65ad998cc9b8d660",
+    "creation_bytecode_sha256": "863d8e8469e13559fab76f86a26667e377ed202d7f0b212ab3ef63e4c4c83848",
+    "runtime_bytecode_sha256": "9fbcaea1c7e0ef0b4fba5b570699cb37afd1467b99a5fc07915309862925b881"
+  },
+  {
+    "benchmark_id": "create2_address_hashing",
+    "profile_id": "solar-size-1",
+    "source_hash": "e3e59926d22fe4fa046dc118298b7afa8fee577c098b3fce65ad998cc9b8d660",
+    "creation_bytecode_sha256": "863d8e8469e13559fab76f86a26667e377ed202d7f0b212ab3ef63e4c4c83848",
+    "runtime_bytecode_sha256": "9fbcaea1c7e0ef0b4fba5b570699cb37afd1467b99a5fc07915309862925b881"
+  },
+  {
+    "benchmark_id": "curve_stableswap_2coin",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "db88c8e16a3d1c28b229e98e95d9155a893976bf12dffeb5f658eb48d358aa22",
+    "creation_bytecode_sha256": "3e63cdcadd8a47701325616ac07b5b68d7472bb49c3d222f22d82b8e4d3ce737",
+    "runtime_bytecode_sha256": "df51fe15a1dcfe8e951468bc30c9c807cf057dc635f577b53148c73fd5846b22"
+  },
+  {
+    "benchmark_id": "curve_stableswap_2coin",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "db88c8e16a3d1c28b229e98e95d9155a893976bf12dffeb5f658eb48d358aa22",
+    "creation_bytecode_sha256": "50b330fe1e80e84a83ac463cfa7204bc3bafcdae33d269ed4fdd4871e607b1b2",
+    "runtime_bytecode_sha256": "588eea879c95c20d08ba3f9f79db893e7178ec95696e57538575c29df780f743"
+  },
+  {
+    "benchmark_id": "curve_stableswap_2coin",
+    "profile_id": "solar-gas-200",
+    "source_hash": "db88c8e16a3d1c28b229e98e95d9155a893976bf12dffeb5f658eb48d358aa22",
+    "creation_bytecode_sha256": "909aae13758fc929d325ea01203d38b13b3568ee0428798d5d0210096f3f7c43",
+    "runtime_bytecode_sha256": "b8dc53f2936852934fec14264d91d42ec23c724bcaaea93bc28e7c223742034f"
+  },
+  {
+    "benchmark_id": "curve_stableswap_2coin",
+    "profile_id": "solar-size-1",
+    "source_hash": "db88c8e16a3d1c28b229e98e95d9155a893976bf12dffeb5f658eb48d358aa22",
+    "creation_bytecode_sha256": "c639de78eb9162c3f86404aff35284eb85376d23be3433fe418350c02d834e6d",
+    "runtime_bytecode_sha256": "a1b5fa651a63c798611e4694e4f942e448e04806b7490d2e29c5a600cce47b87"
+  },
+  {
+    "benchmark_id": "eip1167_codehash_bookkeeping",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "bba94179c80ffaa79faa8ee78b0c084433f556409b775f991a794cef68b8f391",
+    "creation_bytecode_sha256": "4e3ca7280ed05751b6991342909a5bbfba3ca9ec55e53437031799538f341f96",
+    "runtime_bytecode_sha256": "f804736f4de9c26fefcc03850e836f0c6f087b9211722defa08a0f61feb1890b"
+  },
+  {
+    "benchmark_id": "eip1167_codehash_bookkeeping",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "bba94179c80ffaa79faa8ee78b0c084433f556409b775f991a794cef68b8f391",
+    "creation_bytecode_sha256": "332cde27e55b131a92c8f4d09f03a349d9325bc1aff7dcf1b1940416e04d5424",
+    "runtime_bytecode_sha256": "d880d41cf634dff9e20eac2d4b2fa04b7b43776d0b2a27a15429c68cbe8adc50"
+  },
+  {
+    "benchmark_id": "eip1167_codehash_bookkeeping",
+    "profile_id": "solar-gas-200",
+    "source_hash": "bba94179c80ffaa79faa8ee78b0c084433f556409b775f991a794cef68b8f391",
+    "creation_bytecode_sha256": "1a425a73d201380751b31a0e995ea13377f23e5e3d4c9241fd5376e238efcd07",
+    "runtime_bytecode_sha256": "3c582f6768cdcc25ee4ee96b02760f275f244c45eeec61ab02d11f6e6c5cc066"
+  },
+  {
+    "benchmark_id": "eip1167_codehash_bookkeeping",
+    "profile_id": "solar-size-1",
+    "source_hash": "bba94179c80ffaa79faa8ee78b0c084433f556409b775f991a794cef68b8f391",
+    "creation_bytecode_sha256": "1a425a73d201380751b31a0e995ea13377f23e5e3d4c9241fd5376e238efcd07",
+    "runtime_bytecode_sha256": "3c582f6768cdcc25ee4ee96b02760f275f244c45eeec61ab02d11f6e6c5cc066"
+  },
+  {
+    "benchmark_id": "erc20_minimal",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "898b2657fb9403b406341733b26bdd0a0658a0ab6bc7238385fc05e1da090144",
+    "creation_bytecode_sha256": "70a0c238e7aebcd10d7882d86d302c3dfef9bb64d59d795d0806d836fec575ff",
+    "runtime_bytecode_sha256": "503d6e6a454ae5daf2de423d23d32efd9102980d0a91b25e74aef88f6725b77d"
+  },
+  {
+    "benchmark_id": "erc20_minimal",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "898b2657fb9403b406341733b26bdd0a0658a0ab6bc7238385fc05e1da090144",
+    "creation_bytecode_sha256": "0756a9f1da62f9a5d9c811c30a29e81c90e1bdcfd9c1605182c801b2a8e34b49",
+    "runtime_bytecode_sha256": "786dc178abfb5a3350c94b404e43773db851d7f284678be7b649c3029ec6ead3"
+  },
+  {
+    "benchmark_id": "erc20_minimal",
+    "profile_id": "solar-gas-200",
+    "source_hash": "898b2657fb9403b406341733b26bdd0a0658a0ab6bc7238385fc05e1da090144",
+    "creation_bytecode_sha256": "23d0247637ddb7d205bb6ff5fb4b07bfe249f781b2e9c0341ea286b2296ac042",
+    "runtime_bytecode_sha256": "54d051ce05a5274bdfb08083b1ef3276d90e1c00fe879da6a51118f8a8536a67"
+  },
+  {
+    "benchmark_id": "erc20_minimal",
+    "profile_id": "solar-size-1",
+    "source_hash": "898b2657fb9403b406341733b26bdd0a0658a0ab6bc7238385fc05e1da090144",
+    "creation_bytecode_sha256": "07e05de0929755ea30eb3af2468e6b788461448cf9532fa2f45df739d0af2c05",
+    "runtime_bytecode_sha256": "2c7763f27ce7ed7ee7b3669d8908f3bdaac973c83568a197033f7d66e37b2b78"
+  },
+  {
+    "benchmark_id": "erc20_permit_hashing",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "8f6a15c31c26dfd82e1d94a627fff0bcc6fa2179ff092af023db12cd2a22b6d3",
+    "creation_bytecode_sha256": "50e96cf800a0bd1bd86c8526fa724ae16eb746333453ec5ba684ac6daf005cb9",
+    "runtime_bytecode_sha256": "e39f92710f23afa3ac132f506ebdf7452e228e3429645883903bb175f61f1489"
+  },
+  {
+    "benchmark_id": "erc20_permit_hashing",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "8f6a15c31c26dfd82e1d94a627fff0bcc6fa2179ff092af023db12cd2a22b6d3",
+    "creation_bytecode_sha256": "b40266a0d280edb0750ae0b65948cff3ce4f7f20c952d511749156afb4662d17",
+    "runtime_bytecode_sha256": "e19c4cb47332c239a797ba73b687646c57c268cbb3ebe911096effc4216360e2"
+  },
+  {
+    "benchmark_id": "erc20_permit_hashing",
+    "profile_id": "solar-gas-200",
+    "source_hash": "8f6a15c31c26dfd82e1d94a627fff0bcc6fa2179ff092af023db12cd2a22b6d3",
+    "creation_bytecode_sha256": "61d63379f61b0be18a1d7c3572a8d1491aab4de5b7a9641ae7e5304c077355e3",
+    "runtime_bytecode_sha256": "5b1bf03f9e4dc48a73e9f2a784c6f86eeaf4945e4b9aa26deacebf895641fe7b"
+  },
+  {
+    "benchmark_id": "erc20_permit_hashing",
+    "profile_id": "solar-size-1",
+    "source_hash": "8f6a15c31c26dfd82e1d94a627fff0bcc6fa2179ff092af023db12cd2a22b6d3",
+    "creation_bytecode_sha256": "1c551063db73a1beb5028f8496ce39dd20a208cf331fd6861d8ab1cf70c50fd5",
+    "runtime_bytecode_sha256": "64311ef60e539c006096a53d325d3ff09510ed21e3974a8f4b4cd1def123282e"
+  },
+  {
+    "benchmark_id": "merkle_verifier",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "dfdfb5a6ba8044c9a1f355f0f64ebba1ad4d02c644640c7f048fd6f9557e462c",
+    "creation_bytecode_sha256": "0af519cdc99a118bd803c7b64456080432fac46362b883eec7eac021fef646d9",
+    "runtime_bytecode_sha256": "576960ab0c006a7db617dd5df365f5cde763b3ebca44c1f0ce0ce9af05ddf91e"
+  },
+  {
+    "benchmark_id": "merkle_verifier",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "dfdfb5a6ba8044c9a1f355f0f64ebba1ad4d02c644640c7f048fd6f9557e462c",
+    "creation_bytecode_sha256": "5e38164be7f636fd7bd79db269a11403a5d724475f167e5718977d1c8bd2c715",
+    "runtime_bytecode_sha256": "b8ca0729c173e4f6f892439e29f898bbab39991810d76ad44f7af8f15e687534"
+  },
+  {
+    "benchmark_id": "merkle_verifier",
+    "profile_id": "solar-gas-200",
+    "source_hash": "dfdfb5a6ba8044c9a1f355f0f64ebba1ad4d02c644640c7f048fd6f9557e462c",
+    "creation_bytecode_sha256": "21bac954b3ccd2cfe34c1ef13849997557ef2f5213328556a06a5dca4f5bf6ec",
+    "runtime_bytecode_sha256": "7ea896b4839fc73287130d51904fcc8d51779de1fb6364c295a6b18f3421cf49"
+  },
+  {
+    "benchmark_id": "merkle_verifier",
+    "profile_id": "solar-size-1",
+    "source_hash": "dfdfb5a6ba8044c9a1f355f0f64ebba1ad4d02c644640c7f048fd6f9557e462c",
+    "creation_bytecode_sha256": "7d9272c053d3dc724efa695350ca43f30a572b51d16d5a2b0586cf7f6d256e54",
+    "runtime_bytecode_sha256": "b79e9fa2036dc9cb2178a5f131e437e9bc69b2f767e2d373d5c5ad4fc8581a5d"
+  },
+  {
+    "benchmark_id": "ownable_pausable",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "e93c83dc98ce7ee6b5a91339208f214c99f5133acad06882575b988a0e91c628",
+    "creation_bytecode_sha256": "0d5de62a32aa7004e49a1889122aa40cd333893541ad42e90b941805f7ff9412",
+    "runtime_bytecode_sha256": "5785fcd48271435037e6e754b2d83b3cad583747ef8e8ba099b8e3f954769e9d"
+  },
+  {
+    "benchmark_id": "ownable_pausable",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "e93c83dc98ce7ee6b5a91339208f214c99f5133acad06882575b988a0e91c628",
+    "creation_bytecode_sha256": "d19f56cb5d2e7f969be07f1bd12f013fb074ac0a9927447908e81c56e65ed841",
+    "runtime_bytecode_sha256": "965cce24479bdce7b9c4eae75eb854c1de1ffe6b65eb0bc27e88a9847f214855"
+  },
+  {
+    "benchmark_id": "ownable_pausable",
+    "profile_id": "solar-gas-200",
+    "source_hash": "e93c83dc98ce7ee6b5a91339208f214c99f5133acad06882575b988a0e91c628",
+    "creation_bytecode_sha256": "8e28d51c87a29623093e0b3dfe1f68b456df032b3dbe2af9b86649ef9d1cd4c7",
+    "runtime_bytecode_sha256": "0e7dac168b2bb2358fd40016a4327b9dea569e9cdb403315c0f28af3f1c70caa"
+  },
+  {
+    "benchmark_id": "ownable_pausable",
+    "profile_id": "solar-size-1",
+    "source_hash": "e93c83dc98ce7ee6b5a91339208f214c99f5133acad06882575b988a0e91c628",
+    "creation_bytecode_sha256": "b5e9dc52920e7ac729dc9031f6653835096afffc9a6e6b4c36caa274cbd41d25",
+    "runtime_bytecode_sha256": "0275a787c8e73ac67ad09bd5370482646ea3364fd40f8fa41cc73b8a664ab3bb"
+  },
+  {
+    "benchmark_id": "scale_abi_args_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "a2fb8c195ad187fb885adbe8db478fb82bef0482522fa1b968123b142dcb3567",
+    "creation_bytecode_sha256": "4a020c598e5b89f3a3f26e0c16a4c7b3020407c74a5cc2619c086950f7f1bd87",
+    "runtime_bytecode_sha256": "34faddef3f0171b0cf022d1dbb51692067f123bf4183d68e4dbda78f3e325cbf"
+  },
+  {
+    "benchmark_id": "scale_abi_args_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "a2fb8c195ad187fb885adbe8db478fb82bef0482522fa1b968123b142dcb3567",
+    "creation_bytecode_sha256": "21e3a047c7ef4d2948e76749038ab0101ada0ab42b27370da05686ee838480bd",
+    "runtime_bytecode_sha256": "7f4876c5a72d270f8847c2c15134231f4a4c12cf2f53832645277225664c7e3e"
+  },
+  {
+    "benchmark_id": "scale_abi_args_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "a2fb8c195ad187fb885adbe8db478fb82bef0482522fa1b968123b142dcb3567",
+    "creation_bytecode_sha256": "d9f6e01b2941d93de71310da2791e1d4263a0e45b9f35ad6af7407a5f5b05ca0",
+    "runtime_bytecode_sha256": "a2996d7f27485a8f0ae85554e12fc70ca9402430e16578d70955ed5a6b1ed9c1"
+  },
+  {
+    "benchmark_id": "scale_abi_args_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "a2fb8c195ad187fb885adbe8db478fb82bef0482522fa1b968123b142dcb3567",
+    "creation_bytecode_sha256": "d9f6e01b2941d93de71310da2791e1d4263a0e45b9f35ad6af7407a5f5b05ca0",
+    "runtime_bytecode_sha256": "a2996d7f27485a8f0ae85554e12fc70ca9402430e16578d70955ed5a6b1ed9c1"
+  },
+  {
+    "benchmark_id": "scale_abi_args_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "fb3ff80954e581a746b0d60b03431f760c119e5d6c98f4459b97cbb73b49f2b2",
+    "creation_bytecode_sha256": "baebf4e2a322f797c9afa0b80432e1ba6c9a55d8938863afa000a41b9c1f39a1",
+    "runtime_bytecode_sha256": "c8ef1e4862df93f021bf4182e341ce3885bac7d14f6e8ad55b4b88b4b8ed097c"
+  },
+  {
+    "benchmark_id": "scale_abi_args_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "fb3ff80954e581a746b0d60b03431f760c119e5d6c98f4459b97cbb73b49f2b2",
+    "creation_bytecode_sha256": "26442800e24ca826b8240ea0ceeef4958ab7116233032e16b0ab8277ac24b557",
+    "runtime_bytecode_sha256": "ddd5254b3a6db35e96f151e85cc628552ba62df33c96bc34527336e0692740db"
+  },
+  {
+    "benchmark_id": "scale_abi_args_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "fb3ff80954e581a746b0d60b03431f760c119e5d6c98f4459b97cbb73b49f2b2",
+    "creation_bytecode_sha256": "26442800e24ca826b8240ea0ceeef4958ab7116233032e16b0ab8277ac24b557",
+    "runtime_bytecode_sha256": "ddd5254b3a6db35e96f151e85cc628552ba62df33c96bc34527336e0692740db"
+  },
+  {
+    "benchmark_id": "scale_abi_args_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "375ce3151c19dc1a80c70ad0c3f5a2f183694839ae446d65c1d189a598e662c5",
+    "creation_bytecode_sha256": "08921655752c8bb9689355b6c9e249cb2d7fd477af56ddccff8c6447358b55fb",
+    "runtime_bytecode_sha256": "6b94972d546d947822c5590b08f0c2ac970df761abd4049df5facdf42c6956d6"
+  },
+  {
+    "benchmark_id": "scale_abi_args_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "375ce3151c19dc1a80c70ad0c3f5a2f183694839ae446d65c1d189a598e662c5",
+    "creation_bytecode_sha256": "63a4fcf5f0bcf9c7d5670719970ccdc5b84cff705fa69365d3b6db8db12a52ce",
+    "runtime_bytecode_sha256": "cd4f5166974d53e6107d8b7afa34bab1ddfa8e8e31077e0d599a04c003d96b29"
+  },
+  {
+    "benchmark_id": "scale_abi_args_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "375ce3151c19dc1a80c70ad0c3f5a2f183694839ae446d65c1d189a598e662c5",
+    "creation_bytecode_sha256": "289481489cb7b1fe6e588387f18f6a2fe805dd7c727edae4b4e1b1cac041b304",
+    "runtime_bytecode_sha256": "6616792b6d3d47f93c224b388fe62b21c99353613dedf447da98bdc40ee24dc2"
+  },
+  {
+    "benchmark_id": "scale_abi_args_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "375ce3151c19dc1a80c70ad0c3f5a2f183694839ae446d65c1d189a598e662c5",
+    "creation_bytecode_sha256": "289481489cb7b1fe6e588387f18f6a2fe805dd7c727edae4b4e1b1cac041b304",
+    "runtime_bytecode_sha256": "6616792b6d3d47f93c224b388fe62b21c99353613dedf447da98bdc40ee24dc2"
+  },
+  {
+    "benchmark_id": "scale_abi_args_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "0330b9058936e8ed4809c547e7429f0df79125f0d138a9a5c7381f8f99b2b02c",
+    "creation_bytecode_sha256": "0daf91663704730852acf3113ee11040be94476b8b11d961bfd9ccc98fe69647",
+    "runtime_bytecode_sha256": "94b1e42a41eb0ed46367896b3dac04ecb1fd2d7ed8203241f856aa7e6b39839b"
+  },
+  {
+    "benchmark_id": "scale_abi_args_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "0330b9058936e8ed4809c547e7429f0df79125f0d138a9a5c7381f8f99b2b02c",
+    "creation_bytecode_sha256": "9a75570b4a3e956d157e10868733db66bd25caa1bdc1f8aa82fed2889c00ffed",
+    "runtime_bytecode_sha256": "08284e509302a1cbb239c6f633e3019a0027869809b78b83b2630c9d907fa614"
+  },
+  {
+    "benchmark_id": "scale_abi_args_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "0330b9058936e8ed4809c547e7429f0df79125f0d138a9a5c7381f8f99b2b02c",
+    "creation_bytecode_sha256": "9a75570b4a3e956d157e10868733db66bd25caa1bdc1f8aa82fed2889c00ffed",
+    "runtime_bytecode_sha256": "08284e509302a1cbb239c6f633e3019a0027869809b78b83b2630c9d907fa614"
+  },
+  {
+    "benchmark_id": "scale_abi_args_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "d21d64f43188c594c26069ba752dff5b621da053cd6b09e6a1630c28288fa0a7",
+    "creation_bytecode_sha256": "4eedf161584fa484cfa5a2920c2a9931fa2a9794a5a14ff1c5cca588bb97bd84",
+    "runtime_bytecode_sha256": "73df7e47020329c92f776cd3efb95331806a50dbf5dff94d74ef398c3bc7ab67"
+  },
+  {
+    "benchmark_id": "scale_abi_args_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "d21d64f43188c594c26069ba752dff5b621da053cd6b09e6a1630c28288fa0a7",
+    "creation_bytecode_sha256": "2ed32c9367fbc60146af39c04d00c3c4fdf99e519c2bff381bf14a65dfe374b2",
+    "runtime_bytecode_sha256": "95e7615474180c6345b46a22a10f7a896a4d14a7f55d1efad25e6c280308f65b"
+  },
+  {
+    "benchmark_id": "scale_abi_args_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "d21d64f43188c594c26069ba752dff5b621da053cd6b09e6a1630c28288fa0a7",
+    "creation_bytecode_sha256": "30f65fd59be4f1e2a9721701037a5f558d2ac8a709e2a34072ac7c5a8cd4ff9f",
+    "runtime_bytecode_sha256": "39809ded895e700c63c199ffc63a0f5f997319752a24aa3fddc0fb228a5e6df9"
+  },
+  {
+    "benchmark_id": "scale_abi_args_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "d21d64f43188c594c26069ba752dff5b621da053cd6b09e6a1630c28288fa0a7",
+    "creation_bytecode_sha256": "30f65fd59be4f1e2a9721701037a5f558d2ac8a709e2a34072ac7c5a8cd4ff9f",
+    "runtime_bytecode_sha256": "39809ded895e700c63c199ffc63a0f5f997319752a24aa3fddc0fb228a5e6df9"
+  },
+  {
+    "benchmark_id": "scale_abi_args_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "16cca1db9930340f5a472e40e13055085dbdd106f60c8daef7a2fd18bf21d22d",
+    "creation_bytecode_sha256": "3a907d8905d875ca9eca625a9213316c612d688c3628fa4797249c1e03f91bf8",
+    "runtime_bytecode_sha256": "4003f1312f4e6dd8353f34d786cbf8e81325c4341e8045784958eb5fd2ef7c64"
+  },
+  {
+    "benchmark_id": "scale_abi_args_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "16cca1db9930340f5a472e40e13055085dbdd106f60c8daef7a2fd18bf21d22d",
+    "creation_bytecode_sha256": "1250da5f906fa8840ae4b228dbc4edce99fec57c541b44774a60c07ee396c011",
+    "runtime_bytecode_sha256": "80bf9e50921f98716005f7a62e2c5f2e5ea9937a73f39b24ac575aac9ed190c3"
+  },
+  {
+    "benchmark_id": "scale_abi_args_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "16cca1db9930340f5a472e40e13055085dbdd106f60c8daef7a2fd18bf21d22d",
+    "creation_bytecode_sha256": "1250da5f906fa8840ae4b228dbc4edce99fec57c541b44774a60c07ee396c011",
+    "runtime_bytecode_sha256": "80bf9e50921f98716005f7a62e2c5f2e5ea9937a73f39b24ac575aac9ed190c3"
+  },
+  {
+    "benchmark_id": "scale_abi_args_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "505e02b1f27011c542bc00646c25b2d010b6812ea8e8ccc0552897bb23078e12",
+    "creation_bytecode_sha256": "28d7d5e44d655a45f0213b5b2c00903c98dd53a87826854a9fec413cfda4793d",
+    "runtime_bytecode_sha256": "8142c24ce24691022cf3d3e13652d7b257f1da5559799cdb8349b32851740629"
+  },
+  {
+    "benchmark_id": "scale_abi_args_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "505e02b1f27011c542bc00646c25b2d010b6812ea8e8ccc0552897bb23078e12",
+    "creation_bytecode_sha256": "fadf4c396315d895afed6db264305c7a853a82f88416393f04e6b4be572602ff",
+    "runtime_bytecode_sha256": "64ba7ed03c94d37a9fa2e94063fb1829663d5ff971b3664145342de3a850f468"
+  },
+  {
+    "benchmark_id": "scale_abi_args_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "505e02b1f27011c542bc00646c25b2d010b6812ea8e8ccc0552897bb23078e12",
+    "creation_bytecode_sha256": "cd02f29ec6db1d98323b48e22dd4f89f02f209360043c559154e0e1d2f6f538e",
+    "runtime_bytecode_sha256": "c90a6dda7381b2c5cea8e0cce26935403cbdd6b076e8e12c313ea087d8f4b17e"
+  },
+  {
+    "benchmark_id": "scale_abi_args_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "505e02b1f27011c542bc00646c25b2d010b6812ea8e8ccc0552897bb23078e12",
+    "creation_bytecode_sha256": "cd02f29ec6db1d98323b48e22dd4f89f02f209360043c559154e0e1d2f6f538e",
+    "runtime_bytecode_sha256": "c90a6dda7381b2c5cea8e0cce26935403cbdd6b076e8e12c313ea087d8f4b17e"
+  },
+  {
+    "benchmark_id": "scale_dispatch_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "caabb2f9c8270b1912ea43c2560f0eedea37af770458dd0438cfaa6f505e976c",
+    "creation_bytecode_sha256": "334c4bb3618cd73b7d258bb978d6e927e26000464344fcef305f6b1f392527df",
+    "runtime_bytecode_sha256": "553f81a2ad856b8dd6ac5dab0092a23454bb5007573a54da60683e9a231cdb77"
+  },
+  {
+    "benchmark_id": "scale_dispatch_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "caabb2f9c8270b1912ea43c2560f0eedea37af770458dd0438cfaa6f505e976c",
+    "creation_bytecode_sha256": "ef8d0b16d410838fcf4332830e059cf4f9acf1c8bff0c49bc00a14e98b8e5b82",
+    "runtime_bytecode_sha256": "3f136888778e5a3e277d3f6910364b42a9bf38c6b4b57c74b55bb59fcc80b692"
+  },
+  {
+    "benchmark_id": "scale_dispatch_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "caabb2f9c8270b1912ea43c2560f0eedea37af770458dd0438cfaa6f505e976c",
+    "creation_bytecode_sha256": "97c84bbd51b492760cba5827b0fcae3d6d97c0e1d99870e3fe9454652790cf25",
+    "runtime_bytecode_sha256": "d55b1a9f09c3aa8a852728f95c1e1d940940bc78c2602df390ee7f088811e4b1"
+  },
+  {
+    "benchmark_id": "scale_dispatch_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "caabb2f9c8270b1912ea43c2560f0eedea37af770458dd0438cfaa6f505e976c",
+    "creation_bytecode_sha256": "97c84bbd51b492760cba5827b0fcae3d6d97c0e1d99870e3fe9454652790cf25",
+    "runtime_bytecode_sha256": "d55b1a9f09c3aa8a852728f95c1e1d940940bc78c2602df390ee7f088811e4b1"
+  },
+  {
+    "benchmark_id": "scale_dispatch_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "ba4d6b4930e78c235c926c6b95e6d1708e694ec3eee0ce04c3bc1a71e4886128",
+    "creation_bytecode_sha256": "bcec85d512a8ec6bef0341e5625e00f17c563d5ef0708c4ccc643990eb43bc60",
+    "runtime_bytecode_sha256": "2b5ad92ace7f713a03e2ca04493fab2f824f0bee0534c66f74c3116cc272e04b"
+  },
+  {
+    "benchmark_id": "scale_dispatch_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "ba4d6b4930e78c235c926c6b95e6d1708e694ec3eee0ce04c3bc1a71e4886128",
+    "creation_bytecode_sha256": "d83d0a21312a1d71c091ec4a04eb399ab5d09076dd518dc85b71365633c3282f",
+    "runtime_bytecode_sha256": "4e756ca8cd3474e9e44db7d65129c36fceba0cd734138f9d1aad2b99be18945b"
+  },
+  {
+    "benchmark_id": "scale_dispatch_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "ba4d6b4930e78c235c926c6b95e6d1708e694ec3eee0ce04c3bc1a71e4886128",
+    "creation_bytecode_sha256": "822471fa8e3f594dddb443cc102a8a8fa949311de1998df265ff0efdf6f3fd30",
+    "runtime_bytecode_sha256": "0bdf653dc21e0d253cc19dfb84c214e62cf4b95736d4952e3849f71906493194"
+  },
+  {
+    "benchmark_id": "scale_dispatch_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "ba4d6b4930e78c235c926c6b95e6d1708e694ec3eee0ce04c3bc1a71e4886128",
+    "creation_bytecode_sha256": "8cdf232e30506b1d224de38e3948281b02d87147b1c25489491d4ed103d52e4a",
+    "runtime_bytecode_sha256": "f393f934233687c53bf56484859117bbf0e5edc5b912b6384099136b74bfc311"
+  },
+  {
+    "benchmark_id": "scale_dispatch_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "2867c0fa1c67ed3b39249cc7cb2dac103a0d9f5a5af8a968dd83cd2bddc306ca",
+    "creation_bytecode_sha256": "4b6930237a610d360796e062e8df2ee072d4ef1220d1b43a6dd238a95b8a9fd6",
+    "runtime_bytecode_sha256": "24903cfffe33baa29d9a7366aae06f0f6903b058080210460f79eb729cde4f0e"
+  },
+  {
+    "benchmark_id": "scale_dispatch_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "2867c0fa1c67ed3b39249cc7cb2dac103a0d9f5a5af8a968dd83cd2bddc306ca",
+    "creation_bytecode_sha256": "2e3f23f517a81e074f56c6c6e865a5c434facfaf41217a6838a31cd256334b89",
+    "runtime_bytecode_sha256": "9d458690087cda659ac55c77cfdea3315e1374de53c194db395aaa8bcc4114b8"
+  },
+  {
+    "benchmark_id": "scale_dispatch_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "2867c0fa1c67ed3b39249cc7cb2dac103a0d9f5a5af8a968dd83cd2bddc306ca",
+    "creation_bytecode_sha256": "ae3ecd6ef62fb9865472041abf5385a75b66dc5dbfa669e5e693b9d1c2a3dc2c",
+    "runtime_bytecode_sha256": "61f3a8df6d713978096bade47e46c3e11ca33999cf90a38fcdd7497d5b2de008"
+  },
+  {
+    "benchmark_id": "scale_dispatch_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "2867c0fa1c67ed3b39249cc7cb2dac103a0d9f5a5af8a968dd83cd2bddc306ca",
+    "creation_bytecode_sha256": "ae3ecd6ef62fb9865472041abf5385a75b66dc5dbfa669e5e693b9d1c2a3dc2c",
+    "runtime_bytecode_sha256": "61f3a8df6d713978096bade47e46c3e11ca33999cf90a38fcdd7497d5b2de008"
+  },
+  {
+    "benchmark_id": "scale_dispatch_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "ec17feda759ffd6f6adbda59ef3093c2d30943339931686d118931fa9d41debf",
+    "creation_bytecode_sha256": "73f917a71422f735091d2d0a672038b2dd2b97f5204cfee486e18add6d173053",
+    "runtime_bytecode_sha256": "2ed14669dbcdc9d8c432b8615c0cdbc58b5711e84059ea34d941b0bee36e7665"
+  },
+  {
+    "benchmark_id": "scale_dispatch_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "ec17feda759ffd6f6adbda59ef3093c2d30943339931686d118931fa9d41debf",
+    "creation_bytecode_sha256": "8226e55b78045b9560d1ccf6fc2c044f494c1b826929403656c60dca05edc52c",
+    "runtime_bytecode_sha256": "6ff4d96751a385b44d0951abca47f600234e0798b7e4454059bdd2b2cc0b6802"
+  },
+  {
+    "benchmark_id": "scale_dispatch_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "ec17feda759ffd6f6adbda59ef3093c2d30943339931686d118931fa9d41debf",
+    "creation_bytecode_sha256": "b0ca901af251fb78ae0c237befe7e2e079e58c974ef48a3e4b09efbf6f1431d0",
+    "runtime_bytecode_sha256": "067110d75afde06c8310979c55dacb2e2ef206d6a05dacabb5882a45484d97e2"
+  },
+  {
+    "benchmark_id": "scale_dispatch_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "ec17feda759ffd6f6adbda59ef3093c2d30943339931686d118931fa9d41debf",
+    "creation_bytecode_sha256": "4c406f31233109acd309692d665f8d701fc87d5f18029a78a54be5aa3d6a8246",
+    "runtime_bytecode_sha256": "3d6ba081a9b7e35ab3b7cdcea7d5d9c49cb8a93dca9e61347768a7b4dbf60357"
+  },
+  {
+    "benchmark_id": "scale_dispatch_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "15c1c9d28a4d627a5af6fcf6a8db8055b02e305837565fd1f8ecfe24fbe62ab0",
+    "creation_bytecode_sha256": "e0d2069bc62154ed34e8d072af1396bc6146dca416ff7e0c06ed8dd0bc1c5b2e",
+    "runtime_bytecode_sha256": "43d647b7ee02f8ac2d3be253895cb7a2fc3d5cfaab4221a7a60a6fedf4b73141"
+  },
+  {
+    "benchmark_id": "scale_dispatch_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "15c1c9d28a4d627a5af6fcf6a8db8055b02e305837565fd1f8ecfe24fbe62ab0",
+    "creation_bytecode_sha256": "aa9a1abb88915edaed3f14e6e81875ec0340bdb64d6122e82af00ef6c6b906c8",
+    "runtime_bytecode_sha256": "f45f1aacc0878885281e662114d3d453baf9c32cbc20fee8e8977c3abdbaddbc"
+  },
+  {
+    "benchmark_id": "scale_dispatch_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "15c1c9d28a4d627a5af6fcf6a8db8055b02e305837565fd1f8ecfe24fbe62ab0",
+    "creation_bytecode_sha256": "af2b14e8cbb49c81152b927bb6fb90cc8effd0d19a064d517e073e21a999c999",
+    "runtime_bytecode_sha256": "b9bc4c95c21524bce95c76dad434de8106a68948e8fa1f16f1fa8cddbe1ed797"
+  },
+  {
+    "benchmark_id": "scale_dispatch_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "15c1c9d28a4d627a5af6fcf6a8db8055b02e305837565fd1f8ecfe24fbe62ab0",
+    "creation_bytecode_sha256": "1bcc40597172d911a012214870591ead51951cca502d89887ce1d9b47762894a",
+    "runtime_bytecode_sha256": "e4e7c1c745615468a814e612bbcbdf969b426844d714a3e8970a7a6e5ee23a8f"
+  },
+  {
+    "benchmark_id": "scale_dispatch_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "db0336c1211b18dd9c1b7db6420722aec42bb66b4fd0785d5f8866965cee997b",
+    "creation_bytecode_sha256": "98a25703618015f50b9f9ab6a3d55d12ab4e90a96985eaed7c10fa84bd4661a7",
+    "runtime_bytecode_sha256": "38a21f6bdaf3053685cdcd372f0ed9140d722db86cd34386d5310f09e7b91389"
+  },
+  {
+    "benchmark_id": "scale_dispatch_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "db0336c1211b18dd9c1b7db6420722aec42bb66b4fd0785d5f8866965cee997b",
+    "creation_bytecode_sha256": "dba60fd2c6f0dfcbeb29368d079ed7b88c511f8ac8e6f9ca936a84d838f72e2e",
+    "runtime_bytecode_sha256": "5d3516196d35a5eb760cb46c19605f2aed5bfe58b2855df843c27938bb44c96c"
+  },
+  {
+    "benchmark_id": "scale_dispatch_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "db0336c1211b18dd9c1b7db6420722aec42bb66b4fd0785d5f8866965cee997b",
+    "creation_bytecode_sha256": "8d1617bf8ffb72e227c5e02fcc21d205b47afdc2c9fd4939c208320188e1fcdd",
+    "runtime_bytecode_sha256": "98fc21b1fde94a267456ac1836b9577df4b54f1ba071df8f4839fe90eba04ba8"
+  },
+  {
+    "benchmark_id": "scale_dispatch_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "db0336c1211b18dd9c1b7db6420722aec42bb66b4fd0785d5f8866965cee997b",
+    "creation_bytecode_sha256": "c701f78a020cc14b5a397d038b77b7998b48411673eb5cceb1b66aaf47c54c5b",
+    "runtime_bytecode_sha256": "a07162a0f25c86f4f5a2f2c46a5d166415c94d3f322bd09662770bee43f0170f"
+  },
+  {
+    "benchmark_id": "scale_dispatch_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "edb9f516dcf72d03dd3669eccb5761ad08ec9f3a6b2dffe16ee45b61a5856805",
+    "creation_bytecode_sha256": "55edbd40d390604b4871b1bc3a0b5dfd8841b4ebc3d7b5cb42bb0a0ddb6e3fa1",
+    "runtime_bytecode_sha256": "8d6a983a3ea723801ab46023e8e0eb4f17a2b637bf905e91ffd87843aefc9a22"
+  },
+  {
+    "benchmark_id": "scale_dispatch_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "edb9f516dcf72d03dd3669eccb5761ad08ec9f3a6b2dffe16ee45b61a5856805",
+    "creation_bytecode_sha256": "666c265012f5c5945ac04bcdabd3106b327fc17ff879329d0a7dd6d1a45267f0",
+    "runtime_bytecode_sha256": "9617da2b69119208f771c913282402f5e750cf39f799dd7a7d0a338c4a715f97"
+  },
+  {
+    "benchmark_id": "scale_dispatch_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "edb9f516dcf72d03dd3669eccb5761ad08ec9f3a6b2dffe16ee45b61a5856805",
+    "creation_bytecode_sha256": "5ef9ec76eb2089064cd86e8925242c3859d40fdc5ee126e5bab2140282f863ec",
+    "runtime_bytecode_sha256": "41c2cca71a3a58e17e878128d7540b4a8036fed0321e574db148b5b792a7e90a"
+  },
+  {
+    "benchmark_id": "scale_dispatch_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "edb9f516dcf72d03dd3669eccb5761ad08ec9f3a6b2dffe16ee45b61a5856805",
+    "creation_bytecode_sha256": "60bc7f6a7f339d1d4f2ae3953f6eb76f27df9ed78fed4b9350d80bb815dda0b6",
+    "runtime_bytecode_sha256": "fa3177e931fdb7394375b90b08b1c87bf587249199c59592e833978d3d3a0a93"
+  },
+  {
+    "benchmark_id": "scale_events_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "93dbb7c8d819b55e630e9a954d3011dbd633881cf3821a630de4c0f4cfec2526",
+    "creation_bytecode_sha256": "5a98c6ce686c5cb4976306e80d8a87402753a6958c1fae44f6a5cc8cfee05e75",
+    "runtime_bytecode_sha256": "f1003d47aacf05a8d530de1c51be2425483111f62ca2366f9a10c111533731e5"
+  },
+  {
+    "benchmark_id": "scale_events_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "93dbb7c8d819b55e630e9a954d3011dbd633881cf3821a630de4c0f4cfec2526",
+    "creation_bytecode_sha256": "61bd096f2f451a199c4e061632d640fb2c227ea7db30bc0212de43256367a2a1",
+    "runtime_bytecode_sha256": "91e719ff92d3f3140f83ebcf36743217287361722934f896cb4c642f29cbff73"
+  },
+  {
+    "benchmark_id": "scale_events_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "93dbb7c8d819b55e630e9a954d3011dbd633881cf3821a630de4c0f4cfec2526",
+    "creation_bytecode_sha256": "5995533538b50209ede579c6c3b1eddafd6f2609217f59d2d5bea09f2f6fd150",
+    "runtime_bytecode_sha256": "b04e461992f3f6b211245fc76e3821f18a82dfb8b2ac099c32173b136501f469"
+  },
+  {
+    "benchmark_id": "scale_events_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "93dbb7c8d819b55e630e9a954d3011dbd633881cf3821a630de4c0f4cfec2526",
+    "creation_bytecode_sha256": "7cd9cd3fc1e9be8485a461945820183f7ad43f53a271706cb7b86858acc6c31f",
+    "runtime_bytecode_sha256": "df55670803ec6c9ad336ef2e82559a09da614609d8e4b5f33cda4b2cccae5c22"
+  },
+  {
+    "benchmark_id": "scale_events_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "04ee7ea10cb1a77bab8b6d046b772d61cbb801e48a876c979af62fd1651f1f4f",
+    "creation_bytecode_sha256": "b83fd1df5a48bfadfe19f63fe6e1e4ff61a626ee47cb6f6f2ef9fbba30a99a1c",
+    "runtime_bytecode_sha256": "fb794ee491ca4c2e26f1b85be704412b0d368775979590b8d1241ae333a759e2"
+  },
+  {
+    "benchmark_id": "scale_events_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "04ee7ea10cb1a77bab8b6d046b772d61cbb801e48a876c979af62fd1651f1f4f",
+    "creation_bytecode_sha256": "53d83e43f7e1860ddab95bb498c38d19a3f454f9b6d94f9bd05d4edbd84b9a72",
+    "runtime_bytecode_sha256": "5a89aacdfeb1071cbc53db4ca01aa32b7ca74c41384613c2003a1caf8b0158b0"
+  },
+  {
+    "benchmark_id": "scale_events_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "04ee7ea10cb1a77bab8b6d046b772d61cbb801e48a876c979af62fd1651f1f4f",
+    "creation_bytecode_sha256": "2cff14e0dafeaf0a231d4629094563b2f371ba5044b02a0d3306b1b246456189",
+    "runtime_bytecode_sha256": "7baeb7a35bc2fd3f722ffe088e2b8867b2057eeeff9e9a02a57b4d2647ff2ac5"
+  },
+  {
+    "benchmark_id": "scale_events_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "04ee7ea10cb1a77bab8b6d046b772d61cbb801e48a876c979af62fd1651f1f4f",
+    "creation_bytecode_sha256": "0c22251b628b3233c81a5461d30e0a2192c6550702295a154b2f481beb28f7c0",
+    "runtime_bytecode_sha256": "b0fc4833728690e97ba2f7a4377596d9f24dcfd30cb957c7fa14a54d917728fe"
+  },
+  {
+    "benchmark_id": "scale_events_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "7b511cafe747ee98ab792e2062111b5bb08e6483e0cf1e426cb4e450cb824579",
+    "creation_bytecode_sha256": "88cc47561b7bbd1118da6e4469ea2f8d142aa312a6ef1857c3dacbe4f3f8c795",
+    "runtime_bytecode_sha256": "4ea0d43ce4a83982cf046685fc8c225db2d0b95c4e2b9ef541b1f3ab8e16128a"
+  },
+  {
+    "benchmark_id": "scale_events_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "7b511cafe747ee98ab792e2062111b5bb08e6483e0cf1e426cb4e450cb824579",
+    "creation_bytecode_sha256": "1e6196352da28b31da8c0af5a2703051c9a3c444e1afaec5ce73fc424cd5e5f4",
+    "runtime_bytecode_sha256": "8684e6426ff35dcf575fb16faf8d0780bc4382bb8d88925e26934548de00d13f"
+  },
+  {
+    "benchmark_id": "scale_events_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "7b511cafe747ee98ab792e2062111b5bb08e6483e0cf1e426cb4e450cb824579",
+    "creation_bytecode_sha256": "190bac75c5bffea5e38d78cfbc4e3215b4f6d1be3844c6e34ccd0edc6afe41ce",
+    "runtime_bytecode_sha256": "a32cb4354c6a4fdab993bfef3a8b09aa2ffe2a6c897b1cdb6ef1c4a6e1e10b6e"
+  },
+  {
+    "benchmark_id": "scale_events_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "7b511cafe747ee98ab792e2062111b5bb08e6483e0cf1e426cb4e450cb824579",
+    "creation_bytecode_sha256": "df5eb7b3a454a6e58cfaf1a52dde9dfb3341d3050134562120826d143e78f64a",
+    "runtime_bytecode_sha256": "26f81e91eacd735e913ec65931887e205282e41d72ca7c2a27df65a976597079"
+  },
+  {
+    "benchmark_id": "scale_events_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "8173d8b37ff753cd0b36581ab3bd742d8b327395f0255051549c0bd16ee321f2",
+    "creation_bytecode_sha256": "e6ba3263632b8c20b728f9f459f6c74e0a76cf4e577908c43ce42081c52a3c79",
+    "runtime_bytecode_sha256": "9fabdfc54972da2e121a20c7d69aeca9a3d48ac3fb97ff9bf482d76de8062414"
+  },
+  {
+    "benchmark_id": "scale_events_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "8173d8b37ff753cd0b36581ab3bd742d8b327395f0255051549c0bd16ee321f2",
+    "creation_bytecode_sha256": "2d75474944f298df2699aeebd0e008d7d0e9be606a7f3f70f8faee5383440659",
+    "runtime_bytecode_sha256": "b4cf5294e232d1bb949d7a672c16efa5f6d02cc21f352d7aa4f680442d5b6170"
+  },
+  {
+    "benchmark_id": "scale_events_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "8173d8b37ff753cd0b36581ab3bd742d8b327395f0255051549c0bd16ee321f2",
+    "creation_bytecode_sha256": "a1361ab0982129bb829e1e77075f53044d0e2eaf0a313f38deb15307cf79a6c0",
+    "runtime_bytecode_sha256": "918bbc5def81455a4c79f1f277ca579c4853e5051e9aa41700df65e385f449b5"
+  },
+  {
+    "benchmark_id": "scale_events_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "8173d8b37ff753cd0b36581ab3bd742d8b327395f0255051549c0bd16ee321f2",
+    "creation_bytecode_sha256": "b3f43b412b3b9fd245770a8724973f7580ca5fa1d0893843ace0fe3c479476f0",
+    "runtime_bytecode_sha256": "f15b6bf08c7ef2fb27f6b3fa5bcf87dad8dba26e41242addef44974a0d491664"
+  },
+  {
+    "benchmark_id": "scale_events_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "941619a368bc63199cc3ad88ff3d94b7d6ad1d23dd7e07aff2d90a4947e10081",
+    "creation_bytecode_sha256": "3f934e99ff4ebe247aebcbe95429aff9a205650cfe67a99107486f43a1e018e2",
+    "runtime_bytecode_sha256": "2aa6e24677a88685e22229cb36234e246435fc5a4087ca2fda3a9dd6b62a568a"
+  },
+  {
+    "benchmark_id": "scale_events_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "941619a368bc63199cc3ad88ff3d94b7d6ad1d23dd7e07aff2d90a4947e10081",
+    "creation_bytecode_sha256": "4f62a084b3df65abb225b200b8ab66f459f7f8b82d2a2f61cd3a37810f09facc",
+    "runtime_bytecode_sha256": "2f24e8434555d7de555e9c230073c3ae0e1b5c91372c578558774793e86aaedf"
+  },
+  {
+    "benchmark_id": "scale_events_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "941619a368bc63199cc3ad88ff3d94b7d6ad1d23dd7e07aff2d90a4947e10081",
+    "creation_bytecode_sha256": "c272f2834e7f708eb3341440991bb8eb5792393db5adc5d9d0b16d06f262ac4b",
+    "runtime_bytecode_sha256": "689d7375dd84c0883684e720ad1b3f4cf618fce90a6255e705ea783b69ef6da7"
+  },
+  {
+    "benchmark_id": "scale_events_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "941619a368bc63199cc3ad88ff3d94b7d6ad1d23dd7e07aff2d90a4947e10081",
+    "creation_bytecode_sha256": "cb44208e293d3b19d7b5d01d1833b8ddd255e3882ff30134675c354ac6a00008",
+    "runtime_bytecode_sha256": "50944e4f7208c87144e403e85e9f922cbab533b6c5ebe4889d46da3a2574962f"
+  },
+  {
+    "benchmark_id": "scale_events_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "5bff114cf180da045d7fddc70d564b957e89cc3ba75e6cd68cdd470bfcb4c285",
+    "creation_bytecode_sha256": "e0e0b4dfa81e0f884dbc714678df1f385329af317a296273370053dd43cc1749",
+    "runtime_bytecode_sha256": "fd4d8ad15b7357ef088331b1204ce2cfe8d019b18e903203e9022fdd6e0e6f4b"
+  },
+  {
+    "benchmark_id": "scale_events_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "5bff114cf180da045d7fddc70d564b957e89cc3ba75e6cd68cdd470bfcb4c285",
+    "creation_bytecode_sha256": "f0fc26f6931816c9bfcb4ec9a7c8f5a7f12e4b917e8a29cfdfda57c4d5f9ba4a",
+    "runtime_bytecode_sha256": "559a3ef5b2a17c49ab8405cffb8445f17c55688eedddcf3383b73dba5f9314aa"
+  },
+  {
+    "benchmark_id": "scale_events_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "5bff114cf180da045d7fddc70d564b957e89cc3ba75e6cd68cdd470bfcb4c285",
+    "creation_bytecode_sha256": "a4fdfd2f452e441e92d84325fdc37c87ed72961069dc3421620475cc31f555bd",
+    "runtime_bytecode_sha256": "5d98991efb3faffa7c173cac265ae846449a1ed7ac78f7c458e90d9eae49284d"
+  },
+  {
+    "benchmark_id": "scale_events_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "5bff114cf180da045d7fddc70d564b957e89cc3ba75e6cd68cdd470bfcb4c285",
+    "creation_bytecode_sha256": "2814bd1759903ca0025f9f68cee242359f1e41410517db1a35a880c35fb4f9da",
+    "runtime_bytecode_sha256": "ab4a2beca58fb5d6085cbb51aea15124ff25ba7a146cf2598b279d96688131eb"
+  },
+  {
+    "benchmark_id": "scale_events_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "c8b14453e7e46bf7a4673f4ec613462f902c0108338ccacc821a978e7c8e0bc6",
+    "creation_bytecode_sha256": "ff3a1eb758be762554ebcb3e2a1eaccdb3cd4aee6764e45f406e7b5be67b914f",
+    "runtime_bytecode_sha256": "a872f522d45ea6af58d5d89410ed18905ecc0e3622fc0603327e823f07446f8b"
+  },
+  {
+    "benchmark_id": "scale_events_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "c8b14453e7e46bf7a4673f4ec613462f902c0108338ccacc821a978e7c8e0bc6",
+    "creation_bytecode_sha256": "56cd4ef839fbc8849d5d97573c9b55f10e0af5fc9bc0ac353029fe978e713655",
+    "runtime_bytecode_sha256": "b7d47343ab82cf110d5c2beafb7bb9b34eb5de313a46922a533e94f2350e70df"
+  },
+  {
+    "benchmark_id": "scale_events_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "c8b14453e7e46bf7a4673f4ec613462f902c0108338ccacc821a978e7c8e0bc6",
+    "creation_bytecode_sha256": "440d0c4a8f199955679beaee655cf59f01c45dec2f009cb753e21dfc41b87f7c",
+    "runtime_bytecode_sha256": "0c69d86b822faae68e83b9b167fc240f05e46062489599639baf050745caf9f7"
+  },
+  {
+    "benchmark_id": "scale_events_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "c8b14453e7e46bf7a4673f4ec613462f902c0108338ccacc821a978e7c8e0bc6",
+    "creation_bytecode_sha256": "b1ce330338176338fb06c3136a01a588fae002a445441e65ff7bbc8334a382bc",
+    "runtime_bytecode_sha256": "3a2c5baffbba3749f1cf522b51fd6b0d140447be9d6abcb3776400bd6760f24f"
+  },
+  {
+    "benchmark_id": "scale_external_calls_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "8e9d0b703d18d21a864ce9dc23bfa7470f6b7252456c714b3889a3050e20d738",
+    "creation_bytecode_sha256": "f18d0ffbe37b8740f2e66142ffeb7b46159f2f977fb536ffafcc678ed4a7164a",
+    "runtime_bytecode_sha256": "ff262addc5db38eaea5c635c75218f1ac71775adc9f6486d4b7f822d464314eb"
+  },
+  {
+    "benchmark_id": "scale_external_calls_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "8e9d0b703d18d21a864ce9dc23bfa7470f6b7252456c714b3889a3050e20d738",
+    "creation_bytecode_sha256": "ab8613aa283617f0feba1a4e150673388fb8811fecc862d06912f86eb7630cb2",
+    "runtime_bytecode_sha256": "5c800f7bce7cbd0a35d2fe95ff33ead5cd9026f736aedfb07a79fcea64ff32bb"
+  },
+  {
+    "benchmark_id": "scale_external_calls_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "8e9d0b703d18d21a864ce9dc23bfa7470f6b7252456c714b3889a3050e20d738",
+    "creation_bytecode_sha256": "de5689fa4996ddad16623ed2a4360916c4ad44c7090044fac9f09c3d728a49bb",
+    "runtime_bytecode_sha256": "c4fed8751ca7adf6747379642c1ca7cface04d8814b9aebd37c854ce232aa1bc"
+  },
+  {
+    "benchmark_id": "scale_external_calls_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "8e9d0b703d18d21a864ce9dc23bfa7470f6b7252456c714b3889a3050e20d738",
+    "creation_bytecode_sha256": "0b0cd610544bd4a52982b18f0db17ef9f09908cfa76f525809e8e7a4610b3186",
+    "runtime_bytecode_sha256": "1670723d102bd8178fe55f17534ba269687e96b84f06dffb074b7cdc00472f1d"
+  },
+  {
+    "benchmark_id": "scale_external_calls_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "36372cc64764673baecd7cf3e2c6a4382fa006546d040592124800de56b60a14",
+    "creation_bytecode_sha256": "5e237ecfdbe92e0e3e4f63aadd14de1160f6699cd61c8cbaeecf1fa2f8532e0d",
+    "runtime_bytecode_sha256": "433bf8dde99a27d0bea27c2eb8563cb8b5c47f1dc340edfffc1c30ae1f8612ba"
+  },
+  {
+    "benchmark_id": "scale_external_calls_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "36372cc64764673baecd7cf3e2c6a4382fa006546d040592124800de56b60a14",
+    "creation_bytecode_sha256": "7089695a59afa839084e73d38dd3bbdf43956f299eb47983cb8bdfe69b785764",
+    "runtime_bytecode_sha256": "82d6e68fcc0b0b96e9cf5cbeb5fb87fa4d09b84e882697879137ce1d3c0c4a0e"
+  },
+  {
+    "benchmark_id": "scale_external_calls_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "36372cc64764673baecd7cf3e2c6a4382fa006546d040592124800de56b60a14",
+    "creation_bytecode_sha256": "70eb85e58700e631b02bd305d1add527e8dafac3d484750dbd2eee549094bc4b",
+    "runtime_bytecode_sha256": "8ce289c13ba94378fbe854c4106943fce89100490201d14b8f35e1515f3f5618"
+  },
+  {
+    "benchmark_id": "scale_external_calls_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "36372cc64764673baecd7cf3e2c6a4382fa006546d040592124800de56b60a14",
+    "creation_bytecode_sha256": "b62e0127720218e72443a2128c49fa570a0cd83d8115b37f3adb2043bdca88e0",
+    "runtime_bytecode_sha256": "4941658cb174ecb5cbad2b2206907d77ac0fc66020ac2874a560c1c76549f2ad"
+  },
+  {
+    "benchmark_id": "scale_external_calls_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "d1e41d796f875263cdbf2f08f864882376cc09474daf3eea57a5464d40bac35d",
+    "creation_bytecode_sha256": "7f0632b704582ba0b279f1c258c46f927f0ab63f36153c979307a5536187467c",
+    "runtime_bytecode_sha256": "0df99d6954a83a08dfe14013383b122ee9f8244fde2d87ca30c9e29812899af5"
+  },
+  {
+    "benchmark_id": "scale_external_calls_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "d1e41d796f875263cdbf2f08f864882376cc09474daf3eea57a5464d40bac35d",
+    "creation_bytecode_sha256": "779ce9be31db6732ca9bdf89bc468213377533bf51c19877c2c55ea58409719a",
+    "runtime_bytecode_sha256": "19e16519919d4bafca1da36e9f6c48f5b540f291c2f9a28e634e9d1898fcf0cb"
+  },
+  {
+    "benchmark_id": "scale_external_calls_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "d1e41d796f875263cdbf2f08f864882376cc09474daf3eea57a5464d40bac35d",
+    "creation_bytecode_sha256": "7a1817aa13e23dc3d9bd3f572163a834c097f6d3267c1c014379838e25887e99",
+    "runtime_bytecode_sha256": "3d34247929e4ed08499f3486ebc801e399499c53a08e8d7c8aff53f1fe82ee73"
+  },
+  {
+    "benchmark_id": "scale_external_calls_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "d1e41d796f875263cdbf2f08f864882376cc09474daf3eea57a5464d40bac35d",
+    "creation_bytecode_sha256": "3436f3e392c075f6eedd6e25882eed8bacde8a70338a4bb2337c5aa6948103c5",
+    "runtime_bytecode_sha256": "69a1896fcff6f2b3cfc8628c80800c6a7fb8450a44897e88792b7506252492db"
+  },
+  {
+    "benchmark_id": "scale_external_calls_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "beca293324bb0fe110345178ab63e20e6eb14b66fb7403fd2feb187e7bf53c29",
+    "creation_bytecode_sha256": "b7e190440a0c4c7efa606b31797f7b922eb4f3963c189417d2b9a9dc23792443",
+    "runtime_bytecode_sha256": "2d82844cefd2acde0b7b203bae1ef98df90a5dd25f4cfdf0e83da280e25dd8b1"
+  },
+  {
+    "benchmark_id": "scale_external_calls_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "beca293324bb0fe110345178ab63e20e6eb14b66fb7403fd2feb187e7bf53c29",
+    "creation_bytecode_sha256": "dc291ac7e0f1df9e04a3fe0b7c7ae2aa80fe46fb32f0a5460f38a66865226eba",
+    "runtime_bytecode_sha256": "48cac927f623578a5380d9051583566f0c66189d0f70ae029284a5c0312cc532"
+  },
+  {
+    "benchmark_id": "scale_external_calls_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "beca293324bb0fe110345178ab63e20e6eb14b66fb7403fd2feb187e7bf53c29",
+    "creation_bytecode_sha256": "a913b89923951ef01a83a2b079d5caf9d5c4bf13ee5e6062a141299f0ec943c5",
+    "runtime_bytecode_sha256": "a33e9ec4e0fd786b214713ededd307684b98e869e5e60ce420f3660c96b15cd7"
+  },
+  {
+    "benchmark_id": "scale_external_calls_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "beca293324bb0fe110345178ab63e20e6eb14b66fb7403fd2feb187e7bf53c29",
+    "creation_bytecode_sha256": "3e0031164b5c3bb08d56c0114dceea346a35d24f77355a2219b36f6088e6bfdc",
+    "runtime_bytecode_sha256": "cfbc312e837af0b38e84e6e6b99fb3db5cd598570bb6d0bff8fca5dcadf32c9a"
+  },
+  {
+    "benchmark_id": "scale_external_calls_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "dc8dc89d9294fb9b97d6d905372fb010e57bfe46cfdf605016d940816ffc3a8c",
+    "creation_bytecode_sha256": "3741c700348c4d75c19eb27215ac40f0c567968d280c17f8828c141bdb2dbead",
+    "runtime_bytecode_sha256": "cc6ea90357b3aaf9fcd784b85b46d8f12e3d64a1154953b8d60b91e933d23388"
+  },
+  {
+    "benchmark_id": "scale_external_calls_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "dc8dc89d9294fb9b97d6d905372fb010e57bfe46cfdf605016d940816ffc3a8c",
+    "creation_bytecode_sha256": "10140097703ec083b075d2917609eda4e576036b5a8c37bfdc7c74403eb19c6c",
+    "runtime_bytecode_sha256": "48019e8c82a38ffc3093afabbf63b0182101a9df869f3893ee2fc5c616eaa791"
+  },
+  {
+    "benchmark_id": "scale_external_calls_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "dc8dc89d9294fb9b97d6d905372fb010e57bfe46cfdf605016d940816ffc3a8c",
+    "creation_bytecode_sha256": "7c7932cd657f4f48c414bd523218d290ca1a898d6098e5fa3f0e497d6b220916",
+    "runtime_bytecode_sha256": "5b3f1d2e4d950cee4b8479beeec598f606d23f43546701283d4739919634de2c"
+  },
+  {
+    "benchmark_id": "scale_external_calls_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "dc8dc89d9294fb9b97d6d905372fb010e57bfe46cfdf605016d940816ffc3a8c",
+    "creation_bytecode_sha256": "4c0f3ca6dd578c6a9178fe212f7d48a95623302142852dc0e948625dd5193195",
+    "runtime_bytecode_sha256": "65c6bf6f3efb194d601972b91f58a8d1d4b728f99ddeff2491280f2496c3c048"
+  },
+  {
+    "benchmark_id": "scale_external_calls_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "d18b5de9199328aa9f6de36c75dc1410f8a9a0689922684e9d3dbf3e54b86bb4",
+    "creation_bytecode_sha256": "88b0e5a56376f3776fd452fcd850dadd0ec7643af0082f269ca89d91741d8d35",
+    "runtime_bytecode_sha256": "15aa8ad40870972eb2a46024dbe979178ff13292d46b1526cb335812152dc194"
+  },
+  {
+    "benchmark_id": "scale_external_calls_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "d18b5de9199328aa9f6de36c75dc1410f8a9a0689922684e9d3dbf3e54b86bb4",
+    "creation_bytecode_sha256": "a6eafba5f8f647078aaf15b75d87bcbd61f24f6fa76c7d1122f7917f8c2b10fe",
+    "runtime_bytecode_sha256": "60329b2f02007ecfbed9d48c49f00bc28b2591319c1b4f11a4c49561c58d39c1"
+  },
+  {
+    "benchmark_id": "scale_external_calls_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "d18b5de9199328aa9f6de36c75dc1410f8a9a0689922684e9d3dbf3e54b86bb4",
+    "creation_bytecode_sha256": "2af590cee82071cc76248082b664da4e7a8568adbf58bde2159b2860aed3e436",
+    "runtime_bytecode_sha256": "d156da5af53b19b3085a4ddcfd89195d474eb6cda0d5dffda93a1d02ae0b99bd"
+  },
+  {
+    "benchmark_id": "scale_external_calls_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "d18b5de9199328aa9f6de36c75dc1410f8a9a0689922684e9d3dbf3e54b86bb4",
+    "creation_bytecode_sha256": "cef2f65034979a4ae8f3e2eeb64dcd3be69e18589da53ee460ae3f313e1822cc",
+    "runtime_bytecode_sha256": "a988a63db19499ed153d929e205486a5e6bfbcf749d92b24a451796822a21f46"
+  },
+  {
+    "benchmark_id": "scale_external_calls_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "8578ef2fd21cf96822fdf74f38876ca60f16abaaacc243be3ceb351e4e1ea141",
+    "creation_bytecode_sha256": "1ffa2234bf83643c2fc1735edbe10a1c1319d12724a9d4cf54d03f25509f6808",
+    "runtime_bytecode_sha256": "00601498e651027d88691d090940b7b41220d835073cf87c95399121eeddbce1"
+  },
+  {
+    "benchmark_id": "scale_external_calls_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "8578ef2fd21cf96822fdf74f38876ca60f16abaaacc243be3ceb351e4e1ea141",
+    "creation_bytecode_sha256": "cffc6b46e269cc1998dc1d88d9bd008c704e73900beb6eea00fe89dfdd65d097",
+    "runtime_bytecode_sha256": "3f7cbab81d77f44040bd232ff4de4199bace6d69dfa383ba18f344b616d21491"
+  },
+  {
+    "benchmark_id": "scale_external_calls_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "8578ef2fd21cf96822fdf74f38876ca60f16abaaacc243be3ceb351e4e1ea141",
+    "creation_bytecode_sha256": "3b1769760e76fbb698d598b042082edca2f97044a54eed07263469c287615bc0",
+    "runtime_bytecode_sha256": "3d84d16a6276666bb335550ec8bc9b65aa568d45ccbb4fc7795e344eaf6a2c9a"
+  },
+  {
+    "benchmark_id": "scale_external_calls_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "8578ef2fd21cf96822fdf74f38876ca60f16abaaacc243be3ceb351e4e1ea141",
+    "creation_bytecode_sha256": "6a0d3f8a7577944d78d3f199cbe580f0707c520dda938f1c2231615beee143e6",
+    "runtime_bytecode_sha256": "c30567e0f2e94bd3868b216a4a3b4a080c49e83d6d0467155501d89e95ed0482"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "c77b02dbcf8ba3d43e9a10bf5749bf762a0f39cab2083fba978271299e1be9e8",
+    "creation_bytecode_sha256": "f6a0e2ca9ec032ee9d0edd4c3503cc9780abc94e74f4d141b49652ec9e4a2974",
+    "runtime_bytecode_sha256": "47407fb332c2fd52bcfd2df83af7d806035cbf4117b7ad9b9b958eb8f73a7598"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "c77b02dbcf8ba3d43e9a10bf5749bf762a0f39cab2083fba978271299e1be9e8",
+    "creation_bytecode_sha256": "b3d485b3e4fedd91c1d17cb9be44994cdaa438ae6f517b111359be360530d22d",
+    "runtime_bytecode_sha256": "ae8a74ea39a785fe73c08a60240791491d87bd1bb8819f29480dd017c6e3634b"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "c77b02dbcf8ba3d43e9a10bf5749bf762a0f39cab2083fba978271299e1be9e8",
+    "creation_bytecode_sha256": "0eefbae8b4ed9978fbcfb2df95d0efde476f56d277abce07451a6ce305721c39",
+    "runtime_bytecode_sha256": "7a72c41070755b93a93e29300d55c71cd0697f1b387301f3d9f5019e80f23c6f"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "c77b02dbcf8ba3d43e9a10bf5749bf762a0f39cab2083fba978271299e1be9e8",
+    "creation_bytecode_sha256": "8d77a562294d065bd0c485f1434d017ae238efe7f6da6613dea18988f0ce6eae",
+    "runtime_bytecode_sha256": "47ac0e539c4a089713ab2618b9efc7a029a90fba061d3492c7e3591bf943ded1"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "986e3278bb79e73bc16e04154f04543aa5a74e461c1d5a14cc0b03b94681a5cc",
+    "creation_bytecode_sha256": "9eec46b7f7c5eadb9f19a6f2017d6d3ed9c0927cc2fe381568a9b9ba37e59aa1",
+    "runtime_bytecode_sha256": "6e4e801e39a8af1ac543bea79d194e2d1a843a538d3b113b21e2f2aabb369585"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "986e3278bb79e73bc16e04154f04543aa5a74e461c1d5a14cc0b03b94681a5cc",
+    "creation_bytecode_sha256": "932901800752182ad1c2de17538902289e0ae200d5048e84a845c2268c30f229",
+    "runtime_bytecode_sha256": "ae007cf71d4ebc11ca4445632e9f15b31ebd11558eda2f39d40b666972847334"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "986e3278bb79e73bc16e04154f04543aa5a74e461c1d5a14cc0b03b94681a5cc",
+    "creation_bytecode_sha256": "0a59deb5032d6765b8cc222c61e9a2349a43828d24a6e9cce924b240e5eb6e61",
+    "runtime_bytecode_sha256": "871d1858c21fb2d8100c46b7d7b0c44fb86da8e1632d9e581a4f2d8530474ec0"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "986e3278bb79e73bc16e04154f04543aa5a74e461c1d5a14cc0b03b94681a5cc",
+    "creation_bytecode_sha256": "2c0cc3e50475ea0f7ea35d5201805302942328e7ceebe0b165cab6d77b046611",
+    "runtime_bytecode_sha256": "3a9889020ce638dcd5356384ef03f296067986e556522c7589eaf78dcca3469c"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "7978ea74cd9c57f88f50298051ab7c13f1e50383d08e298e346901ef20446342",
+    "creation_bytecode_sha256": "49356ce72ce90f2d7dca1e0eff144d4dd17e1eb7641358b09e37e149dcb19b3a",
+    "runtime_bytecode_sha256": "b746280b0b9ed3a8f7652085efbeaf25a160622555fbad14ca093423aa823e72"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "7978ea74cd9c57f88f50298051ab7c13f1e50383d08e298e346901ef20446342",
+    "creation_bytecode_sha256": "7142065f120377031d93dabeb59c16a3f684f8bb9c142314389a2a38bbf7f1af",
+    "runtime_bytecode_sha256": "01553020e64aacf68f10efda07849111a902a3bb27690de0838ec7fc4517d054"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "7978ea74cd9c57f88f50298051ab7c13f1e50383d08e298e346901ef20446342",
+    "creation_bytecode_sha256": "3a792f69e00aa423038882b4c7a39595d7d0671251772e44f668e4f27a19aeae",
+    "runtime_bytecode_sha256": "c91a4d6a0a2d2b1a1c692e9223f86c911766d5018b4005e63bdb585bac06dc64"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "7978ea74cd9c57f88f50298051ab7c13f1e50383d08e298e346901ef20446342",
+    "creation_bytecode_sha256": "3df6742ca420376f09f4a26bd4f902e92b7b014aa02335a9a91b1f139f6c5ed9",
+    "runtime_bytecode_sha256": "83d069ae2c18d95001d9e2615af5dbcb901e1601f8faab48af48be1479e6cc13"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "9af8d166d3ff96651c77aa2206a6f78e4eb6203a50e71878981fe1b20b4ec7f7",
+    "creation_bytecode_sha256": "949bca0ac44fb21ce8e5c6e381d302e84d1e5a13818d019c08f87785f6e5c5df",
+    "runtime_bytecode_sha256": "320be058c6f7fcbd070a8714eedefe7672148d6214fa6da7a2874f78579e06c5"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "9af8d166d3ff96651c77aa2206a6f78e4eb6203a50e71878981fe1b20b4ec7f7",
+    "creation_bytecode_sha256": "bccf16d8c7ba5005bfffc5b203c1b19c6121523c1fa508333cf467da607a4e8e",
+    "runtime_bytecode_sha256": "c84a1d9b8c8a608a6e8dfda74f5250bb2a0e09e1df795e8f575e956a850349a3"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "9af8d166d3ff96651c77aa2206a6f78e4eb6203a50e71878981fe1b20b4ec7f7",
+    "creation_bytecode_sha256": "56a647bbb33f829352ec05a287c735070db8e5aa5aa130faa68915a72491202f",
+    "runtime_bytecode_sha256": "89ab12f00bde6db39156b511a4d9dd034e02d2310855dbdba1a20621b5836db4"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "9af8d166d3ff96651c77aa2206a6f78e4eb6203a50e71878981fe1b20b4ec7f7",
+    "creation_bytecode_sha256": "f3608d34e055eb4f89ac5d45413586e20c044b3e7dc3970e02490281b5c7f321",
+    "runtime_bytecode_sha256": "7e94b7c7780be57d8bcbd012c81c238a08e783dcf5524c88721254908d55ae88"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "889e7b623051039884a456a9cb1c2509143f90a25b1180383b47ce8147ab15f7",
+    "creation_bytecode_sha256": "c9f30639ae5109a7420e10dbb8c1da8a2fb90f3fde23d9e99e5562634884e6f0",
+    "runtime_bytecode_sha256": "fd330b59b0279af6dd2f323d0f59fdab244b902e8322950468ccbcfb1d48a539"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "889e7b623051039884a456a9cb1c2509143f90a25b1180383b47ce8147ab15f7",
+    "creation_bytecode_sha256": "33181e271b06203fc6f57b6fc0d4eb1fbeaa23079da4965704bf5322115e1d37",
+    "runtime_bytecode_sha256": "68ca4e6ae95d8a15a96963ab735b604ab90a309c97421709760df6f6b45170ad"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "889e7b623051039884a456a9cb1c2509143f90a25b1180383b47ce8147ab15f7",
+    "creation_bytecode_sha256": "96c1ec429c47c28e124a7667a980c72c351c26d8a9c3dc2b7566f669547c4e43",
+    "runtime_bytecode_sha256": "0069b47decc807139fcb0db38af120139019527b8f054175e94358e2f66a25fc"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "889e7b623051039884a456a9cb1c2509143f90a25b1180383b47ce8147ab15f7",
+    "creation_bytecode_sha256": "fc903eb69296357b0493862b1e3a1f63eee2787c948c60d8915ba6e34eca5d36",
+    "runtime_bytecode_sha256": "cf4160f7b0bd2eeb11a0964c89d44ed5d2ed723dcf5d4ae0876aa02031ac2f36"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "c3c9fff03201e4d175b79d4457e498cdbf8a5a385d533abeb115ded1585d20f1",
+    "creation_bytecode_sha256": "7c5e70ef947a3697dc043a27104c70503fbd31de0fa9a04a79c29c353be47d83",
+    "runtime_bytecode_sha256": "7174dac5201af580661f77eb83e8a836ab439c33d0a59b0bf5645d072b5efdc1"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "c3c9fff03201e4d175b79d4457e498cdbf8a5a385d533abeb115ded1585d20f1",
+    "creation_bytecode_sha256": "3a1d878f88153d0654698e86c0a67a0a92488c3584b7c0fe2734a57f2826fbb8",
+    "runtime_bytecode_sha256": "af2ecc0bbf7ce79872b90d9096c6d4dfcc7f96bd80ae5ffef178d5fbae91da19"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "c3c9fff03201e4d175b79d4457e498cdbf8a5a385d533abeb115ded1585d20f1",
+    "creation_bytecode_sha256": "90b9dfdd1d53f968416ed4a87fe46ad1a68ce17a532d9c8ed3e2893e4c3ceac5",
+    "runtime_bytecode_sha256": "f311e12d1f837e5c0b5fd16252f369a4103a22fb55a1fe97e0845b91b3666277"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "c3c9fff03201e4d175b79d4457e498cdbf8a5a385d533abeb115ded1585d20f1",
+    "creation_bytecode_sha256": "6805986a52c3b4755254101a8133090042598502029d55c659c9521f8a52457d",
+    "runtime_bytecode_sha256": "08cdb64d1c56544780614dc5c2f66e8548dae6f252eeb3eaf0c132edf1463fd4"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "8f227feb96f5f793428f33a361f44ad223f5e534d9c5a53f436c577f4a6018b7",
+    "creation_bytecode_sha256": "a1162cb29f6ed96168493d720abce5a39aa4aaca028f002f2865cf1a9892ffb2",
+    "runtime_bytecode_sha256": "9b4b412fb1b3b80de44698417884475bb36566941ffde0be6d907af11c1dcd66"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "8f227feb96f5f793428f33a361f44ad223f5e534d9c5a53f436c577f4a6018b7",
+    "creation_bytecode_sha256": "970e8ff2ee78f5421e56bec86b989718dc4b7869e08e0d9d37818cfe1d20a185",
+    "runtime_bytecode_sha256": "7a9ad83850ed446f955264338d47ef3f9827e3781afe2aa053e3a4192e97b220"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "8f227feb96f5f793428f33a361f44ad223f5e534d9c5a53f436c577f4a6018b7",
+    "creation_bytecode_sha256": "f2eccd8c5c1034fbf76c07d55414ac1299dc02b667a51c8df1614244e707e7c4",
+    "runtime_bytecode_sha256": "10481af747e3c30c5d4ae2861c82a658c99e93f121cd5b9014d98fe1cbe4ca99"
+  },
+  {
+    "benchmark_id": "scale_loop_bound_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "8f227feb96f5f793428f33a361f44ad223f5e534d9c5a53f436c577f4a6018b7",
+    "creation_bytecode_sha256": "fa4ce25fa20b2abaf602c04b5ab525869cc922eac64e2e6113e92703a8b97ecc",
+    "runtime_bytecode_sha256": "043ff421b8c980da4a3df704923fe0a37c7a35dc48ed556e3c3736e050e0e562"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "1c35892d62ae2c1161c3a23a6bb9d1e688a375f65084d9cc15ce247e7195fb45",
+    "creation_bytecode_sha256": "96e74d3043950f8080f155ad2d785e0065dcc2a3b5fa8ee2bfe4b3002abe51aa",
+    "runtime_bytecode_sha256": "f867626edc6ce6e560bcb489c4c3fb3d5e9dc7ad904cda64499db9ff76b555b0"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "1c35892d62ae2c1161c3a23a6bb9d1e688a375f65084d9cc15ce247e7195fb45",
+    "creation_bytecode_sha256": "e2514da302498846e53c7cd1e983734daeccd4b0b0e069b75550f358e844d237",
+    "runtime_bytecode_sha256": "9e5809c84a2ffa3a33569ad83754785e2c59797900c0d6cbc07b77784774c791"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "1c35892d62ae2c1161c3a23a6bb9d1e688a375f65084d9cc15ce247e7195fb45",
+    "creation_bytecode_sha256": "9a7bd70a85e2a3f974678e009570f5edd36c63e56869830fe8b972d4001e380a",
+    "runtime_bytecode_sha256": "886350a1c6df31a09e8c527593457257a688df124805f7a5b213817e7a225515"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "1c35892d62ae2c1161c3a23a6bb9d1e688a375f65084d9cc15ce247e7195fb45",
+    "creation_bytecode_sha256": "91a783c5666a132732372413867d2d146b95c6ad4882ee6c2d48296aaec313f4",
+    "runtime_bytecode_sha256": "5e71bd62fcee1f7ee823efb1c3c25a5c3f3d3c8a69ba218c9d8fbe6d2731a8c6"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "edcf34b78cc15233aa2ef974c3cfa41ebbcc8c6f717c92a65677824685e19845",
+    "creation_bytecode_sha256": "be69e42bcd435f295a8c4411516e85a1db9ebe97c0bc5cf0657510f05d41bf7f",
+    "runtime_bytecode_sha256": "10cece6d849d08ee5ecec58c141ff067b4b923ce61d522d3ee0f3caf40560c8b"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "edcf34b78cc15233aa2ef974c3cfa41ebbcc8c6f717c92a65677824685e19845",
+    "creation_bytecode_sha256": "ff9ef81131339c9904d67633f87f470d162543d9dcda1a901c71e45504573646",
+    "runtime_bytecode_sha256": "b4f68d7fa2d6250ee7cf85698def0ebffe8a5831ab6b4887c8116e300489346a"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "edcf34b78cc15233aa2ef974c3cfa41ebbcc8c6f717c92a65677824685e19845",
+    "creation_bytecode_sha256": "705f6a41156ba746b39fa72c6837fb3b7d4175b310b1e0b2703fad1a83363c02",
+    "runtime_bytecode_sha256": "4a54f02dd59b9945d14570cca5e6f2c05332e3cfcde45205a509b6605b024dad"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "edcf34b78cc15233aa2ef974c3cfa41ebbcc8c6f717c92a65677824685e19845",
+    "creation_bytecode_sha256": "0a732cb4cbca2fc5425598baaa53b606e7fa157c45f83819f39668cee04f6c88",
+    "runtime_bytecode_sha256": "c9645e563144f4f07673d5409e17e7fc3ea7912089eb7a10804842165efcaedb"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "5d1af89ff8b629d8698e9d4dfeff1322af57a45eed4abdf921a9f31a0d1968bd",
+    "creation_bytecode_sha256": "9ee911175aa3498452c59af8b42d56da5341881f488197d6b72b177ea1acd467",
+    "runtime_bytecode_sha256": "a070993716a8d5ec0828bff1900632c2e8ce3795e6cac9a1f96d3bc41a039407"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "5d1af89ff8b629d8698e9d4dfeff1322af57a45eed4abdf921a9f31a0d1968bd",
+    "creation_bytecode_sha256": "2483937e1dafd5814167d53c238c0caef5915d984be3888f364ff6f1ce73763f",
+    "runtime_bytecode_sha256": "eaa8f2903b2fb02cc39c82ee7272aa1312b64f1c4feb456cb040db0bd5b7d099"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "5d1af89ff8b629d8698e9d4dfeff1322af57a45eed4abdf921a9f31a0d1968bd",
+    "creation_bytecode_sha256": "ad6ff52cd8d8366ba2e509a3befead8f6a576af521cd37aa00e94b12a1483330",
+    "runtime_bytecode_sha256": "257a583d5662f270aaf0c78b2e8b1ae4d3c3c99a4eca937b063d2b2fb5c22c9c"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "5d1af89ff8b629d8698e9d4dfeff1322af57a45eed4abdf921a9f31a0d1968bd",
+    "creation_bytecode_sha256": "e0b3a1f8eb1cad8a9a66bc2e449eb150529fcecb986e69f8e7909d4d53caf97e",
+    "runtime_bytecode_sha256": "f1ca6d7a61da31a56cd799f18271b0eb133b582dc8c72230479405b60ac6740a"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "41a51dae574bbe3f93214a40a1b3e27a851efa20b909f130e202b208391b2abf",
+    "creation_bytecode_sha256": "8ca2a2aabfff9a6cda346b020f5b428a2c634b4eb052037890db56db03328e5d",
+    "runtime_bytecode_sha256": "7bdf6246110fe150e70e34741512687fb07ed307936eacd2e828460018b1b289"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "41a51dae574bbe3f93214a40a1b3e27a851efa20b909f130e202b208391b2abf",
+    "creation_bytecode_sha256": "5d93f505d74b4a73cd80b9ad89806762723ee6068489609e9ed67295dd351c9c",
+    "runtime_bytecode_sha256": "cf6b58dc3de0c7d7d0ab1e83ad45c678b5fa7b0f1a23d922cf67f00ddc2c972b"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "41a51dae574bbe3f93214a40a1b3e27a851efa20b909f130e202b208391b2abf",
+    "creation_bytecode_sha256": "8752017a3357578e097ec353582283dad4a422701ca27ff3acb4e5f95a35eb91",
+    "runtime_bytecode_sha256": "8b692046b7ed207dd21f84040c5cc9d6ede99576af2507ff59c8661c0ee3bcca"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "41a51dae574bbe3f93214a40a1b3e27a851efa20b909f130e202b208391b2abf",
+    "creation_bytecode_sha256": "353fc266901ea1d7792896dcfc1340a7ab788a829c1ee14b12ed7c833fb27fe6",
+    "runtime_bytecode_sha256": "bb2fb37d29dac6d4ba5d435a2a04d677679e13ce323c0a9f361d50398d5bb81a"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "de5d810a2c8f7407156df01d37eb229358f5fd814770b9e0d10087e8ef4b5eb3",
+    "creation_bytecode_sha256": "fb9f7dc400e9b306b8e9b964062bdc3cdbb09202e3ccfb0671d4926761cfce86",
+    "runtime_bytecode_sha256": "03aa77bf2e665b902e44126689b8c0a41ff72dac58c7a4bb379c196f55abd43b"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "de5d810a2c8f7407156df01d37eb229358f5fd814770b9e0d10087e8ef4b5eb3",
+    "creation_bytecode_sha256": "1d1ea972a6707490bf9f8e61cb0e5d3ef801e4f49e5ff27301e8de7156751050",
+    "runtime_bytecode_sha256": "b0a51ebc277c259a57a8de0eead82b2d75a2cb4ae06478faf5d435c0c5c93c2a"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "de5d810a2c8f7407156df01d37eb229358f5fd814770b9e0d10087e8ef4b5eb3",
+    "creation_bytecode_sha256": "c0cfb930f6c0b300f27230d10b7211ffdf5e039ccfb5e641cda19a449fb93348",
+    "runtime_bytecode_sha256": "b86cf3c328e2e1b3bffecb992bfd296d41f845d97c31b820869909cf8402daf2"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "de5d810a2c8f7407156df01d37eb229358f5fd814770b9e0d10087e8ef4b5eb3",
+    "creation_bytecode_sha256": "1a07d1c69638931dcf9c0b6299fd6d4bf2d98374da5671f329740465c6097cb6",
+    "runtime_bytecode_sha256": "668c6f7105cb9e612eb7db956751fb80b5e766af161417ef0bcbabab2cdee3a7"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "afce51ede09787d8e52c96703d0ca8f95b2b0ae96e8bd946925e347a3ec98757",
+    "creation_bytecode_sha256": "82e3c1ee3c42e8e915daed84a4e7b0871b4c62aff0b1d5c6edbee52276177869",
+    "runtime_bytecode_sha256": "2ef452436e5ecd10273de25c42b15c237facc389f38029a48c157243df27f123"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "afce51ede09787d8e52c96703d0ca8f95b2b0ae96e8bd946925e347a3ec98757",
+    "creation_bytecode_sha256": "171bf60ac188a7d7ec9128a25e9c0e588626ddb9866b2c0946fbf2c4665a76fc",
+    "runtime_bytecode_sha256": "ef8b14a530e33928a392921b45cead671f37b2d69494d193af15d3c139ed7ba1"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "afce51ede09787d8e52c96703d0ca8f95b2b0ae96e8bd946925e347a3ec98757",
+    "creation_bytecode_sha256": "4fa7342fcf948f69dd9dbd9e48c1005b42d8508fb42db08c20021c7b9f108fc8",
+    "runtime_bytecode_sha256": "ab4f2998437fc360091dbca69886668a044a331be3250af93cd8dd97688dd5f5"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "afce51ede09787d8e52c96703d0ca8f95b2b0ae96e8bd946925e347a3ec98757",
+    "creation_bytecode_sha256": "6525241c50f252dd37755a47ba887ac8f52baab6705802376db0e0162c1dfbd7",
+    "runtime_bytecode_sha256": "62da4ba451b3dcc157fdd74091d0bdc7a04ab3449aa4f0a13efbc4cea244e591"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "7c742b5396566d6c08bd890690d12c198b066def6700353dc5e0af6575fe3d51",
+    "creation_bytecode_sha256": "c972a1c34572eb5e9fe5a92f91a5ea2ca9e3fa22d5e82929a34f5e38998f1247",
+    "runtime_bytecode_sha256": "7249656d4155716864ab255145613617d5b7facd2d0fadf541da354bb9c91159"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "7c742b5396566d6c08bd890690d12c198b066def6700353dc5e0af6575fe3d51",
+    "creation_bytecode_sha256": "b2ec951ef37f43b8d0d022550336238dc9afe74af01459ee63fe06aa1f7daca5",
+    "runtime_bytecode_sha256": "0ea029a46c10cd91ea3798a3f6e54223affa047fffc29dafe48b389fc330b9d3"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "7c742b5396566d6c08bd890690d12c198b066def6700353dc5e0af6575fe3d51",
+    "creation_bytecode_sha256": "6b2ebb0b5f8992196ea8c6905c1b97f9004f56a8abbccd443faf5dd18bbb2db9",
+    "runtime_bytecode_sha256": "46ff117adf668fbb5698d4b5e4bd847afa21ad4ca819631da3ef638c8d447b36"
+  },
+  {
+    "benchmark_id": "scale_mapping_depth_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "7c742b5396566d6c08bd890690d12c198b066def6700353dc5e0af6575fe3d51",
+    "creation_bytecode_sha256": "13ad1e47e1a39ba9c9a1e01b3d66f14187b6ca51b24a3e9d8c086c1ba1ec6c8f",
+    "runtime_bytecode_sha256": "d300c3f8bc43add5ad816dd8522cf2877b0aa676c86737a5d9d43b6ba5890d00"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_1",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "fba95996aca06b591a82e62a499ccb2bbc9ed48802774c96c38f7f6df0dc91e6",
+    "creation_bytecode_sha256": "12317cd9c41b848b9dcb4e6fa558b91107d75a6b57d012cc4d63dcb020c575d6",
+    "runtime_bytecode_sha256": "95661117f417555a00aa51e54dc356d8821f4796552989d4da7066059dae075d"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_1",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "fba95996aca06b591a82e62a499ccb2bbc9ed48802774c96c38f7f6df0dc91e6",
+    "creation_bytecode_sha256": "b44311ab22c9feb047e363c870849b136c4587198ccf19bd2da72c949b1a21fd",
+    "runtime_bytecode_sha256": "43f522813b1d87540b433110e2d4a9d564e02c566ebfde9a39be97a96f51cdc5"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_1",
+    "profile_id": "solar-gas-200",
+    "source_hash": "fba95996aca06b591a82e62a499ccb2bbc9ed48802774c96c38f7f6df0dc91e6",
+    "creation_bytecode_sha256": "0fa36cc41e710a88fd9f0425fe00490d950ca919da277a21c701e5b4e923d640",
+    "runtime_bytecode_sha256": "e5cd583ca316ba5dd6646bf11ab546acc546cb0dacb652df4aa256c5a8e16ecd"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_1",
+    "profile_id": "solar-size-1",
+    "source_hash": "fba95996aca06b591a82e62a499ccb2bbc9ed48802774c96c38f7f6df0dc91e6",
+    "creation_bytecode_sha256": "0fa36cc41e710a88fd9f0425fe00490d950ca919da277a21c701e5b4e923d640",
+    "runtime_bytecode_sha256": "e5cd583ca316ba5dd6646bf11ab546acc546cb0dacb652df4aa256c5a8e16ecd"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_16",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "b556530d1ec9f9b772a393abb0180b6dae4015c1324dc8d5ee0e16cda839fb7a",
+    "creation_bytecode_sha256": "d6e688935c1d89b974da2cca936c93f86c9f5c7cdd31622324fb699264c61903",
+    "runtime_bytecode_sha256": "df2a6b0f52dcc370d93d8b9946414131a77ced860e36eaac1293a92aa76659dc"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_16",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "b556530d1ec9f9b772a393abb0180b6dae4015c1324dc8d5ee0e16cda839fb7a",
+    "creation_bytecode_sha256": "6da0568a31ce268eaa08390da42457574c5a53ba6c10c08ea14dcb282090f0b4",
+    "runtime_bytecode_sha256": "ec0b8eeaf91b8f0f79523de99a8b01f063e37fba5252690b16e153e8120acfa6"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_16",
+    "profile_id": "solar-gas-200",
+    "source_hash": "b556530d1ec9f9b772a393abb0180b6dae4015c1324dc8d5ee0e16cda839fb7a",
+    "creation_bytecode_sha256": "2fa4c7fdd9e1e5e647d0ae20ba3be1ede78e360d24a963499dc8de3622327476",
+    "runtime_bytecode_sha256": "c04697c27e965031ae78b19425ef4e385b302fd05c70fc2eabba68fd26d2c52c"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_16",
+    "profile_id": "solar-size-1",
+    "source_hash": "b556530d1ec9f9b772a393abb0180b6dae4015c1324dc8d5ee0e16cda839fb7a",
+    "creation_bytecode_sha256": "12301105ab9dd82664641a1f6319e5799f0f046426f0920764f0371ac1dc034d",
+    "runtime_bytecode_sha256": "448f152a65b5889a94de52552ec5a7334e7a487649fdb6deaaa5d4c063a9e693"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "7fae057f0071326aadb5ec22a1ffdb330a329c44fa3d98b85c7ba0f70579d908",
+    "creation_bytecode_sha256": "8ded9976dd65b4c2c69768f7fde701f77cbed4d29778aafbe56c044e33298fa5",
+    "runtime_bytecode_sha256": "3daeccc98f98b15964009ffec123e908b05ffde56354d28219fedf9e8d4e5d95"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "7fae057f0071326aadb5ec22a1ffdb330a329c44fa3d98b85c7ba0f70579d908",
+    "creation_bytecode_sha256": "9ed7af2b9aaff69ac9e46db8665421a770399546847193a7d9a029d872b8b537",
+    "runtime_bytecode_sha256": "e6f905072a88fe2235d934e8dd3ca1418f294a509f04409384121c968c206034"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "7fae057f0071326aadb5ec22a1ffdb330a329c44fa3d98b85c7ba0f70579d908",
+    "creation_bytecode_sha256": "783b1c1aa8295d5c66a71cacd093c53d39f494891bdb335f35d751578c25ae37",
+    "runtime_bytecode_sha256": "70b444a2f81264a0ca7835a89f4beaff395bcb266b5232591e07d445d3969b7c"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_2",
+    "profile_id": "solar-size-1",
+    "source_hash": "7fae057f0071326aadb5ec22a1ffdb330a329c44fa3d98b85c7ba0f70579d908",
+    "creation_bytecode_sha256": "783b1c1aa8295d5c66a71cacd093c53d39f494891bdb335f35d751578c25ae37",
+    "runtime_bytecode_sha256": "70b444a2f81264a0ca7835a89f4beaff395bcb266b5232591e07d445d3969b7c"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_32",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "84c5e98ed1cf35e26c7af7dbf77864c324253f1bba311e7279b1d56b77f9aa58",
+    "creation_bytecode_sha256": "6b9a59996c74f6902e6a8f17beedae740a74efb9b584e7d0f25b798bd3129b6b",
+    "runtime_bytecode_sha256": "546b2d2e522379a4f7b2b4aca0a19feb742151d4229dd37fb1f10e8b25f09941"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_32",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "84c5e98ed1cf35e26c7af7dbf77864c324253f1bba311e7279b1d56b77f9aa58",
+    "creation_bytecode_sha256": "3bdf4fc62c4a15f2a069c643e876836e2b8f37241bac8635437c5b6406621e1d",
+    "runtime_bytecode_sha256": "b3f1bf705bd671985f886eaa5fc15f3f018e97de17d857ddb7ea9d3f3946df42"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_32",
+    "profile_id": "solar-gas-200",
+    "source_hash": "84c5e98ed1cf35e26c7af7dbf77864c324253f1bba311e7279b1d56b77f9aa58",
+    "creation_bytecode_sha256": "117658a8a04568aed55c619c4b6e23cc6ab99f606565f44429d1ba00bb9b989f",
+    "runtime_bytecode_sha256": "9229b32f84eba25d40866b0b5168d8ec5d2635da00cecabbf8eb66fe69cd8a16"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_32",
+    "profile_id": "solar-size-1",
+    "source_hash": "84c5e98ed1cf35e26c7af7dbf77864c324253f1bba311e7279b1d56b77f9aa58",
+    "creation_bytecode_sha256": "e7a4bb79c9a06503138591b227cd612c2ef1ddf99cf65c2d31dbc86f137e1a29",
+    "runtime_bytecode_sha256": "f2298f38d43af82959b9efb0e4370503302e02f71b7435480ad5b3ca4130e633"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_4",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "9bba5b17a40cff5cca8009e8f511df585bd17299984a1a56358e1eab2e130998",
+    "creation_bytecode_sha256": "0d7bf00d1e92b19a0c63932c45fc90c4461cd02e7444560cb40244881a2af8d3",
+    "runtime_bytecode_sha256": "d06a6ac47b8fa8bda851042d68b811dcc50a3be2e85a4deff448b19cd47e4eb2"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_4",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "9bba5b17a40cff5cca8009e8f511df585bd17299984a1a56358e1eab2e130998",
+    "creation_bytecode_sha256": "af483d4c8aaab292f6b68f3055ebb16446284206eb3687b8f6616cef0837fec7",
+    "runtime_bytecode_sha256": "5cd70885c5026db7515fc697e5db992a0e52e35701ce7016329a46f2b735b00b"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_4",
+    "profile_id": "solar-gas-200",
+    "source_hash": "9bba5b17a40cff5cca8009e8f511df585bd17299984a1a56358e1eab2e130998",
+    "creation_bytecode_sha256": "a572d953a13038c91dc8e5a517edfcad13ee68d19f3230cca2152b30475a0308",
+    "runtime_bytecode_sha256": "9ca72a13ef6531137dc878df5aac69c5f21bbaa44812326429424ea13813f7d2"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_4",
+    "profile_id": "solar-size-1",
+    "source_hash": "9bba5b17a40cff5cca8009e8f511df585bd17299984a1a56358e1eab2e130998",
+    "creation_bytecode_sha256": "33e915e0e6455afc3b5585faa36d42f2d383dce0574a38c72be4acc84f5c4197",
+    "runtime_bytecode_sha256": "83620eba7e46b9ce1f250fd1d7d6e800f1c6d824f5e7b36b988a8569c5158ca4"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_64",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "b70ee88d94bc28c71d8c601ea25f21d6406bafd956ac0034fff257d53f7cf9af",
+    "creation_bytecode_sha256": "fc0ac18c4dfddb476b64d8e942cba63f8efb83daa98785dc5cddc99712070c53",
+    "runtime_bytecode_sha256": "64c4e0852346c79884dffd7e14c43a9e484bcf8ba04771f182c3bd9aedca65d2"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_64",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "b70ee88d94bc28c71d8c601ea25f21d6406bafd956ac0034fff257d53f7cf9af",
+    "creation_bytecode_sha256": "e99d0266e564f454c361e0b3210cae5483d141650d06bc2a978a17f4c883ddd5",
+    "runtime_bytecode_sha256": "391146439fa48ff2f35517567e5795a22b561b8d78dd48f70330890ac0c68ce6"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_64",
+    "profile_id": "solar-gas-200",
+    "source_hash": "b70ee88d94bc28c71d8c601ea25f21d6406bafd956ac0034fff257d53f7cf9af",
+    "creation_bytecode_sha256": "8f62bdb275f9d5f84eb04d29ceea6ec3912ca646e02a1b72214d964b1ada385d",
+    "runtime_bytecode_sha256": "cc3f33f9cb7e5bfee5313010573a73f863e11b8397a988735cb2409549448aff"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_64",
+    "profile_id": "solar-size-1",
+    "source_hash": "b70ee88d94bc28c71d8c601ea25f21d6406bafd956ac0034fff257d53f7cf9af",
+    "creation_bytecode_sha256": "1bb62b15b67be05259acbe55f541be937b7688b29f26acc78074ede8f4bd066e",
+    "runtime_bytecode_sha256": "a7c9b99e2692f0dfb96fe2c817527c4490dd0c91a3c63ed41a0b2f872b048775"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_8",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "a4294c0a16e89c6d8d837f367f972892db72be8b076ca59c71a3ceb93d62c47c",
+    "creation_bytecode_sha256": "b48d9d53ac9063682eb3bee5917768943536a9cbec67c67c4b3af1e54b3c197d",
+    "runtime_bytecode_sha256": "a2fbb7228291e846b18987d68a575ba59107135917f5826efddb68d083e9f3c9"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_8",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "a4294c0a16e89c6d8d837f367f972892db72be8b076ca59c71a3ceb93d62c47c",
+    "creation_bytecode_sha256": "8261a1f4c59d9a6421b3f5da66b2d6c47a85542aa331604d02e97fa429aecff9",
+    "runtime_bytecode_sha256": "bebd0f41786e3a62fc48a1c273cca86f7ce119df197852526b98682302bb5b9b"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_8",
+    "profile_id": "solar-gas-200",
+    "source_hash": "a4294c0a16e89c6d8d837f367f972892db72be8b076ca59c71a3ceb93d62c47c",
+    "creation_bytecode_sha256": "f778c399fc8676e3715c711ee8f13d7e5c01487006dab303c77d5897daf42b10",
+    "runtime_bytecode_sha256": "48c198a62a5e8f1008aa30f0f768bfd7f52a6e917fe6cbfdd5106ad36a8214b8"
+  },
+  {
+    "benchmark_id": "scale_storage_slots_8",
+    "profile_id": "solar-size-1",
+    "source_hash": "a4294c0a16e89c6d8d837f367f972892db72be8b076ca59c71a3ceb93d62c47c",
+    "creation_bytecode_sha256": "79bd0e6e37ba53c8baa4aaafe35244357739aefbf81417a19208c0072d00acdf",
+    "runtime_bytecode_sha256": "57add12158478914617eb2402138b191dd856678969f034e851716b539bed3c3"
+  },
+  {
+    "benchmark_id": "scaling_dispatch_N",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "3ed6318c06f192d91d9c9d9698c958da59f0fafd4a816747090d0c35ed1537d6",
+    "creation_bytecode_sha256": "cc6d4fa9b7803f8204d5e14ccd7ef59deaf4767a1f5698cc447012ee80b38179",
+    "runtime_bytecode_sha256": "283935325fa50e7125d31907927351aafe52156f7e7384256644be70d6f12516"
+  },
+  {
+    "benchmark_id": "scaling_dispatch_N",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "3ed6318c06f192d91d9c9d9698c958da59f0fafd4a816747090d0c35ed1537d6",
+    "creation_bytecode_sha256": "1fc47fecc84d3e0f2ac8d6064ec82ea9e98f84184c9c74217bae632704fbb5a3",
+    "runtime_bytecode_sha256": "f302bbf40b7d86b86f1cda2961f6c4d4de60af24a0906d485c38d3cdc331eeab"
+  },
+  {
+    "benchmark_id": "scaling_dispatch_N",
+    "profile_id": "solar-gas-200",
+    "source_hash": "3ed6318c06f192d91d9c9d9698c958da59f0fafd4a816747090d0c35ed1537d6",
+    "creation_bytecode_sha256": "acc44ccbe96a75f60fc9a1960b8ea1250d10b0262a66f73708c594fd83f46649",
+    "runtime_bytecode_sha256": "9917e8e45e32564f7900d85941bf05b9450c8bbad9b74d962d0841dde8386602"
+  },
+  {
+    "benchmark_id": "scaling_dispatch_N",
+    "profile_id": "solar-size-1",
+    "source_hash": "3ed6318c06f192d91d9c9d9698c958da59f0fafd4a816747090d0c35ed1537d6",
+    "creation_bytecode_sha256": "4900196a762c93e26a6c2c8499276b850d54d17caaebe46c75778861ec0f46e3",
+    "runtime_bytecode_sha256": "84dfd8dec2d80b647e61a74eeb4a356159d1709f4d5da5b07e8b2a82312eb3be"
+  },
+  {
+    "benchmark_id": "uniswap_v2_factory",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "41e80ebd4cb49329cb7c45e3ddbaeb0a62403af10f380d6d7fc6743e23667efb",
+    "creation_bytecode_sha256": "54859c4c11310e4ff4a638ff5f19507129e49f4d526223688ef9ccaf93d69746",
+    "runtime_bytecode_sha256": "fe34b80f965617cec585a0cd3cb1e612b09ba00babbc6405733f2663bf4eda65"
+  },
+  {
+    "benchmark_id": "uniswap_v2_factory",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "41e80ebd4cb49329cb7c45e3ddbaeb0a62403af10f380d6d7fc6743e23667efb",
+    "creation_bytecode_sha256": "e3ceb62f41ed8769e2d226c7731b2e42e12eceafdc23f8bda7a99932e8cbe3da",
+    "runtime_bytecode_sha256": "8f8bcb1d4547f928226e121a52c99b81003a83d7abc887275bf8820623a87086"
+  },
+  {
+    "benchmark_id": "uniswap_v2_factory",
+    "profile_id": "solar-gas-200",
+    "source_hash": "41e80ebd4cb49329cb7c45e3ddbaeb0a62403af10f380d6d7fc6743e23667efb",
+    "creation_bytecode_sha256": "f7c39a4fcea993e4ee2e6ade53359ee5f77aa6cc263bc40dc9cf06726573db92",
+    "runtime_bytecode_sha256": "649e1c71e5d4c9af48710d0e192207e544ef9e2bcd7d845067fb0b6bcf608203"
+  },
+  {
+    "benchmark_id": "uniswap_v2_factory",
+    "profile_id": "solar-size-1",
+    "source_hash": "41e80ebd4cb49329cb7c45e3ddbaeb0a62403af10f380d6d7fc6743e23667efb",
+    "creation_bytecode_sha256": "51de8546ae43193f0776c93b1bb47d6ef06538975f21d5d24ffdfc0e4d15430c",
+    "runtime_bytecode_sha256": "971c66fd1151b032e6dbf3c554a7f0225c7cc8b4d90d4bb362ac9415e85c7dfc"
+  },
+  {
+    "benchmark_id": "uniswap_v2_pair",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "c44c16c5384bf3771d3e85e595a164c9ee18a1f771f25a4faaba3cfec301f59d",
+    "creation_bytecode_sha256": "acbf6b56106e9516c1d94ab2c31193f56ede158a74200de07d6ce8a5872ab697",
+    "runtime_bytecode_sha256": "88c60c6a252a7f71a18cc88812ef0a27e2c0edb62532aaf535de1b2c3b564b7f"
+  },
+  {
+    "benchmark_id": "uniswap_v2_pair",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "c44c16c5384bf3771d3e85e595a164c9ee18a1f771f25a4faaba3cfec301f59d",
+    "creation_bytecode_sha256": "8e6578c805d1f950a3d12d9dd557343a6bb3be9507729e7144b22ef3c54f5265",
+    "runtime_bytecode_sha256": "669df04a5aa7b1ca10361569b295c0ef8c21837ec161ce72890af770a9d7ce59"
+  },
+  {
+    "benchmark_id": "uniswap_v2_pair",
+    "profile_id": "solar-gas-200",
+    "source_hash": "c44c16c5384bf3771d3e85e595a164c9ee18a1f771f25a4faaba3cfec301f59d",
+    "creation_bytecode_sha256": "72eefeccccae46b1b6689b7e6d3015915ab3363a4cd7ccb9b2d9f6164bf6d8a5",
+    "runtime_bytecode_sha256": "96728707fd80edefff21fd242cd8eb8891d5cedd05d00acd19a1eaf67d8fc944"
+  },
+  {
+    "benchmark_id": "uniswap_v2_pair",
+    "profile_id": "solar-size-1",
+    "source_hash": "c44c16c5384bf3771d3e85e595a164c9ee18a1f771f25a4faaba3cfec301f59d",
+    "creation_bytecode_sha256": "ccb70fd42696e7fb29d267af4039565832b5cb3c137929433822e25a799b35ff",
+    "runtime_bytecode_sha256": "5e37009b1dc2514df00882451a7e60c02cae44413182fb5f4c1f9aadf08aab05"
+  },
+  {
+    "benchmark_id": "vault_deposit_withdraw",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "0208585e411051e557c233170021c60545d86e35c46bec821338a40bfb711e0a",
+    "creation_bytecode_sha256": "d5b032f01c2d78dc85411f9948e5ab839ed5ff224d168958a771352f0644e748",
+    "runtime_bytecode_sha256": "4a1f6c014aa2b2544e1fb6a15f9838a362e18ec91365e046f95d5016d6c21fc2"
+  },
+  {
+    "benchmark_id": "vault_deposit_withdraw",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "0208585e411051e557c233170021c60545d86e35c46bec821338a40bfb711e0a",
+    "creation_bytecode_sha256": "f6e4e464d97a7ca5225178194d2139a0f3844637be5c0426bb495376bc2c3084",
+    "runtime_bytecode_sha256": "bc0a212a7f2d06d222806317863efd3c61ef4206dbba0d3f52a7f24f7f0d10dd"
+  },
+  {
+    "benchmark_id": "vault_deposit_withdraw",
+    "profile_id": "solar-gas-200",
+    "source_hash": "0208585e411051e557c233170021c60545d86e35c46bec821338a40bfb711e0a",
+    "creation_bytecode_sha256": "f5746620835ef19e35549ece668ff707ec059d2c8f5a330c4f7c29a48519ddd4",
+    "runtime_bytecode_sha256": "315243499971947f08f8acb3ba868bb4a2072c30bf73ca8a4b1a5f5c1fb98a26"
+  },
+  {
+    "benchmark_id": "vault_deposit_withdraw",
+    "profile_id": "solar-size-1",
+    "source_hash": "0208585e411051e557c233170021c60545d86e35c46bec821338a40bfb711e0a",
+    "creation_bytecode_sha256": "2256357e7b96e7acbed1b0c859618e2a2ce2caa7f64c1ff00f36cb35f2153c20",
+    "runtime_bytecode_sha256": "482f13076180f041d366fe8a3e7fe54ab0ea506e754e049c587285920b88205d"
+  },
+  {
+    "benchmark_id": "yearn_vault_v2",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "5bdd7da779408aafd6931a265e1ab26eab11f6968ed15f99dc62c31c32ae1829",
+    "creation_bytecode_sha256": "a872d4d73a5b6a243a7ecfd5fd64ae1741f35b838527b2ce89ae216a4961ecf0",
+    "runtime_bytecode_sha256": "257a7bc35eb134773cc65a6c93552de5c8e79aed7b9fd54bf930aab09650df62"
+  },
+  {
+    "benchmark_id": "yearn_vault_v2",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "5bdd7da779408aafd6931a265e1ab26eab11f6968ed15f99dc62c31c32ae1829",
+    "creation_bytecode_sha256": "10b8ce1f1ab2a6bc64c9ba5435b394afe8f3717e8747425fb8796b195ee4f925",
+    "runtime_bytecode_sha256": "cebce32d57077b6881f404dda8f74eac3ae63b4957b0c0568529067617203d7e"
+  },
+  {
+    "benchmark_id": "yearn_vault_v2",
+    "profile_id": "solar-gas-200",
+    "source_hash": "5bdd7da779408aafd6931a265e1ab26eab11f6968ed15f99dc62c31c32ae1829",
+    "creation_bytecode_sha256": "11c376149dc0a9eb7d19322f7ee89ef05cdf1bd1cfeabc1f8d04c6f99613485f",
+    "runtime_bytecode_sha256": "7a9891dd43ee7653fb46507533972c4ac8d96b3c78197cd6c694a395174dd55e"
+  },
+  {
+    "benchmark_id": "yearn_vault_v2",
+    "profile_id": "solar-size-1",
+    "source_hash": "5bdd7da779408aafd6931a265e1ab26eab11f6968ed15f99dc62c31c32ae1829",
+    "creation_bytecode_sha256": "a1c96d0222e36ffc52e3356fcfdeef0b94aa579cec9b2955997f6f2261c99d80",
+    "runtime_bytecode_sha256": "8d2bfdbd7db5c92372944f4c5efca8dcb8c67eb540810a6334ab9ce92018b42b"
+  },
+  {
+    "benchmark_id": "yearn_vault_v3",
+    "profile_id": "solc-0.8.36-legacy-200",
+    "source_hash": "2b84ac90d75b8a5c3d9e68b463a0509038c5a481fe5e2b448ddc271cc9cc734c",
+    "creation_bytecode_sha256": "437d9f1a90f3506ffa248830adeed4817f8061f773fb1d659d16cf956dd24f57",
+    "runtime_bytecode_sha256": "6cf864ba517896d056e1b41bd55a01b0be88f64b50b833b2577940fe26d348d1"
+  },
+  {
+    "benchmark_id": "yearn_vault_v3",
+    "profile_id": "solc-0.8.36-viair-200",
+    "source_hash": "2b84ac90d75b8a5c3d9e68b463a0509038c5a481fe5e2b448ddc271cc9cc734c",
+    "creation_bytecode_sha256": "a4a7efbe62f624dd660af2c8e74d8167d79740bc707286b686a32c67799565e2",
+    "runtime_bytecode_sha256": "25f05124ba6d9e6781f0723c23b265e00fccae5640d2cbd15862ab7c424e7efb"
+  },
+  {
+    "benchmark_id": "yearn_vault_v3",
+    "profile_id": "solar-gas-200",
+    "source_hash": "2b84ac90d75b8a5c3d9e68b463a0509038c5a481fe5e2b448ddc271cc9cc734c",
+    "creation_bytecode_sha256": "49ee2a5e2d24e6836a42095d42c1f57bc6eaa26058b7ba70c30ce491d13538bd",
+    "runtime_bytecode_sha256": "e5f1a6def98f9cde2d7a8b2f1e9f6d47843089b3e27ec93f647b26823c26dc2e"
+  },
+  {
+    "benchmark_id": "yearn_vault_v3",
+    "profile_id": "solar-size-1",
+    "source_hash": "2b84ac90d75b8a5c3d9e68b463a0509038c5a481fe5e2b448ddc271cc9cc734c",
+    "creation_bytecode_sha256": "cd62220832e6b0b2937d95ad345567d1cdfe4ab1126b280b3bb52be580fefaeb",
+    "runtime_bytecode_sha256": "df557a9606435a01e33e0b4038423309c99c37527d0a16e13c3d49d98e8baa1c"
+  }
+]

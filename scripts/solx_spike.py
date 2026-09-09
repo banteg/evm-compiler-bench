@@ -170,7 +170,7 @@ def measure():
         (run / "benches/scenarios").mkdir(parents=True, exist_ok=True)
         for bench in CASES:
             shutil.copy(ROOT / "benches/scenarios" / f"{bench}.yaml", run / "benches/scenarios")
-        config = (ROOT / "foundry/foundry.toml").read_text()
+        config = re.sub(r'^solc\s*=.*$', '', (ROOT / "foundry/foundry.toml").read_text(), flags=re.MULTILINE)
         harness_solc = next((ROOT / ".cache/toolchains/solc/0.8.35").glob("solc-*"))
         (run / "foundry/foundry.toml").write_text(config + f'\nsolc = "{harness_solc}"\n')
         env = dict(os.environ, SPIKE_PAIR=mode)

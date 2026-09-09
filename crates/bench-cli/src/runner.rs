@@ -32,6 +32,7 @@ pub(crate) fn harness_identity() -> String {
                 concat!(
                     include_str!("runner.rs"),
                     include_str!("harness.rs"),
+                    include_str!("foundry_jobs.rs"),
                     include_str!("foundry_templates/helpers.sol"),
                     include_str!("foundry_templates/generated_shard.sol"),
                     include_str!("foundry_templates/randomized_helpers.sol"),
@@ -41,6 +42,24 @@ pub(crate) fn harness_identity() -> String {
             )
         })
         .clone()
+}
+
+/// Effective flags, environment overrides, and the pinned compiler all affect
+/// wrapper codegen. Persist this configuration and include its hash in caches.
+pub(crate) fn harness_config(root: &Path, evm: &str) -> Result<serde_json::Value> {
+    let output = Command::new("forge")
+        .args(["config", "--json", "--root"])
+        .arg(root.join("foundry"))
+        .args(["--evm-version", evm, "--via-ir", "--optimize"])
+        .output()
+        .context("reading effective Foundry harness configuration")?;
+    if !output.status.success() {
+        bail!(
+            "forge config failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    serde_json::from_slice(&output.stdout).context("parsing Foundry harness configuration")
 }
 
 pub fn run_foundry(
@@ -207,10 +226,12 @@ fn gas_cache_inputs(
     use_cache: bool,
     forge_version: &str,
 ) -> Result<BTreeMap<String, GasCacheInput>> {
+    let config_hash = cache::key_for(&harness_config(root, evm_version)?)?;
     let mut inputs = BTreeMap::new();
     for artifact in &compiled.artifacts {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            let fingerprint = gas_fingerprint(evm_version, artifact, scenario, forge_version)?;
+            let fingerprint =
+                gas_fingerprint(evm_version, artifact, scenario, forge_version, &config_hash)?;
             let key = cache::key_for(&fingerprint)?;
             let logical_id = cache::logical_id(&[
                 "gas",
@@ -272,6 +293,7 @@ fn gas_fingerprint(
     artifact: &CompiledArtifact,
     scenario: &Scenario,
     forge_version: &str,
+    config_hash: &str,
 ) -> Result<serde_json::Value> {
     Ok(json!({
         "schema": GAS_CACHE_SCHEMA,
@@ -282,6 +304,7 @@ fn gas_fingerprint(
             "gas_json_schema": "1",
             "source_sha256": harness_identity(),
             "forge_version": forge_version,
+            "config_sha256": config_hash,
         },
         "artifact": {
             "benchmark_id": artifact.benchmark_id,
@@ -1293,4 +1316,29 @@ fn sanitize(value: &str) -> String {
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn harness_compiler_configuration_changes_invalidate_gas_cache() {
+        let artifact = crate::test_support::artifact("solc", "solc-0.8.36-viair-runs200");
+        let scenarios: crate::models::ScenarioFile = serde_yaml::from_str(include_str!(
+            "../../../benches/scenarios/erc20_minimal.yaml"
+        ))
+        .unwrap();
+        let fingerprint = |config| {
+            super::gas_fingerprint(
+                "prague",
+                &artifact,
+                &scenarios.scenarios[0],
+                "forge-version",
+                config,
+            )
+            .unwrap()
+        };
+        let a = crate::cache::key_for(&fingerprint("solc-0.8.34-config")).unwrap();
+        let b = crate::cache::key_for(&fingerprint("solc-0.8.36-config")).unwrap();
+        assert_ne!(a, b);
+    }
 }

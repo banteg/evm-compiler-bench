@@ -1473,12 +1473,12 @@ function BySuiteCard({ rows, tieBand }) {
 }
 
 function MoversCard({ rows }) {
-  const top = rows.filter(r => r.deltaPct < 0).slice(0, 5);
-  const bot = rows.filter(r => r.deltaPct > 0).slice(0, 5);
+  const top = rows.filter(r => r.deltaPct < 0).sort((a, b) => a.deltaPct - b.deltaPct).slice(0, 5);
+  const bot = rows.filter(r => r.deltaPct > 0).sort((a, b) => b.deltaPct - a.deltaPct).slice(0, 5);
   return React.createElement('div', { className: 'card' },
     React.createElement('div', { className: 'card-head' },
       React.createElement('div', { className: 'card-title' }, 'Top movers'),
-      React.createElement('div', { className: 'card-sub' }, '5 wins / 5 regressions')
+      React.createElement('div', { className: 'card-sub' }, `${top.length} decreases / ${bot.length} increases shown`)
     ),
     React.createElement('table', { className: 'tbl' },
       React.createElement('tbody', null,
@@ -1603,7 +1603,7 @@ function ReliabilityPanel() {
         React.createElement('div', { className: 'clean-summary' },
           React.createElement('div', { className: 'failure-label' }, 'Clean profiles'),
           React.createElement('div', { className: 'chip-row' },
-            React.createElement(InlineList, { items: cleanProfiles.map(p => p.id), max: 10, formatter: Bench.profileCompactLabel })
+            React.createElement(InlineList, { items: cleanProfiles.map(p => p.id), max: 10, formatter: Bench.profileLabel })
           )
         )
       )
@@ -1731,7 +1731,7 @@ function RealDerivedProvenance() {
 function CompilerConfigurations() {
   const compilerMeta = (compiler, modes) => {
     const profiles = Bench.D.profiles.filter(p => Bench.profileCompilerKey(p) === compiler);
-    const versions = new Set(profiles.map(p => p.compiler_version || Bench.profileVersionLabel(p)));
+    const versions = new Set(profiles.map(p => Bench.profileVersionKey(p)));
     return {
       profiles: profiles.length,
       versions: versions.size,

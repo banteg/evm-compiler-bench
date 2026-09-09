@@ -79,6 +79,13 @@ sources. Main-matrix compile measurements use the resolved executables on the
 recorded host (including any mixed architectures); the spike's repeated timing
 experiment explicitly runs both compilers as x86-64 on this Apple Silicon host.
 
+The Foundry measurement harness pins solc 0.8.34, separately from every compiler
+under test. Gas and behavior cache keys include the effective Foundry configuration
+(including compiler selection and environment overrides), and the run manifest
+preserves that configuration. The Solar spike used harness solc 0.8.36: its contract
+bytecode is identical to the integrated build, but measured wrapper overhead differs.
+Use v4's integrated dataset for comparisons within the main matrix.
+
 ## Running locally
 
 Resolve toolchains:

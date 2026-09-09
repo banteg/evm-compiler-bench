@@ -247,7 +247,7 @@ def measure(only=None):
         (run / "foundry/test").mkdir(parents=True, exist_ok=True)
         (run / "benches/scenarios").mkdir(parents=True, exist_ok=True)
         shutil.copyfile(WORK / "scenarios" / f"{bench}.yaml", run / "benches/scenarios" / f"{bench}.yaml")
-        config = (ROOT / "foundry/foundry.toml").read_text() + f'\nsolc = "{SOLC}"\n'
+        config = re.sub(r'^solc\s*=.*$', '', (ROOT / "foundry/foundry.toml").read_text(), flags=re.MULTILINE) + f'\nsolc = "{SOLC}"\n'
         (run / "foundry/foundry.toml").write_text(config)
         dump(run / "artifacts.json", group)
         start = time.monotonic()

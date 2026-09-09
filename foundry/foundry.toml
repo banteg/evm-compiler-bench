@@ -4,4 +4,6 @@ test = "test"
 out = "out"
 libs = []
 optimizer = false
+# Keep measurement-wrapper codegen independent from the compiler under test.
+solc = "0.8.34"
 fs_permissions = [{ access = "read-write", path = "../results/raw" }]
