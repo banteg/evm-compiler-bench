@@ -7,7 +7,7 @@ use crate::{
         GasRecord, PropertySpec, RandomizedSpec, Scenario, SolArg,
     },
     scenarios::ScenarioCatalog,
-    util::{Progress, ensure_dir, require_success, run_measured, sha256_bytes},
+    util::{Progress, ensure_dir, sha256_bytes},
 };
 use anyhow::{Context, Result, bail};
 use serde_json::json;
@@ -124,7 +124,7 @@ pub fn run_foundry(
         selected_gas_keys.map_or(expected_cache.len(), BTreeSet::len)
     );
     let mut records = Vec::new();
-    let mut progress = Progress::new("foundry", shards.len());
+    let mut paths = Vec::new();
     for (index, shard_artifacts) in shards.iter().enumerate() {
         let shard_id = format!("{index:03}");
         let contract_name = format!("GeneratedBenchShard{shard_id}");
@@ -144,45 +144,23 @@ pub fn run_foundry(
             )?,
         )
         .with_context(|| format!("writing {}", test_path.display()))?;
-        let expected_shard_rows =
-            expected_shard_gas_rows(shard_artifacts, scenarios, selected_gas_keys)?;
-        progress.update(
-            index,
-            format!(
-                "running shard {}/{} ({} artifacts, {} expected rows)",
-                index + 1,
-                shards.len(),
-                shard_artifacts.len(),
-                expected_shard_rows
-            ),
-        );
-        require_success(
-            run_measured(
-                Command::new("forge")
-                    .arg("test")
-                    .arg("--root")
-                    .arg(root.join("foundry"))
-                    .arg("--match-path")
-                    .arg(&match_path)
-                    .arg("--evm-version")
-                    .arg(evm_version)
-                    .arg("--via-ir")
-                    .arg("--optimize")
-                    .arg("-q"),
-                None,
-            )?,
-            &format!("forge test {match_path}"),
-        )?;
+        paths.push(match_path);
+    }
+    crate::foundry_jobs::run(root, evm_version, &paths)?;
+    for (index, shard) in shards.iter().enumerate() {
+        let shard_id = format!("{index:03}");
         let shard_rows = read_gas_records(
             &root.join(format!("results/raw/foundry-gas-shard-{shard_id}.jsonl")),
         )?;
+        let expected = expected_shard_gas_rows(shard, scenarios, selected_gas_keys)?;
+        if shard_rows.len() != expected {
+            bail!(
+                "Foundry shard {shard_id} returned {} gas rows; expected {expected}",
+                shard_rows.len()
+            );
+        }
         records.extend(shard_rows);
-        progress.update(
-            index + 1,
-            format!("completed shard {}/{}", index + 1, shards.len()),
-        );
     }
-    progress.finish(format!("recorded {} gas rows", records.len()));
     annotate_and_store_gas_records(root, &mut records, &expected_cache, use_cache)?;
     if use_cache {
         cached.extend(records);
@@ -718,23 +696,7 @@ pub(crate) fn run_behavior_shard(
             true,
         )?,
     )?;
-    require_success(
-        run_measured(
-            Command::new("forge")
-                .arg("test")
-                .arg("--root")
-                .arg(root.join("foundry"))
-                .arg("--match-path")
-                .arg(&relative)
-                .arg("--evm-version")
-                .arg(evm)
-                .arg("--via-ir")
-                .arg("--optimize")
-                .arg("-q"),
-            None,
-        )?,
-        &format!("forge behavior tests {relative}"),
-    )?;
+    crate::foundry_jobs::execute(root, evm, &relative)?;
     Ok(())
 }
 

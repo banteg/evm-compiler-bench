@@ -3,6 +3,7 @@ mod behavior;
 mod cache;
 mod catalog;
 mod compiler;
+mod foundry_jobs;
 mod harness;
 mod models;
 mod report;

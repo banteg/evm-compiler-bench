@@ -106,6 +106,12 @@ Because Fe is skipped for the five real-derived benchmarks without an `fe/`
 implementation, this yields 7,867 compile attempts before gas scenarios are
 measured.
 
+Foundry gas shards run in isolated projects under `target/foundry-jobs/`, with
+up to four workers by default. Set `EVM_BENCH_FOUNDRY_JOBS=1` for serial execution
+or a value up to 8 for more concurrency. Each job keeps its own compiler cache
+and raw outputs; generated Solidity and relative evidence paths are unchanged.
+Compiler timing samples are collected separately, before these harness jobs.
+
 ## Report UI
 
 Start the interactive report locally:
