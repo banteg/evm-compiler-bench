@@ -81,7 +81,22 @@
         }
       }
     },
-    "profiles": { "type": "array", "items": { "type": "object" } },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "language", "compiler_name", "compiler_version", "optimizer"],
+        "properties": {
+          "language": { "enum": ["solidity", "vyper", "fe"] },
+          "compiler_name": { "type": "string" },
+          "compiler_version": { "type": "string", "description": "Compiler product release; solx uses its own release version." },
+          "frontend_version": { "type": ["string", "null"], "description": "Embedded Solidity frontend version, independently from compiler_version." },
+          "frontend_commit": { "type": ["string", "null"] },
+          "llvm_build": { "type": ["string", "null"] },
+          "optimizer_runs": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
     "benchmarks": { "type": "array", "items": { "type": "object" } },
     "real_derived_models": {
       "type": "array",

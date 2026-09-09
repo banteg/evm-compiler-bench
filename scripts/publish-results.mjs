@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { assertProductionSnapshot } from "./publish-policy.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = new Set(process.argv.slice(2));
@@ -26,6 +27,14 @@ const paths = {
 const runManifest = JSON.parse(readFileSync(paths.runManifest, "utf8"));
 const runId = runManifest.run_id;
 if (!runId) throw new Error("run-manifest.json is missing run_id");
+if (upload && channel === "prod") {
+  const git = (...args) => {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    if (result.status !== 0) throw new Error("Unable to verify checkout for production publishing");
+    return result.stdout.trim();
+  };
+  assertProductionSnapshot({branch: git("branch", "--show-current"), dirty: git("status", "--porcelain") !== "", commit: git("rev-parse", "HEAD")}, runManifest);
+}
 
 const publishDir = join(root, "target/publish", runId);
 mkdirSync(publishDir, { recursive: true });

@@ -1,4 +1,5 @@
 mod baselines;
+mod behavior;
 mod cache;
 mod catalog;
 mod compiler;
@@ -8,6 +9,9 @@ mod report;
 mod runner;
 mod scale;
 mod scenarios;
+mod solx;
+#[cfg(test)]
+mod test_support;
 mod toolchain;
 mod util;
 mod validate;
@@ -106,6 +110,14 @@ fn main() -> Result<()> {
                 load_scenario_catalog(&root, benchmark.as_deref(), &generated.scenarios)?;
             eprintln!("pipeline: measuring gas");
             let gas_records = run_foundry(
+                &root,
+                &toolchains.evm_version,
+                &compiled,
+                &scenarios,
+                !no_cache,
+            )?;
+            eprintln!("pipeline: verifying compiler behavior pairs");
+            behavior::run(
                 &root,
                 &toolchains.evm_version,
                 &compiled,

@@ -97,6 +97,9 @@ const METRICS = Bench.METRICS;
 const SOL_LEGACY = 'solc-latest-legacy-runs200';
 const SOL_VIAIR = 'solc-latest-viair-runs200';
 const SOL_NOOPT = 'solc-latest-noopt';
+const SOLX_O3 = 'solx-0.1.8-O3';
+const SOLX_OZ = 'solx-0.1.8-Oz';
+const SOLX_BASELINE = 'solc-0.8.34-viair-runs200';
 const SOL_0426_LEGACY = 'solc-0.4.26-legacy-runs200';
 const VYPER_0310_GAS = 'vyper-0.3.10-gas';
 const VYPER_GAS = 'vyper-latest-gas';
@@ -120,6 +123,9 @@ function buildHeadlines() {
   };
 
   return {
+    solxGas: v(SOLX_BASELINE, SOLX_O3, M),
+    solxSize: v(SOLX_BASELINE, SOLX_O3, S),
+    solxOzSize: v(SOLX_BASELINE, SOLX_OZ, S),
     stableSolVsVyperGas: v(SOL_LEGACY, VYPER_GAS, M),
     stableSolVsVyperSize: v(SOL_LEGACY, VYPER_GAS, S),
     solVsVyperVenomGas: v(SOL_VIAIR, VYPER_GAS_VENOM, M),
@@ -137,7 +143,7 @@ function buildHeadlines() {
 }
 
 const HEADLINES = buildHeadlines();
-const REPORT_VERSION = 'v2';
+const REPORT_VERSION = 'v3';
 
 // ============================================================
 // Top bar
@@ -182,14 +188,14 @@ function Hero() {
       `Compiler bench · ${REPORT_VERSION} · ${gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
     ),
     React.createElement('h1', { className: 'hero-title' },
-      'The ',
-      React.createElement('em', null, 'definitive'),
-      ' EVM compiler benchmark.'
+      'Different compilers.',
+      React.createElement('br'),
+      React.createElement('em', null, 'Measured tradeoffs.')
     ),
     React.createElement('p', { className: 'hero-lede' },
-      'Across ',
+      'Compare solc, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
       React.createElement('strong', null, s.ok_rows.toLocaleString()),
-      ` successful scenario measurements, ${vyperGas} is ${absDelta(HEADLINES.stableSolVsVyperGas.geomean)} lower runtime gas than ${solcLegacy}. Against ${solcViaIR}, ${vyperVenom} is ${absDelta(HEADLINES.solVsVyperVenomGas.geomean)} lower gas and ${absDelta(HEADLINES.solVsVyperVenomSize.geomean)} smaller runtime bytecode. Explore the comprehensive breakdown below.`
+      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v3: solx’s LLVM backend, with Solidity 0.8.34 comparison profiles.'
     ),
 
     React.createElement('div', { className: 'hero-strip' },
@@ -243,10 +249,32 @@ function FindingsGrid() {
     : `${(coverage.passRate * 100).toFixed(1)}%`;
   const cards = [
     {
+      tag: 'New · solx',
+      span: 6,
+      headline: 'A different backend for the same Solidity source.',
+      body: `Against ${Bench.profileLabel(SOLX_BASELINE)}, ${Bench.profileLabel(SOLX_O3)} gives ${lowerHigher(HEADLINES.solxGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solxSize.geomean, 'runtime bytecode')}. Both materialize Solidity 0.8.34 sources; solx embeds a modified frontend.`,
+      stat: HEADLINES.solxGas.geomean,
+      statLabel: 'runtime gas (solx O3 vs matched solc viaIR)',
+      altStat: HEADLINES.solxSize.geomean,
+      altLabel: 'runtime bytes',
+      count: HEADLINES.solxGas.count,
+      coverage: HEADLINES.solxGas.coverage,
+    },
+    {
+      tag: 'New · solx Oz',
+      span: 6,
+      headline: 'Measure the size-oriented optimizer separately.',
+      body: `${Bench.profileLabel(SOLX_OZ)} gives ${lowerHigher(HEADLINES.solxOzSize.geomean, 'runtime bytecode')} than the matched solc viaIR / runs 200 profile. Oz does not always produce smaller or cheaper code than O3; inspect the individual workloads.`,
+      stat: HEADLINES.solxOzSize.geomean,
+      statLabel: 'runtime bytes (solx Oz vs matched solc viaIR)',
+      count: HEADLINES.solxOzSize.count,
+      coverage: HEADLINES.solxOzSize.coverage,
+    },
+    {
       tag: 'Finding 01',
       span: 4,
-      headline: 'Vyper gas beats solc legacy on runtime gas.',
-      body: `Comparing stable, optimizer-enabled profiles over fixed and scale benchmarks, ${vyperGas} uses ${absDelta(HEADLINES.stableSolVsVyperGas.geomean)} less runtime gas than ${solcLegacy}.`,
+      headline: 'Vyper gas and solc legacy.',
+      body: `Comparing stable, optimizer-enabled profiles over fixed and scale benchmarks, ${vyperGas} gives ${lowerHigher(HEADLINES.stableSolVsVyperGas.geomean, 'runtime gas')} than ${solcLegacy}.`,
       stat: HEADLINES.stableSolVsVyperGas.geomean,
       statLabel: 'runtime gas (Vyper gas vs solc legacy)',
       altStat: HEADLINES.stableSolVsVyperSize.geomean,
@@ -257,8 +285,8 @@ function FindingsGrid() {
     {
       tag: 'Finding 02',
       span: 4,
-      headline: 'Vyper + Venom beats solc viaIR on both axes.',
-      body: `Against ${solcViaIR}, ${vyperVenom} uses ${absDelta(HEADLINES.solVsVyperVenomGas.geomean)} less runtime gas and ${absDelta(HEADLINES.solVsVyperVenomSize.geomean)} fewer runtime bytes.`,
+      headline: 'Vyper Venom and solc viaIR.',
+      body: `Against ${solcViaIR}, ${vyperVenom} gives ${lowerHigher(HEADLINES.solVsVyperVenomGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solVsVyperVenomSize.geomean, 'runtime bytecode')}.`,
       stat: HEADLINES.solVsVyperVenomGas.geomean,
       statLabel: 'runtime gas (Vyper Venom vs solc viaIR)',
       altStat: HEADLINES.solVsVyperVenomSize.geomean,
@@ -269,7 +297,7 @@ function FindingsGrid() {
     {
       tag: 'Finding 03',
       span: 4,
-      headline: 'Venom makes Vyper smaller and cheaper.',
+      headline: 'Vyper’s experimental backend changes the tradeoff.',
       body: `Enabling --experimental-codegen ("Venom") in Vyper gives ${lowerHigher(HEADLINES.venomSize.geomean, 'runtime bytecode')}, ${lowerHigher(HEADLINES.venomGas.geomean, 'runtime gas')}, and ${lowerHigher(HEADLINES.venomCompile.geomean, 'compile time')} versus legacy Vyper codegen.`,
       stat: HEADLINES.venomSize.geomean,
       statLabel: 'runtime bytes vs Vyper legacy codegen',
@@ -281,7 +309,7 @@ function FindingsGrid() {
     {
       tag: 'Finding 04',
       span: 4,
-      headline: 'viaIR buys gas and size with compile time.',
+      headline: 'solc legacy and viaIR.',
       body: `Switching from ${solcLegacy} to ${solcViaIR} gives ${lowerHigher(HEADLINES.viaIRGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.viaIRSize.geomean, 'runtime bytecode')}, but ${lowerHigher(HEADLINES.viaIRCompile.geomean, 'compile time')}.`,
       stat: HEADLINES.viaIRGas.geomean,
       statLabel: 'runtime gas vs solc legacy',
@@ -294,10 +322,10 @@ function FindingsGrid() {
     {
       tag: 'Finding 05',
       span: 4,
-      headline: 'solc legacy nets out flat, with large offsetting moves.',
-      body: `Solc 0.4.26 to ${solcLegacy} nets to ${Bench.fmtDelta(HEADLINES.solEra.geomean)} runtime gas, but it is not a smooth drift story: loop bounds and ABI args regress while dispatch and Merkle improve.`,
+      headline: 'Solidity compiler versions affect different workloads.',
+      body: `Solc 0.4.26 to ${solcLegacy} gives ${lowerHigher(HEADLINES.solEra.geomean, 'runtime gas')} across comparable cases. The version view separates workload and codegen effects.`,
       stat: HEADLINES.solEra.geomean,
-      statLabel: 'runtime gas (solc 0.4.26 → 0.8.35 legacy)',
+      statLabel: `runtime gas (solc 0.4.26 → ${Bench.profileVersionLabel(Bench.profileById(SOL_LEGACY) || {})} legacy)`,
       neutral: true,
       count: HEADLINES.solEra.count,
       coverage: HEADLINES.solEra.coverage,
@@ -305,8 +333,8 @@ function FindingsGrid() {
     {
       tag: 'Finding 06',
       span: 4,
-      headline: 'The optimizer is the biggest lever in the run.',
-      body: `Disabling the optimizer entirely in solc 0.8.35 gives ${lowerHigher(HEADLINES.nooptGas.geomean, 'runtime gas')}: the single largest measured effect among all solc profile comparisons.`,
+      headline: 'Optimization changes runtime cost and size.',
+      body: `${Bench.profileLabel(SOL_NOOPT)} gives ${lowerHigher(HEADLINES.nooptGas.geomean, 'runtime gas')} than ${solcViaIR}. This comparison changes both optimization and the codegen path.`,
       stat: HEADLINES.nooptGas.geomean,
       statLabel: 'runtime gas without optimizer',
       altStat: HEADLINES.nooptSize.geomean,
@@ -320,12 +348,12 @@ function FindingsGrid() {
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 01 · Summary'),
-        React.createElement('div', { className: 'section-title' }, 'Six findings from this run.'),
+        React.createElement('div', { className: 'section-title' }, 'Compiler tradeoffs in this run.'),
         React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable measurement units; card headers show row count and artifact compile pass rate.')
       )
     ),
     React.createElement('div', { className: 'stories' },
-      cards.map((c, i) => {
+      cards.filter(c => c.count > 0).map((c, i) => {
         const ratio = c.stat;
         const pct = ratio == null ? 0 : (ratio - 1) * 100;
         const tone = c.neutral
@@ -430,8 +458,11 @@ function ScaleStrip({ metric }) {
   const families = ['dispatch_N', 'storage_slots_N', 'mapping_depth_N', 'abi_args_N',
                     'loop_bound_N', 'events_N', 'external_calls_N']
     .filter(f => Bench.D.rows.some(r => r.family === f));
-  const profiles = ['solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2'];
+  const profiles = [SOLX_BASELINE, SOLX_O3, 'solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2']
+    .filter(p => Bench.profileById(p));
   const palette = {
+    [SOLX_BASELINE]: '#d8b476',
+    [SOLX_O3]: 'var(--solx)',
     'solc-latest-viair-runs200': 'var(--solidity)',
     'vyper-latest-gas': 'var(--vyper)',
     'vyper-latest-gas-venom': 'var(--accent)',
@@ -466,6 +497,8 @@ function ScaleStrip({ metric }) {
 // Interactive Comparator
 // ============================================================
 const CONFIG_EXPLAINERS = {
+  'solx:O3': 'LLVM optimization for runtime gas; embedded solc frontend, one compiler worker, no automatic size fallback.',
+  'solx:Oz': 'LLVM optimization for bytecode size. This is not a solc optimizer-runs setting, and may increase gas.',
   'solidity:noopt': 'Optimizer disabled; useful as a control, not a production setting.',
   'solidity:legacy': 'Solidity legacy EVM codegen. The balanced default is optimizer runs=200.',
   'solidity:viaIR': 'Solidity through the IR/Yul pipeline; often better optimized, slower to compile.',
@@ -509,12 +542,13 @@ function SegmentedControl({ name, value, options, onChange }) {
 function ProfilePicker({ title, selected, onChange }) {
   const p = Bench.profileById(selected) || Bench.D.profiles[0];
   const knobs = Bench.profileKnobs(p);
-  const facets = Bench.profileFacets(knobs.language, knobs.versionKey, knobs.optimizer);
+  const facets = Bench.profileFacets(knobs.language, knobs.versionKey, knobs.optimizer, knobs.compiler);
   const showRuns = knobs.language === 'solidity'
     && (knobs.optimizer === 'legacy' || knobs.optimizer === 'viaIR')
     && facets.runs.length > 1;
   const venomAvailable = Bench.profileOptionExists({
     language: knobs.language,
+    compiler: knobs.compiler,
     versionKey: knobs.versionKey,
     optimizer: knobs.optimizer,
     experimental: true,
@@ -522,29 +556,25 @@ function ProfilePicker({ title, selected, onChange }) {
   const choose = (patch) => {
     onChange(Bench.resolveProfile({ ...knobs, ...patch }));
   };
-  const chooseLang = (l) => onChange(Bench.defaultProfileForLanguage(l));
+  const chooseCompiler = (compiler) => onChange(Bench.defaultProfileForCompiler(compiler));
   const chooseVersion = (versionKey) => {
-    const optimizer = Bench.defaultOptimizerForVersion(knobs.language, versionKey);
-    const runs = Bench.defaultOptimizerRuns(knobs.language, versionKey, optimizer);
+    const optimizer = Bench.defaultOptimizerForVersion(knobs.language, versionKey, knobs.compiler);
+    const runs = Bench.defaultOptimizerRuns(knobs.language, versionKey, optimizer, knobs.compiler);
     onChange(Bench.resolveProfile({ ...knobs, versionKey, optimizer, runs, experimental: false }));
   };
   const chooseOptimizer = (optimizer) => {
-    const runs = Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, optimizer);
+    const runs = Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, optimizer, knobs.compiler);
     choose({ optimizer, runs });
   };
   return React.createElement('div', { className: 'compare-side' },
     React.createElement('div', { className: 'lbl' }, title),
     React.createElement('div', { className: 'knobs' },
-      React.createElement('div', { className: 'knob-l' }, 'Lang'),
+      React.createElement('div', { className: 'knob-l' }, 'Compiler'),
       React.createElement(SegmentedControl, {
-        name: `${title}-language`,
-        value: knobs.language,
-        options: [
-          { value: 'solidity', label: 'Solidity' },
-          { value: 'vyper', label: 'Vyper' },
-          { value: 'fe', label: 'Fe' },
-        ],
-        onChange: chooseLang,
+        name: `${title}-compiler`,
+        value: knobs.compiler,
+        options: Bench.compilerOptions(),
+        onChange: chooseCompiler,
       }),
       React.createElement('div', { className: 'knob-l' }, 'Version'),
       React.createElement('select', {
@@ -554,14 +584,14 @@ function ProfilePicker({ title, selected, onChange }) {
         facets.versions.map(v => React.createElement('option', { key: v, value: v },
           facets.versionLabels.get(v) || v))
       ),
-      React.createElement('div', { className: 'knob-l' }, knobs.language === 'solidity' ? 'Codegen' : 'Optimize'),
+      React.createElement('div', { className: 'knob-l' }, knobs.compiler === 'solc' ? 'Codegen' : 'Optimize'),
       React.createElement(SegmentedControl, {
         name: `${title}-optimizer`,
         value: knobs.optimizer,
         options: facets.optimizers.map(o => ({
           value: o,
           label: o,
-          title: CONFIG_EXPLAINERS[`${knobs.language}:${o}`] || '',
+          title: CONFIG_EXPLAINERS[`${knobs.compiler}:${o}`] || CONFIG_EXPLAINERS[`${knobs.language}:${o}`] || '',
         })),
         onChange: chooseOptimizer,
       }),
@@ -569,7 +599,7 @@ function ProfilePicker({ title, selected, onChange }) {
         React.createElement('div', { className: 'knob-l' }, 'Runs'),
         React.createElement('select', {
           className: 'knob',
-          value: knobs.runs ?? Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, knobs.optimizer) ?? '',
+          value: knobs.runs ?? Bench.defaultOptimizerRuns(knobs.language, knobs.versionKey, knobs.optimizer, knobs.compiler) ?? '',
           onChange: event => choose({ runs: Number(event.target.value) }),
         },
           facets.runs.map(runs => React.createElement('option', { key: runs, value: runs }, `runs${runs}`))
@@ -594,7 +624,9 @@ function ProfilePicker({ title, selected, onChange }) {
       ) : null,
     ),
     React.createElement('div', { style: { marginTop: '12px', fontFamily: 'var(--mono)', fontSize: '10.5px', color: 'var(--fg-4)' } },
-      React.createElement('code', { title: p.id }, Bench.profileLabel(p.id)))
+      React.createElement('code', { title: p.id }, Bench.profileLabel(p.id)),
+      p.frontend_version ? React.createElement('div', { style: { marginTop: '6px' } },
+        `Solidity ${p.frontend_version} frontend · ${p.evm_version} · 1 worker`) : null)
   );
 }
 
@@ -625,7 +657,8 @@ const DRILL_AXES = [
   { id: 'benchmark', label: 'Benchmark' },
   { id: 'family', label: 'Family' },
   { id: 'n', label: 'N' },
-  { id: 'language', label: 'Compiler' },
+  { id: 'compiler', label: 'Compiler' },
+  { id: 'language', label: 'Language' },
   { id: 'version', label: 'Version' },
   { id: 'mode', label: 'Mode' },
   { id: 'runs', label: 'Runs' },
@@ -652,7 +685,7 @@ const DEFAULT_DRILL_VIEW = {
   columns: ['n'],
   aggregation: 'median',
   filters: {
-    language: { op: 'in', values: ['solidity'] },
+    compiler: { op: 'in', values: ['solc'] },
     family: { op: 'in', values: ['dispatch_N'] },
     runs: BALANCED_RUN_FILTER,
   },
@@ -668,7 +701,7 @@ const DRILL_PRESETS = [
     metric: 'harness_call_gas',
     view: {
       rows: ['suite'],
-      columns: ['language'],
+      columns: ['compiler'],
       aggregation: 'median',
       filters: { runs: BALANCED_RUN_FILTER },
     },
@@ -678,7 +711,7 @@ const DRILL_PRESETS = [
     metric: 'harness_call_gas',
     view: {
       rows: ['version'],
-      columns: ['language'],
+      columns: ['compiler'],
       aggregation: 'median',
       filters: {
         status: { op: 'in', values: ['ok'] },
@@ -691,7 +724,7 @@ const DRILL_PRESETS = [
     metric: 'harness_call_gas',
     view: {
       rows: ['mode'],
-      columns: ['language'],
+      columns: ['compiler'],
       aggregation: 'median',
       filters: { runs: BALANCED_RUN_FILTER },
     },
@@ -724,11 +757,7 @@ function drillModeLabel(profile) {
 }
 
 function drillCompilerKey(profile, row) {
-  const lang = profile?.language || row?.language;
-  const compiler = profile?.compiler_name || row?.compiler?.name;
-  if (lang === 'solidity' || compiler === 'solc') return 'solc';
-  if (lang === 'vyper' || compiler === 'vyper') return 'vyper';
-  return compiler || lang || 'unknown';
+  return Bench.profileCompilerKey(profile || { language: row?.language, compiler_name: row?.compiler?.name }) || 'unknown';
 }
 
 function drillCompilerLabel(value) {
@@ -765,6 +794,7 @@ function drillField(row, profile, metric, axis) {
     case 'benchmark': return drillBenchmarkLabel(row);
     case 'family': return row.family || 'none';
     case 'n': return row.parameter_value == null ? 'none' : String(row.parameter_value);
+    case 'compiler': return drillCompilerKey(profile, row);
     case 'language': return row.language || profile?.language || 'unknown';
     case 'version': return drillVersionKey(profile, row);
     case 'mode': return drillModeKey(profile, row);
@@ -781,6 +811,7 @@ function drillField(row, profile, metric, axis) {
 function drillValueLabel(axis, value) {
   if (value === ALL_FILTER) return 'all';
   if (axis === 'family') return scaleFamilyLabel(value);
+  if (axis === 'compiler') return drillCompilerLabel(value);
   if (axis === 'language') return value === 'solidity' ? 'Solidity' : value === 'vyper' ? 'Vyper' : value;
   if (axis === 'version') {
     const [compiler, version] = String(value).split('|');
@@ -1133,7 +1164,7 @@ function DrilldownMatrix({ metric, setMetric }) {
   return React.createElement('section', { id: 'drilldown', className: 'shell section', 'data-screen-label': '04 Drilldown' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Arbitrary axes'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 03 · Arbitrary axes'),
         React.createElement('div', { className: 'section-title' }, 'Drill into any two dimensions.'),
         React.createElement('div', { className: 'section-sub' }, 'Build a comparison, narrow the dataset, and choose how matching rows roll up into each cell.')
       )
@@ -1280,6 +1311,9 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
   const unit = Bench.comparisonUnit(metric);
 
   const presets = [
+    [SOLX_BASELINE,    SOLX_O3,          'solc 0.8.34 vs solx O3'],
+    [SOLX_BASELINE,    SOLX_OZ,          'solc 0.8.34 vs solx Oz'],
+    [SOLX_O3,         SOLX_OZ,          'solx gas vs size'],
     [SOL_LEGACY,       VYPER_GAS,       'Stable optimized'],
     [SOL_VIAIR,        VYPER_GAS_VENOM, 'New codegen'],
     [SOL_LEGACY,       SOL_VIAIR,       'solc backend switch'],
@@ -1288,15 +1322,15 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
     [VYPER_0310_GAS,   VYPER_GAS,       'Vyper version drift'],
     [SOL_LEGACY,       FE_O2,           'solc vs Fe'],
     [VYPER_GAS,        FE_O2,           'Vyper vs Fe'],
-  ];
+  ].filter(([a, b]) => Bench.profileById(a) && Bench.profileById(b));
 
-  const totalBuilt = (profA?.successful_artifacts ?? 0) + (profB?.successful_artifacts ?? 0);
-  const totalFail  = (profA?.failed_artifacts ?? 0) + (profB?.failed_artifacts ?? 0);
+  const totalBuilt = (profA?.successful_artifacts ?? 0) + (profileA === profileB ? 0 : profB?.successful_artifacts ?? 0);
+  const totalFail  = (profA?.failed_artifacts ?? 0) + (profileA === profileB ? 0 : profB?.failed_artifacts ?? 0);
 
   return React.createElement('section', { id: 'compare', className: 'shell section', 'data-screen-label': '04 Compare' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 03 · Pick any two configurations'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 02 · Pick any two configurations'),
         React.createElement('div', { className: 'section-title' }, compareTitle),
         React.createElement('div', { className: 'section-sub' }, `Comparisons match on ${unit.match} - different compilers, identical surface. Negative deltas favor the compared profile.`),
       ),
@@ -1651,8 +1685,8 @@ function RealDerivedProvenance() {
 }
 
 function CompilerConfigurations() {
-  const compilerMeta = (language, modes) => {
-    const profiles = Bench.D.profiles.filter(p => p.language === language);
+  const compilerMeta = (compiler, modes) => {
+    const profiles = Bench.D.profiles.filter(p => Bench.profileCompilerKey(p) === compiler);
     const versions = new Set(profiles.map(p => p.compiler_version || Bench.profileVersionLabel(p)));
     return {
       profiles: profiles.length,
@@ -1663,15 +1697,26 @@ function CompilerConfigurations() {
   };
   const compilerConfigs = [
     {
+      key: 'solx',
+      compiler: 'solx',
+      engine: 'Solidity → LLVM',
+      axis: 'LLVM optimizer · pinned embedded Solidity frontend',
+      meta: compilerMeta('solx', ['O3', 'Oz']),
+      modes: [
+        ['O3', '-O3 --threads 1', CONFIG_EXPLAINERS['solx:O3']],
+        ['Oz', '-Oz --threads 1', CONFIG_EXPLAINERS['solx:Oz']],
+      ],
+    },
+    {
       key: 'solidity',
       compiler: 'Solidity',
       engine: 'solc',
       axis: 'Codegen axis · optimizer-runs axis',
-      meta: compilerMeta('solidity', ['noopt', 'legacy', 'viaIR']),
+      meta: compilerMeta('solc', ['noopt', 'legacy', 'viaIR']),
       modes: [
-        ['noopt', '--no-optimize', CONFIG_EXPLAINERS['solidity:noopt']],
+        ['noopt', 'optimizer disabled', CONFIG_EXPLAINERS['solidity:noopt']],
         ['legacy', '--optimize --optimize-runs N', CONFIG_EXPLAINERS['solidity:legacy']],
-        ['viaIR', '--via-ir --optimize-runs N', CONFIG_EXPLAINERS['solidity:viaIR']],
+        ['viaIR', '--via-ir --optimize --optimize-runs N', CONFIG_EXPLAINERS['solidity:viaIR']],
       ],
     },
     {
@@ -1705,7 +1750,7 @@ function CompilerConfigurations() {
           React.createElement('div', null,
             React.createElement('div', { className: 'config-label' }, 'Compiler'),
             React.createElement('div', { className: 'compiler-name' },
-              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : group.key === 'fe' ? 'fe' : 'vy'}` }, group.compiler),
+              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : group.key === 'fe' ? 'fe' : group.key === 'solx' ? 'solx' : 'vy'}` }, group.compiler),
               group.engine ? React.createElement(React.Fragment, null, ' · ', group.engine) : null,
             )
           ),
@@ -1753,7 +1798,7 @@ function SectionVersions({ metric, setMetric }) {
   return React.createElement('section', { id: 'versions', className: 'shell section' },
       React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'section-eyebrow' }, '§ 02 · Versions over time'),
+        React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Versions over time'),
         React.createElement('div', { className: 'section-title' }, 'Compiler versions.'),
         React.createElement('div', { className: 'section-sub' }, 'Each point is the geomean delta vs. the newest comparable profile. Lines near zero indicate small version-to-version changes. For chart continuity, Vyper 0.2 default is grouped with none because modern optimize modes did not exist yet.')
       ),
@@ -1769,7 +1814,7 @@ function SectionScale({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 05 · Cost vs. shape of the contract'),
         React.createElement('div', { className: 'section-title' }, 'How the metric scales with structural N.'),
-        React.createElement('div', { className: 'section-sub' }, 'In dispatch_N, Vyper selector dispatch stays nearly flat as function count grows, while solc viaIR rises with the selector surface. The other panels show how storage, ABI, loop, event, and external-call shapes scale.')
+        React.createElement('div', { className: 'section-sub' }, 'Compare selector dispatch, storage, ABI, loops, events, and external calls as each contract grows. The solx curve includes its Solidity 0.8.34 solc comparison profile.')
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -1828,7 +1873,7 @@ function SectionCompilerConfigurations() {
         React.createElement('div', { className: 'section-eyebrow' }, '§ 07 · Compiler configurations'),
         React.createElement('div', { className: 'section-title' }, 'Compiler configurations.'),
         React.createElement('div', { className: 'section-sub' },
-          React.createElement('p', null, 'A profile is a compiler version paired with exactly one codegen or optimizer mode. Vyper adds Venom as an independent codegen switch.'),
+          React.createElement('p', null, 'A profile combines a compiler release, optimizer or codegen mode, and EVM target. Solidity source can use solc or solx; solx records its embedded frontend separately. Vyper adds Venom as an independent codegen switch.'),
           React.createElement('p', null, "Optimization is not just a performance choice: Solidity's Yul/viaIR path and Vyper's experimental Venom pipeline have both had correctness bugs. Treat faster profiles as performance evidence, not automatic production guidance; pair them with version pinning, differential tests, and IR/bytecode review.")
         )
       )
@@ -1842,8 +1887,10 @@ function SectionCompilerConfigurations() {
 // ============================================================
 function App() {
   const def = Bench.D.defaults;
-  const defaultA = Bench.profileById(SOL_LEGACY) ? SOL_LEGACY : def.baseline_profile;
-  const defaultB = Bench.profileById(VYPER_GAS) ? VYPER_GAS : def.comparison_profile;
+  const defaultA = [SOLX_BASELINE, SOL_LEGACY, def.baseline_profile, Bench.D.profiles[0]?.id]
+    .find(id => Bench.profileById(id));
+  const defaultB = [SOLX_O3, VYPER_GAS, def.comparison_profile, defaultA]
+    .find(id => Bench.profileById(id));
   const [profileA, setProfileA] = useState(defaultA);
   const [profileB, setProfileB] = useState(defaultB);
   const [metric, setMetric] = useState(def.primary_metric || 'harness_call_gas');

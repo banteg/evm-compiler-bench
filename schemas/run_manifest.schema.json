@@ -35,6 +35,22 @@
     "started_at": { "type": "string", "format": "date-time" },
     "evm_version": { "type": "string" },
     "toolchains": { "type": "array", "items": { "type": "object" } },
+    "behavior_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["benchmark_id", "baseline_profile", "compared_profile", "scenario_count", "randomized", "properties", "cache"],
+        "properties": {
+          "benchmark_id": { "type": "string" },
+          "baseline_profile": { "type": "string" },
+          "compared_profile": { "type": "string" },
+          "scenario_count": { "type": "integer", "minimum": 1 },
+          "randomized": { "type": "boolean" },
+          "properties": { "type": "array", "items": { "type": "string" } },
+          "cache": { "type": "object" }
+        }
+      }
+    },
     "profiles": {
       "type": "array",
       "items": {

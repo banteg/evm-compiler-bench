@@ -1,0 +1,24 @@
+{
+  "solc": {
+    "name": "solc",
+    "version": "0.8.34",
+    "binary_path": "/Users/banteg/dev/banteg/evm-compiler-bench/target/solx-spike/bin/solc",
+    "binary_sha256": "0a2829292697dda542e4e365bb63fbd6d3ed51537140222a880ab760cffa7746",
+    "download_source": "https://binaries.soliditylang.org/macosx-amd64/solc-macosx-amd64-v0.8.34+commit.80d5c536",
+    "version_output": "solc, the solidity compiler commandline interface\nVersion: 0.8.34+commit.80d5c536.Darwin.appleclang\n",
+    "metadata": {
+      "solidity_frontend": "0.8.34"
+    }
+  },
+  "solx": {
+    "name": "solx",
+    "version": "0.1.8",
+    "binary_path": "/Users/banteg/dev/banteg/evm-compiler-bench/target/solx-spike/bin/solx",
+    "binary_sha256": "5eda882c060d88b113876e91078ee35471f95e33772679732e339902a3dd4ec2",
+    "download_source": "https://github.com/NomicFoundation/solx/releases/download/0.1.8/solx-macosx-v0.1.8",
+    "version_output": "solx v0.1.8, LLVM-based Solidity compiler for the EVM, Front end: solc, LLVM build: 7d0702e169889fe4f1a2241c57bef7d2c1c68737\nVersion: 0.8.34+commit.91fef221.Darwin.appleclang\n",
+    "metadata": {
+      "solidity_frontend": "0.8.34"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 use crate::{
-    baselines::baseline_pairs,
+    baselines::{baseline_pairs, comparison_pairs},
     cache::{self, CacheLookup},
     harness,
     models::{
@@ -24,6 +24,25 @@ const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 const MAX_GAS_ROWS_PER_SHARD: usize = 800;
 const MAX_GAS_SHARD_ESTIMATED_BYTES: usize = 1_200_000;
 
+pub(crate) fn harness_identity() -> String {
+    static IDENTITY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    IDENTITY
+        .get_or_init(|| {
+            sha256_bytes(
+                concat!(
+                    include_str!("runner.rs"),
+                    include_str!("harness.rs"),
+                    include_str!("foundry_templates/helpers.sol"),
+                    include_str!("foundry_templates/generated_shard.sol"),
+                    include_str!("foundry_templates/randomized_helpers.sol"),
+                    include_str!("foundry_templates/support.sol")
+                )
+                .as_bytes(),
+            )
+        })
+        .clone()
+}
+
 pub fn run_foundry(
     root: &Path,
     evm_version: &str,
@@ -37,7 +56,19 @@ pub fn run_foundry(
         fs::write(root.join("results/raw/foundry-gas.jsonl"), "")?;
         return Ok(Vec::new());
     }
-    let expected_cache = gas_cache_inputs(root, evm_version, compiled, scenarios, use_cache)?;
+    let forge = Command::new("forge").arg("--version").output()?;
+    if !forge.status.success() {
+        bail!("forge --version failed");
+    }
+    let forge_version = String::from_utf8(forge.stdout)?;
+    let expected_cache = gas_cache_inputs(
+        root,
+        evm_version,
+        compiled,
+        scenarios,
+        use_cache,
+        &forge_version,
+    )?;
     let mut cached = Vec::new();
     let mut missing_keys = BTreeSet::new();
     if use_cache {
@@ -196,11 +227,12 @@ fn gas_cache_inputs(
     compiled: &CompileSet,
     scenarios: &ScenarioCatalog,
     use_cache: bool,
+    forge_version: &str,
 ) -> Result<BTreeMap<String, GasCacheInput>> {
     let mut inputs = BTreeMap::new();
     for artifact in &compiled.artifacts {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            let fingerprint = gas_fingerprint(evm_version, artifact, scenario)?;
+            let fingerprint = gas_fingerprint(evm_version, artifact, scenario, forge_version)?;
             let key = cache::key_for(&fingerprint)?;
             let logical_id = cache::logical_id(&[
                 "gas",
@@ -261,6 +293,7 @@ fn gas_fingerprint(
     evm_version: &str,
     artifact: &CompiledArtifact,
     scenario: &Scenario,
+    forge_version: &str,
 ) -> Result<serde_json::Value> {
     Ok(json!({
         "schema": GAS_CACHE_SCHEMA,
@@ -269,6 +302,8 @@ fn gas_fingerprint(
             "name": "foundry-generated-bench",
             "version": "1",
             "gas_json_schema": "1",
+            "source_sha256": harness_identity(),
+            "forge_version": forge_version,
         },
         "artifact": {
             "benchmark_id": artifact.benchmark_id,
@@ -353,7 +388,7 @@ fn read_gas_records(path: &Path) -> Result<Vec<GasRecord>> {
     Ok(records)
 }
 
-fn gas_shards(
+pub(crate) fn gas_shards(
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
 ) -> Result<Vec<Vec<CompiledArtifact>>> {
@@ -600,50 +635,107 @@ fn generate_test(
     }
 
     if include_behavior_checks {
-        let baselines = baseline_pairs(artifacts);
-        for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
-            for scenario in &scenarios.get(benchmark_id)?.scenarios {
+        for (benchmark_id, solidity_idx, vyper_idx) in comparison_pairs(artifacts) {
+            let offset = body.len();
+            for scenario in &scenarios.get(&benchmark_id)?.scenarios {
                 write_diff_test(
                     &mut body,
-                    benchmark_id,
-                    *solidity_idx,
-                    *vyper_idx,
+                    &benchmark_id,
+                    solidity_idx,
+                    vyper_idx,
                     artifacts
-                        .get(*solidity_idx)
+                        .get(solidity_idx)
                         .context("missing solidity baseline")?,
-                    artifacts
-                        .get(*vyper_idx)
-                        .context("missing vyper baseline")?,
+                    artifacts.get(vyper_idx).context("missing vyper baseline")?,
                     scenario,
                 );
             }
-        }
-
-        for (benchmark_id, (solidity_idx, vyper_idx)) in &baselines {
-            let scenario_file = scenarios.get(benchmark_id)?;
+            let scenario_file = scenarios.get(&benchmark_id)?;
             if let Some(randomized) = &scenario_file.randomized {
                 write_randomized_diff_test(
                     &mut body,
-                    benchmark_id,
-                    *solidity_idx,
-                    *vyper_idx,
+                    &benchmark_id,
+                    solidity_idx,
+                    vyper_idx,
                     randomized,
                 )?;
             }
             for property in &scenario_file.properties {
                 write_property_test(
                     &mut body,
-                    benchmark_id,
-                    *solidity_idx,
-                    *vyper_idx,
+                    &benchmark_id,
+                    solidity_idx,
+                    vyper_idx,
                     scenario_file.randomized.as_ref(),
                     property,
                 )?;
             }
+            // Multiple compiler comparisons share a benchmark and observers.
+            // Only test entrypoint names need the pair identity appended.
+            let suffix = sanitize(&format!(
+                "{}_vs_{}",
+                artifacts[solidity_idx].profile_id, artifacts[vyper_idx].profile_id
+            ));
+            let added = body.split_off(offset);
+            body.push_str(
+                &added
+                    .replace(
+                        "function testDiff_",
+                        &format!("function testDiff_{suffix}_"),
+                    )
+                    .replace(
+                        "function testRandomDiff_",
+                        &format!("function testRandomDiff_{suffix}_"),
+                    )
+                    .replace(
+                        "function testProperty_",
+                        &format!("function testProperty_{suffix}_"),
+                    ),
+            );
         }
     }
 
     Ok(render_generated_shard(contract_name, gas_jsonl, &body))
+}
+
+pub(crate) fn run_behavior_shard(
+    root: &Path,
+    evm: &str,
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+    index: usize,
+) -> Result<()> {
+    let name = format!("GeneratedBehaviorShard{index:03}");
+    let relative = format!("test/{name}.t.sol");
+    fs::write(
+        root.join("foundry").join(&relative),
+        generate_test(
+            &name,
+            artifacts,
+            scenarios,
+            "../results/raw/behavior-unused.jsonl",
+            Some(&BTreeSet::new()),
+            true,
+        )?,
+    )?;
+    require_success(
+        run_measured(
+            Command::new("forge")
+                .arg("test")
+                .arg("--root")
+                .arg(root.join("foundry"))
+                .arg("--match-path")
+                .arg(&relative)
+                .arg("--evm-version")
+                .arg(evm)
+                .arg("--via-ir")
+                .arg("--optimize")
+                .arg("-q"),
+            None,
+        )?,
+        &format!("forge behavior tests {relative}"),
+    )?;
+    Ok(())
 }
 
 fn render_generated_shard(contract_name: &str, gas_jsonl: &str, body: &str) -> String {

@@ -1,0 +1,6 @@
+id = "solx-0.1.8-O3"
+language = "solidity"
+compiler = "solx-0.1.8"
+optimizer = true
+optimizer_mode = "3"
+evm_version = "latest-shared"

@@ -5,6 +5,8 @@
 /foundry/out/
 /foundry/test/GeneratedBench.t.sol
 /foundry/test/GeneratedBenchShard*.t.sol
+/foundry/test/GeneratedBehaviorShard*.t.sol
+__pycache__/
 /report-ui/dist/
 /report-ui/node_modules/
 /report-ui/.vite/

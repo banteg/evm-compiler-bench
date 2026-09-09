@@ -4,12 +4,27 @@ import { defineConfig } from "vite";
 
 function reportDataPlugin() {
   const modelPath = fileURLToPath(new URL("../results/normalized/report-model.json", import.meta.url));
+  const evidencePaths = new Map([
+    ["/normalized/results.json", "../results/normalized/results.json"],
+    ["/normalized/run-manifest.json", "../results/normalized/run-manifest.json"],
+    ["/raw/foundry-gas.jsonl", "../results/raw/foundry-gas.jsonl"],
+  ].map(([url, path]) => [url, fileURLToPath(new URL(path, import.meta.url))]));
 
   return {
     name: "evm-bench-report-data",
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
         const pathname = request.url?.split("?")[0];
+        if (evidencePaths.has(pathname)) {
+          try {
+            response.setHeader("Content-Type", pathname.endsWith(".jsonl") ? "application/x-ndjson" : "application/json");
+            response.end(await readFile(evidencePaths.get(pathname)));
+          } catch {
+            response.statusCode = 404;
+            response.end("Evidence is not generated yet. Run the benchmark pipeline first.");
+          }
+          return;
+        }
         if (pathname !== "/report-data.js" && pathname !== "/report-model.json") {
           next();
           return;

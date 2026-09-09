@@ -215,6 +215,9 @@ fn validate_compiler_profile_source_variants(root: &Path) -> Result<()> {
         let text = fs::read_to_string(&path)?;
         let profile: crate::models::CompilerProfile =
             toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        if crate::solx::profile_version(&profile.compiler).is_some() {
+            crate::solx::validate_profile(&profile)?;
+        }
         let expected = expected_profile_source_variant(&profile, &path)?;
         match (profile.source_variant.as_deref(), expected) {
             (Some(actual), Some(expected)) if actual == expected => {}
@@ -263,6 +266,10 @@ fn expected_profile_source_variant(
 }
 
 fn expected_solidity_source_variant(compiler: &str, path: &Path) -> Result<Option<&'static str>> {
+    if let Some(version) = crate::solx::profile_version(compiler) {
+        parse_semver_prefix(version, path, "solx")?;
+        return Ok(None);
+    }
     if compiler == "solc" {
         return Ok(None);
     }
@@ -597,13 +604,13 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             require_enum(
                 row,
                 "/correctness/randomized_differential_check",
-                &["pass", "fail", "not_applicable"],
+                &["pass", "fail", "not_applicable", "not_run"],
                 &results_path,
             )?;
             require_enum(
                 row,
                 "/correctness/property_tests",
-                &["pass", "fail", "not_applicable"],
+                &["pass", "fail", "not_applicable", "not_run"],
                 &results_path,
             )?;
             if !row

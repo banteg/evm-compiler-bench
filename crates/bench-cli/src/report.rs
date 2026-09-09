@@ -1,5 +1,4 @@
 use crate::{
-    baselines::baseline_pairs,
     models::{
         CompileFailure, CompileSet, CompiledArtifact, CompilerProfile, GasRecord, Language,
         Provenance, Scenario, ScenarioFile, Toolchains,
@@ -114,8 +113,9 @@ impl ReportSummary {
                 } else {
                     summary.scenario_status_fail += 1;
                 }
-                if str_at(row, "/correctness/baseline_differential_check").as_deref()
-                    == Some("baseline_only")
+                if str_at(row, "/correctness/baseline_differential_check")
+                    .as_deref()
+                    .is_some_and(|status| matches!(status, "pass" | "baseline_only"))
                 {
                     summary.baseline_differential_rows += 1;
                 }
@@ -196,6 +196,7 @@ pub fn write_outputs(
         "artifacts": compiled.artifacts.len(),
         "compile_failures": compiled.failures.len(),
         "gas_records": gas_records.len(),
+        "behavior_checks": crate::behavior::read(root)?,
         "cache": cache_manifest(compiled, gas_records)
     });
     fs::write(&run_manifest, serde_json::to_string_pretty(&manifest)?)?;
@@ -291,7 +292,7 @@ fn report_model(
 ) -> serde_json::Value {
     let summary = ReportSummary::from_rows(rows);
     json!({
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": Utc::now(),
         "defaults": {
             "primary_metric": "harness_call_gas",
@@ -403,6 +404,16 @@ fn report_methodology() -> serde_json::Value {
                 "tag": "J",
                 "title": "Vyper Venom and 0.5.0a1",
                 "body": "Vyper Venom rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release."
+            },
+            {
+                "tag": "K",
+                "title": "solx and the Solidity frontend",
+                "body": "solx 0.1.8 uses an LLVM backend and embeds a modified solc 0.8.34 frontend. Release, frontend commit, and LLVM build are recorded separately. O3 and Oz use one compiler worker with automatic size fallback disabled. Matched solc 0.8.34 profiles compile the same materialized source; comparisons against latest solc also change the frontend version. LLVM optimizer modes do not map to solc optimizer-runs values."
+            },
+            {
+                "tag": "L",
+                "title": "Evidence for behavioral tests",
+                "body": "Differential, randomized, and property-test credit applies only to the compiler pairs listed in the run manifest. Evidence is cached against bytecode, scenario, harness source, and Foundry version. Other profiles show not_run even if another profile passed that benchmark's tests. Per-scenario return, state, and log hashes remain separate checks across profiles."
             }
         ]
     })
@@ -445,6 +456,10 @@ struct ProfileReportSummary {
     language: String,
     compiler_name: String,
     compiler_version: String,
+    frontend_version: Option<String>,
+    frontend_commit: Option<String>,
+    llvm_build: Option<String>,
+    optimizer_runs: Option<u64>,
     evm_version: String,
     metadata_mode: String,
     optimizer: String,
@@ -465,6 +480,12 @@ impl ProfileReportSummary {
             language: str_at(row, "/language").unwrap_or_default(),
             compiler_name: str_at(row, "/compiler/name").unwrap_or_default(),
             compiler_version: str_at(row, "/compiler/version").unwrap_or_default(),
+            frontend_version: str_at(row, "/compiler/metadata/frontend_version"),
+            frontend_commit: str_at(row, "/compiler/metadata/frontend_commit"),
+            llvm_build: str_at(row, "/compiler/metadata/llvm_build"),
+            optimizer_runs: row
+                .pointer("/compiler/settings/optimizerRuns")
+                .and_then(|v| v.as_u64()),
             evm_version: settings
                 .and_then(|settings| settings.get("evmVersion"))
                 .and_then(|value| value.as_str())
@@ -496,6 +517,10 @@ impl ProfileReportSummary {
             "language": self.language,
             "compiler_name": self.compiler_name,
             "compiler_version": self.compiler_version,
+            "frontend_version": self.frontend_version,
+            "frontend_commit": self.frontend_commit,
+            "llvm_build": self.llvm_build,
+            "optimizer_runs": self.optimizer_runs,
             "evm_version": self.evm_version,
             "metadata_mode": self.metadata_mode,
             "optimizer": self.optimizer,
@@ -708,7 +733,35 @@ fn normalized_rows(
     }
 
     let failure_links = failure_links_by_benchmark(root)?;
-    let differential_benchmarks = differential_benchmarks(compiled);
+    let behavior_evidence = crate::behavior::read(root)?;
+    let same_source_baselines: BTreeMap<_, _> =
+        crate::baselines::comparison_pairs(&compiled.artifacts)
+            .into_iter()
+            .filter(|(_, _, candidate)| compiled.artifacts[*candidate].compiler.name == "solx")
+            .map(|(_, baseline, candidate)| {
+                (
+                    (
+                        compiled.artifacts[candidate].benchmark_id.clone(),
+                        compiled.artifacts[candidate].profile_id.clone(),
+                    ),
+                    &compiled.artifacts[baseline],
+                )
+            })
+            .collect();
+    let gas_by_artifact_scenario: BTreeMap<_, _> = gas_records
+        .iter()
+        .map(|gas| {
+            (
+                (
+                    gas.benchmark_id.as_str(),
+                    gas.profile_id.as_str(),
+                    gas.scenario.as_str(),
+                    gas.state_access_profile.as_str(),
+                ),
+                gas,
+            )
+        })
+        .collect();
     let profile_behavior_baselines = profile_behavior_baselines(gas_records, &artifacts);
     let mut rows = Vec::with_capacity(gas_records.len() + compiled.failures.len());
     for gas in gas_records {
@@ -736,17 +789,32 @@ fn normalized_rows(
             scenario_file,
             failures,
             harness_evm_version,
-            differential_benchmarks.contains(&artifact.benchmark_id),
+            &behavior_evidence,
             profile_behavior_check(
                 gas,
-                profile_behavior_baselines
-                    .get(&profile_behavior_key(gas))
-                    .copied(),
+                if artifact.compiler.name == "solx" {
+                    same_source_baselines
+                        .get(&(artifact.benchmark_id.clone(), artifact.profile_id.clone()))
+                        .and_then(|baseline| {
+                            gas_by_artifact_scenario
+                                .get(&(
+                                    gas.benchmark_id.as_str(),
+                                    baseline.profile_id.as_str(),
+                                    gas.scenario.as_str(),
+                                    gas.state_access_profile.as_str(),
+                                ))
+                                .copied()
+                        })
+                } else {
+                    profile_behavior_baselines
+                        .get(&profile_behavior_key(gas))
+                        .copied()
+                },
                 scenario_file
                     .scenarios
                     .iter()
                     .find(|scenario| scenario.name == gas.scenario),
-                supports_log_diff(&artifact.benchmark_id),
+                crate::harness::supports_log_diff(&artifact.benchmark_id),
             ),
         ));
     }
@@ -761,6 +829,7 @@ fn normalized_rows(
     Ok(rows)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn row(
     root: &Path,
     artifact: &CompiledArtifact,
@@ -768,24 +837,37 @@ fn row(
     scenario_file: &ScenarioFile,
     failure_links: Vec<String>,
     harness_evm_version: &str,
-    differential_available: bool,
+    behavior_evidence: &[crate::behavior::Evidence],
     profile_behavior: ProfileBehaviorCheck,
 ) -> serde_json::Value {
-    let baseline_status = if differential_available {
-        "baseline_only"
+    let evidence: Vec<_> = behavior_evidence
+        .iter()
+        .filter(|e| e.covers(artifact))
+        .collect();
+    let baseline_status = if !evidence.is_empty() {
+        "pass"
     } else {
-        "not_applicable"
+        "not_run"
     };
-    let randomized_status = correctness_status(
-        scenario_file.randomized.is_some(),
-        &failure_links,
-        "randomized_differential",
-    );
-    let property_status = correctness_status(
-        !scenario_file.properties.is_empty(),
-        &failure_links,
-        "property",
-    );
+    let randomized_status = if scenario_file.randomized.is_none() {
+        "not_applicable"
+    } else if evidence.iter().any(|e| e.randomized) {
+        "pass"
+    } else {
+        "not_run"
+    };
+    let property_status = if scenario_file.properties.is_empty() {
+        "not_applicable"
+    } else if evidence.iter().any(|e| {
+        scenario_file
+            .properties
+            .iter()
+            .all(|p| e.properties.contains(&p.name))
+    }) {
+        "pass"
+    } else {
+        "not_run"
+    };
     let deployment_variant = scenario_file
         .scenarios
         .iter()
@@ -862,6 +944,7 @@ fn row(
             "scenario_status_check": if gas.scenario_status_ok { "pass" } else { "fail" },
             "golden_behavior_check": "not_run",
             "baseline_differential_check": baseline_status,
+            "behavior_pairs": evidence,
             "profile_behavior_check": profile_behavior.profile_behavior_check,
             "observer_check": profile_behavior.observer_check,
             "return_data_check": profile_behavior.return_data_check,
@@ -991,17 +1074,6 @@ fn compare_hashes(left: Option<&String>, right: Option<&String>) -> &'static str
         (Some(_), Some(_)) => "fail",
         _ => "not_run",
     }
-}
-
-fn differential_benchmarks(compiled: &CompileSet) -> BTreeSet<String> {
-    baseline_pairs(&compiled.artifacts).into_keys().collect()
-}
-
-fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(
-        benchmark_id,
-        "curve_stableswap_2coin" | "uniswap_v2_pair" | "yearn_vault_v3"
-    )
 }
 
 fn failure_row(root: &Path, failure: &CompileFailure) -> serde_json::Value {
@@ -1305,17 +1377,6 @@ fn command_output(root: &Path, program: &str, args: &[&str]) -> Option<String> {
     Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn correctness_status(applicable: bool, failure_links: &[String], kind: &str) -> &'static str {
-    if !applicable {
-        return "not_applicable";
-    }
-    if failure_links.iter().any(|link| link.contains(kind)) {
-        "fail"
-    } else {
-        "pass"
-    }
-}
-
 fn failure_links_by_benchmark(root: &Path) -> Result<BTreeMap<String, Vec<String>>> {
     let mut links: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let failure_dir = root.join("results/raw/failures");
@@ -1356,12 +1417,15 @@ fn profile_label(row: &serde_json::Value) -> String {
         "legacy optimizer" => "legacy".to_string(),
         other => other.to_string(),
     };
-    let venom = row
+    let venom = if row
         .pointer("/compiler/settings/experimentalCodegen")
         .and_then(|value| value.as_bool())
         .unwrap_or(false)
-        .then_some(" + Venom")
-        .unwrap_or("");
+    {
+        " + Venom"
+    } else {
+        ""
+    };
     format!("{compiler} {version} {optimizer}{venom}")
 }
 
@@ -1398,6 +1462,62 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn property_credit_requires_evidence_for_this_exact_profile() {
+        use crate::{
+            behavior::Evidence,
+            models::CacheInfo,
+            test_support::{artifact, gas},
+        };
+        let artifact = artifact("solx", "solx-0.1.8-O3");
+        let gas = gas(&artifact);
+        let scenario: crate::models::ScenarioFile = serde_yaml::from_str(include_str!(
+            "../../../benches/scenarios/erc20_minimal.yaml"
+        ))
+        .unwrap();
+        let render = |evidence: &[Evidence]| {
+            super::row(
+                std::path::Path::new("/test"),
+                &artifact,
+                &gas,
+                &scenario,
+                vec![],
+                "prague",
+                evidence,
+                super::profile_behavior_check(&gas, None, scenario.scenarios.first(), false),
+            )
+        };
+        let absent = render(&[]);
+        assert_eq!(absent["correctness"]["property_tests"], "not_run");
+        assert_eq!(
+            absent["correctness"]["randomized_differential_check"],
+            "not_run"
+        );
+        let mut proof = Evidence {
+            benchmark_id: artifact.benchmark_id.clone(),
+            baseline_profile: "solc-0.8.34-viair-runs200".into(),
+            compared_profile: "solx-0.1.8-Oz".into(),
+            scenario_count: scenario.scenarios.len(),
+            randomized: true,
+            properties: scenario.properties.iter().map(|p| p.name.clone()).collect(),
+            cache: CacheInfo::disabled(),
+        };
+        assert_eq!(
+            render(&[proof.clone()])["correctness"]["property_tests"],
+            "not_run"
+        );
+        proof.compared_profile = artifact.profile_id.clone();
+        let verified = render(&[proof]);
+        assert_eq!(verified["correctness"]["property_tests"], "pass");
+        assert_eq!(
+            verified["correctness"]["baseline_differential_check"],
+            "pass"
+        );
+        assert_eq!(
+            verified["correctness"]["randomized_differential_check"],
+            "pass"
+        );
+    }
     use super::{manifest_profiles, report_methodology};
     use crate::models::{CompilerProfile, Language, MetadataMode};
 
