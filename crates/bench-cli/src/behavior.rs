@@ -60,6 +60,7 @@ pub fn run(
         bail!("forge --version failed");
     }
     let forge_version = String::from_utf8(forge.stdout)?;
+    let config_hash = cache::key_for(&runner::harness_config(root, evm)?)?;
     let mut records = Vec::new();
     let mut pending = BTreeMap::new();
     let mut wanted = BTreeSet::new();
@@ -69,7 +70,7 @@ pub fn run(
         let scenario = scenarios.get(&benchmark)?;
         let input = json!({
             "schema": "behavior-v1", "evm": evm, "forge": forge_version,
-            "harness": runner::harness_identity(), "scenario": scenario,
+            "harness": runner::harness_identity(), "harness_config": config_hash, "scenario": scenario,
             "left": {"profile": left.profile_id, "source": left.source_hash,
                 "creation": sha256_bytes(left.creation_bytecode.as_bytes()), "settings": left.compiler_settings},
             "right": {"profile": right.profile_id, "source": right.source_hash,

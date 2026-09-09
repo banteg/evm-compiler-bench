@@ -193,6 +193,8 @@ pub fn write_outputs(
             "benchmarks": real_derived_manifest(root, compiled)
         },
         "environment": environment_manifest(root),
+        "harness_config": public_harness_config(&crate::runner::harness_config(root, &toolchains.evm_version)?)?,
+        "harness_shards": serde_json::from_slice::<serde_json::Value>(&fs::read(root.join("results/raw/harness-shards.json"))?)?,
         "artifacts": compiled.artifacts.len(),
         "compile_failures": compiled.failures.len(),
         "gas_records": gas_records.len(),
@@ -419,6 +421,11 @@ fn report_methodology() -> serde_json::Value {
                 "tag": "M",
                 "title": "Correctness exclusions",
                 "body": "An observed scenario or behavior-check failure excludes the entire benchmark/profile artifact from interactive performance comparisons, including size and compile-time rankings. The reliability panel lists those failures, while raw outputs preserve every measured value and correctness status for diagnosis. Compilation coverage remains a separate statistic."
+            },
+            {
+                "tag": "N",
+                "title": "Solar source build and optimizer modes",
+                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. The measurement harness pins solc 0.8.34; the spike used 0.8.36, so harness and fixture overhead can differ even with identical compiled contract bytecode. Generated shard layout also affects optimized harness code; gas cache keys include exact generated source, and reruns preserve the complete shard. Effective harness configuration is recorded and hashed into gas and behavior caches. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
             }
         ]
     })
@@ -461,6 +468,8 @@ struct ProfileReportSummary {
     language: String,
     compiler_name: String,
     compiler_version: String,
+    solidity_version: Option<String>,
+    source_revision: Option<String>,
     frontend_version: Option<String>,
     frontend_commit: Option<String>,
     llvm_build: Option<String>,
@@ -485,6 +494,8 @@ impl ProfileReportSummary {
             language: str_at(row, "/language").unwrap_or_default(),
             compiler_name: str_at(row, "/compiler/name").unwrap_or_default(),
             compiler_version: str_at(row, "/compiler/version").unwrap_or_default(),
+            solidity_version: str_at(row, "/compiler/metadata/solidity_version"),
+            source_revision: str_at(row, "/compiler/metadata/source_revision"),
             frontend_version: str_at(row, "/compiler/metadata/frontend_version"),
             frontend_commit: str_at(row, "/compiler/metadata/frontend_commit"),
             llvm_build: str_at(row, "/compiler/metadata/llvm_build"),
@@ -522,6 +533,8 @@ impl ProfileReportSummary {
             "language": self.language,
             "compiler_name": self.compiler_name,
             "compiler_version": self.compiler_version,
+            "solidity_version": self.solidity_version,
+            "source_revision": self.source_revision,
             "frontend_version": self.frontend_version,
             "frontend_commit": self.frontend_commit,
             "llvm_build": self.llvm_build,
@@ -742,7 +755,12 @@ fn normalized_rows(
     let same_source_baselines: BTreeMap<_, _> =
         crate::baselines::comparison_pairs(&compiled.artifacts)
             .into_iter()
-            .filter(|(_, _, candidate)| compiled.artifacts[*candidate].compiler.name == "solx")
+            .filter(|(_, _, candidate)| {
+                matches!(
+                    compiled.artifacts[*candidate].compiler.name.as_str(),
+                    "solx" | "solar"
+                )
+            })
             .map(|(_, baseline, candidate)| {
                 (
                     (
@@ -797,7 +815,7 @@ fn normalized_rows(
             &behavior_evidence,
             profile_behavior_check(
                 gas,
-                if artifact.compiler.name == "solx" {
+                if matches!(artifact.compiler.name.as_str(), "solx" | "solar") {
                     same_source_baselines
                         .get(&(artifact.benchmark_id.clone(), artifact.profile_id.clone()))
                         .and_then(|baseline| {
@@ -1331,6 +1349,54 @@ fn provenance_value(
     })
 }
 
+fn public_harness_config(config: &serde_json::Value) -> Result<serde_json::Value> {
+    // Foundry's effective config can contain account credentials from global
+    // configuration. Publish only the compiler/EVM controls, plus a hash of the
+    // full configuration used by the local measurement cache.
+    let fields = [
+        "solc",
+        "auto_detect_solc",
+        "evm_version",
+        "optimizer",
+        "optimizer_runs",
+        "optimizer_details",
+        "via_ir",
+        "bytecode_hash",
+        "cbor_metadata",
+        "revert_strings",
+        "libraries",
+        "gas_limit",
+        "code_size_limit",
+        "chain_id",
+        "block_number",
+        "block_timestamp",
+        "block_base_fee_per_gas",
+        "block_coinbase",
+        "block_difficulty",
+        "block_prevrandao",
+        "block_gas_limit",
+        "initial_balance",
+        "sender",
+        "tx_origin",
+        "gas_price",
+        "memory_limit",
+        "disable_block_gas_limit",
+        "disable_eip3607",
+        "enable_tx_gas_limit",
+    ];
+    let mut public = serde_json::Map::new();
+    for field in fields {
+        if let Some(value) = config.get(field) {
+            public.insert(field.into(), value.clone());
+        }
+    }
+    public.insert(
+        "config_sha256".into(),
+        json!(crate::cache::key_for(config)?),
+    );
+    Ok(serde_json::Value::Object(public))
+}
+
 fn environment_manifest(root: &Path) -> serde_json::Value {
     json!({
         "os": env::consts::OS,
@@ -1467,6 +1533,19 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn published_harness_config_keeps_build_flags_and_excludes_credentials() {
+        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true,
+            "etherscan_api_key":"private-account-key", "rpc_endpoints":{"mainnet":"private-rpc-token"}});
+        let public = super::public_harness_config(&config).unwrap();
+        assert_eq!(public["solc"], "0.8.34");
+        assert_eq!(public["optimizer"], true);
+        assert!(public["config_sha256"].as_str().is_some());
+        assert!(public.get("etherscan_api_key").is_none());
+        assert!(public.get("rpc_endpoints").is_none());
+        assert!(!public.to_string().contains("private-"));
+    }
+
     #[test]
     fn property_credit_requires_evidence_for_this_exact_profile() {
         use crate::{

@@ -1,0 +1,26 @@
+[
+  {
+    "benchmark": "scale_abi_args_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "error": "{\"exit_code\": 0, \"errors\": [{\"component\": \"general\", \"formattedMessage\": \"CompilerError: Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\\n --> ScaleAbiArgs16.sol:6:65:\\n  |\\n6 |         return a000 + a001 + a002 + a003 + a004 + a005 + a006 + a007 + a008 + a009 + a010 + a011 + a012 + a013 + a014 + a015;\\n  |                                                                 ^^^^\\n\\n\", \"message\": \"Compiler error (/solidity/libsolidity/codegen/LValue.cpp:54): Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\", \"severity\": \"error\", \"sourceLocation\": {\"end\": 439, \"file\": \"ScaleAbiArgs16.sol\", \"start\": 435}, \"type\": \"CompilerError\"}], \"stderr\": \"\"}",
+    "wall_ms_samples": [
+      11.269957991316915
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "error": "{\"exit_code\": 0, \"errors\": [{\"component\": \"general\", \"formattedMessage\": \"CompilerError: Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\\n --> ScaleAbiArgs32.sol:6:177:\\n  |\\n6 |  ... a018 + a019 + a020 + a021 + a022 + a023 + a024 + a025 + a026 + a027 + a028 ...\\n  |                                         ^^^^\\n\\n\", \"message\": \"Compiler error (/solidity/libsolidity/codegen/LValue.cpp:54): Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\", \"severity\": \"error\", \"sourceLocation\": {\"end\": 775, \"file\": \"ScaleAbiArgs32.sol\", \"start\": 771}, \"type\": \"CompilerError\"}], \"stderr\": \"\"}",
+    "wall_ms_samples": [
+      11.254125041887164
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "error": "{\"exit_code\": 0, \"errors\": [{\"component\": \"general\", \"formattedMessage\": \"CompilerError: Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\\n --> ScaleAbiArgs64.sol:6:401:\\n  |\\n6 |  ... a050 + a051 + a052 + a053 + a054 + a055 + a056 + a057 + a058 + a059 + a060 ...\\n  |                                         ^^^^\\n\\n\", \"message\": \"Compiler error (/solidity/libsolidity/codegen/LValue.cpp:54): Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.\", \"severity\": \"error\", \"sourceLocation\": {\"end\": 1447, \"file\": \"ScaleAbiArgs64.sol\", \"start\": 1443}, \"type\": \"CompilerError\"}], \"stderr\": \"\"}",
+    "wall_ms_samples": [
+      14.537582988850772
+    ]
+  }
+]

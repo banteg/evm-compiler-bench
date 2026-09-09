@@ -32,6 +32,7 @@ pub(crate) fn harness_identity() -> String {
                 concat!(
                     include_str!("runner.rs"),
                     include_str!("harness.rs"),
+                    include_str!("foundry_jobs.rs"),
                     include_str!("foundry_templates/helpers.sol"),
                     include_str!("foundry_templates/generated_shard.sol"),
                     include_str!("foundry_templates/randomized_helpers.sol"),
@@ -41,6 +42,24 @@ pub(crate) fn harness_identity() -> String {
             )
         })
         .clone()
+}
+
+/// Effective flags, environment overrides, and the pinned compiler all affect
+/// wrapper codegen. Persist this configuration and include its hash in caches.
+pub(crate) fn harness_config(root: &Path, evm: &str) -> Result<serde_json::Value> {
+    let output = Command::new("forge")
+        .args(["config", "--json", "--root"])
+        .arg(root.join("foundry"))
+        .args(["--evm-version", evm, "--via-ir", "--optimize"])
+        .output()
+        .context("reading effective Foundry harness configuration")?;
+    if !output.status.success() {
+        bail!(
+            "forge config failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    serde_json::from_slice(&output.stdout).context("parsing Foundry harness configuration")
 }
 
 pub fn run_foundry(
@@ -54,6 +73,7 @@ pub fn run_foundry(
     clear_failure_dir(root)?;
     if compiled.artifacts.is_empty() {
         fs::write(root.join("results/raw/foundry-gas.jsonl"), "")?;
+        fs::write(root.join("results/raw/harness-shards.json"), "[]")?;
         return Ok(Vec::new());
     }
     let forge = Command::new("forge").arg("--version").output()?;
@@ -61,6 +81,31 @@ pub fn run_foundry(
         bail!("forge --version failed");
     }
     let forge_version = String::from_utf8(forge.stdout)?;
+    // Build the same complete shards regardless of cache hits. Optimized
+    // measurement-wrapper code can change when unrelated tests are removed.
+    let shards = gas_shards(&compiled.artifacts, scenarios)?;
+    let mut shard_hashes = BTreeMap::new();
+    let mut shard_manifest = Vec::new();
+    clear_generated_shards(root)?;
+    for (index, artifacts) in shards.iter().enumerate() {
+        let contract = format!("GeneratedBenchShard{index:03}");
+        let path = format!("test/{contract}.t.sol");
+        let gas_path = format!("../results/raw/foundry-gas-shard-{index:03}.jsonl");
+        let source = generate_test(&contract, artifacts, scenarios, &gas_path, None, true)?;
+        let source_hash = sha256_bytes(source.as_bytes());
+        for artifact in artifacts {
+            shard_hashes.insert(artifact_context_key(artifact), source_hash.clone());
+        }
+        fs::write(root.join("foundry").join(&path), source)?;
+        shard_manifest.push(json!({"path": path, "source_sha256": source_hash,
+            "artifacts": artifacts.iter().map(|a| json!({"benchmark_id":a.benchmark_id,
+                "implementation_id":a.implementation_id,"profile_id":a.profile_id})).collect::<Vec<_>>() }));
+    }
+    fs::write(
+        root.join("results/raw/harness-shards.json"),
+        serde_json::to_vec_pretty(&shard_manifest)?,
+    )?;
+
     let expected_cache = gas_cache_inputs(
         root,
         evm_version,
@@ -68,6 +113,7 @@ pub fn run_foundry(
         scenarios,
         use_cache,
         &forge_version,
+        &shard_hashes,
     )?;
     let mut cached = Vec::new();
     let mut missing_keys = BTreeSet::new();
@@ -108,51 +154,42 @@ pub fn run_foundry(
             expected_cache.len()
         );
     }
-    clear_generated_shards(root)?;
-    let selected_gas_keys = if use_cache { Some(&missing_keys) } else { None };
-    let artifacts = if use_cache {
-        artifacts_for_gas_keys(&compiled.artifacts, &missing_keys)
-    } else {
-        compiled.artifacts.clone()
-    };
-    let include_behavior_checks = !use_cache || cached.is_empty();
-    let shards = gas_shards(&artifacts, scenarios)?;
-    eprintln!(
-        "foundry: generating {} gas test shards for {} artifacts and {} expected rows",
-        shards.len(),
-        artifacts.len(),
-        selected_gas_keys.map_or(expected_cache.len(), BTreeSet::len)
-    );
     let mut records = Vec::new();
     let mut paths = Vec::new();
-    for (index, shard_artifacts) in shards.iter().enumerate() {
-        let shard_id = format!("{index:03}");
-        let contract_name = format!("GeneratedBenchShard{shard_id}");
-        let test_file = format!("{contract_name}.t.sol");
-        let match_path = format!("test/{test_file}");
-        let gas_jsonl = format!("../results/raw/foundry-gas-shard-{shard_id}.jsonl");
-        let test_path = root.join("foundry/test").join(&test_file);
-        fs::write(
-            &test_path,
-            generate_test(
-                &contract_name,
-                shard_artifacts,
-                scenarios,
-                &gas_jsonl,
-                selected_gas_keys,
-                include_behavior_checks,
-            )?,
-        )
-        .with_context(|| format!("writing {}", test_path.display()))?;
-        paths.push(match_path);
+    let missing_artifacts: BTreeSet<_> = artifacts_for_gas_keys(&compiled.artifacts, &missing_keys)
+        .iter()
+        .map(artifact_context_key)
+        .collect();
+    let selected: Vec<_> = shards
+        .iter()
+        .enumerate()
+        .filter(|(_, artifacts)| {
+            !use_cache
+                || artifacts
+                    .iter()
+                    .any(|a| missing_artifacts.contains(&artifact_context_key(a)))
+        })
+        .collect();
+    eprintln!(
+        "foundry: running {}/{} complete gas shards for {} missing rows",
+        selected.len(),
+        shards.len(),
+        if use_cache {
+            missing_keys.len()
+        } else {
+            expected_cache.len()
+        }
+    );
+    for (index, _) in &selected {
+        paths.push(format!("test/GeneratedBenchShard{index:03}.t.sol"));
     }
     crate::foundry_jobs::run(root, evm_version, &paths)?;
-    for (index, shard) in shards.iter().enumerate() {
+    for (index, shard) in selected {
         let shard_id = format!("{index:03}");
         let shard_rows = read_gas_records(
             &root.join(format!("results/raw/foundry-gas-shard-{shard_id}.jsonl")),
         )?;
-        let expected = expected_shard_gas_rows(shard, scenarios, selected_gas_keys)?;
+        let expected = expected_shard_gas_rows(shard, scenarios, None)?;
         if shard_rows.len() != expected {
             bail!(
                 "Foundry shard {shard_id} returned {} gas rows; expected {expected}",
@@ -163,6 +200,27 @@ pub fn run_foundry(
     }
     annotate_and_store_gas_records(root, &mut records, &expected_cache, use_cache)?;
     if use_cache {
+        let refreshed: BTreeSet<_> = records
+            .iter()
+            .map(|r| {
+                gas_record_key(
+                    &r.benchmark_id,
+                    &r.implementation_id,
+                    &r.profile_id,
+                    &r.scenario,
+                    r.state_access_profile.as_str(),
+                )
+            })
+            .collect();
+        cached.retain(|r| {
+            !refreshed.contains(&gas_record_key(
+                &r.benchmark_id,
+                &r.implementation_id,
+                &r.profile_id,
+                &r.scenario,
+                r.state_access_profile.as_str(),
+            ))
+        });
         cached.extend(records);
         cached.sort_by(|left, right| {
             gas_record_key(
@@ -206,11 +264,20 @@ fn gas_cache_inputs(
     scenarios: &ScenarioCatalog,
     use_cache: bool,
     forge_version: &str,
+    shard_hashes: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, GasCacheInput>> {
+    let config_hash = cache::key_for(&harness_config(root, evm_version)?)?;
     let mut inputs = BTreeMap::new();
     for artifact in &compiled.artifacts {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            let fingerprint = gas_fingerprint(evm_version, artifact, scenario, forge_version)?;
+            let fingerprint = gas_fingerprint(
+                evm_version,
+                artifact,
+                scenario,
+                forge_version,
+                &config_hash,
+                &shard_hashes[&artifact_context_key(artifact)],
+            )?;
             let key = cache::key_for(&fingerprint)?;
             let logical_id = cache::logical_id(&[
                 "gas",
@@ -250,6 +317,13 @@ fn gas_cache_inputs(
     Ok(inputs)
 }
 
+fn artifact_context_key(artifact: &CompiledArtifact) -> String {
+    format!(
+        "{}\0{}\0{}",
+        artifact.benchmark_id, artifact.implementation_id, artifact.profile_id
+    )
+}
+
 fn artifacts_for_gas_keys(
     artifacts: &[CompiledArtifact],
     selected_keys: &BTreeSet<String>,
@@ -272,6 +346,8 @@ fn gas_fingerprint(
     artifact: &CompiledArtifact,
     scenario: &Scenario,
     forge_version: &str,
+    config_hash: &str,
+    shard_hash: &str,
 ) -> Result<serde_json::Value> {
     Ok(json!({
         "schema": GAS_CACHE_SCHEMA,
@@ -282,6 +358,8 @@ fn gas_fingerprint(
             "gas_json_schema": "1",
             "source_sha256": harness_identity(),
             "forge_version": forge_version,
+            "config_sha256": config_hash,
+            "generated_shard_sha256": shard_hash,
         },
         "artifact": {
             "benchmark_id": artifact.benchmark_id,
@@ -1293,4 +1371,32 @@ fn sanitize(value: &str) -> String {
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn harness_configuration_and_generated_context_invalidate_gas_cache() {
+        let artifact = crate::test_support::artifact("solc", "solc-0.8.36-viair-runs200");
+        let scenarios: crate::models::ScenarioFile = serde_yaml::from_str(include_str!(
+            "../../../benches/scenarios/erc20_minimal.yaml"
+        ))
+        .unwrap();
+        let fingerprint = |config, shard| {
+            super::gas_fingerprint(
+                "prague",
+                &artifact,
+                &scenarios.scenarios[0],
+                "forge-version",
+                config,
+                shard,
+            )
+            .unwrap()
+        };
+        let a = crate::cache::key_for(&fingerprint("solc-0.8.34-config", "shard-a")).unwrap();
+        let b = crate::cache::key_for(&fingerprint("solc-0.8.36-config", "shard-a")).unwrap();
+        let c = crate::cache::key_for(&fingerprint("solc-0.8.34-config", "shard-b")).unwrap();
+        assert_ne!(a, b);
+        assert_ne!(a, c);
+    }
 }

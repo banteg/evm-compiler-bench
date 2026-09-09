@@ -1,0 +1,7 @@
+id = "solar-716e9cbc-gas-runs200"
+language = "solidity"
+compiler = "solar-716e9cbcde88165f931173f1c1fda852ed63afa0"
+optimizer = true
+optimizer_mode = "gas"
+optimizer_runs = 200
+evm_version = "latest-shared"

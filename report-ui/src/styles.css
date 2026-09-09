@@ -23,6 +23,7 @@
   --solidity: #97c2ff;
   --vyper: #f8b1ff;
   --fe: #ffd28a;
+  --solar: #ffbd69;
   --solx: #6ad9ce;
 
   --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1623,3 +1624,5 @@ select.knob option { background: var(--bg-elev); color: var(--fg); }
   }
   .distro-track { display: none; }
 }
+
+.compiler-name .lang-solar { color: var(--solar); }

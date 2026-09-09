@@ -10,6 +10,7 @@ mod report;
 mod runner;
 mod scale;
 mod scenarios;
+mod solar;
 mod solx;
 #[cfg(test)]
 mod test_support;

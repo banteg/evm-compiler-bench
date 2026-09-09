@@ -1,0 +1,703 @@
+[
+  {
+    "benchmark": "amm_pair_subset",
+    "exit_code": 0,
+    "wall_seconds": 8.232143750006799,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "counter",
+    "exit_code": 0,
+    "wall_seconds": 6.5983902079751715,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "create2_address_hashing",
+    "exit_code": 0,
+    "wall_seconds": 6.116516874986701,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "curve_stableswap_2coin",
+    "exit_code": 0,
+    "wall_seconds": 104.61388275003992,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "eip1167_codehash_bookkeeping",
+    "exit_code": 0,
+    "wall_seconds": 5.773853917024098,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "erc20_minimal",
+    "exit_code": 0,
+    "wall_seconds": 8.274308958963957,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "erc20_permit_hashing",
+    "exit_code": 0,
+    "wall_seconds": 5.9384802500135265,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "exit_code": 0,
+    "wall_seconds": 7.157668125000782,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "ownable_pausable",
+    "exit_code": 0,
+    "wall_seconds": 6.965466125053354,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_1",
+    "exit_code": 0,
+    "wall_seconds": 4.917902207991574,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_16",
+    "exit_code": 0,
+    "wall_seconds": 4.97035754105309,
+    "profiles": [
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_2",
+    "exit_code": 0,
+    "wall_seconds": 4.94090937502915,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "exit_code": 0,
+    "wall_seconds": 5.147484333021566,
+    "profiles": [
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_4",
+    "exit_code": 0,
+    "wall_seconds": 5.36573145800503,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "exit_code": 0,
+    "wall_seconds": 5.527154790994246,
+    "profiles": [
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_abi_args_8",
+    "exit_code": 0,
+    "wall_seconds": 5.28116533299908,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_1",
+    "exit_code": 0,
+    "wall_seconds": 5.342215084005147,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_16",
+    "exit_code": 0,
+    "wall_seconds": 5.794299042026978,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_2",
+    "exit_code": 0,
+    "wall_seconds": 5.663811667007394,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_32",
+    "exit_code": 0,
+    "wall_seconds": 6.139458707999438,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_4",
+    "exit_code": 0,
+    "wall_seconds": 5.940969499992207,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_64",
+    "exit_code": 0,
+    "wall_seconds": 6.301125083002262,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_dispatch_8",
+    "exit_code": 0,
+    "wall_seconds": 5.855982540990226,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_1",
+    "exit_code": 0,
+    "wall_seconds": 5.14954445901094,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_16",
+    "exit_code": 0,
+    "wall_seconds": 5.209831207990646,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_2",
+    "exit_code": 0,
+    "wall_seconds": 5.198004457983188,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_32",
+    "exit_code": 0,
+    "wall_seconds": 5.1801158339949325,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_4",
+    "exit_code": 0,
+    "wall_seconds": 5.112428208056372,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_64",
+    "exit_code": 0,
+    "wall_seconds": 5.0908258749987,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_events_8",
+    "exit_code": 0,
+    "wall_seconds": 5.067357499967329,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_1",
+    "exit_code": 0,
+    "wall_seconds": 5.169753000023775,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_16",
+    "exit_code": 0,
+    "wall_seconds": 5.265311083989218,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_2",
+    "exit_code": 0,
+    "wall_seconds": 5.252732833963819,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_32",
+    "exit_code": 0,
+    "wall_seconds": 5.321753334021196,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_4",
+    "exit_code": 0,
+    "wall_seconds": 5.232982457964681,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_64",
+    "exit_code": 0,
+    "wall_seconds": 5.2386404579738155,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_external_calls_8",
+    "exit_code": 0,
+    "wall_seconds": 5.196532125002705,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_1",
+    "exit_code": 0,
+    "wall_seconds": 5.147065124998335,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_16",
+    "exit_code": 0,
+    "wall_seconds": 5.159735583991278,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_2",
+    "exit_code": 0,
+    "wall_seconds": 5.233317708014511,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_32",
+    "exit_code": 0,
+    "wall_seconds": 5.1902257920010015,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_4",
+    "exit_code": 0,
+    "wall_seconds": 5.151599375007208,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_64",
+    "exit_code": 0,
+    "wall_seconds": 5.0739795419503935,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_loop_bound_8",
+    "exit_code": 0,
+    "wall_seconds": 5.10289370798273,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_1",
+    "exit_code": 0,
+    "wall_seconds": 6.041313291992992,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_16",
+    "exit_code": 0,
+    "wall_seconds": 6.32507879199693,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_2",
+    "exit_code": 0,
+    "wall_seconds": 5.990917208022438,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_32",
+    "exit_code": 0,
+    "wall_seconds": 6.929136499995366,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_4",
+    "exit_code": 0,
+    "wall_seconds": 6.134603083017282,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_64",
+    "exit_code": 0,
+    "wall_seconds": 9.536632958042901,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_mapping_depth_8",
+    "exit_code": 0,
+    "wall_seconds": 6.333948999992572,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_1",
+    "exit_code": 0,
+    "wall_seconds": 6.056601958000101,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_16",
+    "exit_code": 0,
+    "wall_seconds": 6.47950849996414,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_2",
+    "exit_code": 0,
+    "wall_seconds": 6.044510542007629,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_32",
+    "exit_code": 0,
+    "wall_seconds": 6.927899999951478,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_4",
+    "exit_code": 0,
+    "wall_seconds": 6.002556166029535,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_64",
+    "exit_code": 0,
+    "wall_seconds": 7.98509929102147,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scale_storage_slots_8",
+    "exit_code": 0,
+    "wall_seconds": 6.132809125003405,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "scaling_dispatch_N",
+    "exit_code": 0,
+    "wall_seconds": 6.246647459047381,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "uniswap_v2_factory",
+    "exit_code": 0,
+    "wall_seconds": 9.101484999991953,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "exit_code": 0,
+    "wall_seconds": 35.12760591699043,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "exit_code": 0,
+    "wall_seconds": 6.698912459018175,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "yearn_vault_v2",
+    "exit_code": 0,
+    "wall_seconds": 50.90593225002522,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  },
+  {
+    "benchmark": "yearn_vault_v3",
+    "exit_code": 0,
+    "wall_seconds": 96.22101533296518,
+    "profiles": [
+      "solc-0.8.36-legacy-200",
+      "solc-0.8.36-viair-200",
+      "solar-gas-200",
+      "solar-size-1"
+    ]
+  }
+]

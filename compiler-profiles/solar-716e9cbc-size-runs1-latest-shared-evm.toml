@@ -1,0 +1,7 @@
+id = "solar-716e9cbc-size-runs1"
+language = "solidity"
+compiler = "solar-716e9cbcde88165f931173f1c1fda852ed63afa0"
+optimizer = true
+optimizer_mode = "size"
+optimizer_runs = 1
+evm_version = "latest-shared"

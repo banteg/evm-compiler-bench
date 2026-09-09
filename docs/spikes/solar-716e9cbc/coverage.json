@@ -1,0 +1,3306 @@
+[
+  {
+    "benchmark": "amm_pair_subset",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1364,
+    "creation_bytes": 1392,
+    "wall_ms_samples": [
+      36.59824997885153
+    ],
+    "input_sha256": "64edf2aed2fc61dc5d15b824cf493053a63c431b4a2da7fa9d7342aafe74a97f",
+    "creation_sha256": "39859a7627510e169436b375bcce2773078b089a1133288b1f8a9e04f0052dc2",
+    "runtime_sha256": "f2660ec6bc100e4d9df11d4b682a9d60d93e793fb04f1283f640a3b9254367a7"
+  },
+  {
+    "benchmark": "amm_pair_subset",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1174,
+    "creation_bytes": 1200,
+    "wall_ms_samples": [
+      76.03933301288635
+    ],
+    "input_sha256": "564f430700a0925048f157fb69334d066b216869253b8e31ddefc443d58f0b90",
+    "creation_sha256": "229a821ad6d131271cc7d37c6a01b17e1ad1a994e398e17ff12049d964f89476",
+    "runtime_sha256": "706c2a43ca189836680b4a0d7efe759db726c24f0c1e571945360d31b433e644"
+  },
+  {
+    "benchmark": "amm_pair_subset",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1066,
+    "creation_bytes": 1084,
+    "wall_ms_samples": [
+      36.4994999836199
+    ],
+    "input_sha256": "a01743a305f41f1774efa5f107cf17b4eddfe86d0877d7f48f4f66df695d6f23",
+    "creation_sha256": "f9610f75e852851fd5a058801d567afb2d8d67ac4107f5b338df0144fed68c10",
+    "runtime_sha256": "d9788bc0e96f303d7177840abc20dcd3d0252029a67e87f01f71dcffe4669ee9"
+  },
+  {
+    "benchmark": "amm_pair_subset",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 1016,
+    "creation_bytes": 1034,
+    "wall_ms_samples": [
+      32.15995797654614
+    ],
+    "input_sha256": "82e897f997571043f52b3d0894f5170a1930f876d42c40eaf0f9e2382be673cb",
+    "creation_sha256": "64e8c4199ef24980bbb1e5f5289614c1fb401f2a4e5851c3e2e87bb0d118cbab",
+    "runtime_sha256": "0a434dbc5434f715077077e383d21ba63ac859ab5712a9e1659d94aa8da140ac"
+  },
+  {
+    "benchmark": "counter",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 240,
+    "creation_bytes": 323,
+    "wall_ms_samples": [
+      13.162834045942873
+    ],
+    "input_sha256": "eaa6ea8da003c3c585cf2863df482c6d20d24b30c07ce55e0d44741484d399b1",
+    "creation_sha256": "b9e5b345979d4730debc19c49eec2f97a59e96e40a71209a559fb78369f392bb",
+    "runtime_sha256": "8c2b4973a7e5c2f5eba2eaf97d94989e65ef8a941a8aba0ce43510d2b7e677b7"
+  },
+  {
+    "benchmark": "counter",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 223,
+    "creation_bytes": 324,
+    "wall_ms_samples": [
+      31.80158301256597
+    ],
+    "input_sha256": "e40975f9df3f17975cde70edb11833b511a7860a571191b6c2de4f9c78ff8192",
+    "creation_sha256": "421a951081a106dfe2b383799a172e2e6542dd5b615becfe997fb69bd741c1d2",
+    "runtime_sha256": "9381f6e140a7c4fbf2448a1f89b88b44c9bac5a606fcded260be891156c6bd00"
+  },
+  {
+    "benchmark": "counter",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 123,
+    "creation_bytes": 181,
+    "wall_ms_samples": [
+      29.45441601332277
+    ],
+    "input_sha256": "caef6f718526e21f332763cad62b7ac0be65c9e87b7f10a9232f2aee88fff1f0",
+    "creation_sha256": "20ea5f959d49067768968e5ecd3494f834e4d0155f6e7839a46b0d8c04204f94",
+    "runtime_sha256": "7682bf9bebd4b89a44306ad9e4d84dc134ba8cc55916baa9ddd8eff2f1f6a937"
+  },
+  {
+    "benchmark": "counter",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 123,
+    "creation_bytes": 181,
+    "wall_ms_samples": [
+      29.147916997317225
+    ],
+    "input_sha256": "a26e7562c617422fda4a2466588612c1be1262186f47f909f94093b4a1fa0150",
+    "creation_sha256": "20ea5f959d49067768968e5ecd3494f834e4d0155f6e7839a46b0d8c04204f94",
+    "runtime_sha256": "7682bf9bebd4b89a44306ad9e4d84dc134ba8cc55916baa9ddd8eff2f1f6a937"
+  },
+  {
+    "benchmark": "create2_address_hashing",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 546,
+    "creation_bytes": 574,
+    "wall_ms_samples": [
+      20.819165976718068
+    ],
+    "input_sha256": "fe5f69e148ff50db40e1a4a0f0fdad4d0cf83ba083bc4c828ef23a01fa9101df",
+    "creation_sha256": "e520061ac184f345aa65bc23f158bdc3694c5659aab29ef5473d893651d61a81",
+    "runtime_sha256": "dcdd141feb972c931a0414db0d2a476a6a854800967c5ea314230fa25cefef18"
+  },
+  {
+    "benchmark": "create2_address_hashing",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 479,
+    "creation_bytes": 505,
+    "wall_ms_samples": [
+      39.630374987609684
+    ],
+    "input_sha256": "0fa4e1e42008105f84ca221c1afe63c1710931fc6f929151a3d75bdca132ad5c",
+    "creation_sha256": "fb77974883811c01605f44f6c74c54f90dc8fb257f7612f20913fb0b70b59c72",
+    "runtime_sha256": "f05baaa887ff18738683bf20d92b3e16a0f8d3660b0f2dc7815fb76a2178e654"
+  },
+  {
+    "benchmark": "create2_address_hashing",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 313,
+    "creation_bytes": 331,
+    "wall_ms_samples": [
+      31.273707980290055
+    ],
+    "input_sha256": "e7d697cf69c4f2b018509ea19932948fc70b473f87c193c86eea04146964cee7",
+    "creation_sha256": "863d8e8469e13559fab76f86a26667e377ed202d7f0b212ab3ef63e4c4c83848",
+    "runtime_sha256": "9fbcaea1c7e0ef0b4fba5b570699cb37afd1467b99a5fc07915309862925b881"
+  },
+  {
+    "benchmark": "create2_address_hashing",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 313,
+    "creation_bytes": 331,
+    "wall_ms_samples": [
+      34.40225002123043
+    ],
+    "input_sha256": "7feddbb7f698897a4ef6d0cd368db1d7ac3524c0f20f1e7bdb1bb4d443fb3ecf",
+    "creation_sha256": "863d8e8469e13559fab76f86a26667e377ed202d7f0b212ab3ef63e4c4c83848",
+    "runtime_sha256": "9fbcaea1c7e0ef0b4fba5b570699cb37afd1467b99a5fc07915309862925b881"
+  },
+  {
+    "benchmark": "curve_stableswap_2coin",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 24854,
+    "creation_bytes": 30349,
+    "wall_ms_samples": [
+      522.3805840360001
+    ],
+    "input_sha256": "8d412b71f77f593b042d3df67fe323fa1aa599d0f8f14bac7c3f9908f8f07e10",
+    "creation_sha256": "3e63cdcadd8a47701325616ac07b5b68d7472bb49c3d222f22d82b8e4d3ce737",
+    "runtime_sha256": "df51fe15a1dcfe8e951468bc30c9c807cf057dc635f577b53148c73fd5846b22"
+  },
+  {
+    "benchmark": "curve_stableswap_2coin",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 19544,
+    "creation_bytes": 24897,
+    "wall_ms_samples": [
+      1719.0021669957787
+    ],
+    "input_sha256": "b0bcbf5a277ed045181d16b7549b5031cf94c7a6f629e7fbb57dd5773bbd4cdb",
+    "creation_sha256": "50b330fe1e80e84a83ac463cfa7204bc3bafcdae33d269ed4fdd4871e607b1b2",
+    "runtime_sha256": "588eea879c95c20d08ba3f9f79db893e7178ec95696e57538575c29df780f743"
+  },
+  {
+    "benchmark": "curve_stableswap_2coin",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 20876,
+    "creation_bytes": 27540,
+    "wall_ms_samples": [
+      151.65087499190122
+    ],
+    "input_sha256": "9f53572cf349ed09666927ebb15bdfee5622a10a7d6ad2287e9fc02c13eb2285",
+    "creation_sha256": "909aae13758fc929d325ea01203d38b13b3568ee0428798d5d0210096f3f7c43",
+    "runtime_sha256": "b8dc53f2936852934fec14264d91d42ec23c724bcaaea93bc28e7c223742034f"
+  },
+  {
+    "benchmark": "curve_stableswap_2coin",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 21713,
+    "creation_bytes": 27890,
+    "wall_ms_samples": [
+      159.14179099490866
+    ],
+    "input_sha256": "0266e60bdcc54c4de53a3633655d1f46593d85b43baf4275838b396c404e5908",
+    "creation_sha256": "c639de78eb9162c3f86404aff35284eb85376d23be3433fe418350c02d834e6d",
+    "runtime_sha256": "a1b5fa651a63c798611e4694e4f942e448e04806b7490d2e29c5a600cce47b87"
+  },
+  {
+    "benchmark": "eip1167_codehash_bookkeeping",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 724,
+    "creation_bytes": 752,
+    "wall_ms_samples": [
+      24.531542032491416
+    ],
+    "input_sha256": "7e38dd8b3346bb56cb6e60536ec9084c4b7be0f4b6ad3e110601408d9afa8dbb",
+    "creation_sha256": "4e3ca7280ed05751b6991342909a5bbfba3ca9ec55e53437031799538f341f96",
+    "runtime_sha256": "f804736f4de9c26fefcc03850e836f0c6f087b9211722defa08a0f61feb1890b"
+  },
+  {
+    "benchmark": "eip1167_codehash_bookkeeping",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 596,
+    "creation_bytes": 622,
+    "wall_ms_samples": [
+      45.75916699832305
+    ],
+    "input_sha256": "32aff1721c8e4a0ede81437547acf98bdfd40e5fa86642b02b37ffca726e154f",
+    "creation_sha256": "332cde27e55b131a92c8f4d09f03a349d9325bc1aff7dcf1b1940416e04d5424",
+    "runtime_sha256": "d880d41cf634dff9e20eac2d4b2fa04b7b43776d0b2a27a15429c68cbe8adc50"
+  },
+  {
+    "benchmark": "eip1167_codehash_bookkeeping",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 457,
+    "creation_bytes": 475,
+    "wall_ms_samples": [
+      32.30512503068894
+    ],
+    "input_sha256": "741854e84519aca09d999b513cd14d98197022fda5b1497bf8e89d28fedd824f",
+    "creation_sha256": "1a425a73d201380751b31a0e995ea13377f23e5e3d4c9241fd5376e238efcd07",
+    "runtime_sha256": "3c582f6768cdcc25ee4ee96b02760f275f244c45eeec61ab02d11f6e6c5cc066"
+  },
+  {
+    "benchmark": "eip1167_codehash_bookkeeping",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 457,
+    "creation_bytes": 475,
+    "wall_ms_samples": [
+      31.920792011078447
+    ],
+    "input_sha256": "858fbe8f723f858d66abce5a782bf7eb2f470b8e6205a8a184ead988075d37dd",
+    "creation_sha256": "1a425a73d201380751b31a0e995ea13377f23e5e3d4c9241fd5376e238efcd07",
+    "runtime_sha256": "3c582f6768cdcc25ee4ee96b02760f275f244c45eeec61ab02d11f6e6c5cc066"
+  },
+  {
+    "benchmark": "erc20_minimal",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1474,
+    "creation_bytes": 1630,
+    "wall_ms_samples": [
+      32.476749969646335
+    ],
+    "input_sha256": "878bbcb44021f720c25d8cb566c69fb523caf0af43f609cff04f542723de99f6",
+    "creation_sha256": "70a0c238e7aebcd10d7882d86d302c3dfef9bb64d59d795d0806d836fec575ff",
+    "runtime_sha256": "503d6e6a454ae5daf2de423d23d32efd9102980d0a91b25e74aef88f6725b77d"
+  },
+  {
+    "benchmark": "erc20_minimal",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1277,
+    "creation_bytes": 1439,
+    "wall_ms_samples": [
+      88.6258750106208
+    ],
+    "input_sha256": "b47f84abc6c5e0bcf7dcf20791dd8e7f7c32f88df7e56145e1ab89474721bc96",
+    "creation_sha256": "0756a9f1da62f9a5d9c811c30a29e81c90e1bdcfd9c1605182c801b2a8e34b49",
+    "runtime_sha256": "786dc178abfb5a3350c94b404e43773db851d7f284678be7b649c3029ec6ead3"
+  },
+  {
+    "benchmark": "erc20_minimal",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1028,
+    "creation_bytes": 1151,
+    "wall_ms_samples": [
+      35.626750031951815
+    ],
+    "input_sha256": "f535988baf55915fd4641a2c14f213c370979ab40743fe159e5abc0dc0bdfec3",
+    "creation_sha256": "23d0247637ddb7d205bb6ff5fb4b07bfe249f781b2e9c0341ea286b2296ac042",
+    "runtime_sha256": "54d051ce05a5274bdfb08083b1ef3276d90e1c00fe879da6a51118f8a8536a67"
+  },
+  {
+    "benchmark": "erc20_minimal",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 995,
+    "creation_bytes": 1118,
+    "wall_ms_samples": [
+      35.85395804839209
+    ],
+    "input_sha256": "a56cfb0975f9496ecb07c0ee35d115b29a84bfd168762bf51509c4d2bae11564",
+    "creation_sha256": "07e05de0929755ea30eb3af2468e6b788461448cf9532fa2f45df739d0af2c05",
+    "runtime_sha256": "2c7763f27ce7ed7ee7b3669d8908f3bdaac973c83568a197033f7d66e37b2b78"
+  },
+  {
+    "benchmark": "erc20_permit_hashing",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 614,
+    "creation_bytes": 642,
+    "wall_ms_samples": [
+      22.381917049642652
+    ],
+    "input_sha256": "ac62158ba5111f7b3911d572aea957b42de441a6df348fa9d836147ebc3baf19",
+    "creation_sha256": "50e96cf800a0bd1bd86c8526fa724ae16eb746333453ec5ba684ac6daf005cb9",
+    "runtime_sha256": "e39f92710f23afa3ac132f506ebdf7452e228e3429645883903bb175f61f1489"
+  },
+  {
+    "benchmark": "erc20_permit_hashing",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 516,
+    "creation_bytes": 542,
+    "wall_ms_samples": [
+      42.662791965994984
+    ],
+    "input_sha256": "9b4b4682940589a4bfac8de69101cd8e0308385e5cca007b8bc48df8196e9191",
+    "creation_sha256": "b40266a0d280edb0750ae0b65948cff3ce4f7f20c952d511749156afb4662d17",
+    "runtime_sha256": "e19c4cb47332c239a797ba73b687646c57c268cbb3ebe911096effc4216360e2"
+  },
+  {
+    "benchmark": "erc20_permit_hashing",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 364,
+    "creation_bytes": 382,
+    "wall_ms_samples": [
+      32.25183399626985
+    ],
+    "input_sha256": "c6cd822a24f18a22d7707c9b16daae82e5a6973eceedeac0bd37e260303db776",
+    "creation_sha256": "61d63379f61b0be18a1d7c3572a8d1491aab4de5b7a9641ae7e5304c077355e3",
+    "runtime_sha256": "5b1bf03f9e4dc48a73e9f2a784c6f86eeaf4945e4b9aa26deacebf895641fe7b"
+  },
+  {
+    "benchmark": "erc20_permit_hashing",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 388,
+    "creation_bytes": 406,
+    "wall_ms_samples": [
+      33.02025003358722
+    ],
+    "input_sha256": "772eaf698ae61f3d531cf4acdabd45ca905f36edf974286be5f511a50ab72695",
+    "creation_sha256": "1c551063db73a1beb5028f8496ce39dd20a208cf331fd6861d8ab1cf70c50fd5",
+    "runtime_sha256": "64311ef60e539c006096a53d325d3ff09510ed21e3974a8f4b4cd1def123282e"
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 571,
+    "creation_bytes": 599,
+    "wall_ms_samples": [
+      19.988708023447543
+    ],
+    "input_sha256": "486e4bcea1e81617be5e61db9dd1f48ba2612077315c8d9dfa2e778add5e415d",
+    "creation_sha256": "0af519cdc99a118bd803c7b64456080432fac46362b883eec7eac021fef646d9",
+    "runtime_sha256": "576960ab0c006a7db617dd5df365f5cde763b3ebca44c1f0ce0ce9af05ddf91e"
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 438,
+    "creation_bytes": 464,
+    "wall_ms_samples": [
+      39.858584001194686
+    ],
+    "input_sha256": "38e56ab6eac8bf2441bf2d2f138cc93893a21383b349b6c4c2f275a62ab947ab",
+    "creation_sha256": "5e38164be7f636fd7bd79db269a11403a5d724475f167e5718977d1c8bd2c715",
+    "runtime_sha256": "b8ca0729c173e4f6f892439e29f898bbab39991810d76ad44f7af8f15e687534"
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 228,
+    "creation_bytes": 245,
+    "wall_ms_samples": [
+      30.67349997581914
+    ],
+    "input_sha256": "563c3e9e8db554c653f3d03ab50045ddab8970d74c6d3471ac725e406049ce43",
+    "creation_sha256": "21bac954b3ccd2cfe34c1ef13849997557ef2f5213328556a06a5dca4f5bf6ec",
+    "runtime_sha256": "7ea896b4839fc73287130d51904fcc8d51779de1fb6364c295a6b18f3421cf49"
+  },
+  {
+    "benchmark": "merkle_verifier",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 240,
+    "creation_bytes": 257,
+    "wall_ms_samples": [
+      32.44133299449459
+    ],
+    "input_sha256": "ae0993df5e5444b51d783ea8e55a040ba9e12763d05bfd6c763094b00fb66f63",
+    "creation_sha256": "7d9272c053d3dc724efa695350ca43f30a572b51d16d5a2b0586cf7f6d256e54",
+    "runtime_sha256": "b79e9fa2036dc9cb2178a5f131e437e9bc69b2f767e2d373d5c5ad4fc8581a5d"
+  },
+  {
+    "benchmark": "ownable_pausable",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 882,
+    "creation_bytes": 972,
+    "wall_ms_samples": [
+      21.49141696281731
+    ],
+    "input_sha256": "92d1f81903fb96ec1565c78a34fd30ec708d3404f1ea87b76161f270ef0073c3",
+    "creation_sha256": "0d5de62a32aa7004e49a1889122aa40cd333893541ad42e90b941805f7ff9412",
+    "runtime_sha256": "5785fcd48271435037e6e754b2d83b3cad583747ef8e8ba099b8e3f954769e9d"
+  },
+  {
+    "benchmark": "ownable_pausable",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 747,
+    "creation_bytes": 829,
+    "wall_ms_samples": [
+      66.82762503623962
+    ],
+    "input_sha256": "cdecd0a574908b2767c4d9c635f2d359b66a3ff2d54fa9c579d7029b877e4909",
+    "creation_sha256": "d19f56cb5d2e7f969be07f1bd12f013fb074ac0a9927447908e81c56e65ed841",
+    "runtime_sha256": "965cce24479bdce7b9c4eae75eb854c1de1ffe6b65eb0bc27e88a9847f214855"
+  },
+  {
+    "benchmark": "ownable_pausable",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 566,
+    "creation_bytes": 640,
+    "wall_ms_samples": [
+      34.977959003299475
+    ],
+    "input_sha256": "0ac7fc43ca9818b3932c086b537df8276a2645320e8fbd134dd0f003f16e7f14",
+    "creation_sha256": "8e28d51c87a29623093e0b3dfe1f68b456df032b3dbe2af9b86649ef9d1cd4c7",
+    "runtime_sha256": "0e7dac168b2bb2358fd40016a4327b9dea569e9cdb403315c0f28af3f1c70caa"
+  },
+  {
+    "benchmark": "ownable_pausable",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 514,
+    "creation_bytes": 588,
+    "wall_ms_samples": [
+      33.53729104856029
+    ],
+    "input_sha256": "736a092b75785e7dd11d9a4ac51efaa0d3507fb89513f7fe418cdaf3eeb39eee",
+    "creation_sha256": "b5e9dc52920e7ac729dc9031f6653835096afffc9a6e6b4c36caa274cbd41d25",
+    "runtime_sha256": "0275a787c8e73ac67ad09bd5370482646ea3364fd40f8fa41cc73b8a664ab3bb"
+  },
+  {
+    "benchmark": "scale_abi_args_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 96,
+    "creation_bytes": 122,
+    "wall_ms_samples": [
+      10.63500001328066
+    ],
+    "input_sha256": "a2db06942ad6304eb011c5d2239f500bdc20bf8a662464c42c0084c6ff967ff8",
+    "creation_sha256": "4a020c598e5b89f3a3f26e0c16a4c7b3020407c74a5cc2619c086950f7f1bd87",
+    "runtime_sha256": "34faddef3f0171b0cf022d1dbb51692067f123bf4183d68e4dbda78f3e325cbf"
+  },
+  {
+    "benchmark": "scale_abi_args_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 64,
+    "creation_bytes": 88,
+    "wall_ms_samples": [
+      14.09750001039356
+    ],
+    "input_sha256": "cf6940165927dd830f13d7287c053251cec87b7ed447282223d4c4bd2ec03107",
+    "creation_sha256": "21e3a047c7ef4d2948e76749038ab0101ada0ab42b27370da05686ee838480bd",
+    "runtime_sha256": "7f4876c5a72d270f8847c2c15134231f4a4c12cf2f53832645277225664c7e3e"
+  },
+  {
+    "benchmark": "scale_abi_args_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 41,
+    "creation_bytes": 58,
+    "wall_ms_samples": [
+      22.21220900537446
+    ],
+    "input_sha256": "c47dce2beab2f264342658057c46ce89a6ef7a8d381c1e39525250055d2146de",
+    "creation_sha256": "d9f6e01b2941d93de71310da2791e1d4263a0e45b9f35ad6af7407a5f5b05ca0",
+    "runtime_sha256": "a2996d7f27485a8f0ae85554e12fc70ca9402430e16578d70955ed5a6b1ed9c1"
+  },
+  {
+    "benchmark": "scale_abi_args_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 41,
+    "creation_bytes": 58,
+    "wall_ms_samples": [
+      22.530958987772465
+    ],
+    "input_sha256": "bdcece32ed9020e98dd7c71089ce7153ec3a42402048d5904812cb3e91d38496",
+    "creation_sha256": "d9f6e01b2941d93de71310da2791e1d4263a0e45b9f35ad6af7407a5f5b05ca0",
+    "runtime_sha256": "a2996d7f27485a8f0ae85554e12fc70ca9402430e16578d70955ed5a6b1ed9c1"
+  },
+  {
+    "benchmark": "scale_abi_args_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "compile_error"
+  },
+  {
+    "benchmark": "scale_abi_args_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 190,
+    "creation_bytes": 214,
+    "wall_ms_samples": [
+      27.549041027668864
+    ],
+    "input_sha256": "380306b00aa36a812ad748cbbd4c48db7e705d577ad35000542bd42829d41912",
+    "creation_sha256": "baebf4e2a322f797c9afa0b80432e1ba6c9a55d8938863afa000a41b9c1f39a1",
+    "runtime_sha256": "c8ef1e4862df93f021bf4182e341ce3885bac7d14f6e8ad55b4b88b4b8ed097c"
+  },
+  {
+    "benchmark": "scale_abi_args_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 254,
+    "wall_ms_samples": [
+      24.508124974090606
+    ],
+    "input_sha256": "5a4bdc503dab1ee0b5f0bee05537f7ac592a155c8a825369ecf031d4ccffe3ef",
+    "creation_sha256": "26442800e24ca826b8240ea0ceeef4958ab7116233032e16b0ab8277ac24b557",
+    "runtime_sha256": "ddd5254b3a6db35e96f151e85cc628552ba62df33c96bc34527336e0692740db"
+  },
+  {
+    "benchmark": "scale_abi_args_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 254,
+    "wall_ms_samples": [
+      25.563833012711257
+    ],
+    "input_sha256": "d1c1b2e79197ebdc9ce3578978098c68770469e6fd38805adf80399e62299fc5",
+    "creation_sha256": "26442800e24ca826b8240ea0ceeef4958ab7116233032e16b0ab8277ac24b557",
+    "runtime_sha256": "ddd5254b3a6db35e96f151e85cc628552ba62df33c96bc34527336e0692740db"
+  },
+  {
+    "benchmark": "scale_abi_args_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 154,
+    "creation_bytes": 180,
+    "wall_ms_samples": [
+      11.43349998164922
+    ],
+    "input_sha256": "bbc692e9842cad077a35a8d4760e14d722dffaa8383801fdd55f1ea20fbdf96c",
+    "creation_sha256": "08921655752c8bb9689355b6c9e249cb2d7fd477af56ddccff8c6447358b55fb",
+    "runtime_sha256": "6b94972d546d947822c5590b08f0c2ac970df761abd4049df5facdf42c6956d6"
+  },
+  {
+    "benchmark": "scale_abi_args_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 96,
+    "creation_bytes": 120,
+    "wall_ms_samples": [
+      15.619124984368682
+    ],
+    "input_sha256": "fc373c1efb4209cdf3117eee1b6d32de3aa7af31b647763f480676f22781fb42",
+    "creation_sha256": "63a4fcf5f0bcf9c7d5670719970ccdc5b84cff705fa69365d3b6db8db12a52ce",
+    "runtime_sha256": "cd4f5166974d53e6107d8b7afa34bab1ddfa8e8e31077e0d599a04c003d96b29"
+  },
+  {
+    "benchmark": "scale_abi_args_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 73,
+    "creation_bytes": 90,
+    "wall_ms_samples": [
+      23.363124986644834
+    ],
+    "input_sha256": "375062c0c1519c1a8865f1775e662f27474350ab0482cbd95ee9983d82786c62",
+    "creation_sha256": "289481489cb7b1fe6e588387f18f6a2fe805dd7c727edae4b4e1b1cac041b304",
+    "runtime_sha256": "6616792b6d3d47f93c224b388fe62b21c99353613dedf447da98bdc40ee24dc2"
+  },
+  {
+    "benchmark": "scale_abi_args_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 73,
+    "creation_bytes": 90,
+    "wall_ms_samples": [
+      25.163250043988228
+    ],
+    "input_sha256": "facbfb2e8e061df847ef004a7402cc238ebeec5a7d8b892f718d35ea98bd6616",
+    "creation_sha256": "289481489cb7b1fe6e588387f18f6a2fe805dd7c727edae4b4e1b1cac041b304",
+    "runtime_sha256": "6616792b6d3d47f93c224b388fe62b21c99353613dedf447da98bdc40ee24dc2"
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "compile_error"
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 324,
+    "creation_bytes": 350,
+    "wall_ms_samples": [
+      42.0069579849951
+    ],
+    "input_sha256": "2c7f0ad3c5a52bc20b1340c206dde64a4ad4f2b5027f4d3289c2bdc541aae72e",
+    "creation_sha256": "0daf91663704730852acf3113ee11040be94476b8b11d961bfd9ccc98fe69647",
+    "runtime_sha256": "94b1e42a41eb0ed46367896b3dac04ecb1fd2d7ed8203241f856aa7e6b39839b"
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 429,
+    "creation_bytes": 447,
+    "wall_ms_samples": [
+      27.940915955696255
+    ],
+    "input_sha256": "bdcefdd250c29e0eea4db6e1a538de6fa9cf0dd824425dbda20105759234ea95",
+    "creation_sha256": "9a75570b4a3e956d157e10868733db66bd25caa1bdc1f8aa82fed2889c00ffed",
+    "runtime_sha256": "08284e509302a1cbb239c6f633e3019a0027869809b78b83b2630c9d907fa614"
+  },
+  {
+    "benchmark": "scale_abi_args_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 429,
+    "creation_bytes": 447,
+    "wall_ms_samples": [
+      26.84791700448841
+    ],
+    "input_sha256": "c21b0d421814455f280d926142d1aae63e6368246309bf83844c3c078a21ec7e",
+    "creation_sha256": "9a75570b4a3e956d157e10868733db66bd25caa1bdc1f8aa82fed2889c00ffed",
+    "runtime_sha256": "08284e509302a1cbb239c6f633e3019a0027869809b78b83b2630c9d907fa614"
+  },
+  {
+    "benchmark": "scale_abi_args_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 193,
+    "creation_bytes": 219,
+    "wall_ms_samples": [
+      12.947249982971698
+    ],
+    "input_sha256": "ef74ddde57e0df1bac718bfca5ef9d947fa17507209b0b844a18c6aeeed9062b",
+    "creation_sha256": "4eedf161584fa484cfa5a2920c2a9931fa2a9794a5a14ff1c5cca588bb97bd84",
+    "runtime_sha256": "73df7e47020329c92f776cd3efb95331806a50dbf5dff94d74ef398c3bc7ab67"
+  },
+  {
+    "benchmark": "scale_abi_args_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 121,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      17.23066600970924
+    ],
+    "input_sha256": "9f33d7dfa55b32394aefee917af16440a4cbedd810c06d4bf058a87d682e018c",
+    "creation_sha256": "2ed32c9367fbc60146af39c04d00c3c4fdf99e519c2bff381bf14a65dfe374b2",
+    "runtime_sha256": "95e7615474180c6345b46a22a10f7a896a4d14a7f55d1efad25e6c280308f65b"
+  },
+  {
+    "benchmark": "scale_abi_args_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 96,
+    "creation_bytes": 113,
+    "wall_ms_samples": [
+      24.94429098442197
+    ],
+    "input_sha256": "8f6c8b0caa8b29f770e31088e07bd2313e0ed5e53b08d1b5268c9c6686d20919",
+    "creation_sha256": "30f65fd59be4f1e2a9721701037a5f558d2ac8a709e2a34072ac7c5a8cd4ff9f",
+    "runtime_sha256": "39809ded895e700c63c199ffc63a0f5f997319752a24aa3fddc0fb228a5e6df9"
+  },
+  {
+    "benchmark": "scale_abi_args_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 96,
+    "creation_bytes": 113,
+    "wall_ms_samples": [
+      24.42404202884063
+    ],
+    "input_sha256": "5f0192f6a81a1b28649a157c57555f9ed74c8e90497c2918d7530eed7b0ad74d",
+    "creation_sha256": "30f65fd59be4f1e2a9721701037a5f558d2ac8a709e2a34072ac7c5a8cd4ff9f",
+    "runtime_sha256": "39809ded895e700c63c199ffc63a0f5f997319752a24aa3fddc0fb228a5e6df9"
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "compile_error"
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 548,
+    "creation_bytes": 574,
+    "wall_ms_samples": [
+      77.56487501319498
+    ],
+    "input_sha256": "947a2a6af9db9bdd4b6a27d7d95809c97a8a548f16d7935f084536ecc0d0b9ba",
+    "creation_sha256": "3a907d8905d875ca9eca625a9213316c612d688c3628fa4797249c1e03f91bf8",
+    "runtime_sha256": "4003f1312f4e6dd8353f34d786cbf8e81325c4341e8045784958eb5fd2ef7c64"
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 813,
+    "creation_bytes": 831,
+    "wall_ms_samples": [
+      27.804417011793703
+    ],
+    "input_sha256": "d215c113d992f4e05654698de49ba148bba5ae42b4578b1eaee5d58b36ce3c26",
+    "creation_sha256": "1250da5f906fa8840ae4b228dbc4edce99fec57c541b44774a60c07ee396c011",
+    "runtime_sha256": "80bf9e50921f98716005f7a62e2c5f2e5ea9937a73f39b24ac575aac9ed190c3"
+  },
+  {
+    "benchmark": "scale_abi_args_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 813,
+    "creation_bytes": 831,
+    "wall_ms_samples": [
+      27.295750041957945
+    ],
+    "input_sha256": "aec51ecb58240fa9501c447e681b7978b822717a5f47d6c20d6f5780eada88f2",
+    "creation_sha256": "1250da5f906fa8840ae4b228dbc4edce99fec57c541b44774a60c07ee396c011",
+    "runtime_sha256": "80bf9e50921f98716005f7a62e2c5f2e5ea9937a73f39b24ac575aac9ed190c3"
+  },
+  {
+    "benchmark": "scale_abi_args_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 291,
+    "creation_bytes": 319,
+    "wall_ms_samples": [
+      14.647500007413328
+    ],
+    "input_sha256": "cfa4d41f68ec9dce4c508370bf91eb52d5c77f8d48b4c2948efb81cea24e4585",
+    "creation_sha256": "28d7d5e44d655a45f0213b5b2c00903c98dd53a87826854a9fec413cfda4793d",
+    "runtime_sha256": "8142c24ce24691022cf3d3e13652d7b257f1da5559799cdb8349b32851740629"
+  },
+  {
+    "benchmark": "scale_abi_args_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 142,
+    "creation_bytes": 166,
+    "wall_ms_samples": [
+      20.068374986294657
+    ],
+    "input_sha256": "fb3e919d235406aa345084d45642e2d9026aeee7009c8fd18ff50f9d80ca5a3d",
+    "creation_sha256": "fadf4c396315d895afed6db264305c7a853a82f88416393f04e6b4be572602ff",
+    "runtime_sha256": "64ba7ed03c94d37a9fa2e94063fb1829663d5ff971b3664145342de3a850f468"
+  },
+  {
+    "benchmark": "scale_abi_args_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 141,
+    "creation_bytes": 158,
+    "wall_ms_samples": [
+      24.306500039529055
+    ],
+    "input_sha256": "db44b41029dec2da3442ab3cc7bdb75a4ec311f08dc1df68e090eaab4a49fd6d",
+    "creation_sha256": "cd02f29ec6db1d98323b48e22dd4f89f02f209360043c559154e0e1d2f6f538e",
+    "runtime_sha256": "c90a6dda7381b2c5cea8e0cce26935403cbdd6b076e8e12c313ea087d8f4b17e"
+  },
+  {
+    "benchmark": "scale_abi_args_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 141,
+    "creation_bytes": 158,
+    "wall_ms_samples": [
+      25.129999965429306
+    ],
+    "input_sha256": "512120bf476e8c34d008c48ba1139509952f4e811147f4e09fcb6057a7d37469",
+    "creation_sha256": "cd02f29ec6db1d98323b48e22dd4f89f02f209360043c559154e0e1d2f6f538e",
+    "runtime_sha256": "c90a6dda7381b2c5cea8e0cce26935403cbdd6b076e8e12c313ea087d8f4b17e"
+  },
+  {
+    "benchmark": "scale_dispatch_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 132,
+    "creation_bytes": 158,
+    "wall_ms_samples": [
+      10.425167041830719
+    ],
+    "input_sha256": "77c99d11753f844ddc39d53fd80a4a704760dd07d67b76a2bba562d0c147cdc7",
+    "creation_sha256": "334c4bb3618cd73b7d258bb978d6e927e26000464344fcef305f6b1f392527df",
+    "runtime_sha256": "553f81a2ad856b8dd6ac5dab0092a23454bb5007573a54da60683e9a231cdb77"
+  },
+  {
+    "benchmark": "scale_dispatch_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 139,
+    "creation_bytes": 163,
+    "wall_ms_samples": [
+      19.291874952614307
+    ],
+    "input_sha256": "55ea74dd99a0ffbbd1491ffa2e1c22f0685459bd35932eef44e8b0cf22f13b98",
+    "creation_sha256": "ef8d0b16d410838fcf4332830e059cf4f9acf1c8bff0c49bc00a14e98b8e5b82",
+    "runtime_sha256": "3f136888778e5a3e277d3f6910364b42a9bf38c6b4b57c74b55bb59fcc80b692"
+  },
+  {
+    "benchmark": "scale_dispatch_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 79,
+    "creation_bytes": 96,
+    "wall_ms_samples": [
+      24.526875000447035
+    ],
+    "input_sha256": "dc263b3e7ecd36e63bb73f25932020f55215c03b6d6d1f10d5a62540472aa85a",
+    "creation_sha256": "97c84bbd51b492760cba5827b0fcae3d6d97c0e1d99870e3fe9454652790cf25",
+    "runtime_sha256": "d55b1a9f09c3aa8a852728f95c1e1d940940bc78c2602df390ee7f088811e4b1"
+  },
+  {
+    "benchmark": "scale_dispatch_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 79,
+    "creation_bytes": 96,
+    "wall_ms_samples": [
+      24.520832987036556
+    ],
+    "input_sha256": "f7ae55b9ec83dbd9d7633f7b0dec881ce263309514ab6d050468556236e5dfb2",
+    "creation_sha256": "97c84bbd51b492760cba5827b0fcae3d6d97c0e1d99870e3fe9454652790cf25",
+    "runtime_sha256": "d55b1a9f09c3aa8a852728f95c1e1d940940bc78c2602df390ee7f088811e4b1"
+  },
+  {
+    "benchmark": "scale_dispatch_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 454,
+    "creation_bytes": 482,
+    "wall_ms_samples": [
+      12.753624992910773
+    ],
+    "input_sha256": "281f756728a7ecf04e56687e32932fb0e7ca3910cc4cf4b8f944a22a33d29913",
+    "creation_sha256": "bcec85d512a8ec6bef0341e5625e00f17c563d5ef0708c4ccc643990eb43bc60",
+    "runtime_sha256": "2b5ad92ace7f713a03e2ca04493fab2f824f0bee0534c66f74c3116cc272e04b"
+  },
+  {
+    "benchmark": "scale_dispatch_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 720,
+    "creation_bytes": 746,
+    "wall_ms_samples": [
+      44.91391603369266
+    ],
+    "input_sha256": "806911df74932063a5795308f02bc9220174e87ded734dcb2893e7e4e6c759b0",
+    "creation_sha256": "d83d0a21312a1d71c091ec4a04eb399ab5d09076dd518dc85b71365633c3282f",
+    "runtime_sha256": "4e756ca8cd3474e9e44db7d65129c36fceba0cd734138f9d1aad2b99be18945b"
+  },
+  {
+    "benchmark": "scale_dispatch_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 421,
+    "creation_bytes": 439,
+    "wall_ms_samples": [
+      26.591875008307397
+    ],
+    "input_sha256": "b531ddb31434a4fcd520ed625662a16f6eb82a233083e203421a29c5fa9e29c1",
+    "creation_sha256": "822471fa8e3f594dddb443cc102a8a8fa949311de1998df265ff0efdf6f3fd30",
+    "runtime_sha256": "0bdf653dc21e0d253cc19dfb84c214e62cf4b95736d4952e3849f71906493194"
+  },
+  {
+    "benchmark": "scale_dispatch_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 331,
+    "creation_bytes": 349,
+    "wall_ms_samples": [
+      25.950916984584183
+    ],
+    "input_sha256": "1595ff6514250700655ffc5e101f300b1117748d520e260e9e89b3d6a07ecae1",
+    "creation_sha256": "8cdf232e30506b1d224de38e3948281b02d87147b1c25489491d4ed103d52e4a",
+    "runtime_sha256": "f393f934233687c53bf56484859117bbf0e5edc5b912b6384099136b74bfc311"
+  },
+  {
+    "benchmark": "scale_dispatch_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 145,
+    "creation_bytes": 171,
+    "wall_ms_samples": [
+      10.829166043549776
+    ],
+    "input_sha256": "d7eca6248f0e088f5138b67141c4586a9ecbb75888b8de0260068e24d16dede9",
+    "creation_sha256": "4b6930237a610d360796e062e8df2ee072d4ef1220d1b43a6dd238a95b8a9fd6",
+    "runtime_sha256": "24903cfffe33baa29d9a7366aae06f0f6903b058080210460f79eb729cde4f0e"
+  },
+  {
+    "benchmark": "scale_dispatch_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 175,
+    "creation_bytes": 199,
+    "wall_ms_samples": [
+      20.765458000823855
+    ],
+    "input_sha256": "c389edd212f6155e0f04ac7810d988124b989ae616c3ac3b309bd459785e9402",
+    "creation_sha256": "2e3f23f517a81e074f56c6c6e865a5c434facfaf41217a6838a31cd256334b89",
+    "runtime_sha256": "9d458690087cda659ac55c77cfdea3315e1374de53c194db395aaa8bcc4114b8"
+  },
+  {
+    "benchmark": "scale_dispatch_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 95,
+    "creation_bytes": 112,
+    "wall_ms_samples": [
+      24.453333986457437
+    ],
+    "input_sha256": "07916a421feda4fd6d1cde071d71fd33d9714c5ed3724b6a2e7a906faa18a4fa",
+    "creation_sha256": "ae3ecd6ef62fb9865472041abf5385a75b66dc5dbfa669e5e693b9d1c2a3dc2c",
+    "runtime_sha256": "61f3a8df6d713978096bade47e46c3e11ca33999cf90a38fcdd7497d5b2de008"
+  },
+  {
+    "benchmark": "scale_dispatch_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 95,
+    "creation_bytes": 112,
+    "wall_ms_samples": [
+      24.11729103187099
+    ],
+    "input_sha256": "fed038e84530699cbf1fc438149fe3f8988e6698ede7fd5159c5bb29dc149f71",
+    "creation_sha256": "ae3ecd6ef62fb9865472041abf5385a75b66dc5dbfa669e5e693b9d1c2a3dc2c",
+    "runtime_sha256": "61f3a8df6d713978096bade47e46c3e11ca33999cf90a38fcdd7497d5b2de008"
+  },
+  {
+    "benchmark": "scale_dispatch_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 802,
+    "creation_bytes": 830,
+    "wall_ms_samples": [
+      15.425458026584238
+    ],
+    "input_sha256": "c78e25f3bf67c9a9332cd0770014778a06cda0c811aeb39e5f7db4d45787f7ca",
+    "creation_sha256": "73f917a71422f735091d2d0a672038b2dd2b97f5204cfee486e18add6d173053",
+    "runtime_sha256": "2ed14669dbcdc9d8c432b8615c0cdbc58b5711e84059ea34d941b0bee36e7665"
+  },
+  {
+    "benchmark": "scale_dispatch_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1328,
+    "creation_bytes": 1354,
+    "wall_ms_samples": [
+      72.51091703074053
+    ],
+    "input_sha256": "3770a6495a1212a0ad0f3afd8ab95bfb6aaa4a17e751662a415255743907201b",
+    "creation_sha256": "8226e55b78045b9560d1ccf6fc2c044f494c1b826929403656c60dca05edc52c",
+    "runtime_sha256": "6ff4d96751a385b44d0951abca47f600234e0798b7e4454059bdd2b2cc0b6802"
+  },
+  {
+    "benchmark": "scale_dispatch_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 773,
+    "creation_bytes": 791,
+    "wall_ms_samples": [
+      26.591291010845453
+    ],
+    "input_sha256": "8609d17de189798ecc1913627f110d0c3e0cc0370548e127cf79e656ca15a737",
+    "creation_sha256": "b0ca901af251fb78ae0c237befe7e2e079e58c974ef48a3e4b09efbf6f1431d0",
+    "runtime_sha256": "067110d75afde06c8310979c55dacb2e2ef206d6a05dacabb5882a45484d97e2"
+  },
+  {
+    "benchmark": "scale_dispatch_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 644,
+    "creation_bytes": 662,
+    "wall_ms_samples": [
+      27.458041033241898
+    ],
+    "input_sha256": "5c6e4fb9b512bee117bc6134ad413a3bf1b73d01b98f87cd27d150381ec7b1e5",
+    "creation_sha256": "4c406f31233109acd309692d665f8d701fc87d5f18029a78a54be5aa3d6a8246",
+    "runtime_sha256": "3d6ba081a9b7e35ab3b7cdcea7d5d9c49cb8a93dca9e61347768a7b4dbf60357"
+  },
+  {
+    "benchmark": "scale_dispatch_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 177,
+    "creation_bytes": 203,
+    "wall_ms_samples": [
+      10.598333028610796
+    ],
+    "input_sha256": "a75502e903ce9c40ed543b8154152811081385e354460641f05b9335dfbf934b",
+    "creation_sha256": "e0d2069bc62154ed34e8d072af1396bc6146dca416ff7e0c06ed8dd0bc1c5b2e",
+    "runtime_sha256": "43d647b7ee02f8ac2d3be253895cb7a2fc3d5cfaab4221a7a60a6fedf4b73141"
+  },
+  {
+    "benchmark": "scale_dispatch_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 245,
+    "creation_bytes": 270,
+    "wall_ms_samples": [
+      24.821167055051774
+    ],
+    "input_sha256": "94339f1c991f3c98323aa6b7ca1fba003a1901648069c50ded02375e8c6a1862",
+    "creation_sha256": "aa9a1abb88915edaed3f14e6e81875ec0340bdb64d6122e82af00ef6c6b906c8",
+    "runtime_sha256": "f45f1aacc0878885281e662114d3d453baf9c32cbc20fee8e8977c3abdbaddbc"
+  },
+  {
+    "benchmark": "scale_dispatch_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 141,
+    "creation_bytes": 158,
+    "wall_ms_samples": [
+      25.73845797451213
+    ],
+    "input_sha256": "7a4b697e4b6ab0c4c4801cc1666b0e1474bc01b6993a254868cc23bbc632cda5",
+    "creation_sha256": "af2b14e8cbb49c81152b927bb6fb90cc8effd0d19a064d517e073e21a999c999",
+    "runtime_sha256": "b9bc4c95c21524bce95c76dad434de8106a68948e8fa1f16f1fa8cddbe1ed797"
+  },
+  {
+    "benchmark": "scale_dispatch_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 127,
+    "creation_bytes": 144,
+    "wall_ms_samples": [
+      25.19195800414309
+    ],
+    "input_sha256": "4864ddd5c9ce0737e91e9514d0b748e4e1f303d5bfb506e9e53cb4bf2b484b4c",
+    "creation_sha256": "1bcc40597172d911a012214870591ead51951cca502d89887ce1d9b47762894a",
+    "runtime_sha256": "e4e7c1c745615468a814e612bbcbdf969b426844d714a3e8970a7a6e5ee23a8f"
+  },
+  {
+    "benchmark": "scale_dispatch_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1498,
+    "creation_bytes": 1526,
+    "wall_ms_samples": [
+      20.79000003868714
+    ],
+    "input_sha256": "ac76574cd64a622d076633d89985bfbde71704d13450681d7ac414022c62a347",
+    "creation_sha256": "98a25703618015f50b9f9ab6a3d55d12ab4e90a96985eaed7c10fa84bd4661a7",
+    "runtime_sha256": "38a21f6bdaf3053685cdcd372f0ed9140d722db86cd34386d5310f09e7b91389"
+  },
+  {
+    "benchmark": "scale_dispatch_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 2543,
+    "creation_bytes": 2569,
+    "wall_ms_samples": [
+      127.66487500630319
+    ],
+    "input_sha256": "71bc127bcc54e46c6b47b7c906babd1a4cb0a5defd192a0a3cded1b9257f9552",
+    "creation_sha256": "dba60fd2c6f0dfcbeb29368d079ed7b88c511f8ac8e6f9ca936a84d838f72e2e",
+    "runtime_sha256": "5d3516196d35a5eb760cb46c19605f2aed5bfe58b2855df843c27938bb44c96c"
+  },
+  {
+    "benchmark": "scale_dispatch_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1321,
+    "creation_bytes": 1339,
+    "wall_ms_samples": [
+      26.431000034790486
+    ],
+    "input_sha256": "626d06a7cd91b360c9697cd5b9497913b24976ecce2bb8ae8929b08380b15fef",
+    "creation_sha256": "8d1617bf8ffb72e227c5e02fcc21d205b47afdc2c9fd4939c208320188e1fcdd",
+    "runtime_sha256": "98fc21b1fde94a267456ac1836b9577df4b54f1ba071df8f4839fe90eba04ba8"
+  },
+  {
+    "benchmark": "scale_dispatch_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 1220,
+    "creation_bytes": 1238,
+    "wall_ms_samples": [
+      26.780125044751912
+    ],
+    "input_sha256": "1d9892cbec33d904c2ed4570824cb90410b5cdbbdeb133d73cc9432156c2e2ab",
+    "creation_sha256": "c701f78a020cc14b5a397d038b77b7998b48411673eb5cceb1b66aaf47c54c5b",
+    "runtime_sha256": "a07162a0f25c86f4f5a2f2c46a5d166415c94d3f322bd09662770bee43f0170f"
+  },
+  {
+    "benchmark": "scale_dispatch_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 280,
+    "creation_bytes": 308,
+    "wall_ms_samples": [
+      11.186040996108204
+    ],
+    "input_sha256": "73672e000d1d2ef051e626aa665678813e610d8f734e3f0a9d9d9c9b55bea677",
+    "creation_sha256": "55edbd40d390604b4871b1bc3a0b5dfd8841b4ebc3d7b5cb42bb0a0ddb6e3fa1",
+    "runtime_sha256": "8d6a983a3ea723801ab46023e8e0eb4f17a2b637bf905e91ffd87843aefc9a22"
+  },
+  {
+    "benchmark": "scale_dispatch_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 416,
+    "creation_bytes": 442,
+    "wall_ms_samples": [
+      31.02508303709328
+    ],
+    "input_sha256": "5171f53b8d170e9068b5a518e3a353a9e8887234fdb72f9332e35af5490693ed",
+    "creation_sha256": "666c265012f5c5945ac04bcdabd3106b327fc17ff879329d0a7dd6d1a45267f0",
+    "runtime_sha256": "9617da2b69119208f771c913282402f5e750cf39f799dd7a7d0a338c4a715f97"
+  },
+  {
+    "benchmark": "scale_dispatch_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 238,
+    "creation_bytes": 255,
+    "wall_ms_samples": [
+      26.114292035344988
+    ],
+    "input_sha256": "23db2422ffa06974fdac4b18c53cdac44ee6b657bd77edfac229ce843add79b4",
+    "creation_sha256": "5ef9ec76eb2089064cd86e8925242c3859d40fdc5ee126e5bab2140282f863ec",
+    "runtime_sha256": "41c2cca71a3a58e17e878128d7540b4a8036fed0321e574db148b5b792a7e90a"
+  },
+  {
+    "benchmark": "scale_dispatch_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 191,
+    "creation_bytes": 208,
+    "wall_ms_samples": [
+      26.51295898249373
+    ],
+    "input_sha256": "5da786364f41d71cb6c7a163ab424fff6fa731664a5dd3ab8d885b01174045dd",
+    "creation_sha256": "60bc7f6a7f339d1d4f2ae3953f6eb76f27df9ed78fed4b9350d80bb815dda0b6",
+    "runtime_sha256": "fa3177e931fdb7394375b90b08b1c87bf587249199c59592e833978d3d3a0a93"
+  },
+  {
+    "benchmark": "scale_events_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      10.027959011495113
+    ],
+    "input_sha256": "701c290d40eb327a1d7819c519aa49cbbf9a1600be38e73e1e0037e5326b6446",
+    "creation_sha256": "5a98c6ce686c5cb4976306e80d8a87402753a6958c1fae44f6a5cc8cfee05e75",
+    "runtime_sha256": "f1003d47aacf05a8d530de1c51be2425483111f62ca2366f9a10c111533731e5"
+  },
+  {
+    "benchmark": "scale_events_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      19.51108395587653
+    ],
+    "input_sha256": "04b53d7b8b0b59a392e9e7ac60ae9d59c76f277c2604f0a4a97132dd8afeb9f1",
+    "creation_sha256": "61bd096f2f451a199c4e061632d640fb2c227ea7db30bc0212de43256367a2a1",
+    "runtime_sha256": "91e719ff92d3f3140f83ebcf36743217287361722934f896cb4c642f29cbff73"
+  },
+  {
+    "benchmark": "scale_events_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 133,
+    "creation_bytes": 150,
+    "wall_ms_samples": [
+      25.20670898957178
+    ],
+    "input_sha256": "87c988f3874282ab16a406e871d586619c22730595c60350ba7fdf638dae3e19",
+    "creation_sha256": "5995533538b50209ede579c6c3b1eddafd6f2609217f59d2d5bea09f2f6fd150",
+    "runtime_sha256": "b04e461992f3f6b211245fc76e3821f18a82dfb8b2ac099c32173b136501f469"
+  },
+  {
+    "benchmark": "scale_events_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 148,
+    "creation_bytes": 165,
+    "wall_ms_samples": [
+      24.96191702084616
+    ],
+    "input_sha256": "fb3c372cfb4673eb7d3119e72a8e547940f5b5ed19bdd86651a80cbf7429931d",
+    "creation_sha256": "7cd9cd3fc1e9be8485a461945820183f7ad43f53a271706cb7b86858acc6c31f",
+    "runtime_sha256": "df55670803ec6c9ad336ef2e82559a09da614609d8e4b5f33cda4b2cccae5c22"
+  },
+  {
+    "benchmark": "scale_events_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      9.916042035911232
+    ],
+    "input_sha256": "262c159c58133872d7b33ddb7b4e44c099f98e51901a8018663a72883643f6ac",
+    "creation_sha256": "b83fd1df5a48bfadfe19f63fe6e1e4ff61a626ee47cb6f6f2ef9fbba30a99a1c",
+    "runtime_sha256": "fb794ee491ca4c2e26f1b85be704412b0d368775979590b8d1241ae333a759e2"
+  },
+  {
+    "benchmark": "scale_events_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      19.493832951411605
+    ],
+    "input_sha256": "32b6bf19946f62a3abf10472ab72f0a0b52e4ae8b112583afab3aca42b0b767b",
+    "creation_sha256": "53d83e43f7e1860ddab95bb498c38d19a3f454f9b6d94f9bd05d4edbd84b9a72",
+    "runtime_sha256": "5a89aacdfeb1071cbc53db4ca01aa32b7ca74c41384613c2003a1caf8b0158b0"
+  },
+  {
+    "benchmark": "scale_events_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      24.70766700571403
+    ],
+    "input_sha256": "739f6be952ff11feacbc544fa6fd72b233f2905fced360a92e67ad6604989359",
+    "creation_sha256": "2cff14e0dafeaf0a231d4629094563b2f371ba5044b02a0d3306b1b246456189",
+    "runtime_sha256": "7baeb7a35bc2fd3f722ffe088e2b8867b2057eeeff9e9a02a57b4d2647ff2ac5"
+  },
+  {
+    "benchmark": "scale_events_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      26.175417006015778
+    ],
+    "input_sha256": "5b173c7683e7d0822c653655851a7f63d319fd347b3916c129c6cf0a481bd6a4",
+    "creation_sha256": "0c22251b628b3233c81a5461d30e0a2192c6550702295a154b2f481beb28f7c0",
+    "runtime_sha256": "b0fc4833728690e97ba2f7a4377596d9f24dcfd30cb957c7fa14a54d917728fe"
+  },
+  {
+    "benchmark": "scale_events_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      10.058666986878961
+    ],
+    "input_sha256": "4a60ef9b24c1250a3ca2d1a6feb0c716bfdb24aa2274ed2628fdfeb3fc166f36",
+    "creation_sha256": "88cc47561b7bbd1118da6e4469ea2f8d142aa312a6ef1857c3dacbe4f3f8c795",
+    "runtime_sha256": "4ea0d43ce4a83982cf046685fc8c225db2d0b95c4e2b9ef541b1f3ab8e16128a"
+  },
+  {
+    "benchmark": "scale_events_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      18.84391700150445
+    ],
+    "input_sha256": "df7f829a84a58fe4f3179add5add8febd9f3b646eb42da0cee5c0fc24565adbd",
+    "creation_sha256": "1e6196352da28b31da8c0af5a2703051c9a3c444e1afaec5ce73fc424cd5e5f4",
+    "runtime_sha256": "8684e6426ff35dcf575fb16faf8d0780bc4382bb8d88925e26934548de00d13f"
+  },
+  {
+    "benchmark": "scale_events_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      25.20791598362848
+    ],
+    "input_sha256": "ba473df5c22233f6358f9ab24922805f4ad958e51ac6743c187bfc3dee039c93",
+    "creation_sha256": "190bac75c5bffea5e38d78cfbc4e3215b4f6d1be3844c6e34ccd0edc6afe41ce",
+    "runtime_sha256": "a32cb4354c6a4fdab993bfef3a8b09aa2ffe2a6c897b1cdb6ef1c4a6e1e10b6e"
+  },
+  {
+    "benchmark": "scale_events_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      26.78958303295076
+    ],
+    "input_sha256": "c321f61ba587808bbe70a25f94f38b2c9ffb01b67e427656e4400b0d7f967102",
+    "creation_sha256": "df5eb7b3a454a6e58cfaf1a52dde9dfb3341d3050134562120826d143e78f64a",
+    "runtime_sha256": "26f81e91eacd735e913ec65931887e205282e41d72ca7c2a27df65a976597079"
+  },
+  {
+    "benchmark": "scale_events_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      12.31295900652185
+    ],
+    "input_sha256": "90508f1d49f6627c4623edd88c2bd7c42bd41ad2520514a9cff5310e5eb4e23d",
+    "creation_sha256": "e6ba3263632b8c20b728f9f459f6c74e0a76cf4e577908c43ce42081c52a3c79",
+    "runtime_sha256": "9fabdfc54972da2e121a20c7d69aeca9a3d48ac3fb97ff9bf482d76de8062414"
+  },
+  {
+    "benchmark": "scale_events_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      19.00270802434534
+    ],
+    "input_sha256": "3a515d80ed75627cdd800f58fed885d022343e6a277e92df704e96be9a5e93cf",
+    "creation_sha256": "2d75474944f298df2699aeebd0e008d7d0e9be606a7f3f70f8faee5383440659",
+    "runtime_sha256": "b4cf5294e232d1bb949d7a672c16efa5f6d02cc21f352d7aa4f680442d5b6170"
+  },
+  {
+    "benchmark": "scale_events_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      25.749958003871143
+    ],
+    "input_sha256": "6d65b89d84b8c6ad04f669ddd5014c70dff9446954b0bbfa8ac18fbbbe5444b4",
+    "creation_sha256": "a1361ab0982129bb829e1e77075f53044d0e2eaf0a313f38deb15307cf79a6c0",
+    "runtime_sha256": "918bbc5def81455a4c79f1f277ca579c4853e5051e9aa41700df65e385f449b5"
+  },
+  {
+    "benchmark": "scale_events_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      25.915417005307972
+    ],
+    "input_sha256": "b907639df049a7643ab18343535b816cadc2f7831bbf05665817ef3c158854cf",
+    "creation_sha256": "b3f43b412b3b9fd245770a8724973f7580ca5fa1d0893843ace0fe3c479476f0",
+    "runtime_sha256": "f15b6bf08c7ef2fb27f6b3fa5bcf87dad8dba26e41242addef44974a0d491664"
+  },
+  {
+    "benchmark": "scale_events_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      10.499292053282261
+    ],
+    "input_sha256": "eaf0153f2b310f8792adb9edf7a009c36d0367364453f89d23d34b0b0c584711",
+    "creation_sha256": "3f934e99ff4ebe247aebcbe95429aff9a205650cfe67a99107486f43a1e018e2",
+    "runtime_sha256": "2aa6e24677a88685e22229cb36234e246435fc5a4087ca2fda3a9dd6b62a568a"
+  },
+  {
+    "benchmark": "scale_events_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      18.946625001262873
+    ],
+    "input_sha256": "a076e3c9b9c9be22d0ffef941855447ce455a6eec769f02d41de3f3a0bc82ce2",
+    "creation_sha256": "4f62a084b3df65abb225b200b8ab66f459f7f8b82d2a2f61cd3a37810f09facc",
+    "runtime_sha256": "2f24e8434555d7de555e9c230073c3ae0e1b5c91372c578558774793e86aaedf"
+  },
+  {
+    "benchmark": "scale_events_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      25.62533295713365
+    ],
+    "input_sha256": "a0cf91be9604eeb37dca39d5f712535cd5490bb3d671e235b2501ea5e82365b2",
+    "creation_sha256": "c272f2834e7f708eb3341440991bb8eb5792393db5adc5d9d0b16d06f262ac4b",
+    "runtime_sha256": "689d7375dd84c0883684e720ad1b3f4cf618fce90a6255e705ea783b69ef6da7"
+  },
+  {
+    "benchmark": "scale_events_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      25.37337498506531
+    ],
+    "input_sha256": "914957127cf08a4cb160d5032b01b16a1680b3af1c4b2a813332e3b7f6ae8b7c",
+    "creation_sha256": "cb44208e293d3b19d7b5d01d1833b8ddd255e3882ff30134675c354ac6a00008",
+    "runtime_sha256": "50944e4f7208c87144e403e85e9f922cbab533b6c5ebe4889d46da3a2574962f"
+  },
+  {
+    "benchmark": "scale_events_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      10.059874970465899
+    ],
+    "input_sha256": "2e007caf2d656a585e49e37d3bd50c468eeaeacaa0ffc95b82201eb5614fc6ad",
+    "creation_sha256": "e0e0b4dfa81e0f884dbc714678df1f385329af317a296273370053dd43cc1749",
+    "runtime_sha256": "fd4d8ad15b7357ef088331b1204ce2cfe8d019b18e903203e9022fdd6e0e6f4b"
+  },
+  {
+    "benchmark": "scale_events_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      19.54333297908306
+    ],
+    "input_sha256": "347412e0cc4057439e606eecd968677d6b7d3608cd3e44f63e0df936b82eff29",
+    "creation_sha256": "f0fc26f6931816c9bfcb4ec9a7c8f5a7f12e4b917e8a29cfdfda57c4d5f9ba4a",
+    "runtime_sha256": "559a3ef5b2a17c49ab8405cffb8445f17c55688eedddcf3383b73dba5f9314aa"
+  },
+  {
+    "benchmark": "scale_events_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      26.01158298784867
+    ],
+    "input_sha256": "ffc052d8c75396dfc51597d9b19644c50b2717eac4bc948e9e59e8473c1a687b",
+    "creation_sha256": "a4fdfd2f452e441e92d84325fdc37c87ed72961069dc3421620475cc31f555bd",
+    "runtime_sha256": "5d98991efb3faffa7c173cac265ae846449a1ed7ac78f7c458e90d9eae49284d"
+  },
+  {
+    "benchmark": "scale_events_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      25.385709013789892
+    ],
+    "input_sha256": "47e6721adca1bdff4f2e1b5a9a9ff26665e290b8f2e9f730fd51fd3437d2049c",
+    "creation_sha256": "2814bd1759903ca0025f9f68cee242359f1e41410517db1a35a880c35fb4f9da",
+    "runtime_sha256": "ab4a2beca58fb5d6085cbb51aea15124ff25ba7a146cf2598b279d96688131eb"
+  },
+  {
+    "benchmark": "scale_events_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      10.107917012646794
+    ],
+    "input_sha256": "8d640a200d817a056ca2b927c330d7cbe2d8c573cbe753bf2c82ed9268fc1c7a",
+    "creation_sha256": "ff3a1eb758be762554ebcb3e2a1eaccdb3cd4aee6764e45f406e7b5be67b914f",
+    "runtime_sha256": "a872f522d45ea6af58d5d89410ed18905ecc0e3622fc0603327e823f07446f8b"
+  },
+  {
+    "benchmark": "scale_events_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 169,
+    "creation_bytes": 193,
+    "wall_ms_samples": [
+      19.469625025521964
+    ],
+    "input_sha256": "db08ca272a1c5fcd75341b7eec77e4860047bcd920aa9f0f8632c1c9b96c2de8",
+    "creation_sha256": "56cd4ef839fbc8849d5d97573c9b55f10e0af5fc9bc0ac353029fe978e713655",
+    "runtime_sha256": "b7d47343ab82cf110d5c2beafb7bb9b34eb5de313a46922a533e94f2350e70df"
+  },
+  {
+    "benchmark": "scale_events_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 128,
+    "creation_bytes": 145,
+    "wall_ms_samples": [
+      25.352458003908396
+    ],
+    "input_sha256": "ee220ff1f98399571edcc7c23b2738e4ff41ad7619093019c47edf70337962f2",
+    "creation_sha256": "440d0c4a8f199955679beaee655cf59f01c45dec2f009cb753e21dfc41b87f7c",
+    "runtime_sha256": "0c69d86b822faae68e83b9b167fc240f05e46062489599639baf050745caf9f7"
+  },
+  {
+    "benchmark": "scale_events_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 152,
+    "creation_bytes": 169,
+    "wall_ms_samples": [
+      26.346291007939726
+    ],
+    "input_sha256": "e6a1326860095dc4ccfa17f740f9324d81fcb1b1e927d1e17c4cecd97a8917a7",
+    "creation_sha256": "b1ce330338176338fb06c3136a01a588fae002a445441e65ff7bbc8334a382bc",
+    "runtime_sha256": "3a2c5baffbba3749f1cf522b51fd6b0d140447be9d6abcb3776400bd6760f24f"
+  },
+  {
+    "benchmark": "scale_external_calls_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      11.53708400670439
+    ],
+    "input_sha256": "02b6130536df471f225d085557807f5210d1a5eb9d06bc2001556d96100a4303",
+    "creation_sha256": "f18d0ffbe37b8740f2e66142ffeb7b46159f2f977fb536ffafcc678ed4a7164a",
+    "runtime_sha256": "ff262addc5db38eaea5c635c75218f1ac71775adc9f6486d4b7f822d464314eb"
+  },
+  {
+    "benchmark": "scale_external_calls_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      25.7591669796966
+    ],
+    "input_sha256": "0c62cea35698ec2bc6fe990fb3cf038c3d0985b7e6a4cf1838da6b99799f8ed9",
+    "creation_sha256": "ab8613aa283617f0feba1a4e150673388fb8811fecc862d06912f86eb7630cb2",
+    "runtime_sha256": "5c800f7bce7cbd0a35d2fe95ff33ead5cd9026f736aedfb07a79fcea64ff32bb"
+  },
+  {
+    "benchmark": "scale_external_calls_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 141,
+    "creation_bytes": 158,
+    "wall_ms_samples": [
+      28.50508299889043
+    ],
+    "input_sha256": "9d1e6db34ed8ff8e1df4d58a73021f8cc287cd9c1b46a99532d53b519925e62a",
+    "creation_sha256": "de5689fa4996ddad16623ed2a4360916c4ad44c7090044fac9f09c3d728a49bb",
+    "runtime_sha256": "c4fed8751ca7adf6747379642c1ca7cface04d8814b9aebd37c854ce232aa1bc"
+  },
+  {
+    "benchmark": "scale_external_calls_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 160,
+    "creation_bytes": 177,
+    "wall_ms_samples": [
+      30.937459028791636
+    ],
+    "input_sha256": "1d4b5b9565fd229007edae62e3e632144eea94cdce1e7535ec721e5bf0f68f87",
+    "creation_sha256": "0b0cd610544bd4a52982b18f0db17ef9f09908cfa76f525809e8e7a4610b3186",
+    "runtime_sha256": "1670723d102bd8178fe55f17534ba269687e96b84f06dffb074b7cdc00472f1d"
+  },
+  {
+    "benchmark": "scale_external_calls_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      12.271667015738785
+    ],
+    "input_sha256": "1dab33087ebb962109503bb6a058c1b6d3a1fd889feeb8781ea9bdd792c1df54",
+    "creation_sha256": "5e237ecfdbe92e0e3e4f63aadd14de1160f6699cd61c8cbaeecf1fa2f8532e0d",
+    "runtime_sha256": "433bf8dde99a27d0bea27c2eb8563cb8b5c47f1dc340edfffc1c30ae1f8612ba"
+  },
+  {
+    "benchmark": "scale_external_calls_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      26.052957982756197
+    ],
+    "input_sha256": "0954fca8e4708c4aa72e252eae5fa13211e8240e040543bbc4e055b4857e954d",
+    "creation_sha256": "7089695a59afa839084e73d38dd3bbdf43956f299eb47983cb8bdfe69b785764",
+    "runtime_sha256": "82d6e68fcc0b0b96e9cf5cbeb5fb87fa4d09b84e882697879137ce1d3c0c4a0e"
+  },
+  {
+    "benchmark": "scale_external_calls_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      27.159791032318026
+    ],
+    "input_sha256": "4099ccaf331726d0ec81e81758009d73246152b3e85a64a03db408d8e6165747",
+    "creation_sha256": "70eb85e58700e631b02bd305d1add527e8dafac3d484750dbd2eee549094bc4b",
+    "runtime_sha256": "8ce289c13ba94378fbe854c4106943fce89100490201d14b8f35e1515f3f5618"
+  },
+  {
+    "benchmark": "scale_external_calls_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      28.96700002020225
+    ],
+    "input_sha256": "57cd8a90432d2a09139fde46d2a66c34dae64b086b83746eb89fb21253c9e591",
+    "creation_sha256": "b62e0127720218e72443a2128c49fa570a0cd83d8115b37f3adb2043bdca88e0",
+    "runtime_sha256": "4941658cb174ecb5cbad2b2206907d77ac0fc66020ac2874a560c1c76549f2ad"
+  },
+  {
+    "benchmark": "scale_external_calls_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      12.26508297258988
+    ],
+    "input_sha256": "3f2e68e95a53568b71f04ca5cef4a4d5e779ab1868d3b24836b0b1cdc24e258c",
+    "creation_sha256": "7f0632b704582ba0b279f1c258c46f927f0ab63f36153c979307a5536187467c",
+    "runtime_sha256": "0df99d6954a83a08dfe14013383b122ee9f8244fde2d87ca30c9e29812899af5"
+  },
+  {
+    "benchmark": "scale_external_calls_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      26.441416994202882
+    ],
+    "input_sha256": "862d9ead66a1b0000671e783798441f35345698a34b33589477ccadc27a30d63",
+    "creation_sha256": "779ce9be31db6732ca9bdf89bc468213377533bf51c19877c2c55ea58409719a",
+    "runtime_sha256": "19e16519919d4bafca1da36e9f6c48f5b540f291c2f9a28e634e9d1898fcf0cb"
+  },
+  {
+    "benchmark": "scale_external_calls_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      26.914458023384213
+    ],
+    "input_sha256": "739cdbccbb48d38d30f0fbd5d4471454ab0cfd6fd17f6469c84f90c5de09374d",
+    "creation_sha256": "7a1817aa13e23dc3d9bd3f572163a834c097f6d3267c1c014379838e25887e99",
+    "runtime_sha256": "3d34247929e4ed08499f3486ebc801e399499c53a08e8d7c8aff53f1fe82ee73"
+  },
+  {
+    "benchmark": "scale_external_calls_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      29.016165994107723
+    ],
+    "input_sha256": "748395b14119f5a9d81acf20ace1645a17c8f0a2c0a209a89e148210ceef13bc",
+    "creation_sha256": "3436f3e392c075f6eedd6e25882eed8bacde8a70338a4bb2337c5aa6948103c5",
+    "runtime_sha256": "69a1896fcff6f2b3cfc8628c80800c6a7fb8450a44897e88792b7506252492db"
+  },
+  {
+    "benchmark": "scale_external_calls_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      11.851333023514599
+    ],
+    "input_sha256": "8b41cbae02c456e9bded095a6a75fe3ce6ce3414b47393ea4d73db87e969402b",
+    "creation_sha256": "b7e190440a0c4c7efa606b31797f7b922eb4f3963c189417d2b9a9dc23792443",
+    "runtime_sha256": "2d82844cefd2acde0b7b203bae1ef98df90a5dd25f4cfdf0e83da280e25dd8b1"
+  },
+  {
+    "benchmark": "scale_external_calls_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      25.95666702836752
+    ],
+    "input_sha256": "09471bdab6f71a856175848f39d87e4546545de3def5ee0764b3e3ec15c600f2",
+    "creation_sha256": "dc291ac7e0f1df9e04a3fe0b7c7ae2aa80fe46fb32f0a5460f38a66865226eba",
+    "runtime_sha256": "48cac927f623578a5380d9051583566f0c66189d0f70ae029284a5c0312cc532"
+  },
+  {
+    "benchmark": "scale_external_calls_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      27.186374994926155
+    ],
+    "input_sha256": "75f23483fe1d466243f249c6ad3e591f2daac008fa6c4b27ab7f71dde6e31473",
+    "creation_sha256": "a913b89923951ef01a83a2b079d5caf9d5c4bf13ee5e6062a141299f0ec943c5",
+    "runtime_sha256": "a33e9ec4e0fd786b214713ededd307684b98e869e5e60ce420f3660c96b15cd7"
+  },
+  {
+    "benchmark": "scale_external_calls_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      28.540332976263016
+    ],
+    "input_sha256": "1cfba9731b8ee275ee77f81a6e3557c04efb8901229d6dab67215dc62ab26c69",
+    "creation_sha256": "3e0031164b5c3bb08d56c0114dceea346a35d24f77355a2219b36f6088e6bfdc",
+    "runtime_sha256": "cfbc312e837af0b38e84e6e6b99fb3db5cd598570bb6d0bff8fca5dcadf32c9a"
+  },
+  {
+    "benchmark": "scale_external_calls_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      11.835333018098027
+    ],
+    "input_sha256": "02844b0f394ceb8abb80ca7defa772939cd88a990206013f7afd4b204dc6352f",
+    "creation_sha256": "3741c700348c4d75c19eb27215ac40f0c567968d280c17f8828c141bdb2dbead",
+    "runtime_sha256": "cc6ea90357b3aaf9fcd784b85b46d8f12e3d64a1154953b8d60b91e933d23388"
+  },
+  {
+    "benchmark": "scale_external_calls_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      26.017332973424345
+    ],
+    "input_sha256": "b1441ef7e44952e601dc35b5e85951af2b928206f8fd5c4eeda8aa0a30161c10",
+    "creation_sha256": "10140097703ec083b075d2917609eda4e576036b5a8c37bfdc7c74403eb19c6c",
+    "runtime_sha256": "48019e8c82a38ffc3093afabbf63b0182101a9df869f3893ee2fc5c616eaa791"
+  },
+  {
+    "benchmark": "scale_external_calls_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      27.249625010881573
+    ],
+    "input_sha256": "72317d17e478a4f7a753dd0788c6abaf40804e6240dc8009e2969e6aa790afb0",
+    "creation_sha256": "7c7932cd657f4f48c414bd523218d290ca1a898d6098e5fa3f0e497d6b220916",
+    "runtime_sha256": "5b3f1d2e4d950cee4b8479beeec598f606d23f43546701283d4739919634de2c"
+  },
+  {
+    "benchmark": "scale_external_calls_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      28.695166984107345
+    ],
+    "input_sha256": "5a2d0f75e1943eace4237c57cdb5d8564d8154f596487aed642aa0e919c0e46d",
+    "creation_sha256": "4c0f3ca6dd578c6a9178fe212f7d48a95623302142852dc0e948625dd5193195",
+    "runtime_sha256": "65c6bf6f3efb194d601972b91f58a8d1d4b728f99ddeff2491280f2496c3c048"
+  },
+  {
+    "benchmark": "scale_external_calls_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      11.759207991417497
+    ],
+    "input_sha256": "8914285566ce14b98cb170a96414c3b1881469328bdbfcf3d44771e9c7309fb3",
+    "creation_sha256": "88b0e5a56376f3776fd452fcd850dadd0ec7643af0082f269ca89d91741d8d35",
+    "runtime_sha256": "15aa8ad40870972eb2a46024dbe979178ff13292d46b1526cb335812152dc194"
+  },
+  {
+    "benchmark": "scale_external_calls_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      26.053500012494624
+    ],
+    "input_sha256": "640fca543a727fd8581bd0ac77c5d3a6b1dcf167526786a5c9f40f83ffa666c8",
+    "creation_sha256": "a6eafba5f8f647078aaf15b75d87bcbd61f24f6fa76c7d1122f7917f8c2b10fe",
+    "runtime_sha256": "60329b2f02007ecfbed9d48c49f00bc28b2591319c1b4f11a4c49561c58d39c1"
+  },
+  {
+    "benchmark": "scale_external_calls_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      28.634749993216246
+    ],
+    "input_sha256": "db1d5f547614636a1ec14d3aa0160963ca296ef199d127fb30c3473aea1105e6",
+    "creation_sha256": "2af590cee82071cc76248082b664da4e7a8568adbf58bde2159b2860aed3e436",
+    "runtime_sha256": "d156da5af53b19b3085a4ddcfd89195d474eb6cda0d5dffda93a1d02ae0b99bd"
+  },
+  {
+    "benchmark": "scale_external_calls_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      28.130582999438047
+    ],
+    "input_sha256": "8fa13df056581972bccdf32733e7bbfd81d2127d8a3ba69d1e4e6b04543fec2d",
+    "creation_sha256": "cef2f65034979a4ae8f3e2eeb64dcd3be69e18589da53ee460ae3f313e1822cc",
+    "runtime_sha256": "a988a63db19499ed153d929e205486a5e6bfbcf749d92b24a451796822a21f46"
+  },
+  {
+    "benchmark": "scale_external_calls_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 275,
+    "creation_bytes": 303,
+    "wall_ms_samples": [
+      11.62583299446851
+    ],
+    "input_sha256": "7caf18196c1a5f9d2a8bbacf039b32d31b0de5e23884f4fb26d7ee2e1fd1d5b5",
+    "creation_sha256": "1ffa2234bf83643c2fc1735edbe10a1c1319d12724a9d4cf54d03f25509f6808",
+    "runtime_sha256": "00601498e651027d88691d090940b7b41220d835073cf87c95399121eeddbce1"
+  },
+  {
+    "benchmark": "scale_external_calls_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 237,
+    "creation_bytes": 262,
+    "wall_ms_samples": [
+      26.161000016145408
+    ],
+    "input_sha256": "38fd0f6019407c977cf2e51d7ede55246bb0c36a58af9aa9f8c56c6dd8684359",
+    "creation_sha256": "cffc6b46e269cc1998dc1d88d9bd008c704e73900beb6eea00fe89dfdd65d097",
+    "runtime_sha256": "3f7cbab81d77f44040bd232ff4de4199bace6d69dfa383ba18f344b616d21491"
+  },
+  {
+    "benchmark": "scale_external_calls_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 174,
+    "creation_bytes": 191,
+    "wall_ms_samples": [
+      28.899208991788328
+    ],
+    "input_sha256": "6e4d06fb235359f261b6e2d77eabe89f2b3448b2ee878449660e112691c28170",
+    "creation_sha256": "3b1769760e76fbb698d598b042082edca2f97044a54eed07263469c287615bc0",
+    "runtime_sha256": "3d84d16a6276666bb335550ec8bc9b65aa568d45ccbb4fc7795e344eaf6a2c9a"
+  },
+  {
+    "benchmark": "scale_external_calls_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 192,
+    "creation_bytes": 209,
+    "wall_ms_samples": [
+      28.60637498088181
+    ],
+    "input_sha256": "9ffcd128f3dc47c37db2f9e5d2186326c4cacdf2a5d082d8c85315ca7d113614",
+    "creation_sha256": "6a0d3f8a7577944d78d3f199cbe580f0707c520dda938f1c2231615beee143e6",
+    "runtime_sha256": "c30567e0f2e94bd3868b216a4a3b4a080c49e83d6d0467155501d89e95ed0482"
+  },
+  {
+    "benchmark": "scale_loop_bound_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.643792000133544
+    ],
+    "input_sha256": "52d2159c7fc3ebe0ec67497971cc25df1dbc61e1dfcd83ab56a3207c6944ae2e",
+    "creation_sha256": "f6a0e2ca9ec032ee9d0edd4c3503cc9780abc94e74f4d141b49652ec9e4a2974",
+    "runtime_sha256": "47407fb332c2fd52bcfd2df83af7d806035cbf4117b7ad9b9b958eb8f73a7598"
+  },
+  {
+    "benchmark": "scale_loop_bound_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      15.89679199969396
+    ],
+    "input_sha256": "4e713c6d80b96cf2979c7b378940ee6d115fa025fd5bfd917f27413ed28e0179",
+    "creation_sha256": "b3d485b3e4fedd91c1d17cb9be44994cdaa438ae6f517b111359be360530d22d",
+    "runtime_sha256": "ae8a74ea39a785fe73c08a60240791491d87bd1bb8819f29480dd017c6e3634b"
+  },
+  {
+    "benchmark": "scale_loop_bound_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 65,
+    "creation_bytes": 82,
+    "wall_ms_samples": [
+      24.698541965335608
+    ],
+    "input_sha256": "ec25fe5b587ebe5b2e83a370aebb0f78368052a9578d511caaf63848d2ac84a6",
+    "creation_sha256": "0eefbae8b4ed9978fbcfb2df95d0efde476f56d277abce07451a6ce305721c39",
+    "runtime_sha256": "7a72c41070755b93a93e29300d55c71cd0697f1b387301f3d9f5019e80f23c6f"
+  },
+  {
+    "benchmark": "scale_loop_bound_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 66,
+    "creation_bytes": 83,
+    "wall_ms_samples": [
+      23.529416997916996
+    ],
+    "input_sha256": "7cc4018479479361ee8c1457b4256f8b2b0d2e28d50ddd28834c8f0a4ff742ce",
+    "creation_sha256": "8d77a562294d065bd0c485f1434d017ae238efe7f6da6613dea18988f0ce6eae",
+    "runtime_sha256": "47ac0e539c4a089713ab2618b9efc7a029a90fba061d3492c7e3591bf943ded1"
+  },
+  {
+    "benchmark": "scale_loop_bound_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      10.073082987219095
+    ],
+    "input_sha256": "7b78fce2066cd05017d07137830b50bffee82f11603426e0857c2aaf8c673027",
+    "creation_sha256": "9eec46b7f7c5eadb9f19a6f2017d6d3ed9c0927cc2fe381568a9b9ba37e59aa1",
+    "runtime_sha256": "6e4e801e39a8af1ac543bea79d194e2d1a843a538d3b113b21e2f2aabb369585"
+  },
+  {
+    "benchmark": "scale_loop_bound_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      15.997625014279038
+    ],
+    "input_sha256": "cba1c8c005c7a6d2b4d3bb0b8e80365d8064d5bcb5ef640741196008ca1071e3",
+    "creation_sha256": "932901800752182ad1c2de17538902289e0ae200d5048e84a845c2268c30f229",
+    "runtime_sha256": "ae007cf71d4ebc11ca4445632e9f15b31ebd11558eda2f39d40b666972847334"
+  },
+  {
+    "benchmark": "scale_loop_bound_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      24.41345900297165
+    ],
+    "input_sha256": "0a25057080e3fa02d1194ac1031e8e910ee21845498a7e2c63f460c46d21dff5",
+    "creation_sha256": "0a59deb5032d6765b8cc222c61e9a2349a43828d24a6e9cce924b240e5eb6e61",
+    "runtime_sha256": "871d1858c21fb2d8100c46b7d7b0c44fb86da8e1632d9e581a4f2d8530474ec0"
+  },
+  {
+    "benchmark": "scale_loop_bound_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      24.107542005367577
+    ],
+    "input_sha256": "847347a432f4b7685e01fcab0c94c2631b7dc316a9a7e0e7b52f5800486e1ac1",
+    "creation_sha256": "2c0cc3e50475ea0f7ea35d5201805302942328e7ceebe0b165cab6d77b046611",
+    "runtime_sha256": "3a9889020ce638dcd5356384ef03f296067986e556522c7589eaf78dcca3469c"
+  },
+  {
+    "benchmark": "scale_loop_bound_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.748124983161688
+    ],
+    "input_sha256": "8ff10055e211239195424c97365493608addbd47f9c3fb7789acfa593fa8bf2c",
+    "creation_sha256": "49356ce72ce90f2d7dca1e0eff144d4dd17e1eb7641358b09e37e149dcb19b3a",
+    "runtime_sha256": "b746280b0b9ed3a8f7652085efbeaf25a160622555fbad14ca093423aa823e72"
+  },
+  {
+    "benchmark": "scale_loop_bound_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      15.945542021654546
+    ],
+    "input_sha256": "c3c379254972ff8c551aa9771a2ef88942abb175ba7e6b8d83f69d42b941cbe6",
+    "creation_sha256": "7142065f120377031d93dabeb59c16a3f684f8bb9c142314389a2a38bbf7f1af",
+    "runtime_sha256": "01553020e64aacf68f10efda07849111a902a3bb27690de0838ec7fc4517d054"
+  },
+  {
+    "benchmark": "scale_loop_bound_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      24.55466700484976
+    ],
+    "input_sha256": "dc49d9d760e19f21699a4b04c16a2b1e8ec3efb3fdea34dfecb8fb60f3bb5604",
+    "creation_sha256": "3a792f69e00aa423038882b4c7a39595d7d0671251772e44f668e4f27a19aeae",
+    "runtime_sha256": "c91a4d6a0a2d2b1a1c692e9223f86c911766d5018b4005e63bdb585bac06dc64"
+  },
+  {
+    "benchmark": "scale_loop_bound_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      24.9256250099279
+    ],
+    "input_sha256": "2529af2a665ba8e760f71d98941a54bfc6d0cfe53f60d155cbdf99047157ea6c",
+    "creation_sha256": "3df6742ca420376f09f4a26bd4f902e92b7b014aa02335a9a91b1f139f6c5ed9",
+    "runtime_sha256": "83d069ae2c18d95001d9e2615af5dbcb901e1601f8faab48af48be1479e6cc13"
+  },
+  {
+    "benchmark": "scale_loop_bound_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.961374977137893
+    ],
+    "input_sha256": "4558704f12221272f4a21f0c6fcff61cbd0a2b0a1fa49fdb8a430d29c546873e",
+    "creation_sha256": "949bca0ac44fb21ce8e5c6e381d302e84d1e5a13818d019c08f87785f6e5c5df",
+    "runtime_sha256": "320be058c6f7fcbd070a8714eedefe7672148d6214fa6da7a2874f78579e06c5"
+  },
+  {
+    "benchmark": "scale_loop_bound_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      16.200624988414347
+    ],
+    "input_sha256": "f5a517cb499cafac03dd7f190962307757cdd85f4749b72d9da0dcbd64072ee3",
+    "creation_sha256": "bccf16d8c7ba5005bfffc5b203c1b19c6121523c1fa508333cf467da607a4e8e",
+    "runtime_sha256": "c84a1d9b8c8a608a6e8dfda74f5250bb2a0e09e1df795e8f575e956a850349a3"
+  },
+  {
+    "benchmark": "scale_loop_bound_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      24.575249990448356
+    ],
+    "input_sha256": "480e95450aa07aa6835fcc5722664aa191b0c35a71ee1df58bfb9765f60ec9ce",
+    "creation_sha256": "56a647bbb33f829352ec05a287c735070db8e5aa5aa130faa68915a72491202f",
+    "runtime_sha256": "89ab12f00bde6db39156b511a4d9dd034e02d2310855dbdba1a20621b5836db4"
+  },
+  {
+    "benchmark": "scale_loop_bound_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      26.400458009447902
+    ],
+    "input_sha256": "8b55edb9220ce077810a7701a5a68e7869d08226a234573d54aeb35e25aafac7",
+    "creation_sha256": "f3608d34e055eb4f89ac5d45413586e20c044b3e7dc3970e02490281b5c7f321",
+    "runtime_sha256": "7e94b7c7780be57d8bcbd012c81c238a08e783dcf5524c88721254908d55ae88"
+  },
+  {
+    "benchmark": "scale_loop_bound_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.786291979253292
+    ],
+    "input_sha256": "423f9abd200ea6fb0424453585641a7003c1e7368018f99f1c8db01088e452b5",
+    "creation_sha256": "c9f30639ae5109a7420e10dbb8c1da8a2fb90f3fde23d9e99e5562634884e6f0",
+    "runtime_sha256": "fd330b59b0279af6dd2f323d0f59fdab244b902e8322950468ccbcfb1d48a539"
+  },
+  {
+    "benchmark": "scale_loop_bound_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      17.019332968629897
+    ],
+    "input_sha256": "f682950d6cf18c9029e131a0fba2d589a53a1af8abc28cae70eb030254d3e39e",
+    "creation_sha256": "33181e271b06203fc6f57b6fc0d4eb1fbeaa23079da4965704bf5322115e1d37",
+    "runtime_sha256": "68ca4e6ae95d8a15a96963ab735b604ab90a309c97421709760df6f6b45170ad"
+  },
+  {
+    "benchmark": "scale_loop_bound_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      24.2479580338113
+    ],
+    "input_sha256": "7440964e2b998859271d9146d2295e2419ebd23443401179943314622353fada",
+    "creation_sha256": "96c1ec429c47c28e124a7667a980c72c351c26d8a9c3dc2b7566f669547c4e43",
+    "runtime_sha256": "0069b47decc807139fcb0db38af120139019527b8f054175e94358e2f66a25fc"
+  },
+  {
+    "benchmark": "scale_loop_bound_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      25.212957989424467
+    ],
+    "input_sha256": "b88a2df12664bded5f90f26a6a8045e086185f0b4d8ecbbee2a4e6bd943d3f5f",
+    "creation_sha256": "fc903eb69296357b0493862b1e3a1f63eee2787c948c60d8915ba6e34eca5d36",
+    "runtime_sha256": "cf4160f7b0bd2eeb11a0964c89d44ed5d2ed723dcf5d4ae0876aa02031ac2f36"
+  },
+  {
+    "benchmark": "scale_loop_bound_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.591749985702336
+    ],
+    "input_sha256": "46db6c8f75620aef3c38caf7fa8ab81142b3e0d11c935c7f8f76c433b27b2d93",
+    "creation_sha256": "7c5e70ef947a3697dc043a27104c70503fbd31de0fa9a04a79c29c353be47d83",
+    "runtime_sha256": "7174dac5201af580661f77eb83e8a836ab439c33d0a59b0bf5645d072b5efdc1"
+  },
+  {
+    "benchmark": "scale_loop_bound_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      15.853790973778814
+    ],
+    "input_sha256": "67c1ac401d298a8c2885e67c1cab67aecf21759cd9c5775f5a69972db3408103",
+    "creation_sha256": "3a1d878f88153d0654698e86c0a67a0a92488c3584b7c0fe2734a57f2826fbb8",
+    "runtime_sha256": "af2ecc0bbf7ce79872b90d9096c6d4dfcc7f96bd80ae5ffef178d5fbae91da19"
+  },
+  {
+    "benchmark": "scale_loop_bound_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      25.0884160050191
+    ],
+    "input_sha256": "dbe347e6905d19b81b64896c704e91db6221779dbc0cdf46dab534346c284310",
+    "creation_sha256": "90b9dfdd1d53f968416ed4a87fe46ad1a68ce17a532d9c8ed3e2893e4c3ceac5",
+    "runtime_sha256": "f311e12d1f837e5c0b5fd16252f369a4103a22fb55a1fe97e0845b91b3666277"
+  },
+  {
+    "benchmark": "scale_loop_bound_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      24.92279198486358
+    ],
+    "input_sha256": "88780a422caac4ba0b1a03d8658e81ab9faea987b4010074e24f0f4d6c9969b6",
+    "creation_sha256": "6805986a52c3b4755254101a8133090042598502029d55c659c9521f8a52457d",
+    "runtime_sha256": "08cdb64d1c56544780614dc5c2f66e8548dae6f252eeb3eaf0c132edf1463fd4"
+  },
+  {
+    "benchmark": "scale_loop_bound_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 160,
+    "wall_ms_samples": [
+      9.559041995089501
+    ],
+    "input_sha256": "03a8b211ea6b46d25fad19e88b9a2fd51f06a8d75638fe5591eb52fc3dfc6d66",
+    "creation_sha256": "a1162cb29f6ed96168493d720abce5a39aa4aaca028f002f2865cf1a9892ffb2",
+    "runtime_sha256": "9b4b412fb1b3b80de44698417884475bb36566941ffde0be6d907af11c1dcd66"
+  },
+  {
+    "benchmark": "scale_loop_bound_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 112,
+    "creation_bytes": 136,
+    "wall_ms_samples": [
+      16.273791959974915
+    ],
+    "input_sha256": "1a462e4ee0f84a2eb9e7fbdd3724ff0579c031df3380ec2e056fe1f2b11a0bb0",
+    "creation_sha256": "970e8ff2ee78f5421e56bec86b989718dc4b7869e08e0d9d37818cfe1d20a185",
+    "runtime_sha256": "7a9ad83850ed446f955264338d47ef3f9827e3781afe2aa053e3a4192e97b220"
+  },
+  {
+    "benchmark": "scale_loop_bound_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 92,
+    "creation_bytes": 109,
+    "wall_ms_samples": [
+      26.260541984811425
+    ],
+    "input_sha256": "9fbf9fda613323220c4257ec940161f3d72b113087ce1f12d4c15490ebdae65e",
+    "creation_sha256": "f2eccd8c5c1034fbf76c07d55414ac1299dc02b667a51c8df1614244e707e7c4",
+    "runtime_sha256": "10481af747e3c30c5d4ae2861c82a658c99e93f121cd5b9014d98fe1cbe4ca99"
+  },
+  {
+    "benchmark": "scale_loop_bound_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 80,
+    "creation_bytes": 97,
+    "wall_ms_samples": [
+      24.929417006205767
+    ],
+    "input_sha256": "207d5aa843d56ea26a067907743de9c6fe52e027b657d653807fe3f8f9ce324a",
+    "creation_sha256": "fa4ce25fa20b2abaf602c04b5ab525869cc922eac64e2e6113e92703a8b97ecc",
+    "runtime_sha256": "043ff421b8c980da4a3df704923fe0a37c7a35dc48ed556e3c3736e050e0e562"
+  },
+  {
+    "benchmark": "scale_mapping_depth_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 240,
+    "creation_bytes": 267,
+    "wall_ms_samples": [
+      11.80191698949784
+    ],
+    "input_sha256": "da26b6672f28bf9f4323b84412f3a70d539dfaa1e0961ab473518ff93a61a084",
+    "creation_sha256": "96e74d3043950f8080f155ad2d785e0065dcc2a3b5fa8ee2bfe4b3002abe51aa",
+    "runtime_sha256": "f867626edc6ce6e560bcb489c4c3fb3d5e9dc7ad904cda64499db9ff76b555b0"
+  },
+  {
+    "benchmark": "scale_mapping_depth_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 171,
+    "creation_bytes": 195,
+    "wall_ms_samples": [
+      25.163749989587814
+    ],
+    "input_sha256": "288876d15d376466b584be86d5cb4063d212990a948b3807fb87a54ef063f799",
+    "creation_sha256": "e2514da302498846e53c7cd1e983734daeccd4b0b0e069b75550f358e844d237",
+    "runtime_sha256": "9e5809c84a2ffa3a33569ad83754785e2c59797900c0d6cbc07b77784774c791"
+  },
+  {
+    "benchmark": "scale_mapping_depth_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 136,
+    "creation_bytes": 153,
+    "wall_ms_samples": [
+      28.46437500556931
+    ],
+    "input_sha256": "2916fea84aa1b50063298ba7638ce8c923b7be384d04354eb68e2985540a2af1",
+    "creation_sha256": "9a7bd70a85e2a3f974678e009570f5edd36c63e56869830fe8b972d4001e380a",
+    "runtime_sha256": "886350a1c6df31a09e8c527593457257a688df124805f7a5b213817e7a225515"
+  },
+  {
+    "benchmark": "scale_mapping_depth_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 134,
+    "creation_bytes": 151,
+    "wall_ms_samples": [
+      28.39720802148804
+    ],
+    "input_sha256": "3ac3c9c8e81a0a2c6fce6ad17f74d8b8c6c8b4d1d31e84df3ae6406fd50032fd",
+    "creation_sha256": "91a783c5666a132732372413867d2d146b95c6ad4882ee6c2d48296aaec313f4",
+    "runtime_sha256": "5e71bd62fcee1f7ee823efb1c3c25a5c3f3d3c8a69ba218c9d8fbe6d2731a8c6"
+  },
+  {
+    "benchmark": "scale_mapping_depth_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1504,
+    "creation_bytes": 1532,
+    "wall_ms_samples": [
+      21.286958013661206
+    ],
+    "input_sha256": "08e5a5c4f556855dd77afc64eea15c93c48a7121e424f2d19c6d515ed4896cfa",
+    "creation_sha256": "be69e42bcd435f295a8c4411516e85a1db9ebe97c0bc5cf0657510f05d41bf7f",
+    "runtime_sha256": "10cece6d849d08ee5ecec58c141ff067b4b923ce61d522d3ee0f3caf40560c8b"
+  },
+  {
+    "benchmark": "scale_mapping_depth_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1617,
+    "creation_bytes": 1643,
+    "wall_ms_samples": [
+      119.23929199110717
+    ],
+    "input_sha256": "fdc79c46bf55e62c923ff93d84fe3b178bd41c2715a136a43590806fb60cfa99",
+    "creation_sha256": "ff9ef81131339c9904d67633f87f470d162543d9dcda1a901c71e45504573646",
+    "runtime_sha256": "b4f68d7fa2d6250ee7cf85698def0ebffe8a5831ab6b4887c8116e300489346a"
+  },
+  {
+    "benchmark": "scale_mapping_depth_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1330,
+    "creation_bytes": 1348,
+    "wall_ms_samples": [
+      34.624457999598235
+    ],
+    "input_sha256": "0a115f346da548793e6e1e3955c801acfcc7696a9abd8cff2778dfbbb5767737",
+    "creation_sha256": "705f6a41156ba746b39fa72c6837fb3b7d4175b310b1e0b2703fad1a83363c02",
+    "runtime_sha256": "4a54f02dd59b9945d14570cca5e6f2c05332e3cfcde45205a509b6605b024dad"
+  },
+  {
+    "benchmark": "scale_mapping_depth_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 1265,
+    "creation_bytes": 1283,
+    "wall_ms_samples": [
+      31.87412500847131
+    ],
+    "input_sha256": "6f44ef079c8cdfe303dab09189be9b1c7a5660fe9dc3f21168bcd1b02ae84c7b",
+    "creation_sha256": "0a732cb4cbca2fc5425598baaa53b606e7fa157c45f83819f39668cee04f6c88",
+    "runtime_sha256": "c9645e563144f4f07673d5409e17e7fc3ea7912089eb7a10804842165efcaedb"
+  },
+  {
+    "benchmark": "scale_mapping_depth_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 340,
+    "creation_bytes": 368,
+    "wall_ms_samples": [
+      12.50974996946752
+    ],
+    "input_sha256": "db986bee0648f2fba3b7fc66c048d9cf6aaaa62d692fc7afd16b563e5534e620",
+    "creation_sha256": "9ee911175aa3498452c59af8b42d56da5341881f488197d6b72b177ea1acd467",
+    "runtime_sha256": "a070993716a8d5ec0828bff1900632c2e8ce3795e6cac9a1f96d3bc41a039407"
+  },
+  {
+    "benchmark": "scale_mapping_depth_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 316,
+    "creation_bytes": 342,
+    "wall_ms_samples": [
+      31.16912499535829
+    ],
+    "input_sha256": "3adadbd11c97cf6ac6e32805820548093f842893401d994853599be6e1c1e3b8",
+    "creation_sha256": "2483937e1dafd5814167d53c238c0caef5915d984be3888f364ff6f1ce73763f",
+    "runtime_sha256": "eaa8f2903b2fb02cc39c82ee7272aa1312b64f1c4feb456cb040db0bd5b7d099"
+  },
+  {
+    "benchmark": "scale_mapping_depth_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 224,
+    "creation_bytes": 241,
+    "wall_ms_samples": [
+      29.057083011139184
+    ],
+    "input_sha256": "22ab0f519eab4a8bb27ecaff77d2d0509d58a401ec112bfe989bcacb58b2812a",
+    "creation_sha256": "ad6ff52cd8d8366ba2e509a3befead8f6a576af521cd37aa00e94b12a1483330",
+    "runtime_sha256": "257a583d5662f270aaf0c78b2e8b1ae4d3c3c99a4eca937b063d2b2fb5c22c9c"
+  },
+  {
+    "benchmark": "scale_mapping_depth_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 225,
+    "creation_bytes": 242,
+    "wall_ms_samples": [
+      30.155459011439234
+    ],
+    "input_sha256": "4fae0e4a198ab9beb9caac8e987e41ed2a4d34e87610a7deca761f6fbd209c18",
+    "creation_sha256": "e0b3a1f8eb1cad8a9a66bc2e449eb150529fcecb986e69f8e7909d4d53caf97e",
+    "runtime_sha256": "f1ca6d7a61da31a56cd799f18271b0eb133b582dc8c72230479405b60ac6740a"
+  },
+  {
+    "benchmark": "scale_mapping_depth_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 2847,
+    "creation_bytes": 2875,
+    "wall_ms_samples": [
+      30.158957990352064
+    ],
+    "input_sha256": "2628ba88d5032a46b35f5eab579ba86c8ea672bd41035d20885f973a34f735fa",
+    "creation_sha256": "8ca2a2aabfff9a6cda346b020f5b428a2c634b4eb052037890db56db03328e5d",
+    "runtime_sha256": "7bdf6246110fe150e70e34741512687fb07ed307936eacd2e828460018b1b289"
+  },
+  {
+    "benchmark": "scale_mapping_depth_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 3106,
+    "creation_bytes": 3132,
+    "wall_ms_samples": [
+      229.0025840047747
+    ],
+    "input_sha256": "74a752a87d4189f38546b8d4f2a3dc556b897136d73acbed0c6ac5017bb39273",
+    "creation_sha256": "5d93f505d74b4a73cd80b9ad89806762723ee6068489609e9ed67295dd351c9c",
+    "runtime_sha256": "cf6b58dc3de0c7d7d0ab1e83ad45c678b5fa7b0f1a23d922cf67f00ddc2c972b"
+  },
+  {
+    "benchmark": "scale_mapping_depth_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 2521,
+    "creation_bytes": 2539,
+    "wall_ms_samples": [
+      34.83820799738169
+    ],
+    "input_sha256": "81cacf7dae2873dd92134de87fffc1bae544751cc6d4538bd74d27135361652f",
+    "creation_sha256": "8752017a3357578e097ec353582283dad4a422701ca27ff3acb4e5f95a35eb91",
+    "runtime_sha256": "8b692046b7ed207dd21f84040c5cc9d6ede99576af2507ff59c8661c0ee3bcca"
+  },
+  {
+    "benchmark": "scale_mapping_depth_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 2548,
+    "creation_bytes": 2566,
+    "wall_ms_samples": [
+      35.09216697420925
+    ],
+    "input_sha256": "e9247c730af83d892c3dcc70409b5e96c1591a50a148c8217025ecb84b7c6550",
+    "creation_sha256": "353fc266901ea1d7792896dcfc1340a7ab788a829c1ee14b12ed7c833fb27fe6",
+    "runtime_sha256": "bb2fb37d29dac6d4ba5d435a2a04d677679e13ce323c0a9f361d50398d5bb81a"
+  },
+  {
+    "benchmark": "scale_mapping_depth_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 500,
+    "creation_bytes": 528,
+    "wall_ms_samples": [
+      13.458666973747313
+    ],
+    "input_sha256": "2c743fa6c2b19f5495a610c680af987f5b7a254f03b1a7be219316fd5a9abf67",
+    "creation_sha256": "fb9f7dc400e9b306b8e9b964062bdc3cdbb09202e3ccfb0671d4926761cfce86",
+    "runtime_sha256": "03aa77bf2e665b902e44126689b8c0a41ff72dac58c7a4bb379c196f55abd43b"
+  },
+  {
+    "benchmark": "scale_mapping_depth_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 502,
+    "creation_bytes": 528,
+    "wall_ms_samples": [
+      43.63825003383681
+    ],
+    "input_sha256": "59aff09ce45d4f259b5ff9fd5d17e3c99777e684c671075d6b48bb0a66e0b605",
+    "creation_sha256": "1d1ea972a6707490bf9f8e61cb0e5d3ef801e4f49e5ff27301e8de7156751050",
+    "runtime_sha256": "b0a51ebc277c259a57a8de0eead82b2d75a2cb4ae06478faf5d435c0c5c93c2a"
+  },
+  {
+    "benchmark": "scale_mapping_depth_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 379,
+    "creation_bytes": 397,
+    "wall_ms_samples": [
+      30.685334000736475
+    ],
+    "input_sha256": "21ad5571caa10c69644b629b6bdabebb3571d25b7c97d6a6a993d83f393e772c",
+    "creation_sha256": "c0cfb930f6c0b300f27230d10b7211ffdf5e039ccfb5e641cda19a449fb93348",
+    "runtime_sha256": "b86cf3c328e2e1b3bffecb992bfd296d41f845d97c31b820869909cf8402daf2"
+  },
+  {
+    "benchmark": "scale_mapping_depth_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 372,
+    "creation_bytes": 390,
+    "wall_ms_samples": [
+      29.047582997009158
+    ],
+    "input_sha256": "4df084385f606274b90794fba59b01c8049c452adb455e8f73d2b0d1c6cb6aab",
+    "creation_sha256": "1a07d1c69638931dcf9c0b6299fd6d4bf2d98374da5671f329740465c6097cb6",
+    "runtime_sha256": "668c6f7105cb9e612eb7db956751fb80b5e766af161417ef0bcbabab2cdee3a7"
+  },
+  {
+    "benchmark": "scale_mapping_depth_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 5526,
+    "creation_bytes": 5554,
+    "wall_ms_samples": [
+      50.62579101650044
+    ],
+    "input_sha256": "d68742c5243899a382f865604b55cae6efb8d54c4469f56f20aabb63d0bcbb96",
+    "creation_sha256": "82e3c1ee3c42e8e915daed84a4e7b0871b4c62aff0b1d5c6edbee52276177869",
+    "runtime_sha256": "2ef452436e5ecd10273de25c42b15c237facc389f38029a48c157243df27f123"
+  },
+  {
+    "benchmark": "scale_mapping_depth_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 6079,
+    "creation_bytes": 6105,
+    "wall_ms_samples": [
+      481.51483305264264
+    ],
+    "input_sha256": "dc6031df8a6e973b1797c8ce76eca0ced8f58cd9f37e10e461e6a4ef23363d0d",
+    "creation_sha256": "171bf60ac188a7d7ec9128a25e9c0e588626ddb9866b2c0946fbf2c4665a76fc",
+    "runtime_sha256": "ef8b14a530e33928a392921b45cead671f37b2d69494d193af15d3c139ed7ba1"
+  },
+  {
+    "benchmark": "scale_mapping_depth_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 4795,
+    "creation_bytes": 4813,
+    "wall_ms_samples": [
+      40.50620802445337
+    ],
+    "input_sha256": "7c4f90608d4bb8eb2bd9feb141399d0b2b32d7c0b121c460c6e62ad7a992edbc",
+    "creation_sha256": "4fa7342fcf948f69dd9dbd9e48c1005b42d8508fb42db08c20021c7b9f108fc8",
+    "runtime_sha256": "ab4f2998437fc360091dbca69886668a044a331be3250af93cd8dd97688dd5f5"
+  },
+  {
+    "benchmark": "scale_mapping_depth_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 5012,
+    "creation_bytes": 5030,
+    "wall_ms_samples": [
+      41.078833979554474
+    ],
+    "input_sha256": "6e3fa8c2c3e21cb56635acf856315c1d3eede8a10e70b7bdac8e648c2c715f07",
+    "creation_sha256": "6525241c50f252dd37755a47ba887ac8f52baab6705802376db0e0162c1dfbd7",
+    "runtime_sha256": "62da4ba451b3dcc157fdd74091d0bdc7a04ab3449aa4f0a13efbc4cea244e591"
+  },
+  {
+    "benchmark": "scale_mapping_depth_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 834,
+    "creation_bytes": 862,
+    "wall_ms_samples": [
+      15.787917014677078
+    ],
+    "input_sha256": "24bb94124090190cd4065c35084681c513decc88772d8ff8e2fdc43f1d8bac94",
+    "creation_sha256": "c972a1c34572eb5e9fe5a92f91a5ea2ca9e3fa22d5e82929a34f5e38998f1247",
+    "runtime_sha256": "7249656d4155716864ab255145613617d5b7facd2d0fadf541da354bb9c91159"
+  },
+  {
+    "benchmark": "scale_mapping_depth_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 873,
+    "creation_bytes": 899,
+    "wall_ms_samples": [
+      68.31191701348871
+    ],
+    "input_sha256": "aa2edee9e81ea1eadf7651508fee345e40f7ebaf5fa4923a4be0207dd848352b",
+    "creation_sha256": "b2ec951ef37f43b8d0d022550336238dc9afe74af01459ee63fe06aa1f7daca5",
+    "runtime_sha256": "0ea029a46c10cd91ea3798a3f6e54223affa047fffc29dafe48b389fc330b9d3"
+  },
+  {
+    "benchmark": "scale_mapping_depth_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 702,
+    "creation_bytes": 720,
+    "wall_ms_samples": [
+      31.515207956545055
+    ],
+    "input_sha256": "900573e7dd429cbf77798eebbcdb9dd34a2111fe990d36e6b695654bdc23be3e",
+    "creation_sha256": "6b2ebb0b5f8992196ea8c6905c1b97f9004f56a8abbccd443faf5dd18bbb2db9",
+    "runtime_sha256": "46ff117adf668fbb5698d4b5e4bd847afa21ad4ca819631da3ef638c8d447b36"
+  },
+  {
+    "benchmark": "scale_mapping_depth_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 667,
+    "creation_bytes": 685,
+    "wall_ms_samples": [
+      29.910124954767525
+    ],
+    "input_sha256": "c0b697eb049a7bd03ff18ee20f5be7bad46d61a8bfeaa97f9e3dedd5ff54bff2",
+    "creation_sha256": "13ad1e47e1a39ba9c9a1e01b3d66f14187b6ca51b24a3e9d8c086c1ba1ec6c8f",
+    "runtime_sha256": "d300c3f8bc43add5ad816dd8522cf2877b0aa676c86737a5d9d43b6ba5890d00"
+  },
+  {
+    "benchmark": "scale_storage_slots_1",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 203,
+    "creation_bytes": 229,
+    "wall_ms_samples": [
+      12.764999992214143
+    ],
+    "input_sha256": "7d66eaf4df364d7e713c9ea1db2cdac5b3c218291317201ad78a76845249f92f",
+    "creation_sha256": "12317cd9c41b848b9dcb4e6fa558b91107d75a6b57d012cc4d63dcb020c575d6",
+    "runtime_sha256": "95661117f417555a00aa51e54dc356d8821f4796552989d4da7066059dae075d"
+  },
+  {
+    "benchmark": "scale_storage_slots_1",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 141,
+    "creation_bytes": 165,
+    "wall_ms_samples": [
+      22.14983303565532
+    ],
+    "input_sha256": "30229d9b2af3b1c7c65f3063a60f3f302edb86474d584104aba04a6d572e6f6b",
+    "creation_sha256": "b44311ab22c9feb047e363c870849b136c4587198ccf19bd2da72c949b1a21fd",
+    "runtime_sha256": "43f522813b1d87540b433110e2d4a9d564e02c566ebfde9a39be97a96f51cdc5"
+  },
+  {
+    "benchmark": "scale_storage_slots_1",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 66,
+    "creation_bytes": 83,
+    "wall_ms_samples": [
+      25.534499960485846
+    ],
+    "input_sha256": "e4b12744ba008b8490b4b9938019b67e9c50ae06402808841eb2773e81c03ea2",
+    "creation_sha256": "0fa36cc41e710a88fd9f0425fe00490d950ca919da277a21c701e5b4e923d640",
+    "runtime_sha256": "e5cd583ca316ba5dd6646bf11ab546acc546cb0dacb652df4aa256c5a8e16ecd"
+  },
+  {
+    "benchmark": "scale_storage_slots_1",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 66,
+    "creation_bytes": 83,
+    "wall_ms_samples": [
+      24.288457992952317
+    ],
+    "input_sha256": "5ac1eaced7193918e6812aba971d8498a28956e61ef503c357747167473fa6f5",
+    "creation_sha256": "0fa36cc41e710a88fd9f0425fe00490d950ca919da277a21c701e5b4e923d640",
+    "runtime_sha256": "e5cd583ca316ba5dd6646bf11ab546acc546cb0dacb652df4aa256c5a8e16ecd"
+  },
+  {
+    "benchmark": "scale_storage_slots_16",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1228,
+    "creation_bytes": 1256,
+    "wall_ms_samples": [
+      17.641582991927862
+    ],
+    "input_sha256": "2ee37855c62c72dfd1f433d3495139ff00d7d586b6961bfbdda9b2f5fd9b7056",
+    "creation_sha256": "d6e688935c1d89b974da2cca936c93f86c9f5c7cdd31622324fb699264c61903",
+    "runtime_sha256": "df2a6b0f52dcc370d93d8b9946414131a77ced860e36eaac1293a92aa76659dc"
+  },
+  {
+    "benchmark": "scale_storage_slots_16",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1323,
+    "creation_bytes": 1349,
+    "wall_ms_samples": [
+      84.59891600068659
+    ],
+    "input_sha256": "37143c5bdd967d6b08cb90a943f94b010450cf7419ac847e3f91f7309253dc32",
+    "creation_sha256": "6da0568a31ce268eaa08390da42457574c5a53ba6c10c08ea14dcb282090f0b4",
+    "runtime_sha256": "ec0b8eeaf91b8f0f79523de99a8b01f063e37fba5252690b16e153e8120acfa6"
+  },
+  {
+    "benchmark": "scale_storage_slots_16",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1035,
+    "creation_bytes": 1053,
+    "wall_ms_samples": [
+      30.882042017765343
+    ],
+    "input_sha256": "0885273df19b8c127486c7d5f1456b3a72a9151e40ec0d9312a440e6340ec31e",
+    "creation_sha256": "2fa4c7fdd9e1e5e647d0ae20ba3be1ede78e360d24a963499dc8de3622327476",
+    "runtime_sha256": "c04697c27e965031ae78b19425ef4e385b302fd05c70fc2eabba68fd26d2c52c"
+  },
+  {
+    "benchmark": "scale_storage_slots_16",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 897,
+    "creation_bytes": 915,
+    "wall_ms_samples": [
+      28.6372079863213
+    ],
+    "input_sha256": "8e2b33f951c3286a59b99f3155b81f388e44a28199b56aa8f66050eea8846729",
+    "creation_sha256": "12301105ab9dd82664641a1f6319e5799f0f046426f0920764f0371ac1dc034d",
+    "runtime_sha256": "448f152a65b5889a94de52552ec5a7334e7a487649fdb6deaaa5d4c063a9e693"
+  },
+  {
+    "benchmark": "scale_storage_slots_2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 287,
+    "creation_bytes": 315,
+    "wall_ms_samples": [
+      12.613832950592041
+    ],
+    "input_sha256": "cf6ca8cb06c409f00fc7316693728a08148041dd0a8d4a6ee633fb2392b28c92",
+    "creation_sha256": "8ded9976dd65b4c2c69768f7fde701f77cbed4d29778aafbe56c044e33298fa5",
+    "runtime_sha256": "3daeccc98f98b15964009ffec123e908b05ffde56354d28219fedf9e8d4e5d95"
+  },
+  {
+    "benchmark": "scale_storage_slots_2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 232,
+    "creation_bytes": 257,
+    "wall_ms_samples": [
+      27.294125000480562
+    ],
+    "input_sha256": "02955b71d8ca64969359f3a796f26b10b76de860b55d547290d6225c94be665c",
+    "creation_sha256": "9ed7af2b9aaff69ac9e46db8665421a770399546847193a7d9a029d872b8b537",
+    "runtime_sha256": "e6f905072a88fe2235d934e8dd3ca1418f294a509f04409384121c968c206034"
+  },
+  {
+    "benchmark": "scale_storage_slots_2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 145,
+    "creation_bytes": 162,
+    "wall_ms_samples": [
+      27.192458976060152
+    ],
+    "input_sha256": "c30c87c51ac78e91f4e5c5d9a8f523bbb164ea410960bee0affb42ae60d98093",
+    "creation_sha256": "783b1c1aa8295d5c66a71cacd093c53d39f494891bdb335f35d751578c25ae37",
+    "runtime_sha256": "70b444a2f81264a0ca7835a89f4beaff395bcb266b5232591e07d445d3969b7c"
+  },
+  {
+    "benchmark": "scale_storage_slots_2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 145,
+    "creation_bytes": 162,
+    "wall_ms_samples": [
+      26.494499994441867
+    ],
+    "input_sha256": "371f119987b2532f00850d53d975bc7ad0c317487cc62f44acd3c2714d28ea13",
+    "creation_sha256": "783b1c1aa8295d5c66a71cacd093c53d39f494891bdb335f35d751578c25ae37",
+    "runtime_sha256": "70b444a2f81264a0ca7835a89f4beaff395bcb266b5232591e07d445d3969b7c"
+  },
+  {
+    "benchmark": "scale_storage_slots_32",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 2312,
+    "creation_bytes": 2340,
+    "wall_ms_samples": [
+      25.517791975289583
+    ],
+    "input_sha256": "a179f9f6fb357c82d9f68797421255578ce72759771e7de6a11d377124d7d156",
+    "creation_sha256": "6b9a59996c74f6902e6a8f17beedae740a74efb9b584e7d0f25b798bd3129b6b",
+    "runtime_sha256": "546b2d2e522379a4f7b2b4aca0a19feb742151d4229dd37fb1f10e8b25f09941"
+  },
+  {
+    "benchmark": "scale_storage_slots_32",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 2541,
+    "creation_bytes": 2567,
+    "wall_ms_samples": [
+      155.72695794980973
+    ],
+    "input_sha256": "eb18b4c9dbf7cf2bc779550f086cb54b4e39d08ec35f72c83f02c24936e701f7",
+    "creation_sha256": "3bdf4fc62c4a15f2a069c643e876836e2b8f37241bac8635437c5b6406621e1d",
+    "runtime_sha256": "b3f1bf705bd671985f886eaa5fc15f3f018e97de17d857ddb7ea9d3f3946df42"
+  },
+  {
+    "benchmark": "scale_storage_slots_32",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1992,
+    "creation_bytes": 2010,
+    "wall_ms_samples": [
+      33.186125045176595
+    ],
+    "input_sha256": "3f0f4c1d924b068227abd9ddbe5152fda6b880de4957d5b7db99f8f46fe1b1a0",
+    "creation_sha256": "117658a8a04568aed55c619c4b6e23cc6ab99f606565f44429d1ba00bb9b989f",
+    "runtime_sha256": "9229b32f84eba25d40866b0b5168d8ec5d2635da00cecabbf8eb66fe69cd8a16"
+  },
+  {
+    "benchmark": "scale_storage_slots_32",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 1845,
+    "creation_bytes": 1863,
+    "wall_ms_samples": [
+      31.44308301853016
+    ],
+    "input_sha256": "e80fcbabcfe4f5a1b4f988cd0b68df4770b0a53d2933b766c9770500fe464d68",
+    "creation_sha256": "e7a4bb79c9a06503138591b227cd612c2ef1ddf99cf65c2d31dbc86f137e1a29",
+    "runtime_sha256": "f2298f38d43af82959b9efb0e4370503302e02f71b7435480ad5b3ca4130e633"
+  },
+  {
+    "benchmark": "scale_storage_slots_4",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 415,
+    "creation_bytes": 443,
+    "wall_ms_samples": [
+      12.670665979385376
+    ],
+    "input_sha256": "fd594c8e7a520a549744a41a8d0691369b17451335ecb17e776c5d74dfa5b997",
+    "creation_sha256": "0d7bf00d1e92b19a0c63932c45fc90c4461cd02e7444560cb40244881a2af8d3",
+    "runtime_sha256": "d06a6ac47b8fa8bda851042d68b811dcc50a3be2e85a4deff448b19cd47e4eb2"
+  },
+  {
+    "benchmark": "scale_storage_slots_4",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 406,
+    "creation_bytes": 432,
+    "wall_ms_samples": [
+      35.19441600656137
+    ],
+    "input_sha256": "296013a87598a556c3cf6433af51e90d6d15bd8c9e9895f81475dbf2a4e078c4",
+    "creation_sha256": "af483d4c8aaab292f6b68f3055ebb16446284206eb3687b8f6616cef0837fec7",
+    "runtime_sha256": "5cd70885c5026db7515fc697e5db992a0e52e35701ce7016329a46f2b735b00b"
+  },
+  {
+    "benchmark": "scale_storage_slots_4",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 269,
+    "creation_bytes": 287,
+    "wall_ms_samples": [
+      26.720917026977986
+    ],
+    "input_sha256": "7ddf8aee3fdc10b8818d574c7607f2f9781bbb247b25379b8e53ecca588cc0c9",
+    "creation_sha256": "a572d953a13038c91dc8e5a517edfcad13ee68d19f3230cca2152b30475a0308",
+    "runtime_sha256": "9ca72a13ef6531137dc878df5aac69c5f21bbaa44812326429424ea13813f7d2"
+  },
+  {
+    "benchmark": "scale_storage_slots_4",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 255,
+    "creation_bytes": 272,
+    "wall_ms_samples": [
+      26.714167033787817
+    ],
+    "input_sha256": "294eaa09c6a635df819a93945f2afe0ee987940a87c0c01f3245384c626ea289",
+    "creation_sha256": "33e915e0e6455afc3b5585faa36d42f2d383dce0574a38c72be4acc84f5c4197",
+    "runtime_sha256": "83620eba7e46b9ce1f250fd1d7d6e800f1c6d824f5e7b36b988a8569c5158ca4"
+  },
+  {
+    "benchmark": "scale_storage_slots_64",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 4480,
+    "creation_bytes": 4508,
+    "wall_ms_samples": [
+      39.63316697627306
+    ],
+    "input_sha256": "0d6348e7262e5dd9cb664726deb3800fdbc5711d9e700bab5822ee96697a8f49",
+    "creation_sha256": "fc0ac18c4dfddb476b64d8e942cba63f8efb83daa98785dc5cddc99712070c53",
+    "runtime_sha256": "64c4e0852346c79884dffd7e14c43a9e484bcf8ba04771f182c3bd9aedca65d2"
+  },
+  {
+    "benchmark": "scale_storage_slots_64",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 4975,
+    "creation_bytes": 5001,
+    "wall_ms_samples": [
+      312.1793329482898
+    ],
+    "input_sha256": "a30c42d583334b98aa5d3e5d50ad99168d1cb7c13abba458550fb7aae761ee6b",
+    "creation_sha256": "e99d0266e564f454c361e0b3210cae5483d141650d06bc2a978a17f4c883ddd5",
+    "runtime_sha256": "391146439fa48ff2f35517567e5795a22b561b8d78dd48f70330890ac0c68ce6"
+  },
+  {
+    "benchmark": "scale_storage_slots_64",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 3788,
+    "creation_bytes": 3806,
+    "wall_ms_samples": [
+      39.099665998946875
+    ],
+    "input_sha256": "cda020001b41bdf943d57dfd8708eb748bb8a5c98ce5430fae6cc99f356b57e7",
+    "creation_sha256": "8f62bdb275f9d5f84eb04d29ceea6ec3912ca646e02a1b72214d964b1ada385d",
+    "runtime_sha256": "cc3f33f9cb7e5bfee5313010573a73f863e11b8397a988735cb2409549448aff"
+  },
+  {
+    "benchmark": "scale_storage_slots_64",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 3637,
+    "creation_bytes": 3655,
+    "wall_ms_samples": [
+      35.94712499761954
+    ],
+    "input_sha256": "c8a73097472d7cd8e5770fa60c177ed4b8267eeb88ad0de34c7881c302c706bc",
+    "creation_sha256": "1bb62b15b67be05259acbe55f541be937b7688b29f26acc78074ede8f4bd066e",
+    "runtime_sha256": "a7c9b99e2692f0dfb96fe2c817527c4490dd0c91a3c63ed41a0b2f872b048775"
+  },
+  {
+    "benchmark": "scale_storage_slots_8",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 686,
+    "creation_bytes": 714,
+    "wall_ms_samples": [
+      14.645874965935946
+    ],
+    "input_sha256": "37ee0035ec5c59dfbeaf53d9bef5106ad2eba77befd07c6772a72af8b53b9062",
+    "creation_sha256": "b48d9d53ac9063682eb3bee5917768943536a9cbec67c67c4b3af1e54b3c197d",
+    "runtime_sha256": "a2fbb7228291e846b18987d68a575ba59107135917f5826efddb68d083e9f3c9"
+  },
+  {
+    "benchmark": "scale_storage_slots_8",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 715,
+    "creation_bytes": 741,
+    "wall_ms_samples": [
+      50.69041601382196
+    ],
+    "input_sha256": "4e35ef4042e34fb9a0d2b79b9091650aac6cbafc82a6f2271f0fa4047464143d",
+    "creation_sha256": "8261a1f4c59d9a6421b3f5da66b2d6c47a85542aa331604d02e97fa429aecff9",
+    "runtime_sha256": "bebd0f41786e3a62fc48a1c273cca86f7ce119df197852526b98682302bb5b9b"
+  },
+  {
+    "benchmark": "scale_storage_slots_8",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 527,
+    "creation_bytes": 545,
+    "wall_ms_samples": [
+      29.10887496545911
+    ],
+    "input_sha256": "e04c66c8ad7a7d03252e4ac77bdfc179f1759615767412418d3e2caa55a5c768",
+    "creation_sha256": "f778c399fc8676e3715c711ee8f13d7e5c01487006dab303c77d5897daf42b10",
+    "runtime_sha256": "48c198a62a5e8f1008aa30f0f768bfd7f52a6e917fe6cbfdd5106ad36a8214b8"
+  },
+  {
+    "benchmark": "scale_storage_slots_8",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 476,
+    "creation_bytes": 494,
+    "wall_ms_samples": [
+      28.2749580219388
+    ],
+    "input_sha256": "71b5aa52059179a586a589ea9f7ff5717af78214e9a0cf08b72bef2472266468",
+    "creation_sha256": "79bd0e6e37ba53c8baa4aaafe35244357739aefbf81417a19208c0072d00acdf",
+    "runtime_sha256": "57add12158478914617eb2402138b191dd856678969f034e851716b539bed3c3"
+  },
+  {
+    "benchmark": "scaling_dispatch_N",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 802,
+    "creation_bytes": 830,
+    "wall_ms_samples": [
+      15.842250024434179
+    ],
+    "input_sha256": "e0df209e19382c209b740cee5cf90249decbcbab9466938fd0ff6964e9092722",
+    "creation_sha256": "cc6d4fa9b7803f8204d5e14ccd7ef59deaf4767a1f5698cc447012ee80b38179",
+    "runtime_sha256": "283935325fa50e7125d31907927351aafe52156f7e7384256644be70d6f12516"
+  },
+  {
+    "benchmark": "scaling_dispatch_N",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 1328,
+    "creation_bytes": 1354,
+    "wall_ms_samples": [
+      72.54858396481723
+    ],
+    "input_sha256": "75967dd63837158fe049c5cd8ffea689f73b31b2d20568a3a3096f7d34149477",
+    "creation_sha256": "1fc47fecc84d3e0f2ac8d6064ec82ea9e98f84184c9c74217bae632704fbb5a3",
+    "runtime_sha256": "f302bbf40b7d86b86f1cda2961f6c4d4de60af24a0906d485c38d3cdc331eeab"
+  },
+  {
+    "benchmark": "scaling_dispatch_N",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 773,
+    "creation_bytes": 791,
+    "wall_ms_samples": [
+      26.675625005736947
+    ],
+    "input_sha256": "3a8619a0ab69785b5ff5f24c6b4f581c8b119bf77dd84b4735e02411b27c09ea",
+    "creation_sha256": "acc44ccbe96a75f60fc9a1960b8ea1250d10b0262a66f73708c594fd83f46649",
+    "runtime_sha256": "9917e8e45e32564f7900d85941bf05b9450c8bbad9b74d962d0841dde8386602"
+  },
+  {
+    "benchmark": "scaling_dispatch_N",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 644,
+    "creation_bytes": 662,
+    "wall_ms_samples": [
+      25.858875014819205
+    ],
+    "input_sha256": "6545ee28b860e6ea4a74916913259956a1704215fcad7a03877044a4b025d68b",
+    "creation_sha256": "4900196a762c93e26a6c2c8499276b850d54d17caaebe46c75778861ec0f46e3",
+    "runtime_sha256": "84dfd8dec2d80b647e61a74eeb4a356159d1709f4d5da5b07e8b2a82312eb3be"
+  },
+  {
+    "benchmark": "uniswap_v2_factory",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 1764,
+    "creation_bytes": 2447,
+    "wall_ms_samples": [
+      74.21829202212393
+    ],
+    "input_sha256": "ea6e004b37284c43e792810cd44143884f2c818791bda45ba6889a81b57e7867",
+    "creation_sha256": "54859c4c11310e4ff4a638ff5f19507129e49f4d526223688ef9ccaf93d69746",
+    "runtime_sha256": "fe34b80f965617cec585a0cd3cb1e612b09ba00babbc6405733f2663bf4eda65"
+  },
+  {
+    "benchmark": "uniswap_v2_factory",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 2034,
+    "creation_bytes": 2635,
+    "wall_ms_samples": [
+      139.94125003227964
+    ],
+    "input_sha256": "cde8ce56b314c5f2d630d7eca59b7a43b67d18f94bee70f21c47df1fbd555290",
+    "creation_sha256": "e3ceb62f41ed8769e2d226c7731b2e42e12eceafdc23f8bda7a99932e8cbe3da",
+    "runtime_sha256": "8f8bcb1d4547f928226e121a52c99b81003a83d7abc887275bf8820623a87086"
+  },
+  {
+    "benchmark": "uniswap_v2_factory",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 1361,
+    "creation_bytes": 2213,
+    "wall_ms_samples": [
+      44.94908300694078
+    ],
+    "input_sha256": "ffd2381b5567b418a49c9c75281e8034ed6c05629ef4f92e3353b06f9645d239",
+    "creation_sha256": "f7c39a4fcea993e4ee2e6ade53359ee5f77aa6cc263bc40dc9cf06726573db92",
+    "runtime_sha256": "649e1c71e5d4c9af48710d0e192207e544ef9e2bcd7d845067fb0b6bcf608203"
+  },
+  {
+    "benchmark": "uniswap_v2_factory",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 1332,
+    "creation_bytes": 2181,
+    "wall_ms_samples": [
+      45.10254203341901
+    ],
+    "input_sha256": "e57254eee1a890e19a5cb7412c6b171628db33d19bf26e84992d852a3bbf0648",
+    "creation_sha256": "51de8546ae43193f0776c93b1bb47d6ef06538975f21d5d24ffdfc0e4d15430c",
+    "runtime_sha256": "971c66fd1151b032e6dbf3c554a7f0225c7cc8b4d90d4bb362ac9415e85c7dfc"
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 8243,
+    "creation_bytes": 8510,
+    "wall_ms_samples": [
+      192.14125000871718
+    ],
+    "input_sha256": "44b86fcd0dc0056d36f46a963524de42a313f11d19c4ec6ee10cdfb210b13208",
+    "creation_sha256": "acbf6b56106e9516c1d94ab2c31193f56ede158a74200de07d6ce8a5872ab697",
+    "runtime_sha256": "88c60c6a252a7f71a18cc88812ef0a27e2c0edb62532aaf535de1b2c3b564b7f"
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 7631,
+    "creation_bytes": 7930,
+    "wall_ms_samples": [
+      644.0864999894984
+    ],
+    "input_sha256": "bd65a752377371f1edc3c681f35ef93180e6ef53c0f7ae9c6f851e8fc7b64ec5",
+    "creation_sha256": "8e6578c805d1f950a3d12d9dd557343a6bb3be9507729e7144b22ef3c54f5265",
+    "runtime_sha256": "669df04a5aa7b1ca10361569b295c0ef8c21837ec161ce72890af770a9d7ce59"
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 7319,
+    "creation_bytes": 7508,
+    "wall_ms_samples": [
+      70.73008303996176
+    ],
+    "input_sha256": "ccb98dd206f6da3de766b47001fd426c7c0b2f9b1f4f91f1d431ab22b5058210",
+    "creation_sha256": "72eefeccccae46b1b6689b7e6d3015915ab3363a4cd7ccb9b2d9f6164bf6d8a5",
+    "runtime_sha256": "96728707fd80edefff21fd242cd8eb8891d5cedd05d00acd19a1eaf67d8fc944"
+  },
+  {
+    "benchmark": "uniswap_v2_pair",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 7289,
+    "creation_bytes": 7478,
+    "wall_ms_samples": [
+      76.13716699415818
+    ],
+    "input_sha256": "9398ab40124d9968b9a2a051a5842950394c1648b8fd70a7c449c719ca0071db",
+    "creation_sha256": "ccb70fd42696e7fb29d267af4039565832b5cb3c137929433822e25a799b35ff",
+    "runtime_sha256": "5e37009b1dc2514df00882451a7e60c02cae44413182fb5f4c1f9aadf08aab05"
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 835,
+    "creation_bytes": 863,
+    "wall_ms_samples": [
+      23.04200001526624
+    ],
+    "input_sha256": "1278a0cda0d4eb07150ac822e29c307c78f18e24c7476bfb27834aea55850438",
+    "creation_sha256": "d5b032f01c2d78dc85411f9948e5ab839ed5ff224d168958a771352f0644e748",
+    "runtime_sha256": "4a1f6c014aa2b2544e1fb6a15f9838a362e18ec91365e046f95d5016d6c21fc2"
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 732,
+    "creation_bytes": 758,
+    "wall_ms_samples": [
+      56.61716696340591
+    ],
+    "input_sha256": "4328b5b923ecf59854b33494200e1a21d664d509de45761ee84eca4d640c98a0",
+    "creation_sha256": "f6e4e464d97a7ca5225178194d2139a0f3844637be5c0426bb495376bc2c3084",
+    "runtime_sha256": "bc0a212a7f2d06d222806317863efd3c61ef4206dbba0d3f52a7f24f7f0d10dd"
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 526,
+    "creation_bytes": 544,
+    "wall_ms_samples": [
+      33.603666990529746
+    ],
+    "input_sha256": "0d2446c40c48a10efade589d5de91e8e0a5557dfa0c2b610736d9f8798b62588",
+    "creation_sha256": "f5746620835ef19e35549ece668ff707ec059d2c8f5a330c4f7c29a48519ddd4",
+    "runtime_sha256": "315243499971947f08f8acb3ba868bb4a2072c30bf73ca8a4b1a5f5c1fb98a26"
+  },
+  {
+    "benchmark": "vault_deposit_withdraw",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 483,
+    "creation_bytes": 501,
+    "wall_ms_samples": [
+      32.49762504128739
+    ],
+    "input_sha256": "8780112cce27905dc1c627f11df8671ed3bd0c1a87f71407be13860956aeb7f8",
+    "creation_sha256": "2256357e7b96e7acbed1b0c859618e2a2ce2caa7f64c1ff00f36cb35f2153c20",
+    "runtime_sha256": "482f13076180f041d366fe8a3e7fe54ab0ea506e754e049c587285920b88205d"
+  },
+  {
+    "benchmark": "yearn_vault_v2",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 21884,
+    "creation_bytes": 21912,
+    "wall_ms_samples": [
+      314.3918329733424
+    ],
+    "input_sha256": "f17b8d0a7d5dd7d8f600c47db93f8f875640170673bb1bd6aac2dd9a510fd634",
+    "creation_sha256": "a872d4d73a5b6a243a7ecfd5fd64ae1741f35b838527b2ce89ae216a4961ecf0",
+    "runtime_sha256": "257a7bc35eb134773cc65a6c93552de5c8e79aed7b9fd54bf930aab09650df62"
+  },
+  {
+    "benchmark": "yearn_vault_v2",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 21808,
+    "creation_bytes": 21834,
+    "wall_ms_samples": [
+      1278.8809170015156
+    ],
+    "input_sha256": "d5f131ccf047b87d88a99b7f300cc5112bcfb304d59ec0129fc379fce535da84",
+    "creation_sha256": "10b8ce1f1ab2a6bc64c9ba5435b394afe8f3717e8747425fb8796b195ee4f925",
+    "runtime_sha256": "cebce32d57077b6881f404dda8f74eac3ae63b4957b0c0568529067617203d7e"
+  },
+  {
+    "benchmark": "yearn_vault_v2",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 16038,
+    "creation_bytes": 16056,
+    "wall_ms_samples": [
+      99.37258396530524
+    ],
+    "input_sha256": "c06d83e59f152b8b698c6846f4648133ae0eeed7eaa56c0bbeebcdca5c3e9a07",
+    "creation_sha256": "11c376149dc0a9eb7d19322f7ee89ef05cdf1bd1cfeabc1f8d04c6f99613485f",
+    "runtime_sha256": "7a9891dd43ee7653fb46507533972c4ac8d96b3c78197cd6c694a395174dd55e"
+  },
+  {
+    "benchmark": "yearn_vault_v2",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 16438,
+    "creation_bytes": 16456,
+    "wall_ms_samples": [
+      106.49795801145956
+    ],
+    "input_sha256": "f0999439070dad75a9a3db87d63e48e7f24e23b9424a19e60a2f4285b51651b0",
+    "creation_sha256": "a1c96d0222e36ffc52e3356fcfdeef0b94aa579cec9b2955997f6f2261c99d80",
+    "runtime_sha256": "8d2bfdbd7db5c92372944f4c5efca8dcb8c67eb540810a6334ab9ce92018b42b"
+  },
+  {
+    "benchmark": "yearn_vault_v3",
+    "profile": "solc-0.8.36-legacy-200",
+    "status": "ok",
+    "runtime_bytes": 25233,
+    "creation_bytes": 25279,
+    "wall_ms_samples": [
+      500.5257499869913
+    ],
+    "input_sha256": "358b82d5cc6d051b5d1fac3ebb92e0943cf49e301af53a44f7d387907c458c27",
+    "creation_sha256": "437d9f1a90f3506ffa248830adeed4817f8061f773fb1d659d16cf956dd24f57",
+    "runtime_sha256": "6cf864ba517896d056e1b41bd55a01b0be88f64b50b833b2577940fe26d348d1"
+  },
+  {
+    "benchmark": "yearn_vault_v3",
+    "profile": "solc-0.8.36-viair-200",
+    "status": "ok",
+    "runtime_bytes": 28528,
+    "creation_bytes": 28572,
+    "wall_ms_samples": [
+      2064.4358749850653
+    ],
+    "input_sha256": "3f3e3c299e2221d8576330a40eedaf28a8b847f9c0760f15848a08ac79852d6e",
+    "creation_sha256": "a4a7efbe62f624dd660af2c8e74d8167d79740bc707286b686a32c67799565e2",
+    "runtime_sha256": "25f05124ba6d9e6781f0723c23b265e00fccae5640d2cbd15862ab7c424e7efb"
+  },
+  {
+    "benchmark": "yearn_vault_v3",
+    "profile": "solar-gas-200",
+    "status": "ok",
+    "runtime_bytes": 22262,
+    "creation_bytes": 22300,
+    "wall_ms_samples": [
+      139.36354202451184
+    ],
+    "input_sha256": "eb6366c9695e1829f93dffbbd1a118a84dcd005e15388f17142a661be70dc0e9",
+    "creation_sha256": "49ee2a5e2d24e6836a42095d42c1f57bc6eaa26058b7ba70c30ce491d13538bd",
+    "runtime_sha256": "e5f1a6def98f9cde2d7a8b2f1e9f6d47843089b3e27ec93f647b26823c26dc2e"
+  },
+  {
+    "benchmark": "yearn_vault_v3",
+    "profile": "solar-size-1",
+    "status": "ok",
+    "runtime_bytes": 22677,
+    "creation_bytes": 22715,
+    "wall_ms_samples": [
+      153.88108300976455
+    ],
+    "input_sha256": "75bf059bed28c899104980c06d05cba56471603b185e96c9dacf05c3d926d732",
+    "creation_sha256": "cd62220832e6b0b2937d95ad345567d1cdfe4ab1126b280b3bb52be580fefaeb",
+    "runtime_sha256": "df557a9606435a01e33e0b4038423309c99c37527d0a16e13c3d49d98e8baa1c"
+  }
+]

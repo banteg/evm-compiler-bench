@@ -1,7 +1,7 @@
 # EVM Compiler Bench
 
 Head-to-head benchmark harness for EVM compiler profiles. The project compares
-solc and solx on Solidity source, plus Vyper and Fe implementations, under pinned compiler versions,
+solc, Solar, and solx on Solidity source, plus Vyper and Fe implementations, under pinned compiler versions,
 optimizer settings, codegen backends, and EVM targets.
 
 The report is meant to show compiler tradeoffs, not crown a language winner.
@@ -22,7 +22,8 @@ Published report: https://evm.banteg.xyz/
   recorded in specs.
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
-- Solidity compiler axis: solx 0.1.8 with LLVM O3/Oz, alongside matched
+- Solidity compiler axis: Solar gas/runs200 and size/runs1 at pinned revision
+  716e9cbc, matched solc 0.8.36 legacy/viaIR profiles; plus solx 0.1.8 with LLVM O3/Oz, alongside matched
   solc 0.8.34 legacy/via-IR profiles and the existing solc version matrix.
 
 Gas is measured through the Foundry internal-call harness. It is useful for
@@ -59,7 +60,35 @@ and cache hits, and support macOS, Linux x86-64/ARM64, and Windows x86-64.
 Set `EVM_BENCH_SOLX=<path>` (or `EVM_BENCH_SOLX_0_1_8=<path>`) for a local
 build reporting that release. Overrides record the actual binary hash but are
 not authenticated against an upstream checksum. The shared EVM target is
-probed against the selected solx binary as well as solc and Vyper.
+probed against the selected Solar and solx binaries as well as solc and Vyper.
+
+Solar profiles pin commit `716e9cbcde88165f931173f1c1fda852ed63afa0`,
+which is newer than the published v0.2.0 release. The resolver fetches that
+commit into `.cache/toolchains/solar`, requires a clean checkout, installs
+Rust 1.96.0 with rustup, and builds `solar-compiler` using `--release --locked`
+and the Rust host target. Git, rustup, and platform C build tools are required
+on the first run. Cached binaries are checked against their build receipt.
+`EVM_BENCH_SOLAR=<path>` accepts an existing binary only if its reported full
+commit matches; overrides record their actual binary hash.
+
+Solar gas uses Standard JSON `optimizer: {enabled: true, runs: 200}`;
+size uses runs 1. Both use `--threads 1`. Package version 0.2.0, full source
+revision, and Solidity compatibility 0.8.36 are recorded independently;
+Solar does not embed solc. Matched solc 0.8.36 profiles use the same materialized
+sources. Main-matrix compile measurements use the resolved executables on the
+recorded host (including any mixed architectures); the spike's repeated timing
+experiment explicitly runs both compilers as x86-64 on this Apple Silicon host.
+
+The Foundry measurement harness pins solc 0.8.34, separately from every compiler
+under test. Gas and behavior cache keys include the effective Foundry configuration
+(including compiler selection and environment overrides), and the run manifest
+preserves that configuration. The Solar spike used harness solc 0.8.36: its contract
+bytecode is identical to the integrated build, but measured wrapper overhead differs.
+Gas cache keys also include the exact generated shard source. Each shard always
+contains its complete test set, including when one missing cache entry triggers
+its rerun. The run manifest lists shard hashes and their artifact membership.
+Generated shard layout can also change harness overhead, so use v4's integrated
+dataset for comparisons within the main matrix.
 
 ## Running locally
 
@@ -101,7 +130,7 @@ Ignore result caches for a fresh run:
 cargo run --release -- run --no-cache
 ```
 
-The full current matrix is large: 123 compiler profiles across 64 benchmarks.
+The full current matrix is large: 127 compiler profiles across 64 benchmarks.
 Because Fe is skipped for the five real-derived benchmarks without an `fe/`
 implementation, this yields 7,867 compile attempts before gas scenarios are
 measured.
@@ -245,7 +274,7 @@ just zip-design
   size fallback, and disabled bytecode metadata. LLVM modes do not map to solc
   optimizer-runs values. Per-contract compile times here are not a reproduction
   of the announcement's whole-project parallel build measurements.
-- Same-source solx/solc pairs run scenario differential tests and applicable
+- Same-source Solar/solc and solx/solc pairs run scenario differential tests and applicable
   randomized/property checks. The matched baseline must share source hash,
   Solidity frontend version, metadata mode, and EVM target. The report records
   exactly which compiler pairs passed. Gas cache hits do not imply behavioral

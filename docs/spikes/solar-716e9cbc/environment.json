@@ -1,0 +1,11 @@
+{
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "python": "3.13.15",
+  "rust_build": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+  "forge_version": "forge Version: 1.5.1-stable\nCommit SHA: b0a9dd9ceda36f63e2326ce530c10e6916f4b8a2\nBuild Timestamp: 2025-12-22T11:41:09.812070000Z (1766403669)\nBuild Profile: maxperf\n",
+  "solar_build_command": "cargo +1.96.0 build --release --locked -p solar-compiler --bin solar",
+  "solar_source_clean": true,
+  "repeated_timing_architecture": "x86_64",
+  "compiler_architecture_command": "/usr/bin/arch -x86_64"
+}
