@@ -258,11 +258,9 @@ fn wait_with_usage(mut child: std::process::Child) -> Result<(std::process::Exit
     let raw = unsafe { raw.assume_init() };
     let user_ms = raw.ru_utime.tv_sec as f64 * 1000.0 + raw.ru_utime.tv_usec as f64 / 1000.0;
     let sys_ms = raw.ru_stime.tv_sec as f64 * 1000.0 + raw.ru_stime.tv_usec as f64 / 1000.0;
-    let mut peak = raw.ru_maxrss as u64;
+    let peak = raw.ru_maxrss as u64;
     #[cfg(target_os = "macos")]
-    {
-        peak /= 1024;
-    }
+    let peak = peak / 1024;
     Ok((
         ExitStatusExt::from_raw(status),
         Usage {
