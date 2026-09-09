@@ -90,6 +90,8 @@
           "language": { "enum": ["solidity", "vyper", "fe"] },
           "compiler_name": { "type": "string" },
           "compiler_version": { "type": "string", "description": "Compiler product release; solx uses its own release version." },
+          "source_revision": { "type": ["string", "null"], "description": "Pinned compiler source commit, independent of its package version." },
+          "solidity_version": { "type": ["string", "null"], "description": "Solidity compatibility version for independent frontends such as Solar." },
           "frontend_version": { "type": ["string", "null"], "description": "Embedded Solidity frontend version, independently from compiler_version." },
           "frontend_commit": { "type": ["string", "null"] },
           "llvm_build": { "type": ["string", "null"] },

@@ -68,6 +68,15 @@ pub fn resolve_toolchains(
                     crate::solx::profile_version(&compiler_ref.compiler).unwrap(),
                 )?
             }
+            Language::Solidity
+                if crate::solar::profile_revision(&compiler_ref.compiler).is_some() =>
+            {
+                crate::solar::resolve(
+                    root,
+                    offline,
+                    crate::solar::profile_revision(&compiler_ref.compiler).unwrap(),
+                )?
+            }
             Language::Solidity => {
                 let Some(version) = compiler_ref.compiler.strip_prefix("solc-") else {
                     bail!("unsupported solidity compiler {}", compiler_ref.compiler);
@@ -107,19 +116,26 @@ pub fn resolve_toolchains(
         compilers.insert(compiler_ref.compiler, toolchain);
     }
     let mut evm_version = latest_shared_evm(&solc, &[&vyper, &vyper_alpha])?;
-    for toolchain in compilers.values().filter(|t| t.name == "solx") {
+    for toolchain in compilers
+        .values()
+        .filter(|t| matches!(t.name.as_str(), "solx" | "solar"))
+    {
         let start = EVM_ORDER
             .iter()
             .position(|evm| *evm == evm_version)
             .context("shared EVM order")?;
         let mut shared = None;
         for evm in &EVM_ORDER[start..] {
-            if crate::solx::supports_evm(toolchain, evm)? {
+            if (if toolchain.name == "solar" {
+                crate::solar::supports_evm(toolchain, evm)
+            } else {
+                crate::solx::supports_evm(toolchain, evm)
+            })? {
                 shared = Some((*evm).to_string());
                 break;
             }
         }
-        evm_version = shared.context("no shared EVM target supported by solx")?;
+        evm_version = shared.context("no shared EVM target supported by Solidity backend")?;
     }
     progress.finish(format!(
         "resolved {} compilers; shared EVM {}",

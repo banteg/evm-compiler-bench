@@ -215,6 +215,9 @@ fn validate_compiler_profile_source_variants(root: &Path) -> Result<()> {
         let text = fs::read_to_string(&path)?;
         let profile: crate::models::CompilerProfile =
             toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        if crate::solar::profile_revision(&profile.compiler).is_some() {
+            crate::solar::validate_profile(&profile)?;
+        }
         if crate::solx::profile_version(&profile.compiler).is_some() {
             crate::solx::validate_profile(&profile)?;
         }
@@ -266,6 +269,9 @@ fn expected_profile_source_variant(
 }
 
 fn expected_solidity_source_variant(compiler: &str, path: &Path) -> Result<Option<&'static str>> {
+    if crate::solar::profile_revision(compiler).is_some() {
+        return Ok(None);
+    }
     if let Some(version) = crate::solx::profile_version(compiler) {
         parse_semver_prefix(version, path, "solx")?;
         return Ok(None);

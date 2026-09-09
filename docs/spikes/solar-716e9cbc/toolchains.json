@@ -1,0 +1,24 @@
+{
+  "solar": {
+    "name": "solar",
+    "version": "0.2.0-dev+716e9cbcde88",
+    "binary_path": "/Users/banteg/dev/banteg/evm-compiler-bench/target/solar-spike/upstream/target/release/solar",
+    "binary_sha256": "e57ca59f1c8e8af7f487d7b5e053ed5e5930e57189d653378ef9f33c5dd5953c",
+    "version_output": "solar Version: 0.2.0\nCommit SHA: 716e9cbcde88165f931173f1c1fda852ed63afa0\nBuild Timestamp: 2026-09-09T14:51:14.691424000Z\nBuild Features: mimalloc,tracing\nBuild Profile: release\n",
+    "download_source": "https://github.com/paradigmxyz/solar/tree/716e9cbcde88165f931173f1c1fda852ed63afa0",
+    "metadata": {
+      "revision": "716e9cbcde88165f931173f1c1fda852ed63afa0",
+      "build_profile": "release",
+      "rust": "1.96.0"
+    }
+  },
+  "solc": {
+    "name": "solc",
+    "version": "0.8.36",
+    "binary_path": "/Users/banteg/dev/banteg/evm-compiler-bench/.cache/toolchains/solc/0.8.36/solc-macosx-amd64-v0.8.36+commit.8a079791",
+    "binary_sha256": "d4abcf0b3e24b7948ddfd64c374d26c3214648717777790ecb936979054a129d",
+    "version_output": "solc, the solidity compiler commandline interface\nVersion: 0.8.36+commit.8a079791.Darwin.appleclang\n",
+    "download_source": "https://binaries.soliditylang.org/macosx-amd64/solc-macosx-amd64-v0.8.36+commit.8a079791",
+    "metadata": {}
+  }
+}

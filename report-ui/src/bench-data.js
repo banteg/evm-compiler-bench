@@ -208,6 +208,7 @@
   function compilerDisplayName(p){
     if (p.language === 'vyper' || p.compiler_name === 'vyper') return 'Vyper';
     if (p.language === 'fe' || p.compiler_name === 'fe') return 'Fe';
+    if (p.compiler_name === 'solar') return 'Solar';
     return p.compiler_name || (p.language === 'solidity' ? 'solc' : p.language);
   }
   function profileCompilerKey(p){
@@ -215,7 +216,7 @@
       : p.language === 'solidity' ? 'solc' : p.language);
   }
   function compilerOptions(){
-    return ['solc', 'solx', 'vyper', 'fe'].filter(key => D.profiles.some(p => profileCompilerKey(p) === key))
+    return ['solc', 'solar', 'solx', 'vyper', 'fe'].filter(key => D.profiles.some(p => profileCompilerKey(p) === key))
       .map(value => ({ value, label: value === 'vyper' ? 'Vyper' : value === 'fe' ? 'Fe' : value }));
   }
   function profileDisplayLabel(p){
@@ -223,16 +224,16 @@
     const runs = profileOptimizerRuns(p);
     const runsLabel = runs == null ? '' : ` runs${runs}`;
     const venom = p.experimental_codegen ? ' + Venom' : '';
-    return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)} ${opt}${runsLabel}${venom}`;
+    return `${compilerDisplayName(p)} ${p.compiler_version || profileVersionKey(p)}${p.source_revision ? ` @${p.source_revision.slice(0, 8)}` : ''} ${opt}${runsLabel}${venom}`;
   }
   function profileVersionKey(p){
     const prefix = `${profileCompilerKey(p)}-latest-`;
     if (String(p.id).startsWith(prefix)) return 'latest';
-    return String(p.compiler_version ?? 'unknown');
+    return p.source_revision || String(p.compiler_version ?? 'unknown');
   }
   function profileVersionLabel(p){
     const key = profileVersionKey(p);
-    return p.compiler_version || key;
+    return p.source_revision ? `${p.compiler_version} @${p.source_revision.slice(0, 8)}` : p.compiler_version || key;
   }
   function versionRank(v){
     if (v === 'latest') return Infinity;
@@ -243,6 +244,7 @@
   }
   function profileOptimizer(p){
     const id = String(p.id);
+    if (profileCompilerKey(p) === 'solar') return p.optimizer || (id.includes('-size-') ? 'size' : 'gas');
     if (profileCompilerKey(p) === 'solx') {
       const mode = id.match(/-O([123sz])(?:-|$)/)?.[1];
       return p.optimizer || (mode ? `O${mode}` : 'unknown');
@@ -265,7 +267,7 @@
     return 'default';
   }
   function optimizerUsesRuns(lang, optimizer){
-    return lang === 'solidity' && (optimizer === 'legacy' || optimizer === 'viaIR');
+    return lang === 'solidity' && ['legacy', 'viaIR', 'gas', 'size'].includes(optimizer);
   }
   function profileOptimizerRuns(p){
     if (!optimizerUsesRuns(p.language, profileOptimizer(p))) return null;
@@ -333,13 +335,13 @@
     return D.profiles.find(p => p.language === lang)?.id ?? D.profiles[0].id;
   }
   function defaultProfileForCompiler(compiler){
-    const pref = {solc: 'solc-latest-viair-runs200', solx: 'solx-0.1.8-O3', vyper: 'vyper-latest-gas', fe: 'fe-latest-O2'}[compiler];
+    const pref = {solc: 'solc-latest-viair-runs200', solx: 'solx-0.1.8-O3', solar: 'solar-716e9cbc-gas-runs200', vyper: 'vyper-latest-gas', fe: 'fe-latest-O2'}[compiler];
     return D.profiles.find(p => p.id === pref)?.id
       ?? D.profiles.find(p => profileCompilerKey(p) === compiler)?.id ?? D.profiles[0].id;
   }
 
   function latestBaselineProfile(p){
-    if (profileCompilerKey(p) === 'solx') return undefined;
+    if (['solx', 'solar'].includes(profileCompilerKey(p))) return undefined;
     const config = profileOptimizer(p);
     const venom = p.experimental_codegen ? '-venom' : '';
     if (p.language === 'solidity'){
@@ -456,6 +458,7 @@
   function defaultOptimizerForVersion(lang, versionKey, compiler){
     const optimizers = [...new Set(matchingProfiles({ language: lang, versionKey, compiler }).map(profileOptimizer))]
       .sort((a,b) => optimizerRank(a) - optimizerRank(b));
+    if (compiler === 'solar') return optimizers.includes('gas') ? 'gas' : optimizers[0];
     if (compiler === 'solx') return optimizers.includes('O3') ? 'O3' : optimizers[0];
     return preferredOptimizer(lang, optimizers);
   }

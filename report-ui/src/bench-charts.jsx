@@ -254,6 +254,8 @@ import React from "react";
     const yOf = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
 
     const palette = {
+      'solar-716e9cbc-gas-runs200': 'var(--solar)',
+      'solc-0.8.36-viair-runs200': '#f6c363',
       'solc-0.8.34-viair-runs200': '#d8b476',
       'solx-0.1.8-O3': 'var(--solx)',
       'solc-latest-viair-runs200': 'var(--solidity)',

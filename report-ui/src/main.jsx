@@ -97,6 +97,9 @@ const METRICS = Bench.METRICS;
 const SOL_LEGACY = 'solc-latest-legacy-runs200';
 const SOL_VIAIR = 'solc-latest-viair-runs200';
 const SOL_NOOPT = 'solc-latest-noopt';
+const SOLAR_GAS = 'solar-716e9cbc-gas-runs200';
+const SOLAR_SIZE = 'solar-716e9cbc-size-runs1';
+const SOLAR_BASELINE = 'solc-0.8.36-viair-runs200';
 const SOLX_O3 = 'solx-0.1.8-O3';
 const SOLX_OZ = 'solx-0.1.8-Oz';
 const SOLX_BASELINE = 'solc-0.8.34-viair-runs200';
@@ -123,6 +126,9 @@ function buildHeadlines() {
   };
 
   return {
+    solarGas: v(SOLAR_BASELINE, SOLAR_GAS, M),
+    solarSize: v(SOLAR_BASELINE, SOLAR_GAS, S),
+    solarSizeMode: v(SOLAR_BASELINE, SOLAR_SIZE, S),
     solxGas: v(SOLX_BASELINE, SOLX_O3, M),
     solxSize: v(SOLX_BASELINE, SOLX_O3, S),
     solxOzSize: v(SOLX_BASELINE, SOLX_OZ, S),
@@ -143,7 +149,7 @@ function buildHeadlines() {
 }
 
 const HEADLINES = buildHeadlines();
-const REPORT_VERSION = 'v3';
+const REPORT_VERSION = 'v4';
 
 // ============================================================
 // Top bar
@@ -193,9 +199,9 @@ function Hero() {
       React.createElement('em', null, 'Measured tradeoffs.')
     ),
     React.createElement('p', { className: 'hero-lede' },
-      'Compare solc, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
+      'Compare solc, Solar, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
       React.createElement('strong', null, s.ok_rows.toLocaleString()),
-      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v3: solx’s LLVM backend, with Solidity 0.8.34 comparison profiles.'
+      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v4: Solar’s Rust compiler, pinned at 716e9cbc, with Solidity 0.8.36 comparison profiles.'
     ),
 
     React.createElement('div', { className: 'hero-strip' },
@@ -250,7 +256,20 @@ function FindingsGrid() {
     : `${(coverage.passRate * 100).toFixed(1)}%`;
   const cards = [
     {
-      tag: 'New · solx',
+      tag: 'New · Solar',
+      span: 6, headline: 'A new compiler, the same Solidity source.',
+      body: `${Bench.profileLabel(SOLAR_GAS)} gives ${lowerHigher(HEADLINES.solarGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solarSize.geomean, 'runtime bytecode')} against solc 0.8.36 viaIR / runs 200 on identical materialized sources. Solar has its own Rust frontend and EVM code generator.`,
+      stat: HEADLINES.solarGas.geomean, statLabel: 'runtime gas (Solar gas vs matched solc viaIR)',
+      altStat: HEADLINES.solarSize.geomean, altLabel: 'runtime bytes',
+      count: HEADLINES.solarGas.count, coverage: HEADLINES.solarGas.coverage,
+    }, {
+      tag: 'New · Solar size',
+      span: 6, headline: 'Two optimizer modes, visible tradeoffs.',
+      body: `Solar size / runs 1 gives ${lowerHigher(HEADLINES.solarSizeMode.geomean, 'runtime bytecode')} than solc viaIR / runs 200. Size mode can increase both gas and bytecode on individual workloads; use the gas-versus-size preset to inspect the tradeoff.`,
+      stat: HEADLINES.solarSizeMode.geomean, statLabel: 'runtime bytes (Solar size vs matched solc viaIR)',
+      count: HEADLINES.solarSizeMode.count, coverage: HEADLINES.solarSizeMode.coverage,
+    }, {
+      tag: 'solx',
       span: 6,
       headline: 'A different backend for the same Solidity source.',
       body: `Against ${Bench.profileLabel(SOLX_BASELINE)}, ${Bench.profileLabel(SOLX_O3)} gives ${lowerHigher(HEADLINES.solxGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solxSize.geomean, 'runtime bytecode')}. Both materialize Solidity 0.8.34 sources; solx embeds a modified frontend.`,
@@ -262,7 +281,7 @@ function FindingsGrid() {
       coverage: HEADLINES.solxGas.coverage,
     },
     {
-      tag: 'New · solx Oz',
+      tag: 'solx Oz',
       span: 6,
       headline: 'Measure the size-oriented optimizer separately.',
       body: `${Bench.profileLabel(SOLX_OZ)} gives ${lowerHigher(HEADLINES.solxOzSize.geomean, 'runtime bytecode')} than the matched solc viaIR / runs 200 profile. Oz does not always produce smaller or cheaper code than O3; inspect the individual workloads.`,
@@ -459,9 +478,11 @@ function ScaleStrip({ metric }) {
   const families = ['dispatch_N', 'storage_slots_N', 'mapping_depth_N', 'abi_args_N',
                     'loop_bound_N', 'events_N', 'external_calls_N']
     .filter(f => Bench.D.rows.some(r => r.family === f));
-  const profiles = [SOLX_BASELINE, SOLX_O3, 'solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2']
+  const profiles = [SOLAR_BASELINE, SOLAR_GAS, SOLX_BASELINE, SOLX_O3, 'solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2']
     .filter(p => Bench.profileById(p));
   const palette = {
+    [SOLAR_BASELINE]: '#f6c363',
+    [SOLAR_GAS]: 'var(--solar)',
     [SOLX_BASELINE]: '#d8b476',
     [SOLX_O3]: 'var(--solx)',
     'solc-latest-viair-runs200': 'var(--solidity)',
@@ -498,6 +519,8 @@ function ScaleStrip({ metric }) {
 // Interactive Comparator
 // ============================================================
 const CONFIG_EXPLAINERS = {
+  'solar:gas': 'Solar Rust frontend and EVM backend; optimizer enabled with runs 200 selects gas mode. One compiler worker.',
+  'solar:size': 'Solar optimizer enabled with runs 1 selects size mode. It can increase gas or bytecode on individual workloads.',
   'solx:O3': 'LLVM optimization for runtime gas; embedded solc frontend, one compiler worker, no automatic size fallback.',
   'solx:Oz': 'LLVM optimization for bytecode size. This is not a solc optimizer-runs setting, and may increase gas.',
   'solidity:noopt': 'Optimizer disabled; useful as a control, not a production setting.',
@@ -626,6 +649,8 @@ function ProfilePicker({ title, selected, onChange }) {
     ),
     React.createElement('div', { style: { marginTop: '12px', fontFamily: 'var(--mono)', fontSize: '10.5px', color: 'var(--fg-4)' } },
       React.createElement('code', { title: p.id }, Bench.profileLabel(p.id)),
+      p.solidity_version ? React.createElement('div', { style: { marginTop: '6px' } },
+        `Solidity ${p.solidity_version} compatibility · revision ${p.source_revision?.slice(0, 8)} · ${p.evm_version} · 1 worker`) : null,
       p.frontend_version ? React.createElement('div', { style: { marginTop: '6px' } },
         `Solidity ${p.frontend_version} frontend · ${p.evm_version} · 1 worker`) : null)
   );
@@ -1312,6 +1337,9 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
   const unit = Bench.comparisonUnit(metric);
 
   const presets = [
+    [SOLAR_BASELINE, SOLAR_GAS, 'solc 0.8.36 vs Solar gas'],
+    [SOLAR_BASELINE, SOLAR_SIZE, 'solc 0.8.36 vs Solar size'],
+    [SOLAR_GAS, SOLAR_SIZE, 'Solar gas vs size'],
     [SOLX_BASELINE,    SOLX_O3,          'solc 0.8.34 vs solx O3'],
     [SOLX_BASELINE,    SOLX_OZ,          'solc 0.8.34 vs solx Oz'],
     [SOLX_O3,         SOLX_OZ,          'solx gas vs size'],
@@ -1712,6 +1740,9 @@ function CompilerConfigurations() {
     };
   };
   const compilerConfigs = [
+    {key: 'solar', compiler: 'Solar', engine: 'Solidity → Rust MIR → EVM',
+      axis: 'Pinned source revision · gas and size optimizer modes', meta: compilerMeta('solar', ['gas', 'size']),
+      modes: [['gas', 'optimizer: enabled, runs 200; --threads 1', CONFIG_EXPLAINERS['solar:gas']], ['size', 'optimizer: enabled, runs 1; --threads 1', CONFIG_EXPLAINERS['solar:size']]]},
     {
       key: 'solx',
       compiler: 'solx',
@@ -1766,7 +1797,7 @@ function CompilerConfigurations() {
           React.createElement('div', null,
             React.createElement('div', { className: 'config-label' }, 'Compiler'),
             React.createElement('div', { className: 'compiler-name' },
-              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : group.key === 'fe' ? 'fe' : group.key === 'solx' ? 'solx' : 'vy'}` }, group.compiler),
+              React.createElement('span', { className: `lang-${group.key === 'solidity' ? 'sol' : group.key === 'fe' ? 'fe' : group.key === 'solx' ? 'solx' : group.key === 'solar' ? 'solar' : 'vy'}` }, group.compiler),
               group.engine ? React.createElement(React.Fragment, null, ' · ', group.engine) : null,
             )
           ),
@@ -1830,7 +1861,7 @@ function SectionScale({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 05 · Cost vs. shape of the contract'),
         React.createElement('div', { className: 'section-title' }, 'How the metric scales with structural N.'),
-        React.createElement('div', { className: 'section-sub' }, 'Compare selector dispatch, storage, ABI, loops, events, and external calls as each contract grows. The solx curve includes its Solidity 0.8.34 solc comparison profile.')
+        React.createElement('div', { className: 'section-sub' }, 'Compare selector dispatch, storage, ABI, loops, events, and external calls as each contract grows. Solar and solx curves include their matched Solidity 0.8.36 and 0.8.34 solc comparison profiles.')
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -1889,7 +1920,7 @@ function SectionCompilerConfigurations() {
         React.createElement('div', { className: 'section-eyebrow' }, '§ 07 · Compiler configurations'),
         React.createElement('div', { className: 'section-title' }, 'Compiler configurations.'),
         React.createElement('div', { className: 'section-sub' },
-          React.createElement('p', null, 'A profile combines a compiler release, optimizer or codegen mode, and EVM target. Solidity source can use solc or solx; solx records its embedded frontend separately. Vyper adds Venom as an independent codegen switch.'),
+          React.createElement('p', null, 'A profile combines a compiler release, optimizer or codegen mode, and EVM target. Solidity source can use solc, Solar, or solx. Solar records its source revision and Solidity compatibility; solx records its embedded frontend separately. Vyper adds Venom as an independent codegen switch.'),
           React.createElement('p', null, "Optimization is not just a performance choice: Solidity's Yul/viaIR path and Vyper's experimental Venom pipeline have both had correctness bugs. Treat faster profiles as performance evidence, not automatic production guidance; pair them with version pinning, differential tests, and IR/bytecode review.")
         )
       )
@@ -1903,9 +1934,9 @@ function SectionCompilerConfigurations() {
 // ============================================================
 function App() {
   const def = Bench.D.defaults;
-  const defaultA = [SOLX_BASELINE, SOL_LEGACY, def.baseline_profile, Bench.D.profiles[0]?.id]
+  const defaultA = [SOLAR_BASELINE, SOLX_BASELINE, SOL_LEGACY, def.baseline_profile, Bench.D.profiles[0]?.id]
     .find(id => Bench.profileById(id));
-  const defaultB = [SOLX_O3, VYPER_GAS, def.comparison_profile, defaultA]
+  const defaultB = [SOLAR_GAS, SOLX_O3, VYPER_GAS, def.comparison_profile, defaultA]
     .find(id => Bench.profileById(id));
   const [profileA, setProfileA] = useState(defaultA);
   const [profileB, setProfileB] = useState(defaultB);

@@ -419,6 +419,11 @@ fn report_methodology() -> serde_json::Value {
                 "tag": "M",
                 "title": "Correctness exclusions",
                 "body": "An observed scenario or behavior-check failure excludes the entire benchmark/profile artifact from interactive performance comparisons, including size and compile-time rankings. The reliability panel lists those failures, while raw outputs preserve every measured value and correctness status for diagnosis. Compilation coverage remains a separate statistic."
+            },
+            {
+                "tag": "N",
+                "title": "Solar source build and optimizer modes",
+                "body": "Solar is pinned at 716e9cbcde88165f931173f1c1fda852ed63afa0, newer than release v0.2.0. It has its own Rust frontend and EVM code generator. Package version, source revision, Solidity compatibility (0.8.36), Rust build target, and binary hash are separate identities. Standard JSON optimizer enabled with runs 200 selects gas mode; runs 1 selects size mode. Both use one worker and the shared EVM target, compared with solc 0.8.36 viaIR / runs 200 on identical materialized sources. Main-matrix compile timings use each binary as resolved on the recorded host; the spike separately controls x86-64 execution for both compilers."
             }
         ]
     })
@@ -461,6 +466,8 @@ struct ProfileReportSummary {
     language: String,
     compiler_name: String,
     compiler_version: String,
+    solidity_version: Option<String>,
+    source_revision: Option<String>,
     frontend_version: Option<String>,
     frontend_commit: Option<String>,
     llvm_build: Option<String>,
@@ -485,6 +492,8 @@ impl ProfileReportSummary {
             language: str_at(row, "/language").unwrap_or_default(),
             compiler_name: str_at(row, "/compiler/name").unwrap_or_default(),
             compiler_version: str_at(row, "/compiler/version").unwrap_or_default(),
+            solidity_version: str_at(row, "/compiler/metadata/solidity_version"),
+            source_revision: str_at(row, "/compiler/metadata/source_revision"),
             frontend_version: str_at(row, "/compiler/metadata/frontend_version"),
             frontend_commit: str_at(row, "/compiler/metadata/frontend_commit"),
             llvm_build: str_at(row, "/compiler/metadata/llvm_build"),
@@ -522,6 +531,8 @@ impl ProfileReportSummary {
             "language": self.language,
             "compiler_name": self.compiler_name,
             "compiler_version": self.compiler_version,
+            "solidity_version": self.solidity_version,
+            "source_revision": self.source_revision,
             "frontend_version": self.frontend_version,
             "frontend_commit": self.frontend_commit,
             "llvm_build": self.llvm_build,
@@ -742,7 +753,12 @@ fn normalized_rows(
     let same_source_baselines: BTreeMap<_, _> =
         crate::baselines::comparison_pairs(&compiled.artifacts)
             .into_iter()
-            .filter(|(_, _, candidate)| compiled.artifacts[*candidate].compiler.name == "solx")
+            .filter(|(_, _, candidate)| {
+                matches!(
+                    compiled.artifacts[*candidate].compiler.name.as_str(),
+                    "solx" | "solar"
+                )
+            })
             .map(|(_, baseline, candidate)| {
                 (
                     (
@@ -797,7 +813,7 @@ fn normalized_rows(
             &behavior_evidence,
             profile_behavior_check(
                 gas,
-                if artifact.compiler.name == "solx" {
+                if matches!(artifact.compiler.name.as_str(), "solx" | "solar") {
                     same_source_baselines
                         .get(&(artifact.benchmark_id.clone(), artifact.profile_id.clone()))
                         .and_then(|baseline| {

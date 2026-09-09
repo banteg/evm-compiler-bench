@@ -1,0 +1,1146 @@
+{
+  "solar_revision": "716e9cbcde88165f931173f1c1fda852ed63afa0",
+  "baseline": "solc-0.8.36-viair-200",
+  "evm_version": "prague",
+  "compile_coverage": {
+    "solc-0.8.36-legacy-200": {
+      "ok": 61,
+      "failed": 3
+    },
+    "solc-0.8.36-viair-200": {
+      "ok": 64,
+      "failed": 0
+    },
+    "solar-gas-200": {
+      "ok": 64,
+      "failed": 0
+    },
+    "solar-size-1": {
+      "ok": 64,
+      "failed": 0
+    }
+  },
+  "runtime_passed_benchmarks": [
+    "amm_pair_subset",
+    "counter",
+    "create2_address_hashing",
+    "curve_stableswap_2coin",
+    "eip1167_codehash_bookkeeping",
+    "erc20_minimal",
+    "erc20_permit_hashing",
+    "merkle_verifier",
+    "ownable_pausable",
+    "scale_abi_args_1",
+    "scale_abi_args_16",
+    "scale_abi_args_2",
+    "scale_abi_args_32",
+    "scale_abi_args_4",
+    "scale_abi_args_64",
+    "scale_abi_args_8",
+    "scale_dispatch_1",
+    "scale_dispatch_16",
+    "scale_dispatch_2",
+    "scale_dispatch_32",
+    "scale_dispatch_4",
+    "scale_dispatch_64",
+    "scale_dispatch_8",
+    "scale_events_1",
+    "scale_events_16",
+    "scale_events_2",
+    "scale_events_32",
+    "scale_events_4",
+    "scale_events_64",
+    "scale_events_8",
+    "scale_external_calls_1",
+    "scale_external_calls_16",
+    "scale_external_calls_2",
+    "scale_external_calls_32",
+    "scale_external_calls_4",
+    "scale_external_calls_64",
+    "scale_external_calls_8",
+    "scale_loop_bound_1",
+    "scale_loop_bound_16",
+    "scale_loop_bound_2",
+    "scale_loop_bound_32",
+    "scale_loop_bound_4",
+    "scale_loop_bound_64",
+    "scale_loop_bound_8",
+    "scale_mapping_depth_1",
+    "scale_mapping_depth_16",
+    "scale_mapping_depth_2",
+    "scale_mapping_depth_32",
+    "scale_mapping_depth_4",
+    "scale_mapping_depth_64",
+    "scale_mapping_depth_8",
+    "scale_storage_slots_1",
+    "scale_storage_slots_16",
+    "scale_storage_slots_2",
+    "scale_storage_slots_32",
+    "scale_storage_slots_4",
+    "scale_storage_slots_64",
+    "scale_storage_slots_8",
+    "scaling_dispatch_N",
+    "uniswap_v2_factory",
+    "uniswap_v2_pair",
+    "vault_deposit_withdraw",
+    "yearn_vault_v2",
+    "yearn_vault_v3"
+  ],
+  "runtime_failures": [],
+  "verified_gas_records": 985,
+  "full_abi_matches": 128,
+  "test_counts": {
+    "gas": 985,
+    "differential": 494,
+    "randomized": 10,
+    "property": 10
+  },
+  "comparisons": {
+    "solar-gas-200": {
+      "benchmarks": 64,
+      "scenarios": 247,
+      "gas_geomean_ratio": 0.9147527751327778,
+      "runtime_bytes_geomean_ratio": 0.7409377040280524,
+      "per_benchmark": [
+        {
+          "benchmark": "amm_pair_subset",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.965242683113334,
+          "runtime_bytes_ratio": 0.9080068143100511,
+          "baseline_runtime_bytes": 1174,
+          "solar_runtime_bytes": 1066
+        },
+        {
+          "benchmark": "counter",
+          "scenarios": 4,
+          "gas_geomean_ratio": 1.0069263781281306,
+          "runtime_bytes_ratio": 0.5515695067264574,
+          "baseline_runtime_bytes": 223,
+          "solar_runtime_bytes": 123
+        },
+        {
+          "benchmark": "create2_address_hashing",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.8956829093069514,
+          "runtime_bytes_ratio": 0.6534446764091858,
+          "baseline_runtime_bytes": 479,
+          "solar_runtime_bytes": 313
+        },
+        {
+          "benchmark": "curve_stableswap_2coin",
+          "scenarios": 30,
+          "gas_geomean_ratio": 0.9387192770913749,
+          "runtime_bytes_ratio": 1.0681539091281211,
+          "baseline_runtime_bytes": 19544,
+          "solar_runtime_bytes": 20876
+        },
+        {
+          "benchmark": "eip1167_codehash_bookkeeping",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9293042630315724,
+          "runtime_bytes_ratio": 0.7667785234899329,
+          "baseline_runtime_bytes": 596,
+          "solar_runtime_bytes": 457
+        },
+        {
+          "benchmark": "erc20_minimal",
+          "scenarios": 5,
+          "gas_geomean_ratio": 0.9681196084200256,
+          "runtime_bytes_ratio": 0.8050117462803446,
+          "baseline_runtime_bytes": 1277,
+          "solar_runtime_bytes": 1028
+        },
+        {
+          "benchmark": "erc20_permit_hashing",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9250618191913049,
+          "runtime_bytes_ratio": 0.7054263565891473,
+          "baseline_runtime_bytes": 516,
+          "solar_runtime_bytes": 364
+        },
+        {
+          "benchmark": "merkle_verifier",
+          "scenarios": 6,
+          "gas_geomean_ratio": 0.7342620182760563,
+          "runtime_bytes_ratio": 0.5205479452054794,
+          "baseline_runtime_bytes": 438,
+          "solar_runtime_bytes": 228
+        },
+        {
+          "benchmark": "ownable_pausable",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.9490053688978902,
+          "runtime_bytes_ratio": 0.7576974564926372,
+          "baseline_runtime_bytes": 747,
+          "solar_runtime_bytes": 566
+        },
+        {
+          "benchmark": "scale_abi_args_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9261744966442953,
+          "runtime_bytes_ratio": 0.640625,
+          "baseline_runtime_bytes": 64,
+          "solar_runtime_bytes": 41
+        },
+        {
+          "benchmark": "scale_abi_args_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.6824887748556767,
+          "runtime_bytes_ratio": 1.2473684210526317,
+          "baseline_runtime_bytes": 190,
+          "solar_runtime_bytes": 237
+        },
+        {
+          "benchmark": "scale_abi_args_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9257503949447078,
+          "runtime_bytes_ratio": 0.7604166666666666,
+          "baseline_runtime_bytes": 96,
+          "solar_runtime_bytes": 73
+        },
+        {
+          "benchmark": "scale_abi_args_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.6222910216718266,
+          "runtime_bytes_ratio": 1.3240740740740742,
+          "baseline_runtime_bytes": 324,
+          "solar_runtime_bytes": 429
+        },
+        {
+          "benchmark": "scale_abi_args_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.8282828282828283,
+          "runtime_bytes_ratio": 0.7933884297520661,
+          "baseline_runtime_bytes": 121,
+          "solar_runtime_bytes": 96
+        },
+        {
+          "benchmark": "scale_abi_args_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.5821282106626376,
+          "runtime_bytes_ratio": 1.4835766423357664,
+          "baseline_runtime_bytes": 548,
+          "solar_runtime_bytes": 813
+        },
+        {
+          "benchmark": "scale_abi_args_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.7557251908396947,
+          "runtime_bytes_ratio": 0.9929577464788732,
+          "baseline_runtime_bytes": 142,
+          "solar_runtime_bytes": 141
+        },
+        {
+          "benchmark": "scale_dispatch_1",
+          "scenarios": 2,
+          "gas_geomean_ratio": 0.9522080030861896,
+          "runtime_bytes_ratio": 0.5683453237410072,
+          "baseline_runtime_bytes": 139,
+          "solar_runtime_bytes": 79
+        },
+        {
+          "benchmark": "scale_dispatch_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.7745626666702797,
+          "runtime_bytes_ratio": 0.5847222222222223,
+          "baseline_runtime_bytes": 720,
+          "solar_runtime_bytes": 421
+        },
+        {
+          "benchmark": "scale_dispatch_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.937016163931309,
+          "runtime_bytes_ratio": 0.5428571428571428,
+          "baseline_runtime_bytes": 175,
+          "solar_runtime_bytes": 95
+        },
+        {
+          "benchmark": "scale_dispatch_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.6566569573436697,
+          "runtime_bytes_ratio": 0.5820783132530121,
+          "baseline_runtime_bytes": 1328,
+          "solar_runtime_bytes": 773
+        },
+        {
+          "benchmark": "scale_dispatch_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.8957143783437793,
+          "runtime_bytes_ratio": 0.5755102040816327,
+          "baseline_runtime_bytes": 245,
+          "solar_runtime_bytes": 141
+        },
+        {
+          "benchmark": "scale_dispatch_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.5543369353936403,
+          "runtime_bytes_ratio": 0.5194651985843491,
+          "baseline_runtime_bytes": 2543,
+          "solar_runtime_bytes": 1321
+        },
+        {
+          "benchmark": "scale_dispatch_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.8308109495647586,
+          "runtime_bytes_ratio": 0.5721153846153846,
+          "baseline_runtime_bytes": 416,
+          "solar_runtime_bytes": 238
+        },
+        {
+          "benchmark": "scale_events_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9599813866914844,
+          "runtime_bytes_ratio": 0.7869822485207101,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 133
+        },
+        {
+          "benchmark": "scale_events_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9743999360996844,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_events_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9627210884353742,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_events_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9753917702962289,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_events_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9689311728853872,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_events_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9758971176249148,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_events_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9724885044033981,
+          "runtime_bytes_ratio": 0.757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 128
+        },
+        {
+          "benchmark": "scale_external_calls_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.8770764119601329,
+          "runtime_bytes_ratio": 0.5949367088607594,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 141
+        },
+        {
+          "benchmark": "scale_external_calls_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.8911384677993692,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_external_calls_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9005059021922428,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_external_calls_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.890325292973882,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_external_calls_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.895868897234551,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_external_calls_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.8902455315397152,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_external_calls_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.892904953145917,
+          "runtime_bytes_ratio": 0.7341772151898734,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 174
+        },
+        {
+          "benchmark": "scale_loop_bound_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9190340909090909,
+          "runtime_bytes_ratio": 0.5803571428571429,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 65
+        },
+        {
+          "benchmark": "scale_loop_bound_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 1.1662324127149557,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_loop_bound_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.978343949044586,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_loop_bound_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 1.2186625194401244,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_loop_bound_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 1.0327349524815206,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_loop_bound_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 1.2533149646977786,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_loop_bound_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 1.099921321793863,
+          "runtime_bytes_ratio": 0.8214285714285714,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 92
+        },
+        {
+          "benchmark": "scale_mapping_depth_1",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9781694674820085,
+          "runtime_bytes_ratio": 0.7953216374269005,
+          "baseline_runtime_bytes": 171,
+          "solar_runtime_bytes": 136
+        },
+        {
+          "benchmark": "scale_mapping_depth_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9660223896891714,
+          "runtime_bytes_ratio": 0.8225108225108225,
+          "baseline_runtime_bytes": 1617,
+          "solar_runtime_bytes": 1330
+        },
+        {
+          "benchmark": "scale_mapping_depth_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9843982019246644,
+          "runtime_bytes_ratio": 0.7088607594936709,
+          "baseline_runtime_bytes": 316,
+          "solar_runtime_bytes": 224
+        },
+        {
+          "benchmark": "scale_mapping_depth_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.964404687168619,
+          "runtime_bytes_ratio": 0.8116548615582743,
+          "baseline_runtime_bytes": 3106,
+          "solar_runtime_bytes": 2521
+        },
+        {
+          "benchmark": "scale_mapping_depth_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9768965820673298,
+          "runtime_bytes_ratio": 0.7549800796812749,
+          "baseline_runtime_bytes": 502,
+          "solar_runtime_bytes": 379
+        },
+        {
+          "benchmark": "scale_mapping_depth_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.963955147789195,
+          "runtime_bytes_ratio": 0.7887810495147228,
+          "baseline_runtime_bytes": 6079,
+          "solar_runtime_bytes": 4795
+        },
+        {
+          "benchmark": "scale_mapping_depth_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9641985296612876,
+          "runtime_bytes_ratio": 0.8041237113402062,
+          "baseline_runtime_bytes": 873,
+          "solar_runtime_bytes": 702
+        },
+        {
+          "benchmark": "scale_storage_slots_1",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9586794478850208,
+          "runtime_bytes_ratio": 0.46808510638297873,
+          "baseline_runtime_bytes": 141,
+          "solar_runtime_bytes": 66
+        },
+        {
+          "benchmark": "scale_storage_slots_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9298309912429851,
+          "runtime_bytes_ratio": 0.782312925170068,
+          "baseline_runtime_bytes": 1323,
+          "solar_runtime_bytes": 1035
+        },
+        {
+          "benchmark": "scale_storage_slots_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9694557010819496,
+          "runtime_bytes_ratio": 0.625,
+          "baseline_runtime_bytes": 232,
+          "solar_runtime_bytes": 145
+        },
+        {
+          "benchmark": "scale_storage_slots_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9241712451801769,
+          "runtime_bytes_ratio": 0.7839433293978748,
+          "baseline_runtime_bytes": 2541,
+          "solar_runtime_bytes": 1992
+        },
+        {
+          "benchmark": "scale_storage_slots_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9596981192371438,
+          "runtime_bytes_ratio": 0.6625615763546798,
+          "baseline_runtime_bytes": 406,
+          "solar_runtime_bytes": 269
+        },
+        {
+          "benchmark": "scale_storage_slots_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9192867723747534,
+          "runtime_bytes_ratio": 0.7614070351758794,
+          "baseline_runtime_bytes": 4975,
+          "solar_runtime_bytes": 3788
+        },
+        {
+          "benchmark": "scale_storage_slots_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.940236239371494,
+          "runtime_bytes_ratio": 0.737062937062937,
+          "baseline_runtime_bytes": 715,
+          "solar_runtime_bytes": 527
+        },
+        {
+          "benchmark": "scaling_dispatch_N",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.8543317905076776,
+          "runtime_bytes_ratio": 0.5820783132530121,
+          "baseline_runtime_bytes": 1328,
+          "solar_runtime_bytes": 773
+        },
+        {
+          "benchmark": "uniswap_v2_factory",
+          "scenarios": 5,
+          "gas_geomean_ratio": 0.9497465610290724,
+          "runtime_bytes_ratio": 0.6691248770894789,
+          "baseline_runtime_bytes": 2034,
+          "solar_runtime_bytes": 1361
+        },
+        {
+          "benchmark": "uniswap_v2_pair",
+          "scenarios": 23,
+          "gas_geomean_ratio": 0.9778983713661873,
+          "runtime_bytes_ratio": 0.959114139693356,
+          "baseline_runtime_bytes": 7631,
+          "solar_runtime_bytes": 7319
+        },
+        {
+          "benchmark": "vault_deposit_withdraw",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9908363777052054,
+          "runtime_bytes_ratio": 0.7185792349726776,
+          "baseline_runtime_bytes": 732,
+          "solar_runtime_bytes": 526
+        },
+        {
+          "benchmark": "yearn_vault_v2",
+          "scenarios": 15,
+          "gas_geomean_ratio": 0.9200158531425988,
+          "runtime_bytes_ratio": 0.7354181951577403,
+          "baseline_runtime_bytes": 21808,
+          "solar_runtime_bytes": 16038
+        },
+        {
+          "benchmark": "yearn_vault_v3",
+          "scenarios": 45,
+          "gas_geomean_ratio": 0.894075847274892,
+          "runtime_bytes_ratio": 0.7803561413348289,
+          "baseline_runtime_bytes": 28528,
+          "solar_runtime_bytes": 22262
+        }
+      ]
+    },
+    "solar-size-1": {
+      "benchmarks": 64,
+      "scenarios": 247,
+      "gas_geomean_ratio": 0.9702258930855764,
+      "runtime_bytes_geomean_ratio": 0.7344886847530716,
+      "per_benchmark": [
+        {
+          "benchmark": "amm_pair_subset",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.9801156208378848,
+          "runtime_bytes_ratio": 0.8654173764906303,
+          "baseline_runtime_bytes": 1174,
+          "solar_runtime_bytes": 1016
+        },
+        {
+          "benchmark": "counter",
+          "scenarios": 4,
+          "gas_geomean_ratio": 1.0069263781281306,
+          "runtime_bytes_ratio": 0.5515695067264574,
+          "baseline_runtime_bytes": 223,
+          "solar_runtime_bytes": 123
+        },
+        {
+          "benchmark": "create2_address_hashing",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.8956829093069514,
+          "runtime_bytes_ratio": 0.6534446764091858,
+          "baseline_runtime_bytes": 479,
+          "solar_runtime_bytes": 313
+        },
+        {
+          "benchmark": "curve_stableswap_2coin",
+          "scenarios": 30,
+          "gas_geomean_ratio": 0.9993257792304863,
+          "runtime_bytes_ratio": 1.1109803520261974,
+          "baseline_runtime_bytes": 19544,
+          "solar_runtime_bytes": 21713
+        },
+        {
+          "benchmark": "eip1167_codehash_bookkeeping",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9293042630315724,
+          "runtime_bytes_ratio": 0.7667785234899329,
+          "baseline_runtime_bytes": 596,
+          "solar_runtime_bytes": 457
+        },
+        {
+          "benchmark": "erc20_minimal",
+          "scenarios": 5,
+          "gas_geomean_ratio": 0.9765369123849099,
+          "runtime_bytes_ratio": 0.7791699295223179,
+          "baseline_runtime_bytes": 1277,
+          "solar_runtime_bytes": 995
+        },
+        {
+          "benchmark": "erc20_permit_hashing",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9240958910887647,
+          "runtime_bytes_ratio": 0.751937984496124,
+          "baseline_runtime_bytes": 516,
+          "solar_runtime_bytes": 388
+        },
+        {
+          "benchmark": "merkle_verifier",
+          "scenarios": 6,
+          "gas_geomean_ratio": 0.7587747486733573,
+          "runtime_bytes_ratio": 0.547945205479452,
+          "baseline_runtime_bytes": 438,
+          "solar_runtime_bytes": 240
+        },
+        {
+          "benchmark": "ownable_pausable",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.9727856601562045,
+          "runtime_bytes_ratio": 0.6880856760374833,
+          "baseline_runtime_bytes": 747,
+          "solar_runtime_bytes": 514
+        },
+        {
+          "benchmark": "scale_abi_args_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9261744966442953,
+          "runtime_bytes_ratio": 0.640625,
+          "baseline_runtime_bytes": 64,
+          "solar_runtime_bytes": 41
+        },
+        {
+          "benchmark": "scale_abi_args_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.6824887748556767,
+          "runtime_bytes_ratio": 1.2473684210526317,
+          "baseline_runtime_bytes": 190,
+          "solar_runtime_bytes": 237
+        },
+        {
+          "benchmark": "scale_abi_args_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9257503949447078,
+          "runtime_bytes_ratio": 0.7604166666666666,
+          "baseline_runtime_bytes": 96,
+          "solar_runtime_bytes": 73
+        },
+        {
+          "benchmark": "scale_abi_args_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.6222910216718266,
+          "runtime_bytes_ratio": 1.3240740740740742,
+          "baseline_runtime_bytes": 324,
+          "solar_runtime_bytes": 429
+        },
+        {
+          "benchmark": "scale_abi_args_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.8282828282828283,
+          "runtime_bytes_ratio": 0.7933884297520661,
+          "baseline_runtime_bytes": 121,
+          "solar_runtime_bytes": 96
+        },
+        {
+          "benchmark": "scale_abi_args_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.5821282106626376,
+          "runtime_bytes_ratio": 1.4835766423357664,
+          "baseline_runtime_bytes": 548,
+          "solar_runtime_bytes": 813
+        },
+        {
+          "benchmark": "scale_abi_args_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.7557251908396947,
+          "runtime_bytes_ratio": 0.9929577464788732,
+          "baseline_runtime_bytes": 142,
+          "solar_runtime_bytes": 141
+        },
+        {
+          "benchmark": "scale_dispatch_1",
+          "scenarios": 2,
+          "gas_geomean_ratio": 0.9522080030861896,
+          "runtime_bytes_ratio": 0.5683453237410072,
+          "baseline_runtime_bytes": 139,
+          "solar_runtime_bytes": 79
+        },
+        {
+          "benchmark": "scale_dispatch_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9512027994251511,
+          "runtime_bytes_ratio": 0.4597222222222222,
+          "baseline_runtime_bytes": 720,
+          "solar_runtime_bytes": 331
+        },
+        {
+          "benchmark": "scale_dispatch_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.937016163931309,
+          "runtime_bytes_ratio": 0.5428571428571428,
+          "baseline_runtime_bytes": 175,
+          "solar_runtime_bytes": 95
+        },
+        {
+          "benchmark": "scale_dispatch_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9662661979482644,
+          "runtime_bytes_ratio": 0.48493975903614456,
+          "baseline_runtime_bytes": 1328,
+          "solar_runtime_bytes": 644
+        },
+        {
+          "benchmark": "scale_dispatch_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9398278469701076,
+          "runtime_bytes_ratio": 0.5183673469387755,
+          "baseline_runtime_bytes": 245,
+          "solar_runtime_bytes": 127
+        },
+        {
+          "benchmark": "scale_dispatch_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9736913005283958,
+          "runtime_bytes_ratio": 0.4797483287455761,
+          "baseline_runtime_bytes": 2543,
+          "solar_runtime_bytes": 1220
+        },
+        {
+          "benchmark": "scale_dispatch_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9474842929766417,
+          "runtime_bytes_ratio": 0.45913461538461536,
+          "baseline_runtime_bytes": 416,
+          "solar_runtime_bytes": 191
+        },
+        {
+          "benchmark": "scale_events_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9711493718008376,
+          "runtime_bytes_ratio": 0.8757396449704142,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 148
+        },
+        {
+          "benchmark": "scale_events_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9940492831183354,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_events_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9861224489795918,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_events_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9947224749772521,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_events_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9903374461126803,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_events_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.995065471527262,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_events_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9927519289221417,
+          "runtime_bytes_ratio": 0.8994082840236687,
+          "baseline_runtime_bytes": 169,
+          "solar_runtime_bytes": 152
+        },
+        {
+          "benchmark": "scale_external_calls_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9078073089700996,
+          "runtime_bytes_ratio": 0.6751054852320675,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 160
+        },
+        {
+          "benchmark": "scale_external_calls_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9216603927154339,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_external_calls_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9353569421023047,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_external_calls_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9204372273897735,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_external_calls_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9286445885967907,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_external_calls_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9200887012744129,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_external_calls_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9242685025817556,
+          "runtime_bytes_ratio": 0.810126582278481,
+          "baseline_runtime_bytes": 237,
+          "solar_runtime_bytes": 192
+        },
+        {
+          "benchmark": "scale_loop_bound_1",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9247159090909091,
+          "runtime_bytes_ratio": 0.5892857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 66
+        },
+        {
+          "benchmark": "scale_loop_bound_16",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9567483064095883,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_loop_bound_2",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9121019108280255,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_loop_bound_32",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9692068429237947,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_loop_bound_4",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.925026399155227,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_loop_bound_64",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.9774410194592733,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_loop_bound_8",
+          "scenarios": 1,
+          "gas_geomean_ratio": 0.940991345397325,
+          "runtime_bytes_ratio": 0.7142857142857143,
+          "baseline_runtime_bytes": 112,
+          "solar_runtime_bytes": 80
+        },
+        {
+          "benchmark": "scale_mapping_depth_1",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9790386732581178,
+          "runtime_bytes_ratio": 0.783625730994152,
+          "baseline_runtime_bytes": 171,
+          "solar_runtime_bytes": 134
+        },
+        {
+          "benchmark": "scale_mapping_depth_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9988279810332173,
+          "runtime_bytes_ratio": 0.782312925170068,
+          "baseline_runtime_bytes": 1617,
+          "solar_runtime_bytes": 1265
+        },
+        {
+          "benchmark": "scale_mapping_depth_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9897768587188736,
+          "runtime_bytes_ratio": 0.7120253164556962,
+          "baseline_runtime_bytes": 316,
+          "solar_runtime_bytes": 225
+        },
+        {
+          "benchmark": "scale_mapping_depth_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 1.0003175845805181,
+          "runtime_bytes_ratio": 0.8203477141017386,
+          "baseline_runtime_bytes": 3106,
+          "solar_runtime_bytes": 2548
+        },
+        {
+          "benchmark": "scale_mapping_depth_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.993381686645626,
+          "runtime_bytes_ratio": 0.7410358565737052,
+          "baseline_runtime_bytes": 502,
+          "solar_runtime_bytes": 372
+        },
+        {
+          "benchmark": "scale_mapping_depth_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 1.0012176821998422,
+          "runtime_bytes_ratio": 0.8244777101496956,
+          "baseline_runtime_bytes": 6079,
+          "solar_runtime_bytes": 5012
+        },
+        {
+          "benchmark": "scale_mapping_depth_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9966329137014799,
+          "runtime_bytes_ratio": 0.7640320733104238,
+          "baseline_runtime_bytes": 873,
+          "solar_runtime_bytes": 667
+        },
+        {
+          "benchmark": "scale_storage_slots_1",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9586794478850208,
+          "runtime_bytes_ratio": 0.46808510638297873,
+          "baseline_runtime_bytes": 141,
+          "solar_runtime_bytes": 66
+        },
+        {
+          "benchmark": "scale_storage_slots_16",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9350058933382459,
+          "runtime_bytes_ratio": 0.6780045351473923,
+          "baseline_runtime_bytes": 1323,
+          "solar_runtime_bytes": 897
+        },
+        {
+          "benchmark": "scale_storage_slots_2",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9694557010819496,
+          "runtime_bytes_ratio": 0.625,
+          "baseline_runtime_bytes": 232,
+          "solar_runtime_bytes": 145
+        },
+        {
+          "benchmark": "scale_storage_slots_32",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9314986786455011,
+          "runtime_bytes_ratio": 0.7260920897284534,
+          "baseline_runtime_bytes": 2541,
+          "solar_runtime_bytes": 1845
+        },
+        {
+          "benchmark": "scale_storage_slots_4",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9522512730756267,
+          "runtime_bytes_ratio": 0.6280788177339901,
+          "baseline_runtime_bytes": 406,
+          "solar_runtime_bytes": 255
+        },
+        {
+          "benchmark": "scale_storage_slots_64",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9297741370113247,
+          "runtime_bytes_ratio": 0.7310552763819096,
+          "baseline_runtime_bytes": 4975,
+          "solar_runtime_bytes": 3637
+        },
+        {
+          "benchmark": "scale_storage_slots_8",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9423997380966662,
+          "runtime_bytes_ratio": 0.6657342657342658,
+          "baseline_runtime_bytes": 715,
+          "solar_runtime_bytes": 476
+        },
+        {
+          "benchmark": "scaling_dispatch_N",
+          "scenarios": 4,
+          "gas_geomean_ratio": 0.9424280896198386,
+          "runtime_bytes_ratio": 0.48493975903614456,
+          "baseline_runtime_bytes": 1328,
+          "solar_runtime_bytes": 644
+        },
+        {
+          "benchmark": "uniswap_v2_factory",
+          "scenarios": 5,
+          "gas_geomean_ratio": 0.9639305601477224,
+          "runtime_bytes_ratio": 0.6548672566371682,
+          "baseline_runtime_bytes": 2034,
+          "solar_runtime_bytes": 1332
+        },
+        {
+          "benchmark": "uniswap_v2_pair",
+          "scenarios": 23,
+          "gas_geomean_ratio": 1.0049901233353065,
+          "runtime_bytes_ratio": 0.9551828069715633,
+          "baseline_runtime_bytes": 7631,
+          "solar_runtime_bytes": 7289
+        },
+        {
+          "benchmark": "vault_deposit_withdraw",
+          "scenarios": 3,
+          "gas_geomean_ratio": 0.9896294118994086,
+          "runtime_bytes_ratio": 0.6598360655737705,
+          "baseline_runtime_bytes": 732,
+          "solar_runtime_bytes": 483
+        },
+        {
+          "benchmark": "yearn_vault_v2",
+          "scenarios": 15,
+          "gas_geomean_ratio": 1.0020067514578226,
+          "runtime_bytes_ratio": 0.7537600880410859,
+          "baseline_runtime_bytes": 21808,
+          "solar_runtime_bytes": 16438
+        },
+        {
+          "benchmark": "yearn_vault_v3",
+          "scenarios": 45,
+          "gas_geomean_ratio": 1.0208754691494815,
+          "runtime_bytes_ratio": 0.7949032529444756,
+          "baseline_runtime_bytes": 28528,
+          "solar_runtime_bytes": 22677
+        }
+      ]
+    }
+  },
+  "measurement_note": "Gas includes harness overhead and expected-revert scenarios. Ratios use only whole benchmarks whose generated harness passed. Compilation failures and runtime failures remain separate; no performance credit for invalid cases.",
+  "repeated_compilation": {
+    "artifacts": 20,
+    "invocations": 100,
+    "bytecode_matches_initial_run": true
+  }
+}

@@ -395,6 +395,9 @@ fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerP
         let text = fs::read_to_string(entry.path())?;
         let base: CompilerProfile =
             toml::from_str(&text).with_context(|| format!("parsing {}", entry.path().display()))?;
+        if crate::solar::profile_revision(&base.compiler).is_some() {
+            crate::solar::validate_profile(&base)?;
+        }
         if crate::solx::profile_version(&base.compiler).is_some() {
             crate::solx::validate_profile(&base)?;
         }
@@ -454,7 +457,10 @@ fn compile_solidity(
         || {
             let mut command = Command::new(&solc.binary_path);
             command.arg("--standard-json");
-            if solc.name == "solx" {
+            if solc.name == "solar" {
+                command.env_remove("SOLC_WRAPPER");
+            }
+            if matches!(solc.name.as_str(), "solx" | "solar") {
                 command
                     .arg("--threads")
                     .arg(crate::solx::WORKER_THREADS.to_string());
@@ -600,6 +606,21 @@ fn solidity_compiler_settings(
     solc: &Toolchain,
     evm_version: &str,
 ) -> serde_json::Value {
+    if solc.name == "solar" {
+        return json!({
+            "evmVersion": evm_version,
+            "compiler": profile.compiler,
+            "metadataMode": profile.metadata_mode.as_str(),
+            "metadata": solidity_metadata_settings(profile.metadata_mode, solc),
+            "optimizer": profile.optimizer,
+            "optimizerRuns": profile.optimizer_runs,
+            "optimize": profile.optimizer_mode,
+            "threads": 1,
+            "sourceRevision": solc.metadata.get("source_revision"),
+            "solidityVersion": solc.metadata.get("solidity_version"),
+            "sourceVariant": source_variant_label(profile),
+        });
+    }
     if solc.name == "solx" {
         return json!({
             "evmVersion": evm_version,
@@ -630,7 +651,9 @@ fn solidity_compiler_settings(
 }
 
 fn solidity_version_tuple(solc: &Toolchain) -> Option<(u64, u64, u64)> {
-    let version = if solc.name == "solx" {
+    let version = if solc.name == "solar" {
+        solc.metadata.get("solidity_version")?
+    } else if solc.name == "solx" {
         solc.metadata.get("frontend_version")?
     } else {
         &solc.version
@@ -2137,6 +2160,40 @@ mod tests {
     };
     use crate::models::{CompilerProfile, Language, MetadataMode, Toolchain};
     use std::{collections::BTreeMap, fs, path::PathBuf};
+
+    #[test]
+    fn solar_uses_compatibility_version_and_actual_json_optimizer_modes() {
+        let mut compiler = toolchain("solar", "0.2.0");
+        assert!(solidity_pragma_for_toolchain(&compiler).is_err());
+        compiler
+            .metadata
+            .insert("solidity_version".into(), "0.8.36".into());
+        assert_eq!(
+            solidity_pragma_for_toolchain(&compiler).unwrap(),
+            "pragma solidity >=0.8.36 <0.9.0;"
+        );
+        let mut p = profile("solar-716e9cbc-gas-runs200", Language::Solidity);
+        p.compiler = "solar-716e9cbcde88165f931173f1c1fda852ed63afa0".into();
+        p.optimizer = true;
+        for (mode, runs) in [("gas", 200), ("size", 1)] {
+            p.optimizer_mode = Some(mode.into());
+            p.optimizer_runs = runs;
+            crate::solar::validate_profile(&p).unwrap();
+            let settings = super::solidity_standard_json_settings(&p, &compiler, "prague");
+            assert_eq!(
+                settings["optimizer"],
+                serde_json::json!({"enabled":true, "runs":runs})
+            );
+            assert_eq!(settings["metadata"]["appendCBOR"], false);
+            assert!(settings.get("viaIR").is_none());
+            assert_eq!(
+                super::solidity_compiler_settings(&p, &compiler, "prague")["optimize"],
+                mode
+            );
+        }
+        p.via_ir = true;
+        assert!(crate::solar::validate_profile(&p).is_err());
+    }
 
     #[test]
     fn solx_uses_embedded_frontend_and_llvm_settings() {

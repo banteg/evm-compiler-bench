@@ -68,3 +68,18 @@ test('a cheap unexpected revert cannot become a gas or size win, even through an
     assert.ok(b.compareProfiles(data, profiles[0].id, profiles[2].id, metric).length > 0);
   }
 });
+
+test('Solar revision and gas/size runs remain distinct from the package and Solidity version', () => {
+  const revision = '716e9cbcde88165f931173f1c1fda852ed63afa0';
+  const gas = {id: 'solar-716e9cbc-gas-runs200', language: 'solidity', compiler_name: 'solar', compiler_version: '0.2.0', source_revision: revision, solidity_version: '0.8.36', optimizer: 'gas', optimizer_runs: 200};
+  const size = {...gas, id: 'solar-716e9cbc-size-runs1', optimizer: 'size', optimizer_runs: 1};
+  const next = {...gas, id: 'solar-next-gas-runs200', source_revision: 'a'.repeat(40)};
+  const b = load([gas, size, next]);
+  const knobs = b.profileKnobs(gas);
+  assert.equal(knobs.versionKey, revision);
+  assert.equal(knobs.runs, 200);
+  assert.equal(b.profileFacets('solidity', revision, 'size', 'solar').runs.join(), '1');
+  assert.equal(b.resolveProfile({...knobs, optimizer: 'size', runs: 1}), size.id);
+  assert.match(b.profileLabel(gas.id), /^Solar 0\.2\.0 @716e9cbc gas runs200$/);
+  assert.equal(b.latestBaselineProfile(gas), undefined);
+});
