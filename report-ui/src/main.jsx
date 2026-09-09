@@ -1663,8 +1663,8 @@ function Methodology() {
     },
     {
       tag: 'J',
-      title: 'Vyper Venom and 0.5.0a1',
-      body: 'Vyper "Venom" rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release.'
+      title: 'Vyper Venom and prereleases',
+      body: 'Vyper "Venom" rows pass --experimental-codegen. Prerelease profiles track the latest non-yanked Vyper prerelease on PyPI; the exact version is recorded for each run.'
     },
   ];
   const methods = Array.isArray(Bench.D.methodology?.notes) && Bench.D.methodology.notes.length

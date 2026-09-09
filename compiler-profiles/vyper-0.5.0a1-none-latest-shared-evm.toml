@@ -1,6 +1,0 @@
-id = "vyper-0.5.0a1-none"
-language = "vyper"
-compiler = "vyper-0.5.0a1"
-optimizer = false
-optimizer_mode = "none"
-evm_version = "latest-shared"

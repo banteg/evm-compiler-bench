@@ -22,7 +22,7 @@ const SOL_VIAIR_CODEGEN: &str = "solc-latest-viair-runs200";
 const VYPER_GAS_CODEGEN: &str = "vyper-latest-gas";
 const FE_CODEGEN_BASELINE: &str = "fe-latest-O2";
 const VYPER_GAS_VENOM_CODEGEN: &str = "vyper-latest-gas-venom";
-const VYPER_ALPHA_GAS_CODEGEN: &str = "vyper-0.5.0a1-gas";
+const VYPER_PRERELEASE_GAS_CODEGEN: &str = "vyper-prerelease-gas";
 const SCORECARD_TIE_BAND: f64 = 0.02;
 
 pub struct ReportPaths {
@@ -306,7 +306,7 @@ fn report_model(
                 "solidity_viair": SOL_VIAIR_CODEGEN,
                 "vyper": VYPER_GAS_CODEGEN,
                 "vyper_experimental": VYPER_GAS_VENOM_CODEGEN,
-                "vyper_alpha": VYPER_ALPHA_GAS_CODEGEN
+                "vyper_prerelease": VYPER_PRERELEASE_GAS_CODEGEN
             }
         },
         "summary": {
@@ -404,8 +404,8 @@ fn report_methodology() -> serde_json::Value {
             },
             {
                 "tag": "J",
-                "title": "Vyper Venom and 0.5.0a1",
-                "body": "Vyper Venom rows pass --experimental-codegen. Vyper 0.5.0a1 is pre-release."
+                "title": "Vyper Venom and prereleases",
+                "body": "Vyper Venom rows pass --experimental-codegen. Prerelease profiles track the latest non-yanked Vyper prerelease on PyPI; the exact version is recorded for each run."
             },
             {
                 "tag": "K",

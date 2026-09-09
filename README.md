@@ -21,7 +21,7 @@ Published report: https://evm.banteg.xyz/
   plus counterpart-language ports with provenance and explicit benchmark scope
   recorded in specs.
 - Compiler version axes: historical solc and Vyper profiles, current latest
-  profiles, Vyper 0.5.0a1, and Vyper Venom via `--experimental-codegen`.
+  profiles, the latest Vyper prerelease (currently 0.5.0b1), and Vyper Venom via `--experimental-codegen`.
 - Solidity compiler axis: Solar gas/runs200 and size/runs1 at pinned revision
   716e9cbc, matched solc 0.8.36 legacy/viaIR profiles; plus solx 0.1.8 with LLVM O3/Oz, alongside matched
   solc 0.8.34 legacy/via-IR profiles and the existing solc version matrix.
@@ -55,6 +55,13 @@ The runner downloads missing solc, solx, Vyper, and Fe compilers unless `--offli
 is used. Fe is resolved from the latest GitHub release of `argotorg/fe`; set
 `EVM_BENCH_FE=<path>` to override with a local Fe binary (for example an
 unreleased build). Resolved compilers and run outputs are cached locally.
+`vyper` follows the latest stable PyPI release; `vyper-prerelease` follows the
+latest prerelease using Python version ordering (including alpha, beta, RC, and
+development releases). Empty and fully yanked releases are excluded. Each run
+records the exact version and binary hash, so a newer release invalidates the
+corresponding compiler cache. Set `EVM_BENCH_VYPER_PRERELEASE=<path>` to provide
+that version locally. With `--offline`, this override must report a prerelease;
+otherwise the highest cached prerelease with a compiler binary is selected.
 Solx profiles pin release 0.1.8, verify upstream SHA-256 checksums on download
 and cache hits, and support macOS, Linux x86-64/ARM64, and Windows x86-64.
 Set `EVM_BENCH_SOLX=<path>` (or `EVM_BENCH_SOLX_0_1_8=<path>`) for a local
@@ -255,6 +262,9 @@ just zip-design
   recorded by `source_variants`; those profiles compile generated compatibility
   variants of the checked-in latest source rather than the pinned upstream
   historical source.
+- Vyper 0.5 standard-library migrations and historical syntax adapters, their
+  behavioral constraints, and focused verification commands are documented in
+  [compiler compatibility](docs/compiler-compatibility.md).
 - Real-derived specs record provenance and equivalence scope per benchmark.
   The corpus targets faithful idiomatic ports under explicit scope boundaries;
   `excluded_features` document what is intentionally outside the benchmark and
@@ -285,7 +295,8 @@ just zip-design
   failure in Reliability; raw measurements are retained. Gas caches also track
   harness source and Foundry version so harness edits do not silently reuse
   stale measurements.
-- Vyper 0.5.0a1 is pre-release.
+- Vyper prerelease profiles are separate from stable profiles and resolve the latest
+  non-yanked prerelease with published files on PyPI (currently 0.5.0b1).
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
   exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no
   historical version axis. Fe implementations cover the fixed benchmark suite

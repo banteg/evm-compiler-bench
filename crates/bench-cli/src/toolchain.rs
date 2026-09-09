@@ -3,6 +3,7 @@ use crate::{
     util::{Progress, ensure_dir, require_success, run_measured, sha256_bytes, sha256_file},
 };
 use anyhow::{Context, Result, anyhow, bail};
+use pep440_rs::Version;
 use regex::Regex;
 use serde::Deserialize;
 use std::{
@@ -16,7 +17,6 @@ const SOLC_INDEX_ROOT: &str = "https://binaries.soliditylang.org";
 const PYPI_VYPER_JSON: &str = "https://pypi.org/pypi/vyper/json";
 const FE_RELEASES_REPO: &str = "argotorg/fe";
 const FE_RELEASES_LATEST: &str = "https://api.github.com/repos/argotorg/fe/releases/latest";
-const VYPER_ALPHA_VERSION: &str = "0.5.0a1";
 const LEGACY_VYPER_PYTHON: &str = "3.11";
 const EVM_ORDER: &[&str] = &["osaka", "prague", "cancun", "shanghai", "paris", "london"];
 
@@ -29,7 +29,7 @@ pub fn resolve_toolchains(
     let extra_compilers: BTreeSet<_> = compiler_refs
         .iter()
         .map(|compiler_ref| compiler_ref.compiler.clone())
-        .filter(|compiler| !matches!(compiler.as_str(), "solc" | "vyper" | "vyper-0.5.0a1"))
+        .filter(|compiler| !matches!(compiler.as_str(), "solc" | "vyper" | "vyper-prerelease"))
         .collect();
     let mut progress = Progress::new("toolchains", 3 + extra_compilers.len());
     progress.update(0, "resolving latest solc");
@@ -38,19 +38,16 @@ pub fn resolve_toolchains(
     progress.update(1, "resolving latest vyper");
     let vyper = resolve_vyper(root, offline)?;
     progress.update(2, format!("resolved vyper {}", vyper.version));
-    progress.update(2, format!("resolving vyper {VYPER_ALPHA_VERSION}"));
-    let vyper_alpha = resolve_vyper_version(
-        root,
-        offline,
-        VYPER_ALPHA_VERSION,
-        "EVM_BENCH_VYPER_0_5_0A1",
-        "alpha",
-    )?;
-    progress.update(3, format!("resolved vyper alpha {}", vyper_alpha.version));
+    progress.update(2, "resolving latest vyper prerelease");
+    let vyper_prerelease = resolve_vyper_prerelease(root, offline)?;
+    progress.update(
+        3,
+        format!("resolved vyper prerelease {}", vyper_prerelease.version),
+    );
     let mut compilers = BTreeMap::from([
         ("solc".to_string(), solc.clone()),
         ("vyper".to_string(), vyper.clone()),
-        ("vyper-0.5.0a1".to_string(), vyper_alpha.clone()),
+        ("vyper-prerelease".to_string(), vyper_prerelease.clone()),
     ]);
     let mut resolved = 3usize;
     for compiler_ref in compiler_refs {
@@ -115,7 +112,7 @@ pub fn resolve_toolchains(
         );
         compilers.insert(compiler_ref.compiler, toolchain);
     }
-    let mut evm_version = latest_shared_evm(&solc, &[&vyper, &vyper_alpha])?;
+    let mut evm_version = latest_shared_evm(&solc, &[&vyper, &vyper_prerelease])?;
     for toolchain in compilers
         .values()
         .filter(|t| matches!(t.name.as_str(), "solx" | "solar"))
@@ -145,7 +142,7 @@ pub fn resolve_toolchains(
     Ok(Toolchains {
         solc,
         vyper,
-        vyper_alpha,
+        vyper_prerelease,
         compilers,
         evm_version,
     })
@@ -429,8 +426,61 @@ fn resolve_vyper(root: &Path, offline: bool) -> Result<Toolchain> {
     if offline {
         return resolve_path_toolchain("vyper", env::var_os("EVM_BENCH_VYPER").map(PathBuf::from));
     }
-    let latest = fetch_vyper_latest_stable()?;
+    let latest = latest_vyper_release(&fetch_vyper_releases()?, false)?;
     resolve_vyper_version(root, offline, &latest, "EVM_BENCH_VYPER", "stable")
+}
+
+fn resolve_vyper_prerelease(root: &Path, offline: bool) -> Result<Toolchain> {
+    let version = if offline {
+        if let Some(path) = env::var_os("EVM_BENCH_VYPER_PRERELEASE") {
+            let mut local = resolve_path_toolchain("vyper", Some(PathBuf::from(path)))?;
+            if !local.version.parse::<Version>()?.any_prerelease() {
+                bail!("EVM_BENCH_VYPER_PRERELEASE must report a prerelease version");
+            }
+            local.metadata.insert("channel".into(), "prerelease".into());
+            return Ok(local);
+        }
+        cached_vyper_prerelease(root)?
+            .context("no cached Vyper prerelease; run online or set EVM_BENCH_VYPER_PRERELEASE")?
+    } else {
+        latest_vyper_release(&fetch_vyper_releases()?, true)?
+    };
+    let mut toolchain = resolve_vyper_version(
+        root,
+        offline,
+        &version,
+        "EVM_BENCH_VYPER_PRERELEASE",
+        "prerelease",
+    )?;
+    toolchain
+        .metadata
+        .insert("channel".into(), "prerelease".into());
+    Ok(toolchain)
+}
+
+fn cached_vyper_prerelease(root: &Path) -> Result<Option<String>> {
+    let directory = root.join(".cache/toolchains/vyper");
+    if !directory.exists() {
+        return Ok(None);
+    }
+    let mut candidates = Vec::new();
+    for entry in fs::read_dir(directory)? {
+        let entry = entry?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let Ok(version) = name.parse::<Version>() else {
+            continue;
+        };
+        if version.any_prerelease()
+            && entry
+                .path()
+                .join(bin_dir())
+                .join(binary_name("vyper"))
+                .is_file()
+        {
+            candidates.push((version, name));
+        }
+    }
+    Ok(candidates.into_iter().max().map(|(_, name)| name))
 }
 
 fn resolve_vyper_version(
@@ -620,18 +670,31 @@ fn fetch_solc_index() -> Result<SolcIndex> {
         .json()?)
 }
 
-fn fetch_vyper_latest_stable() -> Result<String> {
-    let payload: PypiPackage = reqwest::blocking::get(PYPI_VYPER_JSON)
+fn fetch_vyper_releases() -> Result<PypiPackage> {
+    reqwest::blocking::get(PYPI_VYPER_JSON)
         .with_context(|| format!("fetching {PYPI_VYPER_JSON}"))?
         .error_for_status()?
-        .json()?;
+        .json()
+        .context("parsing Vyper PyPI releases")
+}
+
+fn latest_vyper_release(payload: &PypiPackage, prerelease: bool) -> Result<String> {
     payload
         .releases
-        .keys()
-        .filter_map(|version| stable_version_tuple(version).map(|tuple| (tuple, version.clone())))
-        .max_by_key(|(tuple, _)| *tuple)
+        .iter()
+        .filter(|(_, files)| files.iter().any(|file| !file.yanked))
+        .filter_map(|(name, _)| {
+            let version = name.parse::<Version>().ok()?;
+            (version.any_prerelease() == prerelease).then(|| (version, name.clone()))
+        })
+        .max_by(|(a, _), (b, _)| a.cmp(b))
         .map(|(_, version)| version)
-        .context("no stable vyper releases found on PyPI")
+        .with_context(|| {
+            format!(
+                "no installable Vyper {} releases found on PyPI",
+                if prerelease { "prerelease" } else { "stable" }
+            )
+        })
 }
 
 fn stable_version_tuple(version: &str) -> Option<(u64, u64, u64)> {
@@ -729,7 +792,12 @@ fn parse_solc_version(output: &str) -> Result<String> {
 }
 
 fn parse_vyper_version(output: &str) -> Result<String> {
-    parse_version(output, r"([0-9]+\.[0-9]+\.[0-9]+(?:[a-zA-Z][0-9]+)?)")
+    output
+        .split_whitespace()
+        .filter_map(|token| token.split('+').next()?.parse::<Version>().ok())
+        .find(|version| version.release().len() >= 3)
+        .map(|version| version.to_string())
+        .context("unable to parse Vyper version output")
 }
 
 fn parse_fe_version(output: &str) -> Result<String> {
@@ -795,7 +863,13 @@ struct SolcBuild {
 
 #[derive(Debug, Deserialize)]
 struct PypiPackage {
-    releases: BTreeMap<String, serde_json::Value>,
+    releases: BTreeMap<String, Vec<PypiFile>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PypiFile {
+    #[serde(default)]
+    yanked: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -813,8 +887,9 @@ struct GithubAsset {
 #[cfg(test)]
 mod tests {
     use super::{
-        cached_fe_latest, compiler_refs_from_profiles, fe_release_asset_name, make_executable,
-        parse_solc_version, parse_vyper_version, stable_version_tuple,
+        PypiPackage, cached_fe_latest, cached_vyper_prerelease, compiler_refs_from_profiles,
+        fe_release_asset_name, latest_vyper_release, make_executable, parse_solc_version,
+        parse_vyper_version, stable_version_tuple,
     };
     use std::fs;
 
@@ -836,12 +911,75 @@ mod tests {
             parse_vyper_version("0.5.0a1+commit.7d73c468").unwrap(),
             "0.5.0a1"
         );
+        for version in ["0.5.0b1", "0.5.0rc1", "0.6.0.dev12", "0.5.0b2.dev1"] {
+            assert_eq!(
+                parse_vyper_version(&format!("{version}+commit.abcdef12\n")).unwrap(),
+                version
+            );
+        }
     }
 
     #[test]
     fn classifies_stable_vyper_versions() {
         assert_eq!(stable_version_tuple("0.4.3"), Some((0, 4, 3)));
         assert_eq!(stable_version_tuple("0.5.0a1"), None);
+    }
+
+    #[test]
+    fn selects_installable_vyper_releases_by_python_version_order() {
+        let mut payload: PypiPackage = serde_json::from_value(serde_json::json!({
+            "releases": {
+                "0.4.3": [{"yanked": false}],
+                "0.5.0a99": [{}],
+                "0.5.0b2": [{}],
+                "0.5.0b10": [{"yanked": true}, {"yanked": false}],
+                "0.5.0rc1": [{"yanked": true}],
+                "0.5.0": [],
+                "invalid": [{}]
+            }
+        }))
+        .unwrap();
+        assert_eq!(latest_vyper_release(&payload, false).unwrap(), "0.4.3");
+        assert_eq!(latest_vyper_release(&payload, true).unwrap(), "0.5.0b10");
+        payload.releases.get_mut("0.5.0rc1").unwrap()[0].yanked = false;
+        assert_eq!(latest_vyper_release(&payload, true).unwrap(), "0.5.0rc1");
+        payload
+            .releases
+            .insert("0.5.0".into(), vec![super::PypiFile { yanked: false }]);
+        assert_eq!(latest_vyper_release(&payload, false).unwrap(), "0.5.0");
+        assert_eq!(latest_vyper_release(&payload, true).unwrap(), "0.5.0rc1");
+        payload
+            .releases
+            .insert("0.6.0.dev1".into(), vec![super::PypiFile { yanked: false }]);
+        assert_eq!(latest_vyper_release(&payload, true).unwrap(), "0.6.0.dev1");
+        payload.releases.clear();
+        assert!(latest_vyper_release(&payload, true).is_err());
+        assert!(latest_vyper_release(&payload, false).is_err());
+    }
+
+    #[test]
+    fn offline_prerelease_selection_ignores_stable_and_incomplete_caches() {
+        let root = tempfile::tempdir().unwrap();
+        assert_eq!(cached_vyper_prerelease(root.path()).unwrap(), None);
+        for version in ["0.5.0a99", "0.5.0b2", "0.5.0b10", "0.5.0rc1", "0.6.0"] {
+            let directory = root
+                .path()
+                .join(".cache/toolchains/vyper")
+                .join(version)
+                .join(super::bin_dir());
+            fs::create_dir_all(&directory).unwrap();
+            if version != "0.5.0rc1" {
+                fs::write(
+                    directory.join(super::binary_name("vyper")),
+                    "cached compiler",
+                )
+                .unwrap();
+            }
+        }
+        assert_eq!(
+            cached_vyper_prerelease(root.path()).unwrap().as_deref(),
+            Some("0.5.0b10")
+        );
     }
 
     #[test]

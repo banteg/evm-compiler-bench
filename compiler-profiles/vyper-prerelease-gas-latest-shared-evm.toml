@@ -1,6 +1,6 @@
-id = "vyper-0.5.0a1-gas"
+id = "vyper-prerelease-gas"
 language = "vyper"
-compiler = "vyper-0.5.0a1"
+compiler = "vyper-prerelease"
 optimizer = true
 optimizer_mode = "gas"
 evm_version = "latest-shared"

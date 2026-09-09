@@ -238,10 +238,13 @@
   }
   function versionRank(v){
     if (v === 'latest') return Infinity;
-    const m = v.match(/^(\d+)\.(\d+)\.(\d+)(?:a(\d+))?/);
+    const m = v.match(/^(\d+)\.(\d+)\.(\d+)(?:(a|b|rc)(\d+))?(?:\.dev(\d+))?/);
     if (!m) return -1;
-    const [, ma, mi, pa, al] = m;
-    return Number(ma)*1e9 + Number(mi)*1e6 + Number(pa)*1e3 + (al==null?999:Number(al));
+    const [, ma, mi, pa, stage, serial, dev] = m;
+    const iteration = Number(serial || 0) + (dev == null ? 0.5 : 0.25*Number(dev)/(Number(dev)+1));
+    const prerelease = stage ? ({a: 100, b: 200, rc: 300}[stage] + iteration/(iteration+1))
+      : dev != null ? Number(dev)/(Number(dev)+1) : 999;
+    return Number(ma)*1e9 + Number(mi)*1e6 + Number(pa)*1e3 + prerelease;
   }
   function profileOptimizer(p){
     const id = String(p.id);

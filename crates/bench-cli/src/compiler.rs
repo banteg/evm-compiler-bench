@@ -919,6 +919,15 @@ fn source_path_for_profile(
                     profile.source_variant.as_deref().unwrap_or("latest")
                 )
             })?;
+            let transformed = if vyper_legacy_minor(toolchain) >= Some(5) {
+                rewrite_vyper_05_builtins(&transformed)
+            } else if toolchain.version.split('+').next() == Some("0.3.7")
+                && benchmark.id == "curve_stableswap_2coin"
+            {
+                rewrite_vyper_037_curve(&transformed)
+            } else {
+                transformed
+            };
             materialize_source_variant(root, &profile.id, &benchmark.vyper_path, transformed)
         }
         Language::Fe => {
@@ -978,6 +987,7 @@ fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) 
             let source = rewrite_solidity_pre_06_external_data_locations(&source);
             let source = rewrite_solidity_pre_06_immutables(&source);
             let source = rewrite_solidity_04_low_level_calls(&source);
+            let source = rewrite_solidity_04_pair_and_vault_syntax(&source);
             let source = add_constructor_visibility(&source);
             source.replace(" calldata", "")
         }
@@ -1321,8 +1331,48 @@ fn rewrite_solidity_04_low_level_calls(source: &str) -> String {
     rewrite_solidity_04_staticcalls(&source)
 }
 
+fn rewrite_solidity_04_pair_and_vault_syntax(source: &str) -> String {
+    // 0.4 cannot cast a string literal to bytes; keccak256 hashes the same bytes
+    // when the literal is passed directly. Keep runtime string casts intact.
+    let source = source
+        .replace("keccak256(bytes(\"1\"))", "keccak256(\"1\")")
+        .replace(
+            "keccak256(bytes(\"transfer(address,uint256)\"))",
+            "keccak256(\"transfer(address,uint256)\")",
+        )
+        .replace("default_queue.pop();", "default_queue.length--;");
+    let source = if source.contains("external view returns (StrategyParams memory)") {
+        add_solidity_abicoder_pragma(&source, "pragma experimental ABIEncoderV2;")
+    } else {
+        source
+    };
+    // Before 0.5 locals have function scope. Disambiguate the deposit branch's
+    // locals from the withdrawal branch without moving their evaluations.
+    let start = "            uint256 assetsToDeposit = newDebt - currentDebt;";
+    let end = "            newDebt = currentDebt + assetsToDeposit;";
+    let Some((prefix, rest)) = source.split_once(start) else {
+        return source;
+    };
+    let Some((branch, suffix)) = rest.split_once(end) else {
+        return source;
+    };
+    let branch = branch
+        .replace("currentIdle", "depositIdle")
+        .replace("preBalance", "depositPreBalance")
+        .replace("postBalance", "depositPostBalance");
+    format!("{prefix}{start}{branch}{end}{suffix}")
+}
+
 fn rewrite_solidity_04_staticcalls(source: &str) -> String {
     let source = source
+        .replace(
+            "(bool ok, bytes memory returndata) = token.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
+            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(token, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(returndataSize >= 32 && uint256(returndataWord) == 1, message);\n        }",
+        )
+        .replace(
+            "(bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));\n        require(success && (data.length == 0 || abi.decode(data, (bool))), \"UniswapV2: TRANSFER_FAILED\");",
+            "(bool success, bytes32 dataWord, uint256 dataSize) = _benchCallWord(token, abi.encodeWithSelector(SELECTOR, to, value));\n        require(success && (dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)), \"UniswapV2: TRANSFER_FAILED\");",
+        )
         .replace(
             "keccak256(abi.encode(EIP2612_TYPEHASH, owner, spender, value, nonce, deadline))",
             "_benchPermitStructHash(owner, spender, value, nonce, deadline)",
@@ -1534,6 +1584,91 @@ fn strip_vyper_profile_pragmas(source: &str) -> String {
         .join("\n")
 }
 
+fn rewrite_vyper_05_builtins(source: &str) -> String {
+    // isqrt moved to the standard math module in 0.5. Keep older compiler
+    // inputs unchanged; the resolved toolchain version selects this adapter.
+    let source = if source.contains("isqrt(") {
+        format!("import math\n{}", source.replace("isqrt(", "math.isqrt("))
+    } else {
+        source.to_string()
+    };
+    // IERC20Detailed now returns String[...]. The old interface returned
+    // String[1], and concat retained that bound (verified with length 0/1/2
+    // calls). Preserve its runtime rejection, both calls, and both branches.
+    source
+        .replace(
+            "        self.name = concat(staticcall IERC20Detailed(token).symbol(), \" yVault\")",
+            "        name_symbol: String[1] = staticcall IERC20Detailed(token).symbol()\n        self.name = concat(name_symbol, \" yVault\")",
+        )
+        .replace(
+            "        self.symbol = concat(\"yv\", staticcall IERC20Detailed(token).symbol())",
+            "        symbol_symbol: String[1] = staticcall IERC20Detailed(token).symbol()\n        self.symbol = concat(\"yv\", symbol_symbol)",
+        )
+}
+
+fn rewrite_vyper_037_curve(source: &str) -> String {
+    // 0.3.7 predates shift operators, bounded dynamic ranges, and the asset()
+    // member in the bundled ERC4626 interface. Preserve Curve's expressions
+    // and external selectors using the equivalent syntax available there.
+    let mut source = source.replace(
+        "from vyper.interfaces import ERC4626",
+        "interface ERC4626:\n    def asset() -> address: view\n    def convertToAssets(shareAmount: uint256) -> uint256: view",
+    );
+    for (from, to) in [
+        ("p2 << 128", "shift(p2, 128)"),
+        ("packed >> 128", "shift(packed, -128)"),
+        ("packed_value >> 128", "shift(packed_value, -128)"),
+        (
+            "self.last_prices_packed[i] >> 128",
+            "shift(self.last_prices_packed[i], -128)",
+        ),
+        ("self.ma_last_time >> 128", "shift(self.ma_last_time, -128)"),
+        ("x << 78", "shift(x, 78)"),
+        (
+            "unsafe_add(unsafe_div(value << 96, 54916777467707473351141471128), 2 ** 95) >> 96",
+            "shift(unsafe_add(unsafe_div(shift(value, 96), 54916777467707473351141471128), 2 ** 95), -96)",
+        ),
+        (
+            "unsafe_mul(unsafe_add(value, 1346386616545796478920950773328), value) >> 96",
+            "shift(unsafe_mul(unsafe_add(value, 1346386616545796478920950773328), value), -96)",
+        ),
+        (
+            "unsafe_mul(unsafe_sub(unsafe_add(y, value), 94201549194550492254356042504812), y) >> 96",
+            "shift(unsafe_mul(unsafe_sub(unsafe_add(y, value), 94201549194550492254356042504812), y), -96)",
+        ),
+        (
+            "4385272521454847904659076985693276 << 96",
+            "shift(4385272521454847904659076985693276, 96)",
+        ),
+        (
+            "unsafe_mul(unsafe_sub(value, 2855989394907223263936484059900), value) >> 96",
+            "shift(unsafe_mul(unsafe_sub(value, 2855989394907223263936484059900), value), -96)",
+        ),
+        (
+            "unsafe_mul(q, value) >> 96",
+            "shift(unsafe_mul(q, value), -96)",
+        ),
+        // k is bounded to [-61, 195] by exp's input checks, so 195-k is in
+        // [0, 256]. Negating the signed count selects the same logical SHR.
+        (
+            "unsafe_mul(convert(convert(r, bytes32), uint256), 3822833074963236453042738258902158003155416615667) >> convert(unsafe_sub(195, k), uint256)",
+            "shift(unsafe_mul(convert(convert(r, bytes32), uint256), 3822833074963236453042738258902158003155416615667), -unsafe_sub(195, k))",
+        ),
+    ] {
+        source = source.replace(from, to);
+    }
+    source.lines().map(|line| {
+        if line.trim_start() == "for i in range(N_COINS_128, bound=MAX_COINS_128):" {
+            let indent = &line[..line.len() - line.trim_start().len()];
+            // N_COINS_128 is the immutable length of DynArray[address,
+            // MAX_COINS]; its constructor input already enforces the bound.
+            format!("{indent}for i in range(MAX_COINS_128):\n{indent}    if i >= N_COINS_128:\n{indent}        break")
+        } else {
+            line.to_string()
+        }
+    }).collect::<Vec<_>>().join("\n")
+}
+
 fn rewrite_vyper_03_interface_imports(source: &str) -> String {
     source
         .replace(
@@ -1708,7 +1843,7 @@ fn replace_token(source: &str, from: &str, to: &str) -> String {
 }
 
 fn rewrite_vyper_03_struct_constructors(source: &str) -> String {
-    source
+    let source = source
         .replace(
             "    self.pendingReports[strategy] = PendingReport(gain=gain, loss=loss)",
             "    self.pendingReports[strategy].gain = gain\n    self.pendingReports[strategy].loss = loss",
@@ -1716,7 +1851,72 @@ fn rewrite_vyper_03_struct_constructors(source: &str) -> String {
         .replace(
             "    self.pendingReports[strategy] = PendingReport(gain=0, loss=0)",
             "    self.pendingReports[strategy].gain = 0\n    self.pendingReports[strategy].loss = 0",
-        )
+        );
+    rewrite_vyper_keyword_struct(&source, "StrategyParams")
+}
+
+fn rewrite_vyper_keyword_struct(source: &str, name: &str) -> String {
+    let marker = format!("{name}(");
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(start) = rest.find(&marker) {
+        let args_start = start + marker.len();
+        out.push_str(&rest[..args_start]);
+        let mut depth = 1;
+        let mut quote = None;
+        let mut escaped = false;
+        let mut comment = false;
+        let mut field_name = true;
+        let mut args = String::new();
+        let mut end = None;
+        for (index, ch) in rest[args_start..].char_indices() {
+            if comment {
+                comment = ch != '\n';
+            } else if let Some(delimiter) = quote {
+                if escaped {
+                    escaped = false;
+                } else if ch == '\\' {
+                    escaped = true;
+                } else if ch == delimiter {
+                    quote = None;
+                }
+            } else {
+                match ch {
+                    '#' => comment = true,
+                    '\'' | '"' => quote = Some(ch),
+                    '(' | '[' | '{' => depth += 1,
+                    ')' | ']' | '}' => depth -= 1,
+                    ',' if depth == 1 => field_name = true,
+                    '=' if depth == 1 && field_name => {
+                        args.push(':');
+                        field_name = false;
+                        continue;
+                    }
+                    _ => {}
+                }
+                if depth == 0 {
+                    end = Some(args_start + index + 1);
+                    break;
+                }
+            }
+            args.push(ch);
+        }
+        let Some(end) = end else {
+            out.push_str(&rest[args_start..]);
+            return out;
+        };
+        if args.trim_start().starts_with('{') {
+            out.push_str(&args);
+        } else {
+            out.push('{');
+            out.push_str(&args);
+            out.push('}');
+        }
+        out.push(')');
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
 }
 
 fn rewrite_vyper_03_pending_reports(source: &str) -> String {
@@ -2515,5 +2715,150 @@ mod tests {
         assert!(rewritten.contains("self.pendingReportLoss[strategy] = loss"));
         assert!(rewritten.contains("self.pendingReportGain[strategy] = 0"));
         assert!(rewritten.contains("self.pendingReportLoss[strategy] = 0"));
+    }
+
+    #[test]
+    fn vyper_05_migrates_math_and_bounds_each_token_symbol_call() {
+        let pair = include_str!(
+            "../../../benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy"
+        );
+        let migrated = super::rewrite_vyper_05_builtins(pair);
+        assert!(migrated.starts_with("import math\n"));
+        assert_eq!(migrated.matches("math.isqrt(").count(), 3);
+        let vault =
+            include_str!("../../../benches/implementations/yearn_vault_v2/vyper/latest/Vault.vy");
+        let migrated = super::rewrite_vyper_05_builtins(vault);
+        assert!(
+            migrated.contains("name_symbol: String[1] = staticcall IERC20Detailed(token).symbol()")
+        );
+        assert!(
+            migrated
+                .contains("symbol_symbol: String[1] = staticcall IERC20Detailed(token).symbol()")
+        );
+        assert_eq!(
+            migrated
+                .matches("staticcall IERC20Detailed(token).symbol()")
+                .count(),
+            2
+        );
+        assert!(migrated.contains("self.name = concat(name_symbol, \" yVault\")"));
+        assert!(migrated.contains("self.symbol = concat(\"yv\", symbol_symbol)"));
+        let stable =
+            transform_vyper_source(vault, None, "# pragma version >=0.4.3,<0.5.0").unwrap();
+        assert!(!stable.contains("name_symbol:"));
+    }
+
+    #[test]
+    fn vyper_old_struct_syntax_preserves_nested_values_comments_and_strings() {
+        let source = "x = StrategyParams(\n    amount=foo(1, other=2),\n    # preserve ) and x=y\n    label=\"a,)=b\",\n    matches=a == b,\n    values=[1, 2],\n)\ny = StrategyParams({amount: 1})";
+        let expected = "x = StrategyParams({\n    amount:foo(1, other=2),\n    # preserve ) and x=y\n    label:\"a,)=b\",\n    matches:a == b,\n    values:[1, 2],\n})\ny = StrategyParams({amount: 1})";
+        assert_eq!(
+            super::rewrite_vyper_keyword_struct(source, "StrategyParams"),
+            expected
+        );
+        assert_eq!(
+            super::rewrite_vyper_keyword_struct(expected, "StrategyParams"),
+            expected
+        );
+    }
+
+    #[test]
+    fn vyper_037_curve_preserves_exp_constants_and_dynamic_loop_limit() {
+        let source = include_str!(
+            "../../../benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy"
+        );
+        let source =
+            transform_vyper_source(source, Some("vyper-0.3"), "# pragma version >=0.3.7,<0.4.0")
+                .unwrap();
+        let migrated = super::rewrite_vyper_037_curve(&source);
+        let code = migrated
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!code.contains(" << ") && !code.contains(" >> "));
+        assert!(!code.contains("bound=MAX_COINS_128"));
+        assert!(code.contains("if i >= N_COINS_128:\n            break"));
+        assert!(code.contains("def asset() -> address: view"));
+        assert!(code.contains("def convertToAssets(shareAmount: uint256) -> uint256: view"));
+        // Every numeric magnitude in exp must survive, including the large
+        // approximation coefficients; only shift direction becomes a sign.
+        let constants = |text: &str| -> Vec<String> {
+            text.split_once("def exp(")
+                .unwrap()
+                .1
+                .split(|ch: char| !ch.is_ascii_digit())
+                .filter(|word| !word.is_empty())
+                .map(str::to_string)
+                .collect()
+        };
+        // The old shift takes a signed count, removing the dynamic count's
+        // uint256 conversion, but not changing any arithmetic coefficients.
+        assert_eq!(
+            constants(
+                &source.replace("convert(unsafe_sub(195, k), uint256)", "unsafe_sub(195, k)")
+            ),
+            constants(&migrated)
+        );
+        assert_eq!(
+            source
+                .matches("for i in range(N_COINS_128, bound=MAX_COINS_128):")
+                .count(),
+            migrated.matches("if i >= N_COINS_128:").count()
+        );
+    }
+
+    #[test]
+    fn solidity_04_vault_locals_keep_branch_evaluation_and_pair_literal_hashes() {
+        let vault = include_str!(
+            "../../../benches/implementations/yearn_vault_v3/solidity/YearnVaultV3Real.sol"
+        );
+        let migrated = super::rewrite_solidity_04_pair_and_vault_syntax(vault);
+        assert!(migrated.contains("pragma experimental ABIEncoderV2;"));
+        assert!(migrated.contains("default_queue.length--;"));
+        assert!(!migrated.contains("default_queue.pop();"));
+        let branch = migrated
+            .split_once("function _updateDebt(")
+            .unwrap()
+            .1
+            .split_once("\n    function ")
+            .unwrap()
+            .0;
+        for name in [
+            "currentIdle",
+            "preBalance",
+            "postBalance",
+            "depositIdle",
+            "depositPreBalance",
+            "depositPostBalance",
+        ] {
+            assert_eq!(branch.matches(&format!("uint256 {name} =")).count(), 1);
+        }
+        assert!(branch.contains("assetsToDeposit = depositPreBalance - depositPostBalance;"));
+        let pair = "keccak256(bytes(\"1\")); keccak256(bytes(\"transfer(address,uint256)\")); keccak256(bytes(name));";
+        assert_eq!(
+            super::rewrite_solidity_04_pair_and_vault_syntax(pair),
+            "keccak256(\"1\"); keccak256(\"transfer(address,uint256)\"); keccak256(bytes(name));"
+        );
+        let pair = include_str!(
+            "../../../benches/implementations/uniswap_v2_pair/solidity/latest/UniswapV2PairReal.sol"
+        );
+        let migrated = transform_solidity_source(
+            pair,
+            Some("solidity-0.4"),
+            "pragma solidity >=0.4.26 <0.5.0;",
+        )
+        .unwrap();
+        assert!(migrated.contains("dataSize >= 32 && uint256(dataWord) == 1"));
+        assert!(migrated.contains("function _benchCallWord("));
+        assert!(!migrated.contains("abi.decode(data, (bool))"));
+        let migrated = transform_solidity_source(
+            vault,
+            Some("solidity-0.4"),
+            "pragma solidity >=0.4.26 <0.5.0;",
+        )
+        .unwrap();
+        assert!(migrated.contains("returndataSize >= 32 && uint256(returndataWord) == 1"));
+        assert!(migrated.contains("function _benchCallWord("));
     }
 }

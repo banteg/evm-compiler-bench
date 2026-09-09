@@ -14,7 +14,7 @@ const SOLIDITY_BASELINE_PREFERENCES: &[&str] = &[
 
 const VYPER_BASELINE_PREFERENCES: &[&str] = &[
     "vyper-latest-gas",
-    "vyper-0.5.0a1-gas",
+    "vyper-prerelease-gas",
     "vyper-0.4.0-gas",
     "vyper-0.3.10-gas",
     "vyper-0.3.7-default",

@@ -14,6 +14,15 @@ const rows = profiles.flatMap((p, i) => ['transfer', 'approve'].map(scenario => 
   bytecode: {runtime_bytes_stripped: 1000 - 100*i},
   gas: {scenario, state_access_profile: 'cold', deployment_variant: 'standard', harness_call_gas: 2000 - 100*i},
 })));
+
+test('Vyper prerelease profiles retain exact beta identity and order alpha, beta, RC, stable', () => {
+  const beta = {...profiles[3], id: 'vyper-prerelease-gas', compiler_version: '0.5.0b1'};
+  const b = load([beta]);
+  assert.equal(b.profileVersionKey(beta), '0.5.0b1');
+  assert.match(b.profileLabel(beta.id), /0\.5\.0b1/);
+  const versions = ['0.5.0.dev1', '0.5.0a99', '0.5.0b1.dev1', '0.5.0b1.dev2', '0.5.0b1', '0.5.0b10', '0.5.0rc1', '0.5.0'];
+  for (let i = 1; i < versions.length; i++) assert.ok(b.versionRank(versions[i-1]) < b.versionRank(versions[i]));
+});
 function load(extraProfiles = [], dataRows = rows) {
   const context = {window: {__BENCH_DATA: {profiles: [...profiles, ...extraProfiles], rows: dataRows}}};
   vm.runInNewContext(readFileSync(new URL('./bench-data.js', import.meta.url), 'utf8'), context);

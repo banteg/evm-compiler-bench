@@ -1,6 +1,6 @@
-id = "vyper-0.5.0a1-codesize-venom"
+id = "vyper-prerelease-codesize-venom"
 language = "vyper"
-compiler = "vyper-0.5.0a1"
+compiler = "vyper-prerelease"
 optimizer = true
 optimizer_mode = "codesize"
 experimental_codegen = true

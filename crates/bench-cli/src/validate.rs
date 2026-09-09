@@ -300,7 +300,7 @@ fn expected_solidity_source_variant(compiler: &str, path: &Path) -> Result<Optio
 }
 
 fn expected_vyper_source_variant(compiler: &str, path: &Path) -> Result<Option<&'static str>> {
-    if compiler == "vyper" {
+    if matches!(compiler, "vyper" | "vyper-prerelease") {
         return Ok(None);
     }
     let version = compiler.strip_prefix("vyper-").with_context(|| {

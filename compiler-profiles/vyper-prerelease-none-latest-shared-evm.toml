@@ -1,7 +1,6 @@
-id = "vyper-0.5.0a1-none-venom"
+id = "vyper-prerelease-none"
 language = "vyper"
-compiler = "vyper-0.5.0a1"
+compiler = "vyper-prerelease"
 optimizer = false
 optimizer_mode = "none"
-experimental_codegen = true
 evm_version = "latest-shared"

@@ -12,6 +12,7 @@ clap = { version = "4.5.53", features = ["derive"] }
 hex = "0.4.3"
 indicatif = "0.17.11"
 libc = "0.2.177"
+pep440_rs = "0.7.3"
 regex = "1.12.2"
 reqwest = { version = "0.12.24", features = ["blocking", "json"] }
 serde = { version = "1.0.228", features = ["derive"] }
