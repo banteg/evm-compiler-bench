@@ -35,6 +35,15 @@ scenarios:
       - data: 'abi.encodeWithSignature("strategies(address)", benchYearnStrategy({target}))'
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2QueueIds(address)", {target})'
+  - name: initialize_long_metadata
+    state_access_profile: cold
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnPrepare(address)", {target})'
+    measured:
+      data: 'abi.encodeWithSignature("initialize(address,address,address,string,string,address,address)", benchYearnAsset({target}), address(this), address(this), "Yearn Vault with a name crossing two storage words and a tail", "yvSymbol-at32-byte-word-boundary", address(this), address(this))'
+    expect_success: true
+    observers: *yearn_v2_observers
   - name: set_deposit_limit
     state_access_profile: warm
     setup:
@@ -183,3 +192,24 @@ scenarios:
       data: 'abi.encodeWithSignature("setEmergencyShutdown(bool)", true)'
     expect_success: true
     observers: *yearn_v2_observers
+  - name: permit_valid
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'
+  - name: permit_replay_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    measured:
+      data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: false
+    observers:
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'

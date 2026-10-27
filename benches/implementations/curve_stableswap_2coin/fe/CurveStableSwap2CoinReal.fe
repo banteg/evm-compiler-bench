@@ -1,0 +1,1643 @@
+use core::ptr::{MemBuffer, MemSpan}
+use std::evm::packed::encode_packed
+use std::abi::{Bytes, Bytes32, DynArray, DynString}
+use std::evm::{Call, Ctx, Log, RawOps, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{crypto, erc20}
+
+msg PoolMsg {
+    #[selector = sol("add_liquidity(uint256[],uint256,address)")]
+    AddLiquidity { amounts: DynArray<u256>, min_mint_amount: u256, receiver: Address } -> u256,
+    #[selector = sol("exchange(int128,int128,uint256,uint256,address)")]
+    Exchange { i: i128, j: i128, dx: u256, min_dy: u256, receiver: Address } -> u256,
+    #[selector = sol(
+        "exchange_received(int128,int128,uint256,uint256,address)",
+    )]
+    ExchangeReceived { i: i128, j: i128, dx: u256, min_dy: u256, receiver: Address } -> u256,
+    #[selector = sol("get_dy(int128,int128,uint256)")]
+    GetDy { i: i128, j: i128, dx: u256 } -> u256,
+    #[selector = sol("get_dx(int128,int128,uint256)")]
+    GetDx { i: i128, j: i128, dy: u256 } -> u256,
+    #[selector = sol("calc_token_amount(uint256[],bool)")]
+    CalcTokenAmount { amounts: DynArray<u256>, is_deposit: bool } -> u256,
+    #[selector = sol("dynamic_fee(int128,int128)")]
+    DynamicFee { i: i128, j: i128 } -> u256,
+    #[selector = sol("remove_liquidity(uint256,uint256[],address)")]
+    RemoveLiquidity { lp_amount: u256, min_amounts: DynArray<u256>, receiver: Address } -> DynArray<
+        u256,
+    >,
+    #[selector = sol(
+        "remove_liquidity_one_coin(uint256,int128,uint256,address)",
+    )]
+    RemoveLiquidityOneCoin {
+        lp_amount: u256,
+        i: i128,
+        min_amount: u256,
+        receiver: Address,
+    } -> u256,
+    #[selector = sol("remove_liquidity_imbalance(uint256[],uint256,address)")]
+    RemoveLiquidityImbalance {
+        amounts: DynArray<u256>,
+        max_burn_amount: u256,
+        receiver: Address,
+    } -> u256,
+    #[selector = sol("ramp_A(uint256,uint256)")]
+    RampA { future_a: u256, future_time: u256 },
+    #[selector = sol("stop_ramp_A()")]
+    StopRampA,
+    #[selector = sol("set_new_fee(uint256,uint256)")]
+    SetNewFee { new_fee: u256, new_offpeg_fee_multiplier: u256 },
+    #[selector = sol("set_ma_exp_time(uint256,uint256)")]
+    SetMaExpTime { new_ma_exp_time: u256, new_d_ma_time: u256 },
+    #[selector = sol("withdraw_admin_fees()")]
+    WithdrawAdminFees,
+    #[selector = sol(
+        "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+    )]
+    Permit {
+        owner: Address,
+        spender: Address,
+        value: u256,
+        deadline: u256,
+        v: u8,
+        r: Bytes32,
+        s: Bytes32,
+    } -> bool,
+    #[selector = sol("A()")]
+    A -> u256,
+    #[selector = sol("A_precise()")]
+    APrecise -> u256,
+    #[selector = sol("initial_A()")]
+    InitialA -> u256,
+    #[selector = sol("future_A()")]
+    FutureA -> u256,
+    #[selector = sol("initial_A_time()")]
+    InitialATime -> u256,
+    #[selector = sol("future_A_time()")]
+    FutureATime -> u256,
+    #[selector = sol("get_virtual_price()")]
+    GetVirtualPrice -> u256,
+    #[selector = sol("balances(uint256)")]
+    Balances { i: u256 } -> u256,
+    #[selector = sol("get_balances()")]
+    GetBalances -> DynArray<u256>,
+    #[selector = sol("admin_balances(uint256)")]
+    AdminBalances { i: u256 } -> u256,
+    #[selector = sol("stored_rates()")]
+    StoredRates -> DynArray<u256>,
+    #[selector = sol("fee()")]
+    Fee -> u256,
+    #[selector = sol("admin_fee()")]
+    AdminFee -> u256,
+    #[selector = sol("offpeg_fee_multiplier()")]
+    OffpegFeeMultiplier -> u256,
+    #[selector = sol("ma_exp_time()")]
+    MaExpTime -> u256,
+    #[selector = sol("D_ma_time()")]
+    DMaTime -> u256,
+    #[selector = sol("ma_last_time()")]
+    MaLastTime -> u256,
+    #[selector = sol("last_price(uint256)")]
+    LastPrice { i: u256 } -> u256,
+    #[selector = sol("ema_price(uint256)")]
+    EmaPrice { i: u256 } -> u256,
+    #[selector = sol("get_p(uint256)")]
+    GetP { i: u256 } -> u256,
+    #[selector = sol("price_oracle(uint256)")]
+    PriceOracle { i: u256 } -> u256,
+    #[selector = sol("D_oracle()")]
+    DOracle -> u256,
+    #[selector = sol("coins(uint256)")]
+    Coins { i: u256 } -> Address,
+    #[selector = sol("calc_withdraw_one_coin(uint256,int128)")]
+    CalcWithdrawOneCoin { burn_amount: u256, i: i128 } -> u256,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { owner: Address } -> u256,
+    #[selector = sol("allowance(address,address)")]
+    Allowance { owner: Address, spender: Address } -> u256,
+    #[selector = sol("nonces(address)")]
+    Nonces { owner: Address } -> u256,
+    #[selector = sol("DOMAIN_SEPARATOR()")]
+    DomainSeparator -> Bytes32,
+    #[selector = sol("totalSupply()")]
+    TotalSupply -> u256,
+    #[selector = sol("N_COINS()")]
+    NCoins -> u256,
+}
+
+msg FactoryMsg {
+    #[selector = sol("fee_receiver()")]
+    FeeReceiver -> Address,
+    #[selector = sol("admin()")]
+    Admin -> Address,
+    #[selector = sol("views_implementation()")]
+    ViewsImplementation -> Address,
+}
+
+msg Erc20Msg {
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("transferFrom(address,address,uint256)")]
+    TransferFrom { owner: Address, receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { account: Address } -> u256,
+    #[selector = sol("decimals()")]
+    Decimals -> u256,
+}
+
+msg Erc4626Msg {
+    #[selector = sol("asset()")]
+    Asset -> Address,
+    #[selector = sol("convertToAssets(uint256)")]
+    ConvertToAssets { shares: u256 } -> u256,
+}
+
+msg ViewsMsg {
+    #[selector = sol("get_dy(int128,int128,uint256,address)")]
+    GetDy { i: i128, j: i128, dx: u256, pool: Address } -> u256,
+    #[selector = sol("get_dx(int128,int128,uint256,address)")]
+    GetDx { i: i128, j: i128, dy: u256, pool: Address } -> u256,
+    #[selector = sol("dynamic_fee(int128,int128,address)")]
+    DynamicFee { i: i128, j: i128, pool: Address } -> u256,
+    #[selector = sol("calc_token_amount(uint256[],bool,address)")]
+    CalcTokenAmount { amounts: DynArray<u256>, is_deposit: bool, pool: Address } -> u256,
+}
+
+msg Erc1271Msg {
+    #[selector = sol("isValidSignature(bytes32,bytes)")]
+    IsValidSignature { digest: Bytes32, signature: Bytes } -> Bytes32,
+}
+
+#[event]
+struct TokenExchange {
+    #[indexed]
+    buyer: Address,
+    sold_id: i128,
+    tokens_sold: u256,
+    bought_id: i128,
+    tokens_bought: u256,
+}
+
+#[event]
+struct RemoveLiquidityOne {
+    #[indexed]
+    provider: Address,
+    token_id: i128,
+    token_amount: u256,
+    coin_amount: u256,
+    token_supply: u256,
+}
+
+#[event]
+struct RampA { old_a: u256, new_a: u256, initial_time: u256, future_time: u256 }
+
+#[event]
+struct StopRampA { a: u256, t: u256 }
+
+#[event]
+struct ApplyNewFee { fee: u256, offpeg_fee_multiplier: u256 }
+
+#[event]
+struct SetNewMATime { ma_exp_time: u256, d_ma_time: u256 }
+
+#[event]
+struct Approval {
+    #[indexed]
+    owner: Address,
+    #[indexed]
+    spender: Address,
+    value: u256,
+}
+
+#[event]
+struct Transfer {
+    #[indexed]
+    sender: Address,
+    #[indexed]
+    receiver: Address,
+    value: u256,
+}
+
+#[event]
+struct AddLiquidity {
+    #[indexed]
+    provider: Address,
+    token_amounts: DynArray<u256>,
+    fees: DynArray<u256>,
+    invariant: u256,
+    token_supply: u256,
+}
+
+#[event]
+struct RemoveLiquidity {
+    #[indexed]
+    provider: Address,
+    token_amounts: DynArray<u256>,
+    fees: DynArray<u256>,
+    token_supply: u256,
+}
+
+#[event]
+struct RemoveLiquidityImbalance {
+    #[indexed]
+    provider: Address,
+    token_amounts: DynArray<u256>,
+    fees: DynArray<u256>,
+    invariant: u256,
+    token_supply: u256,
+}
+
+const MAX_COINS: u256 = 8
+const PRECISION: u256 = 1000000000000000000
+const A_PRECISION: u256 = 100
+const FEE_DENOMINATOR: u256 = 10000000000
+const MAX_FEE: u256 = 5000000000
+const MAX_A: u256 = 1000000
+const MAX_A_CHANGE: u256 = 10
+const MIN_RAMP_TIME: u256 = 86400
+const ADMIN_FEE: u256 = 5000000000
+const MASK_128: u256 = 0xffffffffffffffffffffffffffffffff
+const SELECTOR_MASK: u256 = 0xffffffff00000000000000000000000000000000000000000000000000000000
+const EIP712_TYPEHASH: u256 = core::keccak(
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)",
+)
+const EIP2612_TYPEHASH: u256 = core::keccak(
+    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
+)
+const VERSION_HASH: u256 = core::keccak("v7.0.0")
+const ERC1271_MAGIC_VALUE: u256 = 0x1626ba7e00000000000000000000000000000000000000000000000000000000
+
+struct PoolStore {
+    n_coins: u256,
+    factory: Address,
+    coins: StorageMap<u256, Address>,
+    initial_a: u256,
+    future_a: u256,
+    initial_a_time: u256,
+    future_a_time: u256,
+    fee: u256,
+    offpeg_fee_multiplier: u256,
+    initialized: bool,
+    rate_multipliers: StorageMap<u256, u256>,
+    rate_multipliers_len: u256,
+    asset_types: StorageMap<u256, u256>,
+    pool_contains_rebasing_tokens: bool,
+    rate_oracles: StorageMap<u256, u256>,
+    call_amount: StorageMap<u256, u256>,
+    scale_factor: StorageMap<u256, u256>,
+    stored_balances: StorageMap<u256, u256>,
+    admin_balances: StorageMap<u256, u256>,
+    last_prices_packed: StorageMap<u256, u256>,
+    last_d_packed: u256,
+    ma_exp_time: u256,
+    d_ma_time: u256,
+    ma_last_time: u256,
+    total_supply: u256,
+    locked: bool,
+    cached_chain_id: u256,
+    salt: u256,
+    name_hash: u256,
+    cached_domain_separator: u256,
+    balance_of: StorageMap<Address, u256>,
+    allowance: StorageMap<(Address, Address), u256>,
+    nonces: StorageMap<Address, u256>,
+}
+
+// Scratch arrays must be independent: fee calculations read the original
+// balances while mutating the copy.
+fn copy_array(source: MemArray<u256>) -> MemArray<u256> {
+    var out = MemArray<u256>::new_zeroed(source.len())
+    for i in 0..source.len() {
+        out[i] = source[i]
+    }
+    out
+}
+
+fn abs_diff(_ a: u256, _ b: u256) -> u256 {
+    if a > b { a - b } else { b - a }
+}
+
+fn pow10(_ exponent: u256) -> u256 {
+    10 ** exponent
+}
+
+fn coin_index(_ value: i128, n_coins: u256) -> u256 {
+    assert!(value >= 0, "coin")
+    let index: u256 = (value as i256).downcast_unchecked()
+    assert!(index < n_coins, "coin")
+    index
+}
+
+fn pack2(x: u256, y: u256) -> u256 {
+    assert!(x <= MASK_128 && y <= MASK_128, "pack")
+    x | (y << 128)
+}
+
+// Upstream accepts an empty return even from an account without code.
+fn transfer_succeeded(_ outcome: TokenCall) -> bool {
+    match outcome {
+        TokenCall::Ok => true,
+        TokenCall::NoCode => true,
+        _ => false,
+    }
+}
+
+fn safe_transfer(coin: Address, receiver: Address, amount: u256)
+uses (ctx: Ctx, call: mut Call)
+{
+    assert!(
+        transfer_succeeded(erc20::try_transfer(token: coin, receiver, amount)),
+        "transfer",
+    )
+}
+
+fn safe_transfer_from(coin: Address, sender: Address, receiver: Address, amount: u256)
+uses (ctx: Ctx, call: mut Call)
+{
+    assert!(
+        transfer_succeeded(
+            erc20::try_transfer_from(token: coin, owner: sender, receiver, amount),
+        ),
+        "transferFrom",
+    )
+}
+
+fn erc20_balance(coin: Address, account: Address) -> u256
+uses (ctx: Ctx, call: mut Call)
+{
+    coin.static(Erc20Msg::BalanceOf { account })
+}
+
+fn lp_mint(to: Address, value: u256) uses (store: mut PoolStore, log: mut Log) {
+    store.total_supply += value
+    store.balance_of.set(key: to, value: store.balance_of.get(key: to) + value)
+    log.emit(Transfer { sender: Address::zero(), receiver: to, value })
+}
+
+fn lp_burn(from: Address, value: u256)
+uses (store: mut PoolStore, log: mut Log)
+{
+    let balance = store.balance_of.get(key: from)
+    assert!(balance >= value, "balance")
+    store.balance_of.set(key: from, value: balance - value)
+    store.total_supply -= value
+    log.emit(
+        Transfer { sender: from, receiver: Address::zero(), value },
+    )
+}
+
+fn current_a() -> u256 uses (store: PoolStore, ctx: Ctx) {
+    let t1 = store.future_a_time
+    let a1 = store.future_a
+    if ctx.timestamp().as_seconds() < t1 {
+        let a0 = store.initial_a
+        let t0 = store.initial_a_time
+        if a1 > a0 {
+            a0 + (a1 - a0) * (ctx.timestamp().as_seconds() - t0) / (t1 - t0)
+        } else {
+            a0 - (a0 - a1) * (ctx.timestamp().as_seconds() - t0) / (t1 - t0)
+        }
+    } else {
+        a1
+    }
+}
+
+fn stored_rates_mem() -> MemArray<u256>
+uses (store: PoolStore, ctx: Ctx, call: mut Call)
+{
+    // Like upstream, return every configured multiplier, but only apply
+    // oracle and ERC4626 rates to the pool's coins.
+    let n = store.n_coins
+    let len = store.rate_multipliers_len
+    var rates = MemArray<u256>::new_zeroed(len as usize)
+    var i: u256 = 0
+    while i < len {
+        var rate = store.rate_multipliers.get(key: i)
+        if i >= n {
+            rates[i as usize] = rate
+            i += 1
+            continue
+        }
+        let asset_type = store.asset_types.get(key: i)
+        let oracle_packed = store.rate_oracles.get(key: i)
+        if asset_type == 1 && oracle_packed != 0 {
+            let args = encode_packed(((oracle_packed >> 224) as u32,)).as_bytes()
+            let oracle = Address::from_word_truncate(oracle_packed)
+            var ret = MemBuffer::with_capacity(32)
+            let outcome = call
+                .raw_staticcall(
+                    addr: oracle,
+                    gas: ctx.gas(),
+                    args: args.payload_span(),
+                    ret: mut ret,
+                )
+            assert!(
+                outcome.success() && outcome.returndata_len() == 32,
+                "rate oracle",
+            )
+            rate = rate * ret.read_word(0) / PRECISION
+        } else if asset_type == 3 {
+            let coin = store.coins.get(key: i)
+            let converted: u256 = coin
+                .static(
+                    Erc4626Msg::ConvertToAssets { shares: store.call_amount.get(key: i) },
+                )
+            rate = rate * converted * store.scale_factor.get(key: i) / PRECISION
+        }
+        rates[i as usize] = rate
+        i += 1
+    }
+    rates
+}
+
+fn balances_mem() -> MemArray<u256>
+uses (store: PoolStore, ctx: Ctx, call: mut Call)
+{
+    let n = store.n_coins
+    var result = MemArray<u256>::new_zeroed(n as usize)
+    var i: u256 = 0
+    while i < n {
+        let gross = if store.pool_contains_rebasing_tokens {
+            erc20_balance(coin: store.coins.get(key: i), account: ctx.address())
+        } else {
+            store.stored_balances.get(key: i)
+        }
+        let balance = gross - store.admin_balances.get(key: i)
+        result[i as usize] = balance
+        i += 1
+    }
+    result
+}
+
+fn xp_mem(rates: MemArray<u256>, source_balances: MemArray<u256>) -> MemArray<u256>
+uses (store: PoolStore)
+{
+    let n = store.n_coins
+    var xp = MemArray<u256>::new_zeroed(n as usize)
+    var i: u256 = 0
+    while i < n {
+        xp[i as usize] = rates[i as usize] * source_balances[i as usize] / PRECISION
+        i += 1
+    }
+    xp
+}
+
+fn get_d(xp: MemArray<u256>) -> u256
+uses (store: PoolStore, ctx: Ctx)
+{
+    let n = store.n_coins
+    var sum: u256 = 0
+    var i: u256 = 0
+    while i < n {
+        sum += xp[i as usize]
+        i += 1
+    }
+    if sum == 0 { return 0 }
+    var d = sum
+    let ann = current_a() * n
+    var d_idx: u256 = 0
+    while d_idx < 255 {
+        var d_p = d
+        var xp_index: u256 = 0
+        while xp_index < n {
+            d_p = d_p * d / xp[xp_index as usize]
+            xp_index += 1
+        }
+        d_p /= n ** n
+        let previous_d = d
+        d = (ann * sum / A_PRECISION + d_p * n) *
+            d
+            / ((ann - A_PRECISION) * d / A_PRECISION + (n + 1) * d_p)
+        if d > previous_d {
+            if d - previous_d <= 1 {
+                return d
+            }
+        } else if previous_d - d <= 1 {
+            return d
+        }
+        d_idx += 1
+    }
+    d
+}
+
+fn get_d_mem(rates: MemArray<u256>, source_balances: MemArray<u256>) -> u256
+uses (store: PoolStore, ctx: Ctx)
+{
+    get_d(xp: xp_mem(rates, source_balances))
+}
+
+fn get_y(i: u256, j: u256, x: u256, xp: MemArray<u256>, d: u256) -> u256
+uses (store: PoolStore, ctx: Ctx)
+{
+    let n = store.n_coins
+    let ann = current_a() * n
+    var c = d
+    var s: u256 = 0
+    var idx: u256 = 0
+    while idx < n {
+        if idx != j {
+            let current_x = if idx == i { x } else { xp[idx as usize] }
+            s += current_x
+            c = c * d / (current_x * n)
+        }
+        idx += 1
+    }
+    c = c * d * A_PRECISION / (ann * n)
+    let b = s + d * A_PRECISION / ann
+    var y = d
+    var y_idx: u256 = 0
+    while y_idx < 255 {
+        let previous_y = y
+        y = (y * y + c) / (2 * y + b - d)
+        if y > previous_y {
+            if y - previous_y <= 1 {
+                return y
+            }
+        } else if previous_y - y <= 1 {
+            return y
+        }
+        y_idx += 1
+    }
+    y
+}
+
+fn get_yd(i: u256, xp: MemArray<u256>, d: u256) -> u256
+uses (store: PoolStore, ctx: Ctx)
+{
+    let n = store.n_coins
+    let ann = current_a() * n
+    var c = d
+    var s: u256 = 0
+    var idx: u256 = 0
+    while idx < n {
+        if idx != i {
+            let current_x = xp[idx as usize]
+            s += current_x
+            c = c * d / (current_x * n)
+        }
+        idx += 1
+    }
+    c = c * d * A_PRECISION / (ann * n)
+    let b = s + d * A_PRECISION / ann
+    var y = d
+    var y_idx: u256 = 0
+    while y_idx < 255 {
+        let previous_y = y
+        y = (y * y + c) / (2 * y + b - d)
+        if y > previous_y {
+            if y - previous_y <= 1 {
+                return y
+            }
+        } else if previous_y - y <= 1 {
+            return y
+        }
+        y_idx += 1
+    }
+    y
+}
+
+fn base_fee() -> u256 uses (store: PoolStore) {
+    store.fee * store.n_coins / (4 * (store.n_coins - 1))
+}
+
+fn dynamic_fee_calc(xpi: u256, xpj: u256, base: u256) -> u256
+uses (store: PoolStore)
+{
+    let multiplier = store.offpeg_fee_multiplier
+    if multiplier <= FEE_DENOMINATOR {
+        return base
+    }
+    let xps2 = (xpi + xpj) * (xpi + xpj)
+    multiplier * base / (((multiplier - FEE_DENOMINATOR) * 4 * xpi * xpj / xps2) + FEE_DENOMINATOR)
+}
+
+// Solmate-style wad exponential over signed 96.96 fixed point, ported from
+// the Solidity reference byte-for-byte.
+fn wad_exp(x: i256) -> u256 {
+    if x <= -41446531673892822313 {
+        return 0
+    }
+    assert!(x < 135305999368893231589, "wad_exp overflow")
+
+    var value = (x << 78) / 3814697265625
+    let k = (((value << 96) / 54916777467707473351141471128) + ((1 as i256) << 95)) >> 96
+    value -= k.wrapping_mul(54916777467707473351141471128)
+
+    let y = (((value + 1346386616545796478920950773328).wrapping_mul(value)) >> 96)
+        + 57155421227552351082224309758442
+    let p = ((((y + value) - 94201549194550492254356042504812).wrapping_mul(y)) >> 96)
+        .wrapping_add(28719021644029726153956944680412240)
+        .wrapping_mul(value)
+        .wrapping_add((4385272521454847904659076985693276 as i256) << 96)
+
+    var q = (((value - 2855989394907223263936484059900).wrapping_mul(value)) >> 96)
+        + 50020603652535783019961831881945
+    q = ((q.wrapping_mul(value)) >> 96) - 533845033583426703283633433725380
+    q = ((q.wrapping_mul(value)) >> 96) + 3604857256930695427073651918091429
+    q = ((q.wrapping_mul(value)) >> 96) - 14423608567350463180887372962807573
+    q = ((q.wrapping_mul(value)) >> 96) + 26449188498355588339934803723976023
+
+    let r = p / q
+    let r_u: u256 = r.downcast_unchecked()
+    let shift: u256 = ((195 as i256) - k).downcast_unchecked()
+    (r_u.wrapping_mul(3822833074963236453042738258902158003155416615667)) >> shift
+}
+
+fn calc_moving_average(packed_value: u256, averaging_window: u256, last_time: u256) -> u256
+uses (ctx: Ctx)
+{
+    let last_spot = packed_value & MASK_128
+    let last_ema = packed_value >> 128
+    if last_time < ctx.timestamp().as_seconds() {
+        let exponent: u256 = (ctx.timestamp().as_seconds() - last_time) * PRECISION / averaging_window
+        let signed_exponent: i256 = exponent.downcast_unchecked()
+        let alpha = wad_exp(x: -signed_exponent)
+        return (last_spot * (PRECISION - alpha) + last_ema * alpha) / PRECISION
+    }
+    last_ema
+}
+
+fn get_p(i: u256, xp: MemArray<u256>, amp: u256, d: u256) -> u256
+uses (store: PoolStore)
+{
+    let n = store.n_coins
+    if d == 0 || xp[0] == 0 || xp[(i + 1) as usize] == 0 {
+        return PRECISION
+    }
+    let ann = amp * n
+    var dr = d / (n ** n)
+    var idx: u256 = 0
+    while idx < n {
+        dr = dr * d / xp[idx as usize]
+        idx += 1
+    }
+    let xp0_a = ann * xp[0] / A_PRECISION
+    PRECISION * (xp0_a + dr * xp[0] / xp[(i + 1) as usize]) / (xp0_a + dr)
+}
+
+fn upkeep_oracles(xp: MemArray<u256>, amp: u256, d: u256)
+uses (store: mut PoolStore, ctx: Ctx)
+{
+    let n = store.n_coins
+    let last_time = store.ma_last_time
+    var price_time = last_time & MASK_128
+    var d_time = last_time >> 128
+    var i: u256 = 0
+    while i < n - 1 {
+        var spot_price = get_p(i, xp, amp, d)
+        if spot_price > 2 * PRECISION {
+            spot_price = 2 * PRECISION
+        }
+        store
+            .last_prices_packed
+            .set(
+                key: i,
+                value: pack2(
+                    x: spot_price,
+                    y: calc_moving_average(
+                        packed_value: store.last_prices_packed.get(key: i),
+                        averaging_window: store.ma_exp_time,
+                        last_time: price_time,
+                    ),
+                ),
+            )
+        i += 1
+    }
+    store.last_d_packed = pack2(
+        x: d,
+        y: calc_moving_average(
+            packed_value: store.last_d_packed,
+            averaging_window: store.d_ma_time,
+            last_time: d_time,
+        ),
+    )
+    if price_time < ctx.timestamp().as_seconds() {
+        price_time = ctx.timestamp().as_seconds()
+    }
+    if d_time < ctx.timestamp().as_seconds() {
+        d_time = ctx.timestamp().as_seconds()
+    }
+    store.ma_last_time = pack2(x: price_time, y: d_time)
+}
+
+fn upkeep_d_oracle_after_liquidity_removal(lp_amount: u256, previous_supply: u256)
+uses (store: mut PoolStore, ctx: Ctx)
+{
+    let last_time = store.ma_last_time
+    let price_time = last_time & MASK_128
+    var d_time = last_time >> 128
+    let current_packed = store.last_d_packed
+    let old_d = current_packed & MASK_128
+    let new_d = old_d - old_d * lp_amount / previous_supply
+    store.last_d_packed = pack2(
+        x: new_d,
+        y: calc_moving_average(
+            packed_value: current_packed,
+            averaging_window: store.d_ma_time,
+            last_time: d_time,
+        ),
+    )
+    if d_time < ctx.timestamp().as_seconds() {
+        d_time = ctx.timestamp().as_seconds()
+        store.ma_last_time = pack2(x: price_time, y: d_time)
+    }
+}
+
+fn transfer_in(
+    coin_index: u256,
+    amount: u256,
+    sender: Address,
+    expect_optimistic_transfer: bool,
+) -> u256
+uses (store: mut PoolStore, ctx: Ctx, call: mut Call)
+{
+    let coin = store.coins.get(key: coin_index)
+    let old_balance = erc20_balance(coin, account: ctx.address())
+    let received = if expect_optimistic_transfer {
+        let incoming = old_balance - store.stored_balances.get(key: coin_index)
+        assert!(incoming >= amount, "optimistic transfer")
+        incoming
+    } else {
+        assert!(amount > 0, "amount")
+        safe_transfer_from(coin, sender, receiver: ctx.address(), amount)
+        erc20_balance(coin, account: ctx.address()) - old_balance
+    }
+    store
+        .stored_balances
+        .set(
+            key: coin_index,
+            value: store.stored_balances.get(key: coin_index) + received,
+        )
+    received
+}
+
+fn transfer_out(coin_index: u256, amount: u256, receiver: Address)
+uses (store: mut PoolStore, ctx: Ctx, call: mut Call)
+{
+    assert!(receiver != Address::zero(), "receiver")
+    let coin = store.coins.get(key: coin_index)
+    if !store.pool_contains_rebasing_tokens {
+        store
+            .stored_balances
+            .set(
+                key: coin_index,
+                value: store.stored_balances.get(key: coin_index) - amount,
+            )
+        safe_transfer(coin, receiver, amount)
+    } else {
+        let coin_balance = erc20_balance(coin, account: ctx.address())
+        safe_transfer(coin, receiver, amount)
+        store.stored_balances.set(key: coin_index, value: coin_balance - amount)
+    }
+}
+
+fn withdraw_admin_fees_internal()
+uses (store: mut PoolStore, ctx: Ctx, call: mut Call)
+{
+    let receiver: Address = store.factory.static(FactoryMsg::FeeReceiver {})
+    if receiver == Address::zero() {
+        return
+    }
+    let n = store.n_coins
+    var i: u256 = 0
+    while i < n {
+        let amount = store.admin_balances.get(key: i)
+        if amount > 0 {
+            transfer_out(coin_index: i, amount, receiver)
+            store.admin_balances.set(key: i, value: 0)
+        }
+        i += 1
+    }
+}
+
+fn build_domain_separator(chain_id: u256) -> u256
+uses (store: PoolStore, ctx: Ctx)
+{
+    let ptr = encode_abi_payload(
+        (EIP712_TYPEHASH, store.name_hash, VERSION_HASH, chain_id, ctx.address(), store.salt),
+    )
+    crypto::keccak256(ptr.span())
+}
+
+fn domain_separator() -> u256 uses (store: PoolStore, ctx: Ctx) {
+    if ctx.chainid() != store.cached_chain_id {
+        return build_domain_separator(chain_id: ctx.chainid())
+    }
+    store.cached_domain_separator
+}
+
+fn check_amount_length(_ length: u256, n_coins: u256) {
+    assert!(length >= n_coins, "amount length")
+}
+
+fn calc_exchange_from_xp(
+    coin_in: u256,
+    coin_out: u256,
+    dx: u256,
+    rates: MemArray<u256>,
+    xp: MemArray<u256>,
+) -> (u256, u256, u256, u256, u256)
+uses (store: PoolStore, ctx: Ctx)
+{
+    let x = xp[coin_in as usize] + dx * rates[coin_in as usize] / PRECISION
+    let d = get_d(xp)
+    let y = get_y(i: coin_in, j: coin_out, x, xp, d)
+    let gross_dy = xp[coin_out as usize] - y - 1
+    let fee_amount = gross_dy *
+        dynamic_fee_calc(
+            xpi: (xp[coin_in as usize] + x) / 2,
+            xpj: (xp[coin_out as usize] + y) / 2,
+            base: store.fee,
+        )
+        / FEE_DENOMINATOR
+    let admin_cut = fee_amount * ADMIN_FEE / FEE_DENOMINATOR * PRECISION / rates[coin_out as usize]
+    let user_dy = (gross_dy - fee_amount) * PRECISION / rates[coin_out as usize]
+    (x, y, d, user_dy, admin_cut)
+}
+
+fn do_exchange(
+    i: i128,
+    j: i128,
+    dx: u256,
+    min_dy: u256,
+    receiver: Address,
+    expect_optimistic_transfer: bool,
+) -> u256
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    let n = store.n_coins
+    let coin_in = coin_index(i, n_coins: n)
+    let coin_out = coin_index(j, n_coins: n)
+    assert!(i != j, "coin")
+    assert!(dx > 0, "dx")
+    var rates = stored_rates_mem()
+    var xp = xp_mem(rates, source_balances: balances_mem())
+    let actual_dx = transfer_in(
+        coin_index: coin_in,
+        amount: dx,
+        sender: ctx.caller(),
+        expect_optimistic_transfer,
+    )
+
+    let (x, y, d, dy, admin_cut) = calc_exchange_from_xp(
+        coin_in,
+        coin_out,
+        dx: actual_dx,
+        rates,
+        xp,
+    )
+    assert!(dy >= min_dy, "slippage")
+
+    store
+        .admin_balances
+        .set(
+            key: coin_out,
+            value: store.admin_balances.get(key: coin_out) + admin_cut,
+        )
+    xp[coin_in as usize] = x
+    xp[coin_out as usize] = y
+    upkeep_oracles(xp, amp: current_a(), d)
+    transfer_out(coin_index: coin_out, amount: dy, receiver)
+    log.emit(
+        TokenExchange {
+            buyer: ctx.caller(),
+            sold_id: i,
+            tokens_sold: actual_dx,
+            bought_id: j,
+            tokens_bought: dy,
+        },
+    )
+    dy
+}
+
+fn calc_withdraw_one_coin_internal(lp_amount: u256, i: u256) -> (
+    u256,
+    u256,
+    MemArray<u256>,
+    u256,
+    u256,
+)
+uses (store: PoolStore, ctx: Ctx, call: mut Call)
+{
+    let n = store.n_coins
+    let amp = current_a()
+    var rates = stored_rates_mem()
+    var xp = xp_mem(rates, source_balances: balances_mem())
+    let d0 = get_d(xp)
+    let d1 = d0 - lp_amount * d0 / store.total_supply
+    let new_y = get_yd(i, xp, d: d1)
+    var xp_reduced = copy_array(source: xp)
+    let fee_base = base_fee()
+    let ys = (d0 + d1) / (2 * n)
+
+    var j: u256 = 0
+    while j < n {
+        let xp_j = xp[j as usize]
+        var dx_expected: u256 = 0
+        var xavg: u256 = 0
+        if j == i {
+            dx_expected = xp_j * d1 / d0 - new_y
+            xavg = (xp_j + new_y) / 2
+        } else {
+            dx_expected = xp_j - xp_j * d1 / d0
+            xavg = xp_j
+        }
+        let fee_cut = dynamic_fee_calc(xpi: xavg, xpj: ys, base: fee_base) *
+            dx_expected
+            / FEE_DENOMINATOR
+        xp_reduced[j as usize] = xp_j - fee_cut
+        j += 1
+    }
+
+    let reduced_y = get_yd(i, xp: xp_reduced, d: d1)
+    let dy_no_fee = (xp[i as usize] - new_y) * PRECISION / rates[i as usize]
+    let dy = (xp_reduced[i as usize] - reduced_y - 1) * PRECISION / rates[i as usize]
+    let fee_amount = dy_no_fee - dy
+    xp[i as usize] = new_y
+    (dy, fee_amount, xp, amp, d1)
+}
+
+pub contract CurveStableSwap2CoinReal uses (
+    ctx: Ctx,
+    log: mut Log,
+    call: mut Call,
+    ops: RawOps,
+) {
+    mut store: PoolStore,
+
+    init(
+        name: DynString,
+        symbol: DynString,
+        amp: u256,
+        swap_fee: u256,
+        offpeg_fee_multiplier: u256,
+        ma_exp_time: u256,
+        coins: DynArray<Address>,
+        rate_multipliers: DynArray<u256>,
+        asset_types: DynArray<u256>,
+        method_ids: DynArray<u256>,
+        oracles: DynArray<Address>,
+    )
+    uses (mut store, ctx, mut log, mut call)
+    {
+        // symbol is part of the constructor ABI but only name feeds the
+        // EIP-712 domain separator; neither string is in the benchmark
+        // surface, so only the name hash is persisted.
+        let _unused_symbol = symbol
+        store.factory = ctx.caller()
+        let n_coins = coins.len() as u256
+        assert!(n_coins >= 2 && n_coins <= MAX_COINS, "coin length")
+        store.n_coins = n_coins
+        assert!(
+            (rate_multipliers.len() as u256) >= n_coins && (rate_multipliers.len() as u256) <= MAX_COINS,
+            "rate length",
+        )
+        assert!(
+            (asset_types.len() as u256) >= n_coins && (asset_types.len() as u256) <= MAX_COINS,
+            "asset length",
+        )
+        assert!(
+            (method_ids.len() as u256) >= n_coins && (method_ids.len() as u256) <= MAX_COINS,
+            "method length",
+        )
+        assert!(
+            (oracles.len() as u256) >= n_coins && (oracles.len() as u256) <= MAX_COINS,
+            "oracle length",
+        )
+        assert!(ma_exp_time != 0, "ma")
+        store.initialized = true
+        var i: u256 = 0
+        while i < rate_multipliers.len() as u256 {
+            store.rate_multipliers.set(key: i, value: rate_multipliers[i as usize])
+            i += 1
+        }
+        store.rate_multipliers_len = rate_multipliers.len() as u256
+        var contains_rebasing = false
+        var asset_index: u256 = 0
+        while asset_index < asset_types.len() as u256 {
+            let asset_type = asset_types[asset_index as usize]
+            store.asset_types.set(key: asset_index, value: asset_type)
+            if asset_type == 2 {
+                contains_rebasing = true
+            }
+            asset_index += 1
+        }
+        store.pool_contains_rebasing_tokens = contains_rebasing
+        var coin_idx: u256 = 0
+        while coin_idx < n_coins {
+            let coin = coins[coin_idx as usize]
+            store.coins.set(key: coin_idx, value: coin)
+            let method_word = method_ids[coin_idx as usize]
+            let oracle_word = oracles[coin_idx as usize].word()
+            store
+                .rate_oracles
+                .set(
+                    key: coin_idx,
+                    value: (method_word & SELECTOR_MASK) | oracle_word,
+                )
+            if asset_types[coin_idx as usize] == 3 {
+                let coin_decimals: u256 = coin.static(Erc20Msg::Decimals {})
+                store.call_amount.set(key: coin_idx, value: pow10(coin_decimals))
+                let underlying: Address = coin.static(Erc4626Msg::Asset {})
+                let underlying_decimals: u256 = underlying.static(Erc20Msg::Decimals {})
+                store.scale_factor.set(key: coin_idx, value: pow10(18 - underlying_decimals))
+            }
+            coin_idx += 1
+        }
+        let precise_a = amp * A_PRECISION
+        store.initial_a = precise_a
+        store.future_a = precise_a
+        store.fee = swap_fee
+        store.offpeg_fee_multiplier = offpeg_fee_multiplier
+        store.ma_exp_time = ma_exp_time
+        store.d_ma_time = 62324
+        store.ma_last_time = pack2(x: ctx.timestamp().as_seconds(), y: ctx.timestamp().as_seconds())
+        var price_index: u256 = 0
+        while price_index < n_coins - 1 {
+            store.last_prices_packed.set(key: price_index, value: pack2(x: PRECISION, y: PRECISION))
+            price_index += 1
+        }
+        store.cached_chain_id = ctx.chainid()
+        store.salt = if ctx.block_number() == 0 {
+            0
+        } else {
+            ctx.blockhash(ctx.block_number() - 1)
+        }
+        store.name_hash = crypto::keccak256(name.as_bytes().payload_span())
+        store.cached_domain_separator = build_domain_separator(chain_id: store.cached_chain_id)
+        log.emit(
+            Transfer { sender: Address::zero(), receiver: ctx.caller(), value: 0 },
+        )
+    }
+
+    recv PoolMsg {
+        AddLiquidity { amounts, min_mint_amount, receiver } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            assert!(receiver != Address::zero(), "receiver")
+            let n = store.n_coins
+            check_amount_length(amounts.len() as u256, n_coins: n)
+            let old_balances = balances_mem()
+            var rates = stored_rates_mem()
+            let supply = store.total_supply
+            let d0 = if supply == 0 {
+                0
+            } else {
+                get_d_mem(rates, source_balances: old_balances)
+            }
+            var new_balances = copy_array(source: old_balances)
+            var i: u256 = 0
+            while i < n {
+                let amount = amounts[i as usize]
+                if amount > 0 {
+                    new_balances[i as usize] = old_balances[i as usize]
+                                + transfer_in(
+                                    coin_index: i,
+                                    amount,
+                                    sender: ctx.caller(),
+                                    expect_optimistic_transfer: false,
+                                )
+                } else {
+                    assert!(supply != 0, "initial amount")
+                }
+                i += 1
+            }
+            var d1 = get_d_mem(rates, source_balances: new_balances)
+            assert!(d1 > d0, "invariant")
+            var fees = DynArray<u256>::empty()
+            var minted: u256 = 0
+            if supply == 0 {
+                minted = d1
+            } else {
+                var fees_marr = MemArray<u256>::new_zeroed(n as usize)
+                let fee_base = base_fee()
+                let ys = (d0 + d1) / n
+                var fee_index: u256 = 0
+                while fee_index < n {
+                    let old_balance = old_balances[fee_index as usize]
+                    let new_balance = new_balances[fee_index as usize]
+                    let ideal_balance = d1 * old_balance / d0
+                    let difference = abs_diff(ideal_balance, new_balance)
+                    let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
+                    let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
+                        difference
+                        / FEE_DENOMINATOR
+                    fees_marr[fee_index as usize] = coin_fee
+                    store
+                        .admin_balances
+                        .set(
+                            key: fee_index,
+                            value: store.admin_balances.get(key: fee_index)
+                                + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
+                        )
+                    new_balances[fee_index as usize] = new_balance - coin_fee
+                    fee_index += 1
+                }
+                d1 = get_d_mem(rates, source_balances: new_balances)
+                minted = supply * (d1 - d0) / d0
+                fees = DynArray::from_slice(fees_marr.as_slice())
+            }
+            assert!(minted >= min_mint_amount, "slippage")
+            lp_mint(to: receiver, value: minted)
+            log.emit(
+                AddLiquidity {
+                    provider: ctx.caller(),
+                    token_amounts: amounts,
+                    fees,
+                    invariant: d1,
+                    token_supply: store.total_supply,
+                },
+            )
+            if supply == 0 {
+                store.last_d_packed = pack2(x: d1, y: d1)
+                let price_time = store.ma_last_time & MASK_128
+                var d_time = store.ma_last_time >> 128
+                if d_time < ctx.timestamp().as_seconds() {
+                    d_time = ctx.timestamp().as_seconds()
+                    store.ma_last_time = pack2(x: price_time, y: d_time)
+                }
+            } else {
+                upkeep_oracles(
+                    xp: xp_mem(rates, source_balances: new_balances),
+                    amp: current_a(),
+                    d: d1,
+                )
+            }
+            store.locked = false
+            minted
+        }
+
+        Exchange { i, j, dx, min_dy, receiver } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            let dy = do_exchange(
+                i,
+                j,
+                dx,
+                min_dy,
+                receiver,
+                expect_optimistic_transfer: false,
+            )
+            store.locked = false
+            dy
+        }
+
+        ExchangeReceived { i, j, dx, min_dy, receiver } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            assert!(!store.pool_contains_rebasing_tokens, "rebasing")
+            let dy = do_exchange(
+                i,
+                j,
+                dx,
+                min_dy,
+                receiver,
+                expect_optimistic_transfer: true,
+            )
+            store.locked = false
+            dy
+        }
+
+        GetDy { i, j, dx } -> u256 uses (store, ctx, mut call) {
+            let views: Address = store.factory.static(FactoryMsg::ViewsImplementation {})
+            views.static(ViewsMsg::GetDy { i, j, dx, pool: ctx.address() })
+        }
+
+        GetDx { i, j, dy } -> u256 uses (store, ctx, mut call) {
+            let views: Address = store.factory.static(FactoryMsg::ViewsImplementation {})
+            views.static(ViewsMsg::GetDx { i, j, dy, pool: ctx.address() })
+        }
+
+        CalcTokenAmount { amounts, is_deposit } -> u256
+        uses (store, ctx, mut call)
+        {
+            let views: Address = store.factory.static(FactoryMsg::ViewsImplementation {})
+            views.static(
+                    ViewsMsg::CalcTokenAmount { amounts, is_deposit, pool: ctx.address() },
+                )
+        }
+
+        DynamicFee { i, j } -> u256 uses (store, ctx, mut call) {
+            let views: Address = store.factory.static(FactoryMsg::ViewsImplementation {})
+            views.static(ViewsMsg::DynamicFee { i, j, pool: ctx.address() })
+        }
+
+        RemoveLiquidity { lp_amount, min_amounts, receiver } -> DynArray<u256>
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            assert!(lp_amount > 0, "lp")
+            let n = store.n_coins
+            assert!(min_amounts.len() as u256 == n, "amount length")
+            let supply = store.total_supply
+            let current_balances = balances_mem()
+            var amounts_marr = MemArray<u256>::new_zeroed(n as usize)
+            var i: u256 = 0
+            while i < n {
+                let amount = current_balances[i as usize] * lp_amount / supply
+                assert!(amount >= min_amounts[i as usize], "slippage")
+                amounts_marr[i as usize] = amount
+                transfer_out(coin_index: i, amount, receiver)
+                i += 1
+            }
+            lp_burn(from: ctx.caller(), value: lp_amount)
+            upkeep_d_oracle_after_liquidity_removal(lp_amount, previous_supply: supply)
+            let amounts = DynArray::from_slice(amounts_marr.as_slice())
+            log.emit(
+                RemoveLiquidity {
+                    provider: ctx.caller(),
+                    token_amounts: amounts,
+                    fees: DynArray<u256>::empty(),
+                    token_supply: store.total_supply,
+                },
+            )
+            withdraw_admin_fees_internal()
+            store.locked = false
+            amounts
+        }
+
+        RemoveLiquidityOneCoin { lp_amount, i, min_amount, receiver } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            let coin = coin_index(i, n_coins: store.n_coins)
+            assert!(lp_amount > 0, "lp")
+            let (user_amount, fee_amount, xp, amp, d) = calc_withdraw_one_coin_internal(
+                lp_amount,
+                i: coin,
+            )
+            let admin_cut = fee_amount * ADMIN_FEE / FEE_DENOMINATOR
+            assert!(user_amount >= min_amount, "slippage")
+            store
+                .admin_balances
+                .set(
+                    key: coin,
+                    value: store.admin_balances.get(key: coin) + admin_cut,
+                )
+            lp_burn(from: ctx.caller(), value: lp_amount)
+            transfer_out(coin_index: coin, amount: user_amount, receiver)
+            log.emit(
+                RemoveLiquidityOne {
+                    provider: ctx.caller(),
+                    token_id: i,
+                    token_amount: lp_amount,
+                    coin_amount: user_amount,
+                    token_supply: store.total_supply,
+                },
+            )
+            upkeep_oracles(xp, amp, d)
+            store.locked = false
+            user_amount
+        }
+
+        RemoveLiquidityImbalance { amounts, max_burn_amount, receiver } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(store.initialized, "not initialized")
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            let n = store.n_coins
+            check_amount_length(amounts.len() as u256, n_coins: n)
+            let old_balances = balances_mem()
+            var rates = stored_rates_mem()
+            let d0 = get_d_mem(rates, source_balances: old_balances)
+            var new_balances = copy_array(source: old_balances)
+            var i: u256 = 0
+            while i < n {
+                let amount = amounts[i as usize]
+                if amount > 0 {
+                    let new_balance = new_balances[i as usize]
+                    assert!(new_balance >= amount, "balance")
+                    new_balances[i as usize] = new_balance - amount
+                    transfer_out(coin_index: i, amount, receiver)
+                }
+                i += 1
+            }
+
+            var d1 = get_d_mem(rates, source_balances: new_balances)
+            let fee_base = base_fee()
+            let ys = (d0 + d1) / n
+            var fees_marr = MemArray<u256>::new_zeroed(n as usize)
+            var fee_index: u256 = 0
+            while fee_index < n {
+                let old_balance = old_balances[fee_index as usize]
+                let new_balance = new_balances[fee_index as usize]
+                let ideal_balance = d1 * old_balance / d0
+                let difference = abs_diff(ideal_balance, new_balance)
+                let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
+                let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
+                    difference
+                    / FEE_DENOMINATOR
+                fees_marr[fee_index as usize] = coin_fee
+                store
+                    .admin_balances
+                    .set(
+                        key: fee_index,
+                        value: store.admin_balances.get(key: fee_index)
+                            + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
+                    )
+                new_balances[fee_index as usize] = new_balance - coin_fee
+                fee_index += 1
+            }
+
+            d1 = get_d_mem(rates, source_balances: new_balances)
+            let burn_amount = (d0 - d1) * store.total_supply / d0 + 1
+            assert!(burn_amount > 1, "burn")
+            assert!(burn_amount <= max_burn_amount, "slippage")
+            lp_burn(from: ctx.caller(), value: burn_amount)
+            log.emit(
+                RemoveLiquidityImbalance {
+                    provider: ctx.caller(),
+                    token_amounts: amounts,
+                    fees: DynArray::from_slice(fees_marr.as_slice()),
+                    invariant: d1,
+                    token_supply: store.total_supply,
+                },
+            )
+            upkeep_oracles(
+                xp: xp_mem(rates, source_balances: new_balances),
+                amp: current_a(),
+                d: d1,
+            )
+            store.locked = false
+            burn_amount
+        }
+
+        RampA { future_a, future_time } uses (mut store, ctx, mut log, mut call) {
+            let admin: Address = store.factory.static(FactoryMsg::Admin {})
+            assert!(ctx.caller() == admin, "admin")
+            assert!(
+                ctx.timestamp().as_seconds() >= store.initial_a_time + MIN_RAMP_TIME,
+                "ramp active",
+            )
+            assert!(future_time >= ctx.timestamp().as_seconds() + MIN_RAMP_TIME, "time")
+
+            let initial_a_precise = current_a()
+            let future_a_precise = future_a * A_PRECISION
+            assert!(future_a > 0 && future_a < MAX_A, "A")
+            if future_a_precise < initial_a_precise {
+                assert!(
+                    future_a_precise * MAX_A_CHANGE >= initial_a_precise,
+                    "A change",
+                )
+            } else {
+                assert!(
+                    future_a_precise <= initial_a_precise * MAX_A_CHANGE,
+                    "A change",
+                )
+            }
+
+            store.initial_a = initial_a_precise
+            store.future_a = future_a_precise
+            store.initial_a_time = ctx.timestamp().as_seconds()
+            store.future_a_time = future_time
+            log.emit(
+                RampA {
+                    old_a: initial_a_precise,
+                    new_a: future_a_precise,
+                    initial_time: ctx.timestamp().as_seconds(),
+                    future_time,
+                },
+            )
+        }
+
+        StopRampA uses (mut store, ctx, mut log, mut call) {
+            let admin: Address = store.factory.static(FactoryMsg::Admin {})
+            assert!(ctx.caller() == admin, "admin")
+            let a = current_a()
+            store.initial_a = a
+            store.future_a = a
+            store.initial_a_time = ctx.timestamp().as_seconds()
+            store.future_a_time = ctx.timestamp().as_seconds()
+            log.emit(StopRampA { a, t: ctx.timestamp().as_seconds() })
+        }
+
+        SetNewFee { new_fee, new_offpeg_fee_multiplier }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            let admin: Address = store.factory.static(FactoryMsg::Admin {})
+            assert!(ctx.caller() == admin, "admin")
+            assert!(new_fee <= MAX_FEE, "fee")
+            assert!(
+                new_offpeg_fee_multiplier * new_fee <= MAX_FEE * FEE_DENOMINATOR,
+                "offpeg",
+            )
+            store.fee = new_fee
+            store.offpeg_fee_multiplier = new_offpeg_fee_multiplier
+            log.emit(
+                ApplyNewFee { fee: new_fee, offpeg_fee_multiplier: new_offpeg_fee_multiplier },
+            )
+        }
+
+        SetMaExpTime { new_ma_exp_time, new_d_ma_time }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            let admin: Address = store.factory.static(FactoryMsg::Admin {})
+            assert!(ctx.caller() == admin, "admin")
+            assert!(new_ma_exp_time.wrapping_mul(new_d_ma_time) > 0, "ma")
+            store.ma_exp_time = new_ma_exp_time
+            store.d_ma_time = new_d_ma_time
+            log.emit(
+                SetNewMATime { ma_exp_time: new_ma_exp_time, d_ma_time: new_d_ma_time },
+            )
+        }
+
+        WithdrawAdminFees uses (mut store, ctx, mut call) {
+            assert!(!store.locked, "reentrant")
+            store.locked = true
+            withdraw_admin_fees_internal()
+            store.locked = false
+        }
+
+        Permit { owner, spender, value, deadline, v, r, s } -> bool
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(owner != Address::zero(), "owner")
+            assert!(ctx.timestamp().as_seconds() <= deadline, "deadline")
+            let nonce = store.nonces.get(key: owner)
+            let struct_ptr = encode_abi_payload(
+                (EIP2612_TYPEHASH, owner, spender, value, nonce, deadline),
+            )
+            let struct_hash = crypto::keccak256(struct_ptr.span())
+
+            let digest = crypto::eip712_digest(domain_separator: domain_separator(), struct_hash)
+            if ctx.extcodesize(owner) > 0 {
+                let signature = encode_packed((r, s, v)).as_bytes()
+                let answer: Bytes32 = owner
+                    .static(
+                        Erc1271Msg::IsValidSignature { digest: Bytes32 { val: digest }, signature },
+                    )
+                assert!(answer.val == ERC1271_MAGIC_VALUE, "signature")
+            } else {
+                let recovered = match crypto::ecrecover_raw(
+                    hash: digest,
+                    v: v as u256,
+                    r: r.val,
+                    s: s.val,
+                ) {
+                    Result::Ok(Option::Some(addr,),) => addr,
+                    _ => 0,
+                }
+                assert!(recovered != 0 && recovered == owner.word(), "signature")
+            }
+            store.allowance.set(key: (owner, spender), value)
+            store.nonces.set(key: owner, value: nonce + 1)
+            log.emit(Approval { owner, spender, value })
+            true
+        }
+
+        A -> u256 uses (store, ctx) {
+            current_a() / A_PRECISION
+        }
+        APrecise -> u256 uses (store, ctx) {
+            current_a()
+        }
+        InitialA -> u256 uses store {
+            store.initial_a
+        }
+        FutureA -> u256 uses store {
+            store.future_a
+        }
+        InitialATime -> u256 uses store {
+            store.initial_a_time
+        }
+        FutureATime -> u256 uses store {
+            store.future_a_time
+        }
+
+        GetVirtualPrice -> u256 uses (store, ctx, mut call, ops) {
+            assert!(!store.locked, "reentrant")
+            if store.total_supply == 0 {
+                ops.revert(data: MemSpan::empty())
+            }
+            var rates = stored_rates_mem()
+            get_d_mem(rates, source_balances: balances_mem()) * PRECISION / store.total_supply
+        }
+
+        Balances { i } -> u256 uses (store, ctx, mut call) {
+            assert!(i < store.n_coins, "coin")
+            balances_mem()[i as usize]
+        }
+
+        GetBalances -> DynArray<u256> uses (store, ctx, mut call) {
+            DynArray::from_slice(balances_mem().as_slice())
+        }
+
+        AdminBalances { i } -> u256 uses (store, ops) {
+            if i >= store.n_coins {
+                ops.revert(data: MemSpan::empty())
+            }
+            store.admin_balances.get(key: i)
+        }
+
+        StoredRates -> DynArray<u256> uses (store, ctx, mut call) {
+            DynArray::from_slice(stored_rates_mem().as_slice())
+        }
+
+        Fee -> u256 uses store {
+            store.fee
+        }
+        AdminFee -> u256 {
+            ADMIN_FEE
+        }
+        OffpegFeeMultiplier -> u256 uses store {
+            store.offpeg_fee_multiplier
+        }
+        MaExpTime -> u256 uses store {
+            store.ma_exp_time
+        }
+        DMaTime -> u256 uses store {
+            store.d_ma_time
+        }
+        MaLastTime -> u256 uses store {
+            store.ma_last_time
+        }
+
+        LastPrice { i } -> u256 uses store {
+            assert!(i < store.n_coins - 1, "price")
+            store.last_prices_packed.get(key: i) & MASK_128
+        }
+
+        EmaPrice { i } -> u256 uses store {
+            assert!(i < store.n_coins - 1, "price")
+            store.last_prices_packed.get(key: i) >> 128
+        }
+
+        GetP { i } -> u256 uses (store, ctx, mut call) {
+            assert!(i < store.n_coins - 1, "price")
+            var xp = xp_mem(rates: stored_rates_mem(), source_balances: balances_mem())
+            let d = get_d(xp)
+            get_p(i, xp, amp: current_a(), d)
+        }
+
+        PriceOracle { i } -> u256 uses (store, ctx) {
+            assert!(!store.locked, "reentrant")
+            assert!(i < store.n_coins - 1, "price")
+            calc_moving_average(
+                packed_value: store.last_prices_packed.get(key: i),
+                averaging_window: store.ma_exp_time,
+                last_time: store.ma_last_time & MASK_128,
+            )
+        }
+
+        DOracle -> u256 uses (store, ctx) {
+            assert!(!store.locked, "reentrant")
+            calc_moving_average(
+                packed_value: store.last_d_packed,
+                averaging_window: store.d_ma_time,
+                last_time: store.ma_last_time >> 128,
+            )
+        }
+
+        Coins { i } -> Address uses (store, ops) {
+            if i >= store.n_coins {
+                ops.revert(data: MemSpan::empty())
+            }
+            store.coins.get(key: i)
+        }
+
+        CalcWithdrawOneCoin { burn_amount, i } -> u256
+        uses (store, ctx, mut call)
+        {
+            let coin = coin_index(i, n_coins: store.n_coins)
+            let (dy, _fee_amount, _xp, _amp, _d) = calc_withdraw_one_coin_internal(
+                lp_amount: burn_amount,
+                i: coin,
+            )
+            dy
+        }
+
+        BalanceOf { owner } -> u256 uses store {
+            store.balance_of.get(key: owner)
+        }
+        Allowance { owner, spender } -> u256 uses store {
+            store.allowance.get(key: (owner, spender))
+        }
+        Nonces { owner } -> u256 uses store {
+            store.nonces.get(key: owner)
+        }
+        DomainSeparator -> Bytes32 uses (store, ctx) {
+            Bytes32 { val: domain_separator() }
+        }
+        TotalSupply -> u256 uses store {
+            assert!(!store.locked, "reentrant")
+            store.total_supply
+        }
+
+        NCoins -> u256 uses store {
+            store.n_coins
+        }
+    }
+}

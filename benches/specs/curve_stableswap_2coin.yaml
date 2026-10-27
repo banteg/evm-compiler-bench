@@ -242,3 +242,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
   vyper: "benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy"
+  fe: "benches/implementations/curve_stableswap_2coin/fe/CurveStableSwap2CoinReal.fe"

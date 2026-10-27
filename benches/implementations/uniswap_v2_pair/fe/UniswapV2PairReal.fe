@@ -1,0 +1,606 @@
+use core::num::isqrt
+use core::ptr::MemSpan
+use core::ops::{WrappingAdd, WrappingMul}
+use std::abi::sol::Uint112
+use std::abi::{Bytes, Bytes32}
+use std::evm::{Call, Ctx, Log, RawOps, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{crypto, erc20}
+
+msg PairMsg {
+    #[selector = sol("name()")]
+    Name -> String<10>,
+    #[selector = sol("symbol()")]
+    Symbol -> String<6>,
+    #[selector = sol("decimals()")]
+    Decimals -> u8,
+    #[selector = sol("MINIMUM_LIQUIDITY()")]
+    MinimumLiquidity -> u256,
+    #[selector = sol("PERMIT_TYPEHASH()")]
+    PermitTypehash -> Bytes32,
+    #[selector = sol("DOMAIN_SEPARATOR()")]
+    DomainSeparator -> Bytes32,
+    #[selector = sol("factory()")]
+    Factory -> Address,
+    #[selector = sol("token0()")]
+    Token0 -> Address,
+    #[selector = sol("token1()")]
+    Token1 -> Address,
+    #[selector = sol("getReserves()")]
+    GetReserves -> (u256, u256, u256),
+    #[selector = sol("price0CumulativeLast()")]
+    Price0CumulativeLast -> u256,
+    #[selector = sol("price1CumulativeLast()")]
+    Price1CumulativeLast -> u256,
+    #[selector = sol("kLast()")]
+    KLast -> u256,
+    #[selector = sol("totalSupply()")]
+    TotalSupply -> u256,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { owner: Address } -> u256,
+    #[selector = sol("allowance(address,address)")]
+    Allowance { owner: Address, spender: Address } -> u256,
+    #[selector = sol("nonces(address)")]
+    Nonces { owner: Address } -> u256,
+    #[selector = sol("initialize(address,address)")]
+    Initialize { token0: Address, token1: Address },
+    #[selector = sol("approve(address,uint256)")]
+    Approve { spender: Address, amount: u256 } -> bool,
+    #[selector = sol(
+        "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+    )]
+    Permit {
+        owner: Address,
+        spender: Address,
+        amount: u256,
+        deadline: u256,
+        v: u8,
+        r: Bytes32,
+        s: Bytes32,
+    },
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("transferFrom(address,address,uint256)")]
+    TransferFrom { owner: Address, receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("mint(address)")]
+    Mint { receiver: Address } -> u256,
+    #[selector = sol("burn(address)")]
+    Burn { receiver: Address } -> (u256, u256),
+    #[selector = sol("swap(uint256,uint256,address,bytes)")]
+    Swap { amount0_out: u256, amount1_out: u256, receiver: Address, data: Bytes },
+    #[selector = sol("skim(address)")]
+    Skim { receiver: Address },
+    #[selector = sol("sync()")]
+    Sync,
+}
+
+msg Erc20Msg {
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { account: Address } -> u256,
+}
+
+msg FactoryMsg {
+    #[selector = sol("feeTo()")]
+    FeeTo -> Address,
+}
+
+msg CalleeMsg {
+    #[selector = sol("uniswapV2Call(address,uint256,uint256,bytes)")]
+    UniswapV2Call { sender: Address, amount0: u256, amount1: u256, data: Bytes },
+}
+
+#[event]
+struct Approval {
+    #[indexed]
+    owner: Address,
+    #[indexed]
+    spender: Address,
+    amount: u256,
+}
+
+#[event]
+struct Transfer {
+    #[indexed]
+    sender: Address,
+    #[indexed]
+    receiver: Address,
+    amount: u256,
+}
+
+#[event]
+struct Mint {
+    #[indexed]
+    sender: Address,
+    amount0: u256,
+    amount1: u256,
+}
+
+#[event]
+struct Burn {
+    #[indexed]
+    sender: Address,
+    amount0: u256,
+    amount1: u256,
+    #[indexed]
+    receiver: Address,
+}
+
+#[event]
+struct Swap {
+    #[indexed]
+    sender: Address,
+    amount0_in: u256,
+    amount1_in: u256,
+    amount0_out: u256,
+    amount1_out: u256,
+    #[indexed]
+    receiver: Address,
+}
+
+#[event]
+struct Sync { reserve0: Uint112, reserve1: Uint112 }
+
+const MINIMUM_LIQUIDITY: u256 = 1000
+const Q112: u256 = 5192296858534827628530496329220096
+const MAX_U112: u256 = 5192296858534827628530496329220095
+const U32_MOD: u256 = 4294967296
+const MAX_U256: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+const DOMAIN_TYPEHASH: u256 = core::keccak(
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+)
+const NAME_HASH: u256 = core::keccak("Uniswap V2")
+const VERSION_HASH: u256 = core::keccak("1")
+const PERMIT_TYPEHASH: u256 = core::keccak(
+    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
+)
+
+struct PairStore {
+    factory: Address,
+    token0: Address,
+    token1: Address,
+    reserve0: u256,
+    reserve1: u256,
+    block_timestamp_last: u256,
+    price0_cumulative_last: u256,
+    price1_cumulative_last: u256,
+    k_last: u256,
+    total_supply: u256,
+    balance_of: StorageMap<Address, u256>,
+    allowance: StorageMap<(Address, Address), u256>,
+    domain_separator: u256,
+    nonces: StorageMap<Address, u256>,
+    unlocked: bool,
+}
+
+fn min(_ x: u256, _ y: u256) -> u256 {
+    if x < y { x } else { y }
+}
+
+fn erc20_balance(token: Address) -> u256 uses (ctx: Ctx, call: mut Call) {
+    token.static(Erc20Msg::BalanceOf { account: ctx.address() })
+}
+
+// Upstream accepts an empty return even from an account without code.
+fn safe_transfer(token: Address, receiver: Address, amount: u256)
+uses (ctx: Ctx, call: mut Call)
+{
+    let ok = match erc20::try_transfer(token, receiver, amount) {
+        TokenCall::Ok => true,
+        TokenCall::NoCode => true,
+        _ => false,
+    }
+    assert!(ok, "UniswapV2: TRANSFER_FAILED")
+}
+
+fn lp_mint(receiver: Address, amount: u256)
+uses (store: mut PairStore, log: mut Log)
+{
+    store.total_supply += amount
+    store.balance_of.set(
+            key: receiver,
+            value: store.balance_of.get(key: receiver) + amount,
+        )
+    log.emit(Transfer { sender: Address::zero(), receiver, amount })
+}
+
+fn lp_burn(owner: Address, amount: u256)
+uses (store: mut PairStore, log: mut Log)
+{
+    let balance = store.balance_of.get(key: owner)
+    assert!(balance >= amount, "UniswapV2: INSUFFICIENT_BALANCE")
+    store.balance_of.set(key: owner, value: balance - amount)
+    store.total_supply -= amount
+    log.emit(
+        Transfer { sender: owner, receiver: Address::zero(), amount },
+    )
+}
+
+fn lp_transfer(owner: Address, receiver: Address, amount: u256)
+uses (store: mut PairStore, log: mut Log)
+{
+    let balance = store.balance_of.get(key: owner)
+    assert!(balance >= amount, "UniswapV2: INSUFFICIENT_BALANCE")
+    store.balance_of.set(key: owner, value: balance - amount)
+    store.balance_of.set(
+            key: receiver,
+            value: store.balance_of.get(key: receiver) + amount,
+        )
+    log.emit(Transfer { sender: owner, receiver, amount })
+}
+
+fn update(balance0: u256, balance1: u256, old_reserve0: u256, old_reserve1: u256)
+uses (store: mut PairStore, ctx: Ctx, log: mut Log)
+{
+    assert!(
+        balance0 <= MAX_U112 && balance1 <= MAX_U112,
+        "UniswapV2: OVERFLOW",
+    )
+    let block_timestamp = ctx.timestamp().as_seconds() % U32_MOD
+    let last_timestamp = store.block_timestamp_last
+    let time_elapsed = if block_timestamp >= last_timestamp {
+        block_timestamp - last_timestamp
+    } else {
+        U32_MOD - last_timestamp + block_timestamp
+    }
+    if time_elapsed > 0 && old_reserve0 != 0 && old_reserve1 != 0 {
+        let price0_increment = (old_reserve1 * Q112 / old_reserve0).wrapping_mul(time_elapsed)
+        let price1_increment = (old_reserve0 * Q112 / old_reserve1).wrapping_mul(time_elapsed)
+        store.price0_cumulative_last = store.price0_cumulative_last.wrapping_add(price0_increment)
+        store.price1_cumulative_last = store.price1_cumulative_last.wrapping_add(price1_increment)
+    }
+    store.reserve0 = balance0
+    store.reserve1 = balance1
+    store.block_timestamp_last = block_timestamp
+    log.emit(
+        Sync {
+            reserve0: Uint112 { val: balance0.downcast_truncate() },
+            reserve1: Uint112 { val: balance1.downcast_truncate() },
+        },
+    )
+}
+
+fn mint_fee(old_reserve0: u256, old_reserve1: u256) -> bool
+uses (store: mut PairStore, ctx: Ctx, call: mut Call, log: mut Log)
+{
+    let fee_to = store.factory.static(FactoryMsg::FeeTo {})
+    let fee_on = fee_to != Address::zero()
+    let last_k = store.k_last
+    if fee_on {
+        if last_k != 0 {
+            // Fe uses the stdlib fixed-iteration square root; the Solidity
+            // reference retains upstream Babylonian iteration.
+            let root_k = isqrt(old_reserve0 * old_reserve1)
+            let root_k_last = isqrt(last_k)
+            if root_k > root_k_last {
+                let liquidity = store.total_supply *
+                    (root_k - root_k_last)
+                    / (root_k * 5 + root_k_last)
+                if liquidity > 0 {
+                    lp_mint(receiver: fee_to, amount: liquidity)
+                }
+            }
+        }
+    } else if last_k != 0 {
+        store.k_last = 0
+    }
+    fee_on
+}
+
+fn permit_digest(
+    owner: Address,
+    spender: Address,
+    amount: u256,
+    nonce: u256,
+    deadline: u256,
+) -> u256
+uses (store: PairStore)
+{
+    let struct_ptr = encode_abi_payload((PERMIT_TYPEHASH, owner, spender, amount, nonce, deadline))
+    let struct_hash = crypto::keccak256(struct_ptr.span())
+    crypto::eip712_digest(domain_separator: store.domain_separator, struct_hash)
+}
+
+pub contract UniswapV2Pair uses (
+    ctx: Ctx,
+    log: mut Log,
+    call: mut Call,
+    ops: RawOps,
+) {
+    mut store: PairStore,
+
+    init()
+    uses (mut store, ctx)
+    {
+        store.factory = ctx.caller()
+        let ptr = encode_abi_payload(
+            (DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, ctx.chainid(), ctx.address()),
+        )
+        store.domain_separator = crypto::keccak256(ptr.span())
+        store.unlocked = true
+    }
+
+    recv PairMsg {
+        Name -> String<10> {
+            "Uniswap V2"
+        }
+        Symbol -> String<6> {
+            "UNI-V2"
+        }
+        Decimals -> u8 {
+            18
+        }
+        MinimumLiquidity -> u256 {
+            MINIMUM_LIQUIDITY
+        }
+        PermitTypehash -> Bytes32 {
+            Bytes32 { val: PERMIT_TYPEHASH }
+        }
+        DomainSeparator -> Bytes32 uses store {
+            Bytes32 { val: store.domain_separator }
+        }
+        Factory -> Address uses store {
+            store.factory
+        }
+        Token0 -> Address uses store {
+            store.token0
+        }
+        Token1 -> Address uses store {
+            store.token1
+        }
+
+        GetReserves -> (u256, u256, u256) uses store {
+            (store.reserve0, store.reserve1, store.block_timestamp_last)
+        }
+
+        Price0CumulativeLast -> u256 uses store {
+            store.price0_cumulative_last
+        }
+        Price1CumulativeLast -> u256 uses store {
+            store.price1_cumulative_last
+        }
+        KLast -> u256 uses store {
+            store.k_last
+        }
+        TotalSupply -> u256 uses store {
+            store.total_supply
+        }
+        BalanceOf { owner } -> u256 uses store {
+            store.balance_of.get(key: owner)
+        }
+        Allowance { owner, spender } -> u256 uses store {
+            store.allowance.get(key: (owner, spender))
+        }
+        Nonces { owner } -> u256 uses store {
+            store.nonces.get(key: owner)
+        }
+
+        Initialize { token0, token1 } uses (mut store, ctx) {
+            assert!(ctx.caller() == store.factory, "UniswapV2: FORBIDDEN")
+            store.token0 = token0
+            store.token1 = token1
+        }
+
+        Approve { spender, amount } -> bool uses (mut store, ctx, mut log) {
+            store.allowance.set(key: (ctx.caller(), spender), value: amount)
+            log.emit(Approval { owner: ctx.caller(), spender, amount })
+            true
+        }
+
+        Permit { owner, spender, amount, deadline, v, r, s }
+        uses (mut store, ctx, mut log)
+        {
+            assert!(deadline >= ctx.timestamp().as_seconds(), "UniswapV2: EXPIRED")
+            let nonce = store.nonces.get(key: owner)
+            store.nonces.set(key: owner, value: nonce + 1)
+            let digest = permit_digest(owner, spender, amount, nonce, deadline)
+            let recovered = match crypto::ecrecover_raw(
+                hash: digest,
+                v: v as u256,
+                r: r.val,
+                s: s.val,
+            ) {
+                Result::Ok(Option::Some(addr,),) => addr,
+                _ => 0,
+            }
+            assert!(
+                recovered != 0 && recovered == owner.word(),
+                "UniswapV2: INVALID_SIGNATURE",
+            )
+            store.allowance.set(key: (owner, spender), value: amount)
+            log.emit(Approval { owner, spender, amount })
+        }
+
+        Transfer { receiver, amount } -> bool uses (mut store, ctx, mut log) {
+            lp_transfer(owner: ctx.caller(), receiver, amount)
+            true
+        }
+
+        TransferFrom { owner, receiver, amount } -> bool
+        uses (mut store, ctx, mut log)
+        {
+            let allowed = store.allowance.get(key: (owner, ctx.caller()))
+            if allowed != MAX_U256 {
+                assert!(allowed >= amount, "UniswapV2: INSUFFICIENT_ALLOWANCE")
+                store.allowance.set(key: (owner, ctx.caller()), value: allowed - amount)
+            }
+            lp_transfer(owner, receiver, amount)
+            true
+        }
+
+        Mint { receiver } -> u256 uses (mut store, ctx, mut log, mut call) {
+            assert!(store.unlocked, "UniswapV2: LOCKED")
+            store.unlocked = false
+            let old_reserve0 = store.reserve0
+            let old_reserve1 = store.reserve1
+            let balance0 = erc20_balance(token: store.token0)
+            let balance1 = erc20_balance(token: store.token1)
+            let amount0 = balance0 - old_reserve0
+            let amount1 = balance1 - old_reserve1
+            let fee_on = mint_fee(old_reserve0, old_reserve1)
+            let supply = store.total_supply
+            let liquidity = if supply == 0 {
+                lp_mint(receiver: Address::zero(), amount: MINIMUM_LIQUIDITY)
+                isqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+            } else {
+                min(
+                    amount0 * supply / old_reserve0,
+                    amount1 * supply / old_reserve1,
+                )
+            }
+            assert!(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED")
+            lp_mint(receiver, amount: liquidity)
+            update(balance0, balance1, old_reserve0, old_reserve1)
+            if fee_on {
+                store.k_last = balance0 * balance1
+            }
+            log.emit(Mint { sender: ctx.caller(), amount0, amount1 })
+            store.unlocked = true
+            liquidity
+        }
+
+        Burn { receiver } -> (u256, u256) uses (mut store, ctx, mut log, mut call) {
+            assert!(store.unlocked, "UniswapV2: LOCKED")
+            store.unlocked = false
+            let old_reserve0 = store.reserve0
+            let old_reserve1 = store.reserve1
+            let token0 = store.token0
+            let token1 = store.token1
+            var balance0 = erc20_balance(token: token0)
+            var balance1 = erc20_balance(token: token1)
+            let liquidity = store.balance_of.get(key: ctx.address())
+            let fee_on = mint_fee(old_reserve0, old_reserve1)
+            let supply = store.total_supply
+            let amount0 = liquidity * balance0 / supply
+            let amount1 = liquidity * balance1 / supply
+            assert!(
+                amount0 > 0 && amount1 > 0,
+                "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED",
+            )
+            lp_burn(owner: ctx.address(), amount: liquidity)
+            safe_transfer(token: token0, receiver, amount: amount0)
+            safe_transfer(token: token1, receiver, amount: amount1)
+            balance0 = erc20_balance(token: token0)
+            balance1 = erc20_balance(token: token1)
+            update(balance0, balance1, old_reserve0, old_reserve1)
+            if fee_on {
+                store.k_last = balance0 * balance1
+            }
+            log.emit(Burn { sender: ctx.caller(), amount0, amount1, receiver })
+            store.unlocked = true
+            (amount0, amount1)
+        }
+
+        Swap { amount0_out, amount1_out, receiver, data }
+        uses (mut store, ctx, mut log, mut call, ops)
+        {
+            assert!(store.unlocked, "UniswapV2: LOCKED")
+            store.unlocked = false
+            assert!(
+                amount0_out > 0 || amount1_out > 0,
+                "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT",
+            )
+            let old_reserve0 = store.reserve0
+            let old_reserve1 = store.reserve1
+            assert!(
+                amount0_out < old_reserve0 && amount1_out < old_reserve1,
+                "UniswapV2: INSUFFICIENT_LIQUIDITY",
+            )
+            let token0 = store.token0
+            let token1 = store.token1
+            assert!(
+                receiver != token0 && receiver != token1,
+                "UniswapV2: INVALID_TO",
+            )
+            if amount0_out > 0 {
+                safe_transfer(token: token0, receiver, amount: amount0_out)
+            }
+            if amount1_out > 0 {
+                safe_transfer(token: token1, receiver, amount: amount1_out)
+            }
+            if data.len() > 0 {
+                // Solidity's interface call checks for code before calling.
+                if ctx.extcodesize(receiver) == 0 {
+                    ops.revert(data: MemSpan::empty())
+                }
+                receiver
+                    .call(
+                        CalleeMsg::UniswapV2Call {
+                            sender: ctx.caller(),
+                            amount0: amount0_out,
+                            amount1: amount1_out,
+                            data,
+                        },
+                    )
+            }
+
+            let balance0 = erc20_balance(token: token0)
+            let balance1 = erc20_balance(token: token1)
+            let reserve0_less_out = old_reserve0 - amount0_out
+            let reserve1_less_out = old_reserve1 - amount1_out
+            let amount0_in = if balance0 > reserve0_less_out {
+                balance0 - reserve0_less_out
+            } else {
+                0
+            }
+            let amount1_in = if balance1 > reserve1_less_out {
+                balance1 - reserve1_less_out
+            } else {
+                0
+            }
+            assert!(
+                amount0_in > 0 || amount1_in > 0,
+                "UniswapV2: INSUFFICIENT_INPUT_AMOUNT",
+            )
+
+            let balance0_adjusted = balance0 * 1000 - amount0_in * 3
+            let balance1_adjusted = balance1 * 1000 - amount1_in * 3
+            assert!(
+                balance0_adjusted * balance1_adjusted >= old_reserve0 * old_reserve1 * 1000000,
+                "UniswapV2: K",
+            )
+            update(balance0, balance1, old_reserve0, old_reserve1)
+            log.emit(
+                Swap {
+                    sender: ctx.caller(),
+                    amount0_in,
+                    amount1_in,
+                    amount0_out,
+                    amount1_out,
+                    receiver,
+                },
+            )
+            store.unlocked = true
+        }
+
+        Skim { receiver } uses (mut store, ctx, mut call) {
+            assert!(store.unlocked, "UniswapV2: LOCKED")
+            store.unlocked = false
+            let token0 = store.token0
+            let token1 = store.token1
+            safe_transfer(
+                token: token0,
+                receiver,
+                amount: erc20_balance(token: token0) - store.reserve0,
+            )
+            safe_transfer(
+                token: token1,
+                receiver,
+                amount: erc20_balance(token: token1) - store.reserve1,
+            )
+            store.unlocked = true
+        }
+
+        Sync uses (mut store, ctx, mut log, mut call) {
+            assert!(store.unlocked, "UniswapV2: LOCKED")
+            store.unlocked = false
+            update(
+                balance0: erc20_balance(token: store.token0),
+                balance1: erc20_balance(token: store.token1),
+                old_reserve0: store.reserve0,
+                old_reserve1: store.reserve1,
+            )
+            store.unlocked = true
+        }
+    }
+}

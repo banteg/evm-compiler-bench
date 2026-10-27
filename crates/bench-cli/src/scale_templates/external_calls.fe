@@ -13,7 +13,7 @@ pub contract {{CONTRACT_NAME}} uses (ctx: Ctx, call: mut Call) {
 
         CallMany -> u256 uses (ctx, mut call) {
             let me = ctx.address()
-            let mut total: u256 = 0
+            var total: u256 = 0
             for i in 0..{{N}} {
                 me.call(ExternalCallsMsg::Ping { x: i as u256 })
                 total += i as u256

@@ -81,6 +81,9 @@ real_derived:
     - optional-return ERC20 transfer and transferFrom compatibility
   scenario_coverage:
     - initialize
+    - initialize_long_metadata
+    - permit_valid
+    - permit_replay_reverts
     - set_deposit_limit
     - deposit
     - deposit_all
@@ -114,6 +117,9 @@ scenarios:
   - name: initialize
     call: "initialize(token, governance, rewards, name, symbol, guardian, management)"
     expected: "sets token, metadata, authority addresses, fees, and activation timestamps"
+  - name: initialize_long_metadata
+    call: "initialize with a multiword name and a 32-byte symbol"
+    expected: "returns the complete overrides including the name's final partial word"
   - name: set_deposit_limit
     call: "setDepositLimit(limit)"
     expected: "accepts authorized deposit limit update"
@@ -156,6 +162,13 @@ scenarios:
   - name: emergency_shutdown
     call: "setEmergencyShutdown(true)"
     expected: "enables shutdown and zeros deposit/debt ratios"
+  - name: permit_valid
+    call: "permit with an independently signed EIP-712 digest and packed signature"
+    expected: "sets the allowance from the independently signed permit"
+  - name: permit_replay_reverts
+    call: "repeat a permit signed with nonce zero after its successful use"
+    expected: "rejects the consumed signature while preserving the allowance"
 implementations:
   solidity: "benches/implementations/yearn_vault_v2/solidity/YearnVaultV2Real.sol"
   vyper: "benches/implementations/yearn_vault_v2/vyper/latest/Vault.vy"
+  fe: "benches/implementations/yearn_vault_v2/fe/YearnVaultV2Real.fe"

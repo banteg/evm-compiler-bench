@@ -16,3 +16,5 @@ __pycache__/
 !/results/normalized/.gitkeep
 /results/reports/*
 !/results/reports/.gitkeep
+/.fe-lsp.json
+/.fe-lsp/

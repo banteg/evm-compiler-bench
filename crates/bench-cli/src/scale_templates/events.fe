@@ -15,7 +15,7 @@ struct Tick {
 pub contract {{CONTRACT_NAME}} uses (log: mut Log) {
     recv EventsMsg {
         EmitMany -> u256 uses (mut log) {
-            let mut total: u256 = 0
+            var total: u256 = 0
             for i in 0..{{N}} {
                 log.emit(Tick { index: i as u256, value: i as u256 + 1 })
                 total += i as u256 + 1

@@ -1,0 +1,1289 @@
+use std::evm::packed::encode_packed
+use std::abi::{Bytes, Bytes32, DynString}
+use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{crypto, erc20}
+
+msg VaultMsg {
+    #[selector = sol("initialize(address,address,address,string,string)")]
+    InitializeDefault {
+        token: Address,
+        governance: Address,
+        rewards: Address,
+        name_override: DynString,
+        symbol_override: DynString,
+    },
+    #[selector = sol(
+        "initialize(address,address,address,string,string,address)",
+    )]
+    InitializeWithGuardian {
+        token: Address,
+        governance: Address,
+        rewards: Address,
+        name_override: DynString,
+        symbol_override: DynString,
+        guardian: Address,
+    },
+    #[selector = sol(
+        "initialize(address,address,address,string,string,address,address)",
+    )]
+    Initialize {
+        token: Address,
+        governance: Address,
+        rewards: Address,
+        name_override: DynString,
+        symbol_override: DynString,
+        guardian: Address,
+        management: Address,
+    },
+    #[selector = sol("deposit()")]
+    DepositAll -> u256,
+    #[selector = sol("deposit(uint256)")]
+    DepositAmount { amount: u256 } -> u256,
+    #[selector = sol("deposit(uint256,address)")]
+    Deposit { amount: u256, recipient: Address } -> u256,
+    #[selector = sol("withdraw()")]
+    WithdrawAll -> u256,
+    #[selector = sol("withdraw(uint256)")]
+    WithdrawShares { max_shares: u256 } -> u256,
+    #[selector = sol("withdraw(uint256,address)")]
+    WithdrawSharesTo { max_shares: u256, recipient: Address } -> u256,
+    #[selector = sol("withdraw(uint256,address,uint256)")]
+    Withdraw { max_shares: u256, recipient: Address, max_loss: u256 } -> u256,
+    #[selector = sol("approve(address,uint256)")]
+    Approve { spender: Address, amount: u256 } -> bool,
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("transferFrom(address,address,uint256)")]
+    TransferFrom { sender: Address, receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("increaseAllowance(address,uint256)")]
+    IncreaseAllowance { spender: Address, amount: u256 } -> bool,
+    #[selector = sol("decreaseAllowance(address,uint256)")]
+    DecreaseAllowance { spender: Address, amount: u256 } -> bool,
+    #[selector = sol("permit(address,address,uint256,uint256,bytes)")]
+    Permit {
+        owner: Address,
+        spender: Address,
+        amount: u256,
+        expiry: u256,
+        signature: Bytes,
+    } -> bool,
+    #[selector = sol("setDepositLimit(uint256)")]
+    SetDepositLimit { limit: u256 },
+    #[selector = sol("setEmergencyShutdown(bool)")]
+    SetEmergencyShutdown { active: bool },
+    #[selector = sol("addStrategy(address,uint256,uint256,uint256,uint256)")]
+    AddStrategy {
+        strategy: Address,
+        debt_ratio: u256,
+        min_debt_per_harvest: u256,
+        max_debt_per_harvest: u256,
+        performance_fee: u256,
+    },
+    #[selector = sol("updateStrategyDebtRatio(address,uint256)")]
+    UpdateStrategyDebtRatio { strategy: Address, debt_ratio: u256 },
+    #[selector = sol("revokeStrategy(address)")]
+    RevokeStrategy { strategy: Address },
+    #[selector = sol("addStrategyToQueue(address)")]
+    AddStrategyToQueue { strategy: Address },
+    #[selector = sol("removeStrategyFromQueue(address)")]
+    RemoveStrategyFromQueue { strategy: Address },
+    #[selector = sol("report(uint256,uint256,uint256)")]
+    Report { gain: u256, loss: u256, debt_payment: u256 } -> u256,
+    #[selector = sol("sweep(address,uint256)")]
+    Sweep { token: Address, amount: u256 },
+    #[selector = sol("name()")]
+    Name -> DynString,
+    #[selector = sol("symbol()")]
+    Symbol -> DynString,
+    #[selector = sol("apiVersion()")]
+    ApiVersion -> String<5>,
+    #[selector = sol("token()")]
+    Token -> Address,
+    #[selector = sol("governance()")]
+    Governance -> Address,
+    #[selector = sol("management()")]
+    Management -> Address,
+    #[selector = sol("guardian()")]
+    Guardian -> Address,
+    #[selector = sol("depositLimit()")]
+    DepositLimit -> u256,
+    #[selector = sol("debtRatio()")]
+    DebtRatio -> u256,
+    #[selector = sol("totalIdle()")]
+    TotalIdle -> u256,
+    #[selector = sol("totalDebt()")]
+    TotalDebt -> u256,
+    #[selector = sol("totalAssets()")]
+    TotalAssets -> u256,
+    #[selector = sol("totalSupply()")]
+    TotalSupply -> u256,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { owner: Address } -> u256,
+    #[selector = sol("allowance(address,address)")]
+    Allowance { owner: Address, spender: Address } -> u256,
+    #[selector = sol("pricePerShare()")]
+    PricePerShare -> u256,
+    #[selector = sol("maxAvailableShares()")]
+    MaxAvailableShares -> u256,
+    #[selector = sol("availableDepositLimit()")]
+    AvailableDepositLimit -> u256,
+    #[selector = sol("creditAvailable(address)")]
+    CreditAvailable { strategy: Address } -> u256,
+    #[selector = sol("debtOutstanding(address)")]
+    DebtOutstanding { strategy: Address } -> u256,
+    #[selector = sol("expectedReturn(address)")]
+    ExpectedReturn { strategy: Address } -> u256,
+    #[selector = sol("strategies(address)")]
+    Strategies { strategy: Address } -> (u256, u256, u256, u256, u256, u256, u256, u256, u256),
+    #[selector = sol("withdrawalQueue(uint256)")]
+    WithdrawalQueue { index: u256 } -> Address,
+}
+
+msg Erc20Msg {
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("transferFrom(address,address,uint256)")]
+    TransferFrom { owner: Address, receiver: Address, amount: u256 } -> bool,
+    #[selector = sol("balanceOf(address)")]
+    BalanceOf { account: Address } -> u256,
+    #[selector = sol("symbol()")]
+    Symbol -> DynString,
+    #[selector = sol("decimals()")]
+    Decimals -> u256,
+}
+
+msg StrategyMsg {
+    #[selector = sol("vault()")]
+    Vault -> Address,
+    #[selector = sol("want()")]
+    Want -> Address,
+    #[selector = sol("emergencyExit()")]
+    EmergencyExit -> bool,
+    #[selector = sol("isActive()")]
+    IsActive -> bool,
+    #[selector = sol("delegatedAssets()")]
+    DelegatedAssets -> u256,
+    #[selector = sol("estimatedTotalAssets()")]
+    EstimatedTotalAssets -> u256,
+    #[selector = sol("withdraw(uint256)")]
+    Withdraw { amount: u256 } -> u256,
+}
+
+#[event]
+struct Transfer {
+    #[indexed]
+    sender: Address,
+    #[indexed]
+    receiver: Address,
+    value: u256,
+}
+
+#[event]
+struct Approval {
+    #[indexed]
+    owner: Address,
+    #[indexed]
+    spender: Address,
+    value: u256,
+}
+
+#[event]
+struct Deposit {
+    #[indexed]
+    recipient: Address,
+    shares: u256,
+    amount: u256,
+}
+
+#[event]
+struct Withdraw {
+    #[indexed]
+    recipient: Address,
+    shares: u256,
+    amount: u256,
+}
+
+#[event]
+struct Sweep {
+    #[indexed]
+    token: Address,
+    amount: u256,
+}
+
+#[event]
+struct StrategyAdded {
+    #[indexed]
+    strategy: Address,
+    debt_ratio: u256,
+    min_debt_per_harvest: u256,
+    max_debt_per_harvest: u256,
+    performance_fee: u256,
+}
+
+#[event]
+struct StrategyReported {
+    #[indexed]
+    strategy: Address,
+    gain: u256,
+    loss: u256,
+    debt_paid: u256,
+    total_gain: u256,
+    total_loss: u256,
+    total_debt: u256,
+    debt_added: u256,
+    debt_ratio: u256,
+}
+
+#[event]
+struct FeeReport {
+    management_fee: u256,
+    performance_fee: u256,
+    strategist_fee: u256,
+    duration: u256,
+}
+
+#[event]
+struct WithdrawFromStrategy {
+    #[indexed]
+    strategy: Address,
+    total_debt: u256,
+    loss: u256,
+}
+
+#[event]
+struct UpdateGovernance { governance: Address }
+
+#[event]
+struct UpdateManagement { management: Address }
+
+#[event]
+struct UpdateRewards { rewards: Address }
+
+#[event]
+struct UpdateDepositLimit { deposit_limit: u256 }
+
+#[event]
+struct UpdatePerformanceFee { performance_fee: u256 }
+
+#[event]
+struct UpdateManagementFee { management_fee: u256 }
+
+#[event]
+struct UpdateGuardian { guardian: Address }
+
+#[event]
+struct EmergencyShutdown { active: bool }
+
+#[event]
+struct StrategyUpdateDebtRatio {
+    #[indexed]
+    strategy: Address,
+    debt_ratio: u256,
+}
+
+#[event]
+struct StrategyRevoked {
+    #[indexed]
+    strategy: Address,
+}
+
+#[event]
+struct StrategyAddedToQueue {
+    #[indexed]
+    strategy: Address,
+}
+
+#[event]
+struct StrategyRemovedFromQueue {
+    #[indexed]
+    strategy: Address,
+}
+
+const MAXIMUM_STRATEGIES: u256 = 20
+const DEGRADATION_COEFFICIENT: u256 = 1000000000000000000
+const MAX_BPS: u256 = 10000
+const SECS_PER_YEAR: u256 = 31556952
+const MAX_U256: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+const DOMAIN_TYPEHASH: u256 = core::keccak(
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+)
+const DOMAIN_NAME_HASH: u256 = core::keccak("Yearn Vault")
+const API_VERSION_HASH: u256 = core::keccak("0.4.6")
+const PERMIT_TYPEHASH: u256 = core::keccak(
+    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
+)
+const STR_NAME: u256 = 0
+const STR_SYMBOL: u256 = 1
+
+struct VaultStore {
+    strings: StorageBytes<u256>,
+    decimals: u256,
+    balance_of: StorageMap<Address, u256>,
+    allowance: StorageMap<(Address, Address), u256>,
+    total_supply: u256,
+    token: Address,
+    governance: Address,
+    management: Address,
+    guardian: Address,
+    strat_performance_fee: StorageMap<Address, u256>,
+    strat_activation: StorageMap<Address, u256>,
+    strat_debt_ratio: StorageMap<Address, u256>,
+    strat_min_debt_per_harvest: StorageMap<Address, u256>,
+    strat_max_debt_per_harvest: StorageMap<Address, u256>,
+    strat_last_report: StorageMap<Address, u256>,
+    strat_total_debt: StorageMap<Address, u256>,
+    strat_total_gain: StorageMap<Address, u256>,
+    strat_total_loss: StorageMap<Address, u256>,
+    withdrawal_queue: StorageMap<u256, Address>,
+    emergency_shutdown: bool,
+    deposit_limit: u256,
+    debt_ratio: u256,
+    total_idle: u256,
+    total_debt: u256,
+    last_report: u256,
+    activation: u256,
+    locked_profit: u256,
+    locked_profit_degradation: u256,
+    rewards: Address,
+    management_fee: u256,
+    performance_fee: u256,
+    nonces: StorageMap<Address, u256>,
+    locked: bool,
+}
+
+fn min(_ x: u256, _ y: u256) -> u256 {
+    if x < y { x } else { y }
+}
+
+fn load_str(key: u256) -> DynString uses (store: VaultStore) {
+    DynString::from_payload(source: store.strings.to_memory(key).span())
+}
+
+fn erc20_balance(token: Address, account: Address) -> u256
+uses (ctx: Ctx, call: mut Call)
+{
+    token.static(Erc20Msg::BalanceOf { account })
+}
+
+// Like the Solidity reference, accept an empty return even from an account
+// without code and replace token revert data with "Transfer failed!".
+fn transfer_succeeded(_ outcome: TokenCall) -> bool {
+    match outcome {
+        TokenCall::Ok => true,
+        TokenCall::NoCode => true,
+        _ => false,
+    }
+}
+
+fn safe_transfer(token: Address, receiver: Address, amount: u256)
+uses (ctx: Ctx, call: mut Call)
+{
+    assert!(
+        transfer_succeeded(erc20::try_transfer(token, receiver, amount)),
+        "Transfer failed!",
+    )
+}
+
+fn safe_transfer_from(token: Address, sender: Address, receiver: Address, amount: u256)
+uses (ctx: Ctx, call: mut Call)
+{
+    assert!(
+        transfer_succeeded(
+            erc20::try_transfer_from(token, owner: sender, receiver, amount),
+        ),
+        "Transfer failed!",
+    )
+}
+
+fn total_assets() -> u256 uses (store: VaultStore) {
+    store.total_idle + store.total_debt
+}
+
+fn calculate_locked_profit() -> u256 uses (store: VaultStore, ctx: Ctx) {
+    let locked_funds_ratio = (ctx.timestamp().as_seconds() - store.last_report) * store.locked_profit_degradation
+    if locked_funds_ratio < DEGRADATION_COEFFICIENT {
+        let locked_profit = store.locked_profit
+        locked_profit - locked_funds_ratio * locked_profit / DEGRADATION_COEFFICIENT
+    } else {
+        0
+    }
+}
+
+fn free_funds() -> u256 uses (store: VaultStore, ctx: Ctx) {
+    total_assets() - calculate_locked_profit()
+}
+
+fn share_value(shares: u256) -> u256 uses (store: VaultStore, ctx: Ctx) {
+    if store.total_supply == 0 {
+        return shares
+    }
+    shares * free_funds() / store.total_supply
+}
+
+fn shares_for_amount(amount: u256) -> u256 uses (store: VaultStore, ctx: Ctx) {
+    let funds = free_funds()
+    if funds > 0 {
+        amount * store.total_supply / funds
+    } else {
+        0
+    }
+}
+
+fn issue_shares_for_amount(to: Address, amount: u256) -> u256
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log)
+{
+    let supply = store.total_supply
+    let shares = if supply > 0 {
+        amount * supply / free_funds()
+    } else {
+        amount
+    }
+    assert!(shares != 0, "shares")
+    store.total_supply = supply + shares
+    store.balance_of.set(key: to, value: store.balance_of.get(key: to) + shares)
+    log.emit(
+        Transfer { sender: Address::zero(), receiver: to, value: shares },
+    )
+    shares
+}
+
+fn vault_transfer(sender: Address, receiver: Address, amount: u256)
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log)
+{
+    assert!(
+        receiver != ctx.address() && receiver != Address::zero(),
+        "receiver",
+    )
+    let sender_balance = store.balance_of.get(key: sender)
+    assert!(sender_balance >= amount, "balance")
+    store.balance_of.set(key: sender, value: sender_balance - amount)
+    store.balance_of.set(
+            key: receiver,
+            value: store.balance_of.get(key: receiver) + amount,
+        )
+    log.emit(Transfer { sender, receiver, value: amount })
+}
+
+fn debt_outstanding_for(strategy: Address) -> u256 uses (store: VaultStore) {
+    let strategy_debt_limit = store.strat_debt_ratio.get(key: strategy) * total_assets() / MAX_BPS
+    let strategy_total_debt = store.strat_total_debt.get(key: strategy)
+    if store.emergency_shutdown {
+        strategy_total_debt
+    } else if strategy_total_debt <= strategy_debt_limit {
+        0
+    } else {
+        strategy_total_debt - strategy_debt_limit
+    }
+}
+
+fn credit_available_for(strategy: Address) -> u256 uses (store: VaultStore) {
+    if store.emergency_shutdown {
+        return 0
+    }
+    let vault_total_assets = total_assets()
+    let vault_debt_limit = store.debt_ratio * vault_total_assets / MAX_BPS
+    let strategy_debt_limit = store.strat_debt_ratio.get(key: strategy) *
+        vault_total_assets
+        / MAX_BPS
+    let strategy_total_debt = store.strat_total_debt.get(key: strategy)
+    if strategy_debt_limit <= strategy_total_debt || vault_debt_limit <= store.total_debt {
+        return 0
+    }
+    var available = strategy_debt_limit - strategy_total_debt
+    available = min(available, vault_debt_limit - store.total_debt)
+    available = min(available, store.total_idle)
+    if available < store.strat_min_debt_per_harvest.get(key: strategy) {
+        return 0
+    }
+    min(
+        available,
+        store.strat_max_debt_per_harvest.get(key: strategy),
+    )
+}
+
+fn expected_return_for(strategy: Address) -> u256
+uses (store: VaultStore, ctx: Ctx, call: mut Call)
+{
+    let strategy_last_report = store.strat_last_report.get(key: strategy)
+    let time_since_last_harvest = ctx.timestamp().as_seconds() - strategy_last_report
+    let total_harvest_time = strategy_last_report - store.strat_activation.get(key: strategy)
+    if time_since_last_harvest > 0 && total_harvest_time > 0 {
+        let is_active: bool = strategy.static(StrategyMsg::IsActive {})
+        if is_active {
+            return store.strat_total_gain.get(key: strategy) *
+                time_since_last_harvest
+                / total_harvest_time
+        }
+    }
+    0
+}
+
+fn report_loss(strategy: Address, loss: u256) uses (store: mut VaultStore) {
+    let strategy_debt = store.strat_total_debt.get(key: strategy)
+    let loss = min(loss, strategy_debt)
+    if store.total_debt > 0 {
+        store.debt_ratio -= loss * store.debt_ratio / store.total_debt
+    }
+    store
+        .strat_total_loss
+        .set(
+            key: strategy,
+            value: store.strat_total_loss.get(key: strategy) + loss,
+        )
+    store.strat_total_debt.set(key: strategy, value: strategy_debt - loss)
+    store.total_debt -= loss
+}
+
+fn assess_fees(strategy: Address, gain: u256) -> u256
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    if store.strat_activation.get(key: strategy) == ctx.timestamp().as_seconds() {
+        return 0
+    }
+    let duration = ctx.timestamp().as_seconds() - store.strat_last_report.get(key: strategy)
+    assert!(duration != 0, "duration")
+    if gain == 0 { return 0 }
+    let delegated_assets: u256 = strategy.static(StrategyMsg::DelegatedAssets {})
+    let management_fee = (store.strat_total_debt.get(key: strategy) - delegated_assets) *
+        duration *
+        store.management_fee
+        / MAX_BPS
+        / SECS_PER_YEAR
+    let strategist_fee = gain * store.strat_performance_fee.get(key: strategy) / MAX_BPS
+    let performance_fee = gain * store.performance_fee / MAX_BPS
+    var total_fee = management_fee + strategist_fee + performance_fee
+    if total_fee > gain {
+        total_fee = gain
+    }
+    if total_fee > 0 {
+        let reward = issue_shares_for_amount(to: ctx.address(), amount: total_fee)
+        if strategist_fee > 0 {
+            let strategist_reward = strategist_fee * reward / total_fee
+            vault_transfer(
+                sender: ctx.address(),
+                receiver: strategy,
+                amount: strategist_reward,
+            )
+        }
+        if store.balance_of.get(key: ctx.address()) > 0 {
+            vault_transfer(
+                sender: ctx.address(),
+                receiver: store.rewards,
+                amount: store.balance_of.get(key: ctx.address()),
+            )
+        }
+    }
+    log.emit(
+        FeeReport { management_fee, performance_fee, strategist_fee, duration },
+    )
+    total_fee
+}
+
+fn organize_withdrawal_queue() uses (store: mut VaultStore) {
+    var offset: u256 = 0
+    var i: u256 = 0
+    while i < MAXIMUM_STRATEGIES {
+        let strategy = store.withdrawal_queue.get(key: i)
+        if strategy == Address::zero() {
+            offset += 1
+        } else if offset > 0 {
+            store.withdrawal_queue.set(key: i - offset, value: strategy)
+            store.withdrawal_queue.set(key: i, value: Address::zero())
+        }
+        i += 1
+    }
+}
+
+fn revoke_strategy_internal(strategy: Address)
+uses (store: mut VaultStore, log: mut Log)
+{
+    store.debt_ratio -= store.strat_debt_ratio.get(key: strategy)
+    store.strat_debt_ratio.set(key: strategy, value: 0)
+    log.emit(StrategyRevoked { strategy })
+}
+
+fn domain_separator() -> u256 uses (ctx: Ctx) {
+    let ptr = encode_abi_payload(
+        (DOMAIN_TYPEHASH, DOMAIN_NAME_HASH, API_VERSION_HASH, ctx.chainid(), ctx.address()),
+    )
+    crypto::keccak256(ptr.span())
+}
+
+fn permit_digest(owner: Address, spender: Address, amount: u256, nonce: u256, expiry: u256) -> u256
+uses (ctx: Ctx)
+{
+    let struct_ptr = encode_abi_payload((PERMIT_TYPEHASH, owner, spender, amount, nonce, expiry))
+    let struct_hash = crypto::keccak256(struct_ptr.span())
+    crypto::eip712_digest(domain_separator: domain_separator(), struct_hash)
+}
+
+fn do_initialize(
+    token: Address,
+    governance: Address,
+    rewards: Address,
+    name_override: DynString,
+    symbol_override: DynString,
+    guardian: Address,
+    management: Address,
+)
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.activation == 0, "initialized")
+    store.token = token
+    if name_override.len() == 0 {
+        let base_symbol: DynString = token.static(Erc20Msg::Symbol {})
+        let name = encode_packed((base_symbol.as_bytes(), " yVault")).as_bytes()
+        store.strings.store_view(key: STR_NAME, view: name.payload_span())
+    } else {
+        store.strings.store_view(key: STR_NAME, view: name_override.as_bytes().payload_span())
+    }
+    if symbol_override.len() == 0 {
+        let base_symbol: DynString = token.static(Erc20Msg::Symbol {})
+        let symbol = encode_packed(("yv", base_symbol.as_bytes())).as_bytes()
+        store.strings.store_view(key: STR_SYMBOL, view: symbol.payload_span())
+    } else {
+        store.strings.store_view(key: STR_SYMBOL, view: symbol_override.as_bytes().payload_span())
+    }
+    let decimals: u256 = token.static(Erc20Msg::Decimals {})
+    assert!(decimals < 256, "decimals")
+    store.decimals = decimals
+    store.governance = governance
+    log.emit(UpdateGovernance { governance })
+    store.management = management
+    log.emit(UpdateManagement { management })
+    store.rewards = rewards
+    log.emit(UpdateRewards { rewards })
+    store.guardian = guardian
+    log.emit(UpdateGuardian { guardian })
+    store.performance_fee = 1000
+    log.emit(UpdatePerformanceFee { performance_fee: 1000 })
+    store.management_fee = 200
+    log.emit(UpdateManagementFee { management_fee: 200 })
+    store.last_report = ctx.timestamp().as_seconds()
+    store.activation = ctx.timestamp().as_seconds()
+    store.locked_profit_degradation = DEGRADATION_COEFFICIENT * 46 / 1000000
+}
+
+fn do_deposit(requested: u256, recipient: Address) -> u256
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(!store.emergency_shutdown, "shutdown")
+    assert!(
+        recipient != ctx.address() && recipient != Address::zero(),
+        "recipient",
+    )
+    let amount = if requested == MAX_U256 {
+        min(
+            store.deposit_limit - total_assets(),
+            erc20_balance(token: store.token, account: ctx.caller()),
+        )
+    } else {
+        assert!(
+            total_assets() + requested <= store.deposit_limit,
+            "deposit limit",
+        )
+        requested
+    }
+    assert!(amount > 0, "amount")
+    let shares = issue_shares_for_amount(to: recipient, amount)
+    safe_transfer_from(
+        token: store.token,
+        sender: ctx.caller(),
+        receiver: ctx.address(),
+        amount,
+    )
+    store.total_idle += amount
+    log.emit(Deposit { recipient, shares, amount })
+    shares
+}
+
+fn do_withdraw(max_shares: u256, recipient: Address, max_loss: u256) -> u256
+uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(max_loss <= MAX_BPS, "max loss")
+    let shares = if max_shares == MAX_U256 {
+        store.balance_of.get(key: ctx.caller())
+    } else {
+        max_shares
+    }
+    assert!(
+        shares <= store.balance_of.get(key: ctx.caller()),
+        "shares",
+    )
+    var value = share_value(shares)
+    if value > store.total_idle {
+        var total_loss: u256 = 0
+        var vault_balance = store.total_idle
+        var i: u256 = 0
+        while i < MAXIMUM_STRATEGIES {
+            let strategy = store.withdrawal_queue.get(key: i)
+            if strategy == Address::zero() {
+                break
+            }
+            let amount_needed = min(
+                value - vault_balance,
+                store.strat_total_debt.get(key: strategy),
+            )
+            if amount_needed == 0 {
+                i += 1
+                continue
+            }
+            let pre_balance = erc20_balance(token: store.token, account: ctx.address())
+            let loss = strategy.call(StrategyMsg::Withdraw { amount: amount_needed })
+            let withdrawn = erc20_balance(token: store.token, account: ctx.address()) - pre_balance
+            vault_balance += withdrawn
+            if loss > 0 {
+                value -= loss
+                total_loss += loss
+                report_loss(strategy, loss)
+            }
+            store
+                .strat_total_debt
+                .set(
+                    key: strategy,
+                    value: store.strat_total_debt.get(key: strategy) - withdrawn,
+                )
+            store.total_debt -= withdrawn
+            log.emit(
+                WithdrawFromStrategy {
+                    strategy,
+                    total_debt: store.strat_total_debt.get(key: strategy),
+                    loss,
+                },
+            )
+            if vault_balance >= value {
+                break
+            }
+            i += 1
+        }
+        assert!(
+            total_loss <= max_loss * (value + total_loss) / MAX_BPS,
+            "loss",
+        )
+        store.total_idle = vault_balance
+    }
+    store.total_supply -= shares
+    store.balance_of.set(
+            key: ctx.caller(),
+            value: store.balance_of.get(key: ctx.caller()) - shares,
+        )
+    log.emit(
+        Transfer { sender: ctx.caller(), receiver: Address::zero(), value: shares },
+    )
+    store.total_idle -= value
+    safe_transfer(token: store.token, receiver: recipient, amount: value)
+    log.emit(Withdraw { recipient, shares, amount: value })
+    value
+}
+
+pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
+    mut store: VaultStore,
+
+    recv VaultMsg {
+        InitializeDefault { token, governance, rewards, name_override, symbol_override }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            do_initialize(
+                token,
+                governance,
+                rewards,
+                name_override,
+                symbol_override,
+                guardian: ctx.caller(),
+                management: ctx.caller(),
+            )
+        }
+
+        InitializeWithGuardian {
+            token,
+            governance,
+            rewards,
+            name_override,
+            symbol_override,
+            guardian,
+        }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            do_initialize(
+                token,
+                governance,
+                rewards,
+                name_override,
+                symbol_override,
+                guardian,
+                management: ctx.caller(),
+            )
+        }
+
+        Initialize {
+            token,
+            governance,
+            rewards,
+            name_override,
+            symbol_override,
+            guardian,
+            management,
+        }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            do_initialize(
+                token,
+                governance,
+                rewards,
+                name_override,
+                symbol_override,
+                guardian,
+                management,
+            )
+        }
+
+        DepositAll -> u256 uses (mut store, ctx, mut log, mut call) {
+            do_deposit(requested: MAX_U256, recipient: ctx.caller())
+        }
+
+        DepositAmount { amount } -> u256 uses (mut store, ctx, mut log, mut call) {
+            do_deposit(requested: amount, recipient: ctx.caller())
+        }
+
+        Deposit { amount, recipient } -> u256 uses (mut store, ctx, mut log, mut call) {
+            assert!(!store.locked, "reentrant call")
+            store.locked = true
+            let shares = do_deposit(requested: amount, recipient)
+            store.locked = false
+            shares
+        }
+
+        WithdrawAll -> u256 uses (mut store, ctx, mut log, mut call) {
+            do_withdraw(max_shares: MAX_U256, recipient: ctx.caller(), max_loss: 1)
+        }
+
+        WithdrawShares { max_shares } -> u256 uses (mut store, ctx, mut log, mut call) {
+            do_withdraw(max_shares, recipient: ctx.caller(), max_loss: 1)
+        }
+
+        WithdrawSharesTo { max_shares, recipient } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            do_withdraw(max_shares, recipient, max_loss: 1)
+        }
+
+        Withdraw { max_shares, recipient, max_loss } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(!store.locked, "reentrant call")
+            store.locked = true
+            let value = do_withdraw(max_shares, recipient, max_loss)
+            store.locked = false
+            value
+        }
+
+        Approve { spender, amount } -> bool uses (mut store, ctx, mut log) {
+            store.allowance.set(key: (ctx.caller(), spender), value: amount)
+            log.emit(Approval { owner: ctx.caller(), spender, value: amount })
+            true
+        }
+
+        Transfer { receiver, amount } -> bool uses (mut store, ctx, mut log) {
+            vault_transfer(sender: ctx.caller(), receiver, amount)
+            true
+        }
+
+        TransferFrom { sender, receiver, amount } -> bool
+        uses (mut store, ctx, mut log)
+        {
+            let allowed = store.allowance.get(key: (sender, ctx.caller()))
+            if allowed < MAX_U256 {
+                assert!(allowed >= amount, "allowance")
+                store.allowance.set(key: (sender, ctx.caller()), value: allowed - amount)
+                log.emit(
+                    Approval { owner: sender, spender: ctx.caller(), value: allowed - amount },
+                )
+            }
+            vault_transfer(sender, receiver, amount)
+            true
+        }
+
+        IncreaseAllowance { spender, amount } -> bool
+        uses (mut store, ctx, mut log)
+        {
+            let updated = store.allowance.get(key: (ctx.caller(), spender)) + amount
+            store.allowance.set(key: (ctx.caller(), spender), value: updated)
+            log.emit(Approval { owner: ctx.caller(), spender, value: updated })
+            true
+        }
+
+        DecreaseAllowance { spender, amount } -> bool
+        uses (mut store, ctx, mut log)
+        {
+            let allowed = store.allowance.get(key: (ctx.caller(), spender))
+            assert!(allowed >= amount, "allowance")
+            store.allowance.set(key: (ctx.caller(), spender), value: allowed - amount)
+            log.emit(
+                Approval { owner: ctx.caller(), spender, value: allowed - amount },
+            )
+            true
+        }
+
+        Permit { owner, spender, amount, expiry, signature } -> bool
+        uses (mut store, ctx, mut log)
+        {
+            assert!(owner != Address::zero(), "owner")
+            assert!(expiry >= ctx.timestamp().as_seconds(), "expired")
+            assert!(signature.len() == 65, "signature")
+            let nonce = store.nonces.get(key: owner)
+            let digest = permit_digest(owner, spender, amount, nonce, expiry)
+            let r = signature.word_at(0)
+            let s = signature.word_at(32)
+            let v = signature.byte_at(64)
+            let recovered = match crypto::ecrecover_raw(hash: digest, v: v as u256, r, s) {
+                Result::Ok(Option::Some(addr,),) => addr,
+                _ => 0,
+            }
+            assert!(recovered != 0 && recovered == owner.word(), "permit")
+            store.allowance.set(key: (owner, spender), value: amount)
+            store.nonces.set(key: owner, value: nonce + 1)
+            log.emit(Approval { owner, spender, value: amount })
+            true
+        }
+
+        SetDepositLimit { limit } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance || ctx.caller() == store.management,
+                "auth",
+            )
+            store.deposit_limit = limit
+            log.emit(UpdateDepositLimit { deposit_limit: limit })
+        }
+
+        SetEmergencyShutdown { active } uses (mut store, ctx, mut log) {
+            if active {
+                assert!(
+                    ctx.caller() == store.governance || ctx.caller() == store.guardian,
+                    "auth",
+                )
+            } else {
+                assert!(ctx.caller() == store.governance, "governance")
+            }
+            store.emergency_shutdown = active
+            log.emit(EmergencyShutdown { active })
+        }
+
+        AddStrategy {
+            strategy,
+            debt_ratio,
+            min_debt_per_harvest,
+            max_debt_per_harvest,
+            performance_fee,
+        }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(
+                store.withdrawal_queue.get(key: MAXIMUM_STRATEGIES - 1) == Address::zero(),
+                "queue full",
+            )
+            assert!(!store.emergency_shutdown, "shutdown")
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(strategy != Address::zero(), "strategy")
+            assert!(store.strat_activation.get(key: strategy) == 0, "active")
+            let strategy_vault: Address = strategy.static(StrategyMsg::Vault {})
+            assert!(ctx.address() == strategy_vault, "vault")
+            let strategy_want: Address = strategy.static(StrategyMsg::Want {})
+            assert!(store.token == strategy_want, "want")
+            assert!(store.debt_ratio + debt_ratio <= MAX_BPS, "debt ratio")
+            assert!(
+                min_debt_per_harvest <= max_debt_per_harvest,
+                "debt harvest",
+            )
+            assert!(performance_fee <= MAX_BPS / 2, "performance fee")
+            store.strat_performance_fee.set(key: strategy, value: performance_fee)
+            store.strat_activation.set(key: strategy, value: ctx.timestamp().as_seconds())
+            store.strat_debt_ratio.set(key: strategy, value: debt_ratio)
+            store.strat_min_debt_per_harvest.set(key: strategy, value: min_debt_per_harvest)
+            store.strat_max_debt_per_harvest.set(key: strategy, value: max_debt_per_harvest)
+            store.strat_last_report.set(key: strategy, value: ctx.timestamp().as_seconds())
+            store.strat_total_debt.set(key: strategy, value: 0)
+            store.strat_total_gain.set(key: strategy, value: 0)
+            store.strat_total_loss.set(key: strategy, value: 0)
+            log.emit(
+                StrategyAdded {
+                    strategy,
+                    debt_ratio,
+                    min_debt_per_harvest,
+                    max_debt_per_harvest,
+                    performance_fee,
+                },
+            )
+            store.debt_ratio += debt_ratio
+            store.withdrawal_queue.set(key: MAXIMUM_STRATEGIES - 1, value: strategy)
+            organize_withdrawal_queue()
+        }
+
+        UpdateStrategyDebtRatio { strategy, debt_ratio }
+        uses (mut store, ctx, mut log, mut call)
+        {
+            assert!(
+                ctx.caller() == store.management || ctx.caller() == store.governance,
+                "auth",
+            )
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            let emergency_exit: bool = strategy.static(StrategyMsg::EmergencyExit {})
+            assert!(!emergency_exit, "emergency")
+            store.debt_ratio -= store.strat_debt_ratio.get(key: strategy)
+            store.strat_debt_ratio.set(key: strategy, value: debt_ratio)
+            store.debt_ratio += debt_ratio
+            assert!(store.debt_ratio <= MAX_BPS, "debt ratio")
+            log.emit(StrategyUpdateDebtRatio { strategy, debt_ratio })
+        }
+
+        RevokeStrategy { strategy } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance
+                    || ctx.caller() == store.guardian
+                    || ctx.caller() == strategy,
+                "auth",
+            )
+            revoke_strategy_internal(strategy)
+        }
+
+        AddStrategyToQueue { strategy } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance || ctx.caller() == store.management,
+                "auth",
+            )
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            var found_open_slot = false
+            var i: u256 = 0
+            while i < MAXIMUM_STRATEGIES {
+                let current = store.withdrawal_queue.get(key: i)
+                if current == Address::zero() {
+                    found_open_slot = true
+                    break
+                }
+                assert!(current != strategy, "duplicate")
+                i += 1
+            }
+            assert!(found_open_slot, "queue full")
+            store.withdrawal_queue.set(key: MAXIMUM_STRATEGIES - 1, value: strategy)
+            organize_withdrawal_queue()
+            log.emit(StrategyAddedToQueue { strategy })
+        }
+
+        RemoveStrategyFromQueue { strategy } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance || ctx.caller() == store.management,
+                "auth",
+            )
+            var i: u256 = 0
+            while i < MAXIMUM_STRATEGIES {
+                if store.withdrawal_queue.get(key: i) == strategy {
+                    store.withdrawal_queue.set(key: i, value: Address::zero())
+                    organize_withdrawal_queue()
+                    log.emit(StrategyRemovedFromQueue { strategy })
+                    return
+                }
+                i += 1
+            }
+            assert!(false, "not queued")
+        }
+
+        Report { gain, loss, debt_payment } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            let strategy = ctx.caller()
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            assert!(
+                erc20_balance(token: store.token, account: strategy) >= gain + debt_payment,
+                "available",
+            )
+            if loss > 0 {
+                report_loss(strategy, loss)
+            }
+            let total_fees = assess_fees(strategy, gain)
+            store
+                .strat_total_gain
+                .set(
+                    key: strategy,
+                    value: store.strat_total_gain.get(key: strategy) + gain,
+                )
+            let credit = credit_available_for(strategy)
+            var debt = debt_outstanding_for(strategy)
+            let debt_paid = min(debt_payment, debt)
+            if debt_paid > 0 {
+                store
+                    .strat_total_debt
+                    .set(
+                        key: strategy,
+                        value: store.strat_total_debt.get(key: strategy) - debt_paid,
+                    )
+                store.total_debt -= debt_paid
+                debt -= debt_paid
+            }
+            if credit > 0 {
+                store
+                    .strat_total_debt
+                    .set(
+                        key: strategy,
+                        value: store.strat_total_debt.get(key: strategy) + credit,
+                    )
+                store.total_debt += credit
+            }
+            let total_avail = gain + debt_paid
+            if total_avail < credit {
+                store.total_idle -= credit - total_avail
+                safe_transfer(
+                    token: store.token,
+                    receiver: strategy,
+                    amount: credit - total_avail,
+                )
+            } else if total_avail > credit {
+                store.total_idle += total_avail - credit
+                safe_transfer_from(
+                    token: store.token,
+                    sender: strategy,
+                    receiver: ctx.address(),
+                    amount: total_avail - credit,
+                )
+            }
+            let locked_profit_before_loss = calculate_locked_profit() + gain - total_fees
+            store.locked_profit = if locked_profit_before_loss > loss {
+                locked_profit_before_loss - loss
+            } else {
+                0
+            }
+            store.strat_last_report.set(key: strategy, value: ctx.timestamp().as_seconds())
+            store.last_report = ctx.timestamp().as_seconds()
+            log.emit(
+                StrategyReported {
+                    strategy,
+                    gain,
+                    loss,
+                    debt_paid,
+                    total_gain: store.strat_total_gain.get(key: strategy),
+                    total_loss: store.strat_total_loss.get(key: strategy),
+                    total_debt: store.strat_total_debt.get(key: strategy),
+                    debt_added: credit,
+                    debt_ratio: store.strat_debt_ratio.get(key: strategy),
+                },
+            )
+            if store.strat_debt_ratio.get(key: strategy) == 0 || store.emergency_shutdown {
+                return strategy.static(StrategyMsg::EstimatedTotalAssets {})
+            }
+            debt
+        }
+
+        Sweep { token, amount } uses (mut store, ctx, mut log, mut call) {
+            assert!(ctx.caller() == store.governance, "governance")
+            var value = amount
+            if value == MAX_U256 {
+                value = erc20_balance(token, account: ctx.address())
+            }
+            if token == store.token {
+                value = erc20_balance(token: store.token, account: ctx.address()) - store.total_idle
+            }
+            log.emit(Sweep { token, amount: value })
+            safe_transfer(token, receiver: store.governance, amount: value)
+        }
+
+        Name -> DynString uses (store) {
+            load_str(key: STR_NAME)
+        }
+        Symbol -> DynString uses (store) {
+            load_str(key: STR_SYMBOL)
+        }
+        ApiVersion -> String<5> {
+            "0.4.6"
+        }
+        Token -> Address uses store {
+            store.token
+        }
+        Governance -> Address uses store {
+            store.governance
+        }
+        Management -> Address uses store {
+            store.management
+        }
+        Guardian -> Address uses store {
+            store.guardian
+        }
+        DepositLimit -> u256 uses store {
+            store.deposit_limit
+        }
+        DebtRatio -> u256 uses store {
+            store.debt_ratio
+        }
+        TotalIdle -> u256 uses store {
+            store.total_idle
+        }
+        TotalDebt -> u256 uses store {
+            store.total_debt
+        }
+        TotalAssets -> u256 uses store {
+            total_assets()
+        }
+        TotalSupply -> u256 uses store {
+            store.total_supply
+        }
+        BalanceOf { owner } -> u256 uses store {
+            store.balance_of.get(key: owner)
+        }
+        Allowance { owner, spender } -> u256 uses store {
+            store.allowance.get(key: (owner, spender))
+        }
+        PricePerShare -> u256 uses (store, ctx) {
+            share_value(shares: 10 ** store.decimals)
+        }
+
+        MaxAvailableShares -> u256 uses (store, ctx) {
+            var value = store.total_idle
+            var i: u256 = 0
+            while i < MAXIMUM_STRATEGIES {
+                let strategy = store.withdrawal_queue.get(key: i)
+                if strategy == Address::zero() {
+                    break
+                }
+                value += store.strat_total_debt.get(key: strategy)
+                i += 1
+            }
+            shares_for_amount(amount: value)
+        }
+
+        AvailableDepositLimit -> u256 uses store {
+            let assets = total_assets()
+            if store.deposit_limit > assets {
+                store.deposit_limit - assets
+            } else {
+                0
+            }
+        }
+
+        CreditAvailable { strategy } -> u256 uses store {
+            credit_available_for(strategy)
+        }
+        DebtOutstanding { strategy } -> u256 uses store {
+            debt_outstanding_for(strategy)
+        }
+        ExpectedReturn { strategy } -> u256 uses (store, ctx, mut call) {
+            expected_return_for(strategy)
+        }
+
+        Strategies { strategy } -> (u256, u256, u256, u256, u256, u256, u256, u256, u256)
+        uses store
+        {
+            (
+                store.strat_performance_fee.get(key: strategy),
+                store.strat_activation.get(key: strategy),
+                store.strat_debt_ratio.get(key: strategy),
+                store.strat_min_debt_per_harvest.get(key: strategy),
+                store.strat_max_debt_per_harvest.get(key: strategy),
+                store.strat_last_report.get(key: strategy),
+                store.strat_total_debt.get(key: strategy),
+                store.strat_total_gain.get(key: strategy),
+                store.strat_total_loss.get(key: strategy),
+            )
+        }
+
+        WithdrawalQueue { index } -> Address uses store {
+            store.withdrawal_queue.get(key: index)
+        }
+    }
+}
