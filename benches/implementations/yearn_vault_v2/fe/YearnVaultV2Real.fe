@@ -1,7 +1,7 @@
 use std::evm::packed::encode_packed
 use std::abi::{Bytes, Bytes32, DynString}
 use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
-use std::evm::{crypto, erc20}
+use std::evm::{crypto, eip712, erc20, signature}
 
 msg VaultMsg {
     #[selector = sol("initialize(address,address,address,string,string)")]
@@ -406,9 +406,6 @@ const DEGRADATION_COEFFICIENT: u256 = 1000000000000000000
 const MAX_BPS: u256 = 10000
 const SECS_PER_YEAR: u256 = 31556952
 const MAX_U256: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-const DOMAIN_TYPEHASH: u256 = core::keccak(
-    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
-)
 const DOMAIN_NAME_HASH: u256 = core::keccak("Yearn Vault")
 const API_VERSION_HASH: u256 = core::keccak("0.4.6")
 const PERMIT_TYPEHASH: u256 = core::keccak(
@@ -709,10 +706,12 @@ uses (store: mut VaultStore, log: mut Log)
 }
 
 fn domain_separator() -> u256 uses (ctx: Ctx) {
-    let ptr = encode_abi_payload(
-        (DOMAIN_TYPEHASH, DOMAIN_NAME_HASH, API_VERSION_HASH, ctx.chainid(), ctx.address()),
+    eip712::domain_separator(
+        name_hash: DOMAIN_NAME_HASH,
+        version_hash: API_VERSION_HASH,
+        chain_id: ctx.chainid(),
+        verifying_contract: ctx.address(),
     )
-    crypto::keccak256(ptr.span())
 }
 
 fn permit_digest(owner: Address, spender: Address, amount: u256, nonce: u256, expiry: u256) -> u256
@@ -1053,14 +1052,11 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             assert!(signature.len() == 65, "signature")
             let nonce = store.nonces.get(key: owner)
             let digest = permit_digest(owner, spender, amount, nonce, expiry)
-            let r = signature.word_at(0)
-            let s = signature.word_at(32)
-            let v = signature.byte_at(64)
-            let recovered = match crypto::ecrecover_raw(hash: digest, v: v as u256, r, s) {
-                Result::Ok(Option::Some(addr,),) => addr,
-                _ => 0,
+            let recovered = match signature::recover_raw(digest, signature.payload_span()) {
+                Option::Some(addr) => addr,
+                Option::None => Address::zero(),
             }
-            assert!(recovered != 0 && recovered == owner.word(), "permit")
+            assert!(recovered != Address::zero() && recovered == owner, "permit")
             store.allowance.set(key: (owner, spender), value: amount)
             store.nonces.set(key: owner, value: nonce + 1)
             log.emit(Approval { owner, spender, value: amount })
