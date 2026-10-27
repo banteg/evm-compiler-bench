@@ -1118,6 +1118,14 @@
         );
     }
 
+    function benchYearnV2SwapQueueCalldata(address target) public view returns (bytes memory) {
+        // Reorders a queue holding strategy then strategy2 into the reverse order.
+        address[20] memory queue;
+        queue[0] = address(yearnDeps[target].strategy2);
+        queue[1] = address(yearnDeps[target].strategy);
+        return abi.encodeWithSignature("setWithdrawalQueue(address[20])", queue);
+    }
+
     function benchYearnSetReport(address target, uint256 gain, uint256 loss) external returns (bool) {
         require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
         yearnDeps[target].strategy.setReport(gain, loss);

@@ -67,10 +67,32 @@ msg VaultMsg {
         expiry: u256,
         signature: Bytes,
     } -> bool,
+    #[selector = sol("setName(string)")]
+    SetName { name: DynString },
+    #[selector = sol("setSymbol(string)")]
+    SetSymbol { symbol: DynString },
+    #[selector = sol("setGovernance(address)")]
+    SetGovernance { governance: Address },
+    #[selector = sol("acceptGovernance()")]
+    AcceptGovernance,
+    #[selector = sol("setManagement(address)")]
+    SetManagement { management: Address },
+    #[selector = sol("setRewards(address)")]
+    SetRewards { rewards: Address },
+    #[selector = sol("setLockedProfitDegradation(uint256)")]
+    SetLockedProfitDegradation { degradation: u256 },
     #[selector = sol("setDepositLimit(uint256)")]
     SetDepositLimit { limit: u256 },
+    #[selector = sol("setPerformanceFee(uint256)")]
+    SetPerformanceFee { fee: u256 },
+    #[selector = sol("setManagementFee(uint256)")]
+    SetManagementFee { fee: u256 },
+    #[selector = sol("setGuardian(address)")]
+    SetGuardian { guardian: Address },
     #[selector = sol("setEmergencyShutdown(bool)")]
     SetEmergencyShutdown { active: bool },
+    #[selector = sol("setWithdrawalQueue(address[20])")]
+    SetWithdrawalQueue { queue: [Address; 20] },
     #[selector = sol("addStrategy(address,uint256,uint256,uint256,uint256)")]
     AddStrategy {
         strategy: Address,
@@ -81,6 +103,16 @@ msg VaultMsg {
     },
     #[selector = sol("updateStrategyDebtRatio(address,uint256)")]
     UpdateStrategyDebtRatio { strategy: Address, debt_ratio: u256 },
+    #[selector = sol("updateStrategyMinDebtPerHarvest(address,uint256)")]
+    UpdateStrategyMinDebtPerHarvest { strategy: Address, min_debt_per_harvest: u256 },
+    #[selector = sol("updateStrategyMaxDebtPerHarvest(address,uint256)")]
+    UpdateStrategyMaxDebtPerHarvest { strategy: Address, max_debt_per_harvest: u256 },
+    #[selector = sol("updateStrategyPerformanceFee(address,uint256)")]
+    UpdateStrategyPerformanceFee { strategy: Address, performance_fee: u256 },
+    #[selector = sol("migrateStrategy(address,address)")]
+    MigrateStrategy { old_version: Address, new_version: Address },
+    #[selector = sol("revokeStrategy()")]
+    RevokeStrategySelf,
     #[selector = sol("revokeStrategy(address)")]
     RevokeStrategy { strategy: Address },
     #[selector = sol("addStrategyToQueue(address)")]
@@ -89,6 +121,8 @@ msg VaultMsg {
     RemoveStrategyFromQueue { strategy: Address },
     #[selector = sol("report(uint256,uint256,uint256)")]
     Report { gain: u256, loss: u256, debt_payment: u256 } -> u256,
+    #[selector = sol("sweep(address)")]
+    SweepAll { token: Address },
     #[selector = sol("sweep(address,uint256)")]
     Sweep { token: Address, amount: u256 },
     #[selector = sol("name()")]
@@ -97,6 +131,10 @@ msg VaultMsg {
     Symbol -> DynString,
     #[selector = sol("apiVersion()")]
     ApiVersion -> String<5>,
+    #[selector = sol("DOMAIN_SEPARATOR()")]
+    DomainSeparator -> Bytes32,
+    #[selector = sol("decimals()")]
+    Decimals -> u256,
     #[selector = sol("token()")]
     Token -> Address,
     #[selector = sol("governance()")]
@@ -105,6 +143,22 @@ msg VaultMsg {
     Management -> Address,
     #[selector = sol("guardian()")]
     Guardian -> Address,
+    #[selector = sol("rewards()")]
+    Rewards -> Address,
+    #[selector = sol("emergencyShutdown()")]
+    EmergencyShutdown -> bool,
+    #[selector = sol("managementFee()")]
+    ManagementFee -> u256,
+    #[selector = sol("performanceFee()")]
+    PerformanceFee -> u256,
+    #[selector = sol("activation()")]
+    Activation -> u256,
+    #[selector = sol("lastReport()")]
+    LastReport -> u256,
+    #[selector = sol("lockedProfit()")]
+    LockedProfit -> u256,
+    #[selector = sol("lockedProfitDegradation()")]
+    LockedProfitDegradation -> u256,
     #[selector = sol("depositLimit()")]
     DepositLimit -> u256,
     #[selector = sol("debtRatio()")]
@@ -121,16 +175,24 @@ msg VaultMsg {
     BalanceOf { owner: Address } -> u256,
     #[selector = sol("allowance(address,address)")]
     Allowance { owner: Address, spender: Address } -> u256,
+    #[selector = sol("nonces(address)")]
+    Nonces { owner: Address } -> u256,
     #[selector = sol("pricePerShare()")]
     PricePerShare -> u256,
     #[selector = sol("maxAvailableShares()")]
     MaxAvailableShares -> u256,
     #[selector = sol("availableDepositLimit()")]
     AvailableDepositLimit -> u256,
+    #[selector = sol("creditAvailable()")]
+    CreditAvailableSelf -> u256,
     #[selector = sol("creditAvailable(address)")]
     CreditAvailable { strategy: Address } -> u256,
+    #[selector = sol("debtOutstanding()")]
+    DebtOutstandingSelf -> u256,
     #[selector = sol("debtOutstanding(address)")]
     DebtOutstanding { strategy: Address } -> u256,
+    #[selector = sol("expectedReturn()")]
+    ExpectedReturnSelf -> u256,
     #[selector = sol("expectedReturn(address)")]
     ExpectedReturn { strategy: Address } -> u256,
     #[selector = sol("strategies(address)")]
@@ -167,6 +229,8 @@ msg StrategyMsg {
     EstimatedTotalAssets -> u256,
     #[selector = sol("withdraw(uint256)")]
     Withdraw { amount: u256 } -> u256,
+    #[selector = sol("migrate(address)")]
+    Migrate { new_strategy: Address },
 }
 
 #[event]
@@ -209,6 +273,9 @@ struct Sweep {
     token: Address,
     amount: u256,
 }
+
+#[event]
+struct LockedProfitDegradationUpdated { value: u256 }
 
 #[event]
 struct StrategyAdded {
@@ -282,6 +349,35 @@ struct StrategyUpdateDebtRatio {
 }
 
 #[event]
+struct StrategyUpdateMinDebtPerHarvest {
+    #[indexed]
+    strategy: Address,
+    min_debt_per_harvest: u256,
+}
+
+#[event]
+struct StrategyUpdateMaxDebtPerHarvest {
+    #[indexed]
+    strategy: Address,
+    max_debt_per_harvest: u256,
+}
+
+#[event]
+struct StrategyUpdatePerformanceFee {
+    #[indexed]
+    strategy: Address,
+    performance_fee: u256,
+}
+
+#[event]
+struct StrategyMigrated {
+    #[indexed]
+    old_version: Address,
+    #[indexed]
+    new_version: Address,
+}
+
+#[event]
 struct StrategyRevoked {
     #[indexed]
     strategy: Address,
@@ -299,6 +395,12 @@ struct StrategyRemovedFromQueue {
     strategy: Address,
 }
 
+#[event]
+struct NewPendingGovernance {
+    #[indexed]
+    pending_governance: Address,
+}
+
 const MAXIMUM_STRATEGIES: u256 = 20
 const DEGRADATION_COEFFICIENT: u256 = 1000000000000000000
 const MAX_BPS: u256 = 10000
@@ -312,6 +414,9 @@ const API_VERSION_HASH: u256 = core::keccak("0.4.6")
 const PERMIT_TYPEHASH: u256 = core::keccak(
     "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
 )
+// Fixed-size arrays are not supported as event fields, so
+// UpdateWithdrawalQueue is emitted as a raw log with this topic.
+const UPDATE_WITHDRAWAL_QUEUE_TOPIC: u256 = core::keccak("UpdateWithdrawalQueue(address[20])")
 const STR_NAME: u256 = 0
 const STR_SYMBOL: u256 = 1
 
@@ -325,6 +430,7 @@ struct VaultStore {
     governance: Address,
     management: Address,
     guardian: Address,
+    pending_governance: Address,
     strat_performance_fee: StorageMap<Address, u256>,
     strat_activation: StorageMap<Address, u256>,
     strat_debt_ratio: StorageMap<Address, u256>,
@@ -776,6 +882,21 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
     value
 }
 
+fn sweep(token: Address, amount: u256)
+uses (store: VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(ctx.caller() == store.governance, "governance")
+    var value = amount
+    if value == MAX_U256 {
+        value = erc20_balance(token, account: ctx.address())
+    }
+    if token == store.token {
+        value = erc20_balance(token: store.token, account: ctx.address()) - store.total_idle
+    }
+    log.emit(Sweep { token, amount: value })
+    safe_transfer(token, receiver: store.governance, amount: value)
+}
+
 pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
     mut store: VaultStore,
 
@@ -946,6 +1067,48 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             true
         }
 
+        SetName { name } uses (mut store, ctx) {
+            assert!(ctx.caller() == store.governance, "governance")
+            store.strings.store_view(key: STR_NAME, view: name.as_bytes().payload_span())
+        }
+
+        SetSymbol { symbol } uses (mut store, ctx) {
+            assert!(ctx.caller() == store.governance, "governance")
+            store.strings.store_view(key: STR_SYMBOL, view: symbol.as_bytes().payload_span())
+        }
+
+        SetGovernance { governance } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            log.emit(NewPendingGovernance { pending_governance: governance })
+            store.pending_governance = governance
+        }
+
+        AcceptGovernance uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.pending_governance, "pending governance")
+            store.governance = ctx.caller()
+            log.emit(UpdateGovernance { governance: ctx.caller() })
+        }
+
+        SetManagement { management } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            store.management = management
+            log.emit(UpdateManagement { management })
+        }
+
+        SetRewards { rewards } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(rewards != ctx.address() && rewards != Address::zero(), "rewards")
+            store.rewards = rewards
+            log.emit(UpdateRewards { rewards })
+        }
+
+        SetLockedProfitDegradation { degradation } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(degradation <= DEGRADATION_COEFFICIENT, "degradation")
+            store.locked_profit_degradation = degradation
+            log.emit(LockedProfitDegradationUpdated { value: degradation })
+        }
+
         SetDepositLimit { limit } uses (mut store, ctx, mut log) {
             assert!(
                 ctx.caller() == store.governance || ctx.caller() == store.management,
@@ -953,6 +1116,29 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             )
             store.deposit_limit = limit
             log.emit(UpdateDepositLimit { deposit_limit: limit })
+        }
+
+        SetPerformanceFee { fee } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(fee <= MAX_BPS / 2, "performance fee")
+            store.performance_fee = fee
+            log.emit(UpdatePerformanceFee { performance_fee: fee })
+        }
+
+        SetManagementFee { fee } uses (mut store, ctx, mut log) {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(fee <= MAX_BPS, "management fee")
+            store.management_fee = fee
+            log.emit(UpdateManagementFee { management_fee: fee })
+        }
+
+        SetGuardian { guardian } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance || ctx.caller() == store.guardian,
+                "auth",
+            )
+            store.guardian = guardian
+            log.emit(UpdateGuardian { guardian })
         }
 
         SetEmergencyShutdown { active } uses (mut store, ctx, mut log) {
@@ -966,6 +1152,46 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             }
             store.emergency_shutdown = active
             log.emit(EmergencyShutdown { active })
+        }
+
+        SetWithdrawalQueue { queue } uses (mut store, ctx, mut log) {
+            assert!(
+                ctx.caller() == store.governance || ctx.caller() == store.management,
+                "auth",
+            )
+            // Entries are compared against the queue as it was before this
+            // call, so snapshot it before overwriting slots.
+            var old_queue = MemArray<Address>::new_zeroed(MAXIMUM_STRATEGIES as usize)
+            var k: u256 = 0
+            while k < MAXIMUM_STRATEGIES {
+                old_queue[k as usize] = store.withdrawal_queue.get(key: k)
+                k += 1
+            }
+            var i: u256 = 0
+            while i < MAXIMUM_STRATEGIES {
+                let strategy = queue[i as usize]
+                if strategy == Address::zero() {
+                    assert!(old_queue[i as usize] == Address::zero(), "cannot remove")
+                    break
+                }
+                assert!(old_queue[i as usize] != Address::zero(), "new strategy")
+                var exists_in_old_queue = false
+                var j: u256 = 0
+                while j < MAXIMUM_STRATEGIES {
+                    if queue[j as usize] == Address::zero() {
+                        break
+                    }
+                    if strategy == old_queue[j as usize] {
+                        exists_in_old_queue = true
+                        break
+                    }
+                    j += 1
+                }
+                assert!(exists_in_old_queue, "unknown strategy")
+                store.withdrawal_queue.set(key: i, value: strategy)
+                i += 1
+            }
+            log.log1(data: encode_abi_payload(queue).span(), topic0: UPDATE_WITHDRAWAL_QUEUE_TOPIC)
         }
 
         AddStrategy {
@@ -1033,6 +1259,93 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             store.debt_ratio += debt_ratio
             assert!(store.debt_ratio <= MAX_BPS, "debt ratio")
             log.emit(StrategyUpdateDebtRatio { strategy, debt_ratio })
+        }
+
+        UpdateStrategyMinDebtPerHarvest { strategy, min_debt_per_harvest }
+        uses (mut store, ctx, mut log)
+        {
+            assert!(
+                ctx.caller() == store.management || ctx.caller() == store.governance,
+                "auth",
+            )
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            assert!(
+                min_debt_per_harvest <= store.strat_max_debt_per_harvest.get(key: strategy),
+                "min",
+            )
+            store.strat_min_debt_per_harvest.set(key: strategy, value: min_debt_per_harvest)
+            log.emit(StrategyUpdateMinDebtPerHarvest { strategy, min_debt_per_harvest })
+        }
+
+        UpdateStrategyMaxDebtPerHarvest { strategy, max_debt_per_harvest }
+        uses (mut store, ctx, mut log)
+        {
+            assert!(
+                ctx.caller() == store.management || ctx.caller() == store.governance,
+                "auth",
+            )
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            assert!(
+                store.strat_min_debt_per_harvest.get(key: strategy) <= max_debt_per_harvest,
+                "max",
+            )
+            store.strat_max_debt_per_harvest.set(key: strategy, value: max_debt_per_harvest)
+            log.emit(StrategyUpdateMaxDebtPerHarvest { strategy, max_debt_per_harvest })
+        }
+
+        UpdateStrategyPerformanceFee { strategy, performance_fee }
+        uses (mut store, ctx, mut log)
+        {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
+            assert!(performance_fee <= MAX_BPS / 2, "performance")
+            store.strat_performance_fee.set(key: strategy, value: performance_fee)
+            log.emit(StrategyUpdatePerformanceFee { strategy, performance_fee })
+        }
+
+        MigrateStrategy { old_version, new_version } uses (mut store, ctx, mut log, mut call) {
+            assert!(ctx.caller() == store.governance, "governance")
+            assert!(new_version != Address::zero(), "new")
+            assert!(store.strat_activation.get(key: old_version) > 0, "old")
+            assert!(store.strat_activation.get(key: new_version) == 0, "new active")
+            let new_vault: Address = new_version.static(StrategyMsg::Vault {})
+            assert!(new_vault == ctx.address(), "vault")
+            let new_want: Address = new_version.static(StrategyMsg::Want {})
+            assert!(new_want == store.token, "want")
+            let debt_ratio = store.strat_debt_ratio.get(key: old_version)
+            let last_report = store.strat_last_report.get(key: old_version)
+            let total_debt = store.strat_total_debt.get(key: old_version)
+            revoke_strategy_internal(strategy: old_version)
+            store.debt_ratio += debt_ratio
+            store.strat_total_debt.set(key: old_version, value: 0)
+            store
+                .strat_performance_fee
+                .set(key: new_version, value: store.strat_performance_fee.get(key: old_version))
+            store.strat_activation.set(key: new_version, value: last_report)
+            store.strat_debt_ratio.set(key: new_version, value: debt_ratio)
+            store
+                .strat_min_debt_per_harvest
+                .set(key: new_version, value: store.strat_min_debt_per_harvest.get(key: old_version))
+            store
+                .strat_max_debt_per_harvest
+                .set(key: new_version, value: store.strat_max_debt_per_harvest.get(key: old_version))
+            store.strat_last_report.set(key: new_version, value: last_report)
+            store.strat_total_debt.set(key: new_version, value: total_debt)
+            store.strat_total_gain.set(key: new_version, value: 0)
+            store.strat_total_loss.set(key: new_version, value: 0)
+            old_version.call(StrategyMsg::Migrate { new_strategy: new_version })
+            var i: u256 = 0
+            while i < MAXIMUM_STRATEGIES {
+                if store.withdrawal_queue.get(key: i) == old_version {
+                    store.withdrawal_queue.set(key: i, value: new_version)
+                }
+                i += 1
+            }
+            log.emit(StrategyMigrated { old_version, new_version })
+        }
+
+        RevokeStrategySelf uses (mut store, ctx, mut log) {
+            revoke_strategy_internal(strategy: ctx.caller())
         }
 
         RevokeStrategy { strategy } uses (mut store, ctx, mut log) {
@@ -1171,17 +1484,12 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             debt
         }
 
+        SweepAll { token } uses (mut store, ctx, mut log, mut call) {
+            sweep(token, amount: MAX_U256)
+        }
+
         Sweep { token, amount } uses (mut store, ctx, mut log, mut call) {
-            assert!(ctx.caller() == store.governance, "governance")
-            var value = amount
-            if value == MAX_U256 {
-                value = erc20_balance(token, account: ctx.address())
-            }
-            if token == store.token {
-                value = erc20_balance(token: store.token, account: ctx.address()) - store.total_idle
-            }
-            log.emit(Sweep { token, amount: value })
-            safe_transfer(token, receiver: store.governance, amount: value)
+            sweep(token, amount)
         }
 
         Name -> DynString uses (store) {
@@ -1192,6 +1500,12 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         }
         ApiVersion -> String<5> {
             "0.4.6"
+        }
+        DomainSeparator -> Bytes32 uses ctx {
+            Bytes32 { val: domain_separator() }
+        }
+        Decimals -> u256 uses store {
+            store.decimals
         }
         Token -> Address uses store {
             store.token
@@ -1204,6 +1518,30 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         }
         Guardian -> Address uses store {
             store.guardian
+        }
+        Rewards -> Address uses store {
+            store.rewards
+        }
+        EmergencyShutdown -> bool uses store {
+            store.emergency_shutdown
+        }
+        ManagementFee -> u256 uses store {
+            store.management_fee
+        }
+        PerformanceFee -> u256 uses store {
+            store.performance_fee
+        }
+        Activation -> u256 uses store {
+            store.activation
+        }
+        LastReport -> u256 uses store {
+            store.last_report
+        }
+        LockedProfit -> u256 uses store {
+            store.locked_profit
+        }
+        LockedProfitDegradation -> u256 uses store {
+            store.locked_profit_degradation
         }
         DepositLimit -> u256 uses store {
             store.deposit_limit
@@ -1228,6 +1566,9 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         }
         Allowance { owner, spender } -> u256 uses store {
             store.allowance.get(key: (owner, spender))
+        }
+        Nonces { owner } -> u256 uses store {
+            store.nonces.get(key: owner)
         }
         PricePerShare -> u256 uses (store, ctx) {
             share_value(shares: 10 ** store.decimals)
@@ -1256,11 +1597,20 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             }
         }
 
+        CreditAvailableSelf -> u256 uses (store, ctx) {
+            credit_available_for(strategy: ctx.caller())
+        }
         CreditAvailable { strategy } -> u256 uses store {
             credit_available_for(strategy)
         }
+        DebtOutstandingSelf -> u256 uses (store, ctx) {
+            debt_outstanding_for(strategy: ctx.caller())
+        }
         DebtOutstanding { strategy } -> u256 uses store {
             debt_outstanding_for(strategy)
+        }
+        ExpectedReturnSelf -> u256 uses (store, ctx, mut call) {
+            expected_return_for(strategy: ctx.caller())
         }
         ExpectedReturn { strategy } -> u256 uses (store, ctx, mut call) {
             expected_return_for(strategy)

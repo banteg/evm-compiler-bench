@@ -1,14 +1,26 @@
 use core::ptr::{MemBuffer, MemSpan}
 use std::evm::packed::encode_packed
 use std::abi::{Bytes, Bytes32, DynArray, DynString}
-use std::evm::{Call, Ctx, Log, RawOps, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{Call, Ctx, Log, RawOps, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
 use std::evm::{crypto, erc20}
 
 msg PoolMsg {
+    #[selector = sol("approve(address,uint256)")]
+    Approve { spender: Address, value: u256 } -> bool,
+    #[selector = sol("transfer(address,uint256)")]
+    Transfer { receiver: Address, value: u256 } -> bool,
+    #[selector = sol("transferFrom(address,address,uint256)")]
+    TransferFrom { sender: Address, receiver: Address, value: u256 } -> bool,
+    #[selector = sol("add_liquidity(uint256[],uint256)")]
+    AddLiquidityDefault { amounts: DynArray<u256>, min_mint_amount: u256 } -> u256,
     #[selector = sol("add_liquidity(uint256[],uint256,address)")]
     AddLiquidity { amounts: DynArray<u256>, min_mint_amount: u256, receiver: Address } -> u256,
+    #[selector = sol("exchange(int128,int128,uint256,uint256)")]
+    ExchangeDefault { i: i128, j: i128, dx: u256, min_dy: u256 } -> u256,
     #[selector = sol("exchange(int128,int128,uint256,uint256,address)")]
     Exchange { i: i128, j: i128, dx: u256, min_dy: u256, receiver: Address } -> u256,
+    #[selector = sol("exchange_received(int128,int128,uint256,uint256)")]
+    ExchangeReceivedDefault { i: i128, j: i128, dx: u256, min_dy: u256 } -> u256,
     #[selector = sol(
         "exchange_received(int128,int128,uint256,uint256,address)",
     )]
@@ -21,10 +33,21 @@ msg PoolMsg {
     CalcTokenAmount { amounts: DynArray<u256>, is_deposit: bool } -> u256,
     #[selector = sol("dynamic_fee(int128,int128)")]
     DynamicFee { i: i128, j: i128 } -> u256,
+    #[selector = sol("remove_liquidity(uint256,uint256[])")]
+    RemoveLiquidityDefault { lp_amount: u256, min_amounts: DynArray<u256> } -> DynArray<u256>,
     #[selector = sol("remove_liquidity(uint256,uint256[],address)")]
     RemoveLiquidity { lp_amount: u256, min_amounts: DynArray<u256>, receiver: Address } -> DynArray<
         u256,
     >,
+    #[selector = sol("remove_liquidity(uint256,uint256[],address,bool)")]
+    RemoveLiquidityClaim {
+        lp_amount: u256,
+        min_amounts: DynArray<u256>,
+        receiver: Address,
+        claim_admin_fees: bool,
+    } -> DynArray<u256>,
+    #[selector = sol("remove_liquidity_one_coin(uint256,int128,uint256)")]
+    RemoveLiquidityOneCoinDefault { lp_amount: u256, i: i128, min_amount: u256 } -> u256,
     #[selector = sol(
         "remove_liquidity_one_coin(uint256,int128,uint256,address)",
     )]
@@ -34,6 +57,8 @@ msg PoolMsg {
         min_amount: u256,
         receiver: Address,
     } -> u256,
+    #[selector = sol("remove_liquidity_imbalance(uint256[],uint256)")]
+    RemoveLiquidityImbalanceDefault { amounts: DynArray<u256>, max_burn_amount: u256 } -> u256,
     #[selector = sol("remove_liquidity_imbalance(uint256[],uint256,address)")]
     RemoveLiquidityImbalance {
         amounts: DynArray<u256>,
@@ -110,6 +135,16 @@ msg PoolMsg {
     Coins { i: u256 } -> Address,
     #[selector = sol("calc_withdraw_one_coin(uint256,int128)")]
     CalcWithdrawOneCoin { burn_amount: u256, i: i128 } -> u256,
+    #[selector = sol("name()")]
+    Name -> DynString,
+    #[selector = sol("symbol()")]
+    Symbol -> DynString,
+    #[selector = sol("decimals()")]
+    Decimals -> u8,
+    #[selector = sol("version()")]
+    Version -> String<6>,
+    #[selector = sol("salt()")]
+    Salt -> Bytes32,
     #[selector = sol("balanceOf(address)")]
     BalanceOf { owner: Address } -> u256,
     #[selector = sol("allowance(address,address)")]
@@ -264,6 +299,9 @@ const EIP2612_TYPEHASH: u256 = core::keccak(
     "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
 )
 const VERSION_HASH: u256 = core::keccak("v7.0.0")
+const MAX_U256: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+const STR_NAME: u256 = 0
+const STR_SYMBOL: u256 = 1
 const ERC1271_MAGIC_VALUE: u256 = 0x1626ba7e00000000000000000000000000000000000000000000000000000000
 
 struct PoolStore {
@@ -295,6 +333,7 @@ struct PoolStore {
     locked: bool,
     cached_chain_id: u256,
     salt: u256,
+    strings: StorageBytes<u256>,
     name_hash: u256,
     cached_domain_separator: u256,
     balance_of: StorageMap<Address, u256>,
@@ -383,6 +422,20 @@ uses (store: mut PoolStore, log: mut Log)
     log.emit(
         Transfer { sender: from, receiver: Address::zero(), value },
     )
+}
+
+fn lp_transfer(from: Address, to: Address, value: u256)
+uses (store: mut PoolStore, log: mut Log)
+{
+    let balance = store.balance_of.get(key: from)
+    assert!(balance >= value, "balance")
+    store.balance_of.set(key: from, value: balance - value)
+    store.balance_of.set(key: to, value: store.balance_of.get(key: to) + value)
+    log.emit(Transfer { sender: from, receiver: to, value })
+}
+
+fn load_str(key: u256) -> DynString uses (store: PoolStore) {
+    DynString::from_payload(source: store.strings.to_memory(key).span())
 }
 
 fn current_a() -> u256 uses (store: PoolStore, ctx: Ctx) {
@@ -956,6 +1009,278 @@ uses (store: PoolStore, ctx: Ctx, call: mut Call)
     (dy, fee_amount, xp, amp, d1)
 }
 
+fn add_liquidity(amounts: DynArray<u256>, min_mint_amount: u256, receiver: Address) -> u256
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.initialized, "not initialized")
+    assert!(!store.locked, "reentrant")
+    store.locked = true
+    assert!(receiver != Address::zero(), "receiver")
+    let n = store.n_coins
+    check_amount_length(amounts.len() as u256, n_coins: n)
+    let old_balances = balances_mem()
+    var rates = stored_rates_mem()
+    let supply = store.total_supply
+    let d0 = if supply == 0 {
+        0
+    } else {
+        get_d_mem(rates, source_balances: old_balances)
+    }
+    var new_balances = copy_array(source: old_balances)
+    var i: u256 = 0
+    while i < n {
+        let amount = amounts[i as usize]
+        if amount > 0 {
+            new_balances[i as usize] = old_balances[i as usize]
+                        + transfer_in(
+                            coin_index: i,
+                            amount,
+                            sender: ctx.caller(),
+                            expect_optimistic_transfer: false,
+                        )
+        } else {
+            assert!(supply != 0, "initial amount")
+        }
+        i += 1
+    }
+    var d1 = get_d_mem(rates, source_balances: new_balances)
+    assert!(d1 > d0, "invariant")
+    var fees = DynArray<u256>::empty()
+    var minted: u256 = 0
+    if supply == 0 {
+        minted = d1
+    } else {
+        var fees_marr = MemArray<u256>::new_zeroed(n as usize)
+        let fee_base = base_fee()
+        let ys = (d0 + d1) / n
+        var fee_index: u256 = 0
+        while fee_index < n {
+            let old_balance = old_balances[fee_index as usize]
+            let new_balance = new_balances[fee_index as usize]
+            let ideal_balance = d1 * old_balance / d0
+            let difference = abs_diff(ideal_balance, new_balance)
+            let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
+            let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
+                difference
+                / FEE_DENOMINATOR
+            fees_marr[fee_index as usize] = coin_fee
+            store
+                .admin_balances
+                .set(
+                    key: fee_index,
+                    value: store.admin_balances.get(key: fee_index)
+                        + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
+                )
+            new_balances[fee_index as usize] = new_balance - coin_fee
+            fee_index += 1
+        }
+        d1 = get_d_mem(rates, source_balances: new_balances)
+        minted = supply * (d1 - d0) / d0
+        fees = DynArray::from_slice(fees_marr.as_slice())
+    }
+    assert!(minted >= min_mint_amount, "slippage")
+    lp_mint(to: receiver, value: minted)
+    log.emit(
+        AddLiquidity {
+            provider: ctx.caller(),
+            token_amounts: amounts,
+            fees,
+            invariant: d1,
+            token_supply: store.total_supply,
+        },
+    )
+    if supply == 0 {
+        store.last_d_packed = pack2(x: d1, y: d1)
+        let price_time = store.ma_last_time & MASK_128
+        var d_time = store.ma_last_time >> 128
+        if d_time < ctx.timestamp().as_seconds() {
+            d_time = ctx.timestamp().as_seconds()
+            store.ma_last_time = pack2(x: price_time, y: d_time)
+        }
+    } else {
+        upkeep_oracles(
+            xp: xp_mem(rates, source_balances: new_balances),
+            amp: current_a(),
+            d: d1,
+        )
+    }
+    store.locked = false
+    minted
+}
+
+fn exchange(
+    i: i128,
+    j: i128,
+    dx: u256,
+    min_dy: u256,
+    receiver: Address,
+    expect_optimistic_transfer: bool,
+) -> u256
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.initialized, "not initialized")
+    assert!(!store.locked, "reentrant")
+    store.locked = true
+    if expect_optimistic_transfer {
+        assert!(!store.pool_contains_rebasing_tokens, "rebasing")
+    }
+    let dy = do_exchange(i, j, dx, min_dy, receiver, expect_optimistic_transfer)
+    store.locked = false
+    dy
+}
+
+fn remove_liquidity(
+    lp_amount: u256,
+    min_amounts: DynArray<u256>,
+    receiver: Address,
+    claim_admin_fees: bool,
+) -> DynArray<u256>
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.initialized, "not initialized")
+    assert!(!store.locked, "reentrant")
+    store.locked = true
+    assert!(lp_amount > 0, "lp")
+    let n = store.n_coins
+    assert!(min_amounts.len() as u256 == n, "amount length")
+    let supply = store.total_supply
+    let current_balances = balances_mem()
+    var amounts_marr = MemArray<u256>::new_zeroed(n as usize)
+    var i: u256 = 0
+    while i < n {
+        let amount = current_balances[i as usize] * lp_amount / supply
+        assert!(amount >= min_amounts[i as usize], "slippage")
+        amounts_marr[i as usize] = amount
+        transfer_out(coin_index: i, amount, receiver)
+        i += 1
+    }
+    lp_burn(from: ctx.caller(), value: lp_amount)
+    upkeep_d_oracle_after_liquidity_removal(lp_amount, previous_supply: supply)
+    let amounts = DynArray::from_slice(amounts_marr.as_slice())
+    log.emit(
+        RemoveLiquidity {
+            provider: ctx.caller(),
+            token_amounts: amounts,
+            fees: DynArray<u256>::empty(),
+            token_supply: store.total_supply,
+        },
+    )
+    if claim_admin_fees {
+        withdraw_admin_fees_internal()
+    }
+    store.locked = false
+    amounts
+}
+
+fn remove_liquidity_one_coin(lp_amount: u256, i: i128, min_amount: u256, receiver: Address) -> u256
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.initialized, "not initialized")
+    assert!(!store.locked, "reentrant")
+    store.locked = true
+    let coin = coin_index(i, n_coins: store.n_coins)
+    assert!(lp_amount > 0, "lp")
+    let (user_amount, fee_amount, xp, amp, d) = calc_withdraw_one_coin_internal(
+        lp_amount,
+        i: coin,
+    )
+    let admin_cut = fee_amount * ADMIN_FEE / FEE_DENOMINATOR
+    assert!(user_amount >= min_amount, "slippage")
+    store
+        .admin_balances
+        .set(
+            key: coin,
+            value: store.admin_balances.get(key: coin) + admin_cut,
+        )
+    lp_burn(from: ctx.caller(), value: lp_amount)
+    transfer_out(coin_index: coin, amount: user_amount, receiver)
+    log.emit(
+        RemoveLiquidityOne {
+            provider: ctx.caller(),
+            token_id: i,
+            token_amount: lp_amount,
+            coin_amount: user_amount,
+            token_supply: store.total_supply,
+        },
+    )
+    upkeep_oracles(xp, amp, d)
+    store.locked = false
+    user_amount
+}
+
+fn remove_liquidity_imbalance(amounts: DynArray<u256>, max_burn_amount: u256, receiver: Address) -> u256
+uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
+{
+    assert!(store.initialized, "not initialized")
+    assert!(!store.locked, "reentrant")
+    store.locked = true
+    let n = store.n_coins
+    check_amount_length(amounts.len() as u256, n_coins: n)
+    let old_balances = balances_mem()
+    var rates = stored_rates_mem()
+    let d0 = get_d_mem(rates, source_balances: old_balances)
+    var new_balances = copy_array(source: old_balances)
+    var i: u256 = 0
+    while i < n {
+        let amount = amounts[i as usize]
+        if amount > 0 {
+            let new_balance = new_balances[i as usize]
+            assert!(new_balance >= amount, "balance")
+            new_balances[i as usize] = new_balance - amount
+            transfer_out(coin_index: i, amount, receiver)
+        }
+        i += 1
+    }
+
+    var d1 = get_d_mem(rates, source_balances: new_balances)
+    let fee_base = base_fee()
+    let ys = (d0 + d1) / n
+    var fees_marr = MemArray<u256>::new_zeroed(n as usize)
+    var fee_index: u256 = 0
+    while fee_index < n {
+        let old_balance = old_balances[fee_index as usize]
+        let new_balance = new_balances[fee_index as usize]
+        let ideal_balance = d1 * old_balance / d0
+        let difference = abs_diff(ideal_balance, new_balance)
+        let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
+        let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
+            difference
+            / FEE_DENOMINATOR
+        fees_marr[fee_index as usize] = coin_fee
+        store
+            .admin_balances
+            .set(
+                key: fee_index,
+                value: store.admin_balances.get(key: fee_index)
+                    + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
+            )
+        new_balances[fee_index as usize] = new_balance - coin_fee
+        fee_index += 1
+    }
+
+    d1 = get_d_mem(rates, source_balances: new_balances)
+    let burn_amount = (d0 - d1) * store.total_supply / d0 + 1
+    assert!(burn_amount > 1, "burn")
+    assert!(burn_amount <= max_burn_amount, "slippage")
+    lp_burn(from: ctx.caller(), value: burn_amount)
+    log.emit(
+        RemoveLiquidityImbalance {
+            provider: ctx.caller(),
+            token_amounts: amounts,
+            fees: DynArray::from_slice(fees_marr.as_slice()),
+            invariant: d1,
+            token_supply: store.total_supply,
+        },
+    )
+    upkeep_oracles(
+        xp: xp_mem(rates, source_balances: new_balances),
+        amp: current_a(),
+        d: d1,
+    )
+    store.locked = false
+    burn_amount
+}
+
 pub contract CurveStableSwap2CoinReal uses (
     ctx: Ctx,
     log: mut Log,
@@ -979,10 +1304,6 @@ pub contract CurveStableSwap2CoinReal uses (
     )
     uses (mut store, ctx, mut log, mut call)
     {
-        // symbol is part of the constructor ABI but only name feeds the
-        // EIP-712 domain separator; neither string is in the benchmark
-        // surface, so only the name hash is persisted.
-        let _unused_symbol = symbol
         store.factory = ctx.caller()
         let n_coins = coins.len() as u256
         assert!(n_coins >= 2 && n_coins <= MAX_COINS, "coin length")
@@ -1062,6 +1383,8 @@ pub contract CurveStableSwap2CoinReal uses (
         } else {
             ctx.blockhash(ctx.block_number() - 1)
         }
+        store.strings.store_view(key: STR_NAME, view: name.as_bytes().payload_span())
+        store.strings.store_view(key: STR_SYMBOL, view: symbol.as_bytes().payload_span())
         store.name_hash = crypto::keccak256(name.as_bytes().payload_span())
         store.cached_domain_separator = build_domain_separator(chain_id: store.cached_chain_id)
         log.emit(
@@ -1070,140 +1393,62 @@ pub contract CurveStableSwap2CoinReal uses (
     }
 
     recv PoolMsg {
+        Approve { spender, value } -> bool uses (mut store, ctx, mut log) {
+            store.allowance.set(key: (ctx.caller(), spender), value)
+            log.emit(Approval { owner: ctx.caller(), spender, value })
+            true
+        }
+
+        Transfer { receiver, value } -> bool uses (mut store, ctx, mut log) {
+            lp_transfer(from: ctx.caller(), to: receiver, value)
+            true
+        }
+
+        TransferFrom { sender, receiver, value } -> bool uses (mut store, ctx, mut log) {
+            lp_transfer(from: sender, to: receiver, value)
+            let allowed = store.allowance.get(key: (sender, ctx.caller()))
+            if allowed != MAX_U256 {
+                assert!(allowed >= value, "allowance")
+                store.allowance.set(key: (sender, ctx.caller()), value: allowed - value)
+                log.emit(Approval { owner: sender, spender: ctx.caller(), value: allowed - value })
+            }
+            true
+        }
+
+        AddLiquidityDefault { amounts, min_mint_amount } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            add_liquidity(amounts, min_mint_amount, receiver: ctx.caller())
+        }
+
         AddLiquidity { amounts, min_mint_amount, receiver } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            assert!(receiver != Address::zero(), "receiver")
-            let n = store.n_coins
-            check_amount_length(amounts.len() as u256, n_coins: n)
-            let old_balances = balances_mem()
-            var rates = stored_rates_mem()
-            let supply = store.total_supply
-            let d0 = if supply == 0 {
-                0
-            } else {
-                get_d_mem(rates, source_balances: old_balances)
-            }
-            var new_balances = copy_array(source: old_balances)
-            var i: u256 = 0
-            while i < n {
-                let amount = amounts[i as usize]
-                if amount > 0 {
-                    new_balances[i as usize] = old_balances[i as usize]
-                                + transfer_in(
-                                    coin_index: i,
-                                    amount,
-                                    sender: ctx.caller(),
-                                    expect_optimistic_transfer: false,
-                                )
-                } else {
-                    assert!(supply != 0, "initial amount")
-                }
-                i += 1
-            }
-            var d1 = get_d_mem(rates, source_balances: new_balances)
-            assert!(d1 > d0, "invariant")
-            var fees = DynArray<u256>::empty()
-            var minted: u256 = 0
-            if supply == 0 {
-                minted = d1
-            } else {
-                var fees_marr = MemArray<u256>::new_zeroed(n as usize)
-                let fee_base = base_fee()
-                let ys = (d0 + d1) / n
-                var fee_index: u256 = 0
-                while fee_index < n {
-                    let old_balance = old_balances[fee_index as usize]
-                    let new_balance = new_balances[fee_index as usize]
-                    let ideal_balance = d1 * old_balance / d0
-                    let difference = abs_diff(ideal_balance, new_balance)
-                    let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
-                    let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
-                        difference
-                        / FEE_DENOMINATOR
-                    fees_marr[fee_index as usize] = coin_fee
-                    store
-                        .admin_balances
-                        .set(
-                            key: fee_index,
-                            value: store.admin_balances.get(key: fee_index)
-                                + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
-                        )
-                    new_balances[fee_index as usize] = new_balance - coin_fee
-                    fee_index += 1
-                }
-                d1 = get_d_mem(rates, source_balances: new_balances)
-                minted = supply * (d1 - d0) / d0
-                fees = DynArray::from_slice(fees_marr.as_slice())
-            }
-            assert!(minted >= min_mint_amount, "slippage")
-            lp_mint(to: receiver, value: minted)
-            log.emit(
-                AddLiquidity {
-                    provider: ctx.caller(),
-                    token_amounts: amounts,
-                    fees,
-                    invariant: d1,
-                    token_supply: store.total_supply,
-                },
-            )
-            if supply == 0 {
-                store.last_d_packed = pack2(x: d1, y: d1)
-                let price_time = store.ma_last_time & MASK_128
-                var d_time = store.ma_last_time >> 128
-                if d_time < ctx.timestamp().as_seconds() {
-                    d_time = ctx.timestamp().as_seconds()
-                    store.ma_last_time = pack2(x: price_time, y: d_time)
-                }
-            } else {
-                upkeep_oracles(
-                    xp: xp_mem(rates, source_balances: new_balances),
-                    amp: current_a(),
-                    d: d1,
-                )
-            }
-            store.locked = false
-            minted
+            add_liquidity(amounts, min_mint_amount, receiver)
+        }
+
+        ExchangeDefault { i, j, dx, min_dy } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            exchange(i, j, dx, min_dy, receiver: ctx.caller(), expect_optimistic_transfer: false)
         }
 
         Exchange { i, j, dx, min_dy, receiver } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            let dy = do_exchange(
-                i,
-                j,
-                dx,
-                min_dy,
-                receiver,
-                expect_optimistic_transfer: false,
-            )
-            store.locked = false
-            dy
+            exchange(i, j, dx, min_dy, receiver, expect_optimistic_transfer: false)
+        }
+
+        ExchangeReceivedDefault { i, j, dx, min_dy } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            exchange(i, j, dx, min_dy, receiver: ctx.caller(), expect_optimistic_transfer: true)
         }
 
         ExchangeReceived { i, j, dx, min_dy, receiver } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            assert!(!store.pool_contains_rebasing_tokens, "rebasing")
-            let dy = do_exchange(
-                i,
-                j,
-                dx,
-                min_dy,
-                receiver,
-                expect_optimistic_transfer: true,
-            )
-            store.locked = false
-            dy
+            exchange(i, j, dx, min_dy, receiver, expect_optimistic_transfer: true)
         }
 
         GetDy { i, j, dx } -> u256 uses (store, ctx, mut call) {
@@ -1230,149 +1475,46 @@ pub contract CurveStableSwap2CoinReal uses (
             views.static(ViewsMsg::DynamicFee { i, j, pool: ctx.address() })
         }
 
+        RemoveLiquidityDefault { lp_amount, min_amounts } -> DynArray<u256>
+        uses (mut store, ctx, mut log, mut call)
+        {
+            remove_liquidity(lp_amount, min_amounts, receiver: ctx.caller(), claim_admin_fees: true)
+        }
+
         RemoveLiquidity { lp_amount, min_amounts, receiver } -> DynArray<u256>
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            assert!(lp_amount > 0, "lp")
-            let n = store.n_coins
-            assert!(min_amounts.len() as u256 == n, "amount length")
-            let supply = store.total_supply
-            let current_balances = balances_mem()
-            var amounts_marr = MemArray<u256>::new_zeroed(n as usize)
-            var i: u256 = 0
-            while i < n {
-                let amount = current_balances[i as usize] * lp_amount / supply
-                assert!(amount >= min_amounts[i as usize], "slippage")
-                amounts_marr[i as usize] = amount
-                transfer_out(coin_index: i, amount, receiver)
-                i += 1
-            }
-            lp_burn(from: ctx.caller(), value: lp_amount)
-            upkeep_d_oracle_after_liquidity_removal(lp_amount, previous_supply: supply)
-            let amounts = DynArray::from_slice(amounts_marr.as_slice())
-            log.emit(
-                RemoveLiquidity {
-                    provider: ctx.caller(),
-                    token_amounts: amounts,
-                    fees: DynArray<u256>::empty(),
-                    token_supply: store.total_supply,
-                },
-            )
-            withdraw_admin_fees_internal()
-            store.locked = false
-            amounts
+            remove_liquidity(lp_amount, min_amounts, receiver, claim_admin_fees: true)
+        }
+
+        RemoveLiquidityClaim { lp_amount, min_amounts, receiver, claim_admin_fees } -> DynArray<u256>
+        uses (mut store, ctx, mut log, mut call)
+        {
+            remove_liquidity(lp_amount, min_amounts, receiver, claim_admin_fees)
+        }
+
+        RemoveLiquidityOneCoinDefault { lp_amount, i, min_amount } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            remove_liquidity_one_coin(lp_amount, i, min_amount, receiver: ctx.caller())
         }
 
         RemoveLiquidityOneCoin { lp_amount, i, min_amount, receiver } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            let coin = coin_index(i, n_coins: store.n_coins)
-            assert!(lp_amount > 0, "lp")
-            let (user_amount, fee_amount, xp, amp, d) = calc_withdraw_one_coin_internal(
-                lp_amount,
-                i: coin,
-            )
-            let admin_cut = fee_amount * ADMIN_FEE / FEE_DENOMINATOR
-            assert!(user_amount >= min_amount, "slippage")
-            store
-                .admin_balances
-                .set(
-                    key: coin,
-                    value: store.admin_balances.get(key: coin) + admin_cut,
-                )
-            lp_burn(from: ctx.caller(), value: lp_amount)
-            transfer_out(coin_index: coin, amount: user_amount, receiver)
-            log.emit(
-                RemoveLiquidityOne {
-                    provider: ctx.caller(),
-                    token_id: i,
-                    token_amount: lp_amount,
-                    coin_amount: user_amount,
-                    token_supply: store.total_supply,
-                },
-            )
-            upkeep_oracles(xp, amp, d)
-            store.locked = false
-            user_amount
+            remove_liquidity_one_coin(lp_amount, i, min_amount, receiver)
+        }
+
+        RemoveLiquidityImbalanceDefault { amounts, max_burn_amount } -> u256
+        uses (mut store, ctx, mut log, mut call)
+        {
+            remove_liquidity_imbalance(amounts, max_burn_amount, receiver: ctx.caller())
         }
 
         RemoveLiquidityImbalance { amounts, max_burn_amount, receiver } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(store.initialized, "not initialized")
-            assert!(!store.locked, "reentrant")
-            store.locked = true
-            let n = store.n_coins
-            check_amount_length(amounts.len() as u256, n_coins: n)
-            let old_balances = balances_mem()
-            var rates = stored_rates_mem()
-            let d0 = get_d_mem(rates, source_balances: old_balances)
-            var new_balances = copy_array(source: old_balances)
-            var i: u256 = 0
-            while i < n {
-                let amount = amounts[i as usize]
-                if amount > 0 {
-                    let new_balance = new_balances[i as usize]
-                    assert!(new_balance >= amount, "balance")
-                    new_balances[i as usize] = new_balance - amount
-                    transfer_out(coin_index: i, amount, receiver)
-                }
-                i += 1
-            }
-
-            var d1 = get_d_mem(rates, source_balances: new_balances)
-            let fee_base = base_fee()
-            let ys = (d0 + d1) / n
-            var fees_marr = MemArray<u256>::new_zeroed(n as usize)
-            var fee_index: u256 = 0
-            while fee_index < n {
-                let old_balance = old_balances[fee_index as usize]
-                let new_balance = new_balances[fee_index as usize]
-                let ideal_balance = d1 * old_balance / d0
-                let difference = abs_diff(ideal_balance, new_balance)
-                let xs = rates[fee_index as usize] * (old_balance + new_balance) / PRECISION
-                let coin_fee = dynamic_fee_calc(xpi: xs, xpj: ys, base: fee_base) *
-                    difference
-                    / FEE_DENOMINATOR
-                fees_marr[fee_index as usize] = coin_fee
-                store
-                    .admin_balances
-                    .set(
-                        key: fee_index,
-                        value: store.admin_balances.get(key: fee_index)
-                            + coin_fee * ADMIN_FEE / FEE_DENOMINATOR,
-                    )
-                new_balances[fee_index as usize] = new_balance - coin_fee
-                fee_index += 1
-            }
-
-            d1 = get_d_mem(rates, source_balances: new_balances)
-            let burn_amount = (d0 - d1) * store.total_supply / d0 + 1
-            assert!(burn_amount > 1, "burn")
-            assert!(burn_amount <= max_burn_amount, "slippage")
-            lp_burn(from: ctx.caller(), value: burn_amount)
-            log.emit(
-                RemoveLiquidityImbalance {
-                    provider: ctx.caller(),
-                    token_amounts: amounts,
-                    fees: DynArray::from_slice(fees_marr.as_slice()),
-                    invariant: d1,
-                    token_supply: store.total_supply,
-                },
-            )
-            upkeep_oracles(
-                xp: xp_mem(rates, source_balances: new_balances),
-                amp: current_a(),
-                d: d1,
-            )
-            store.locked = false
-            burn_amount
+            remove_liquidity_imbalance(amounts, max_burn_amount, receiver)
         }
 
         RampA { future_a, future_time } uses (mut store, ctx, mut log, mut call) {
@@ -1619,6 +1761,21 @@ pub contract CurveStableSwap2CoinReal uses (
             dy
         }
 
+        Name -> DynString uses store {
+            load_str(key: STR_NAME)
+        }
+        Symbol -> DynString uses store {
+            load_str(key: STR_SYMBOL)
+        }
+        Decimals -> u8 {
+            18
+        }
+        Version -> String<6> {
+            "v7.0.0"
+        }
+        Salt -> Bytes32 uses store {
+            Bytes32 { val: store.salt }
+        }
         BalanceOf { owner } -> u256 uses store {
             store.balance_of.get(key: owner)
         }

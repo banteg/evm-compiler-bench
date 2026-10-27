@@ -1,21 +1,31 @@
 id: curve_stableswap_2coin
 title: Real-Derived Curve Stableswap NG 2-Coin Benchmark
 abi:
+  - "add_liquidity(uint256[],uint256) returns (uint256)"
   - "add_liquidity(uint256[],uint256,address) returns (uint256)"
+  - "exchange(int128,int128,uint256,uint256) returns (uint256)"
   - "exchange(int128,int128,uint256,uint256,address) returns (uint256)"
+  - "exchange_received(int128,int128,uint256,uint256) returns (uint256)"
   - "exchange_received(int128,int128,uint256,uint256,address) returns (uint256)"
   - "get_dy(int128,int128,uint256) returns (uint256)"
   - "get_dx(int128,int128,uint256) returns (uint256)"
   - "calc_token_amount(uint256[],bool) returns (uint256)"
   - "dynamic_fee(int128,int128) returns (uint256)"
+  - "remove_liquidity(uint256,uint256[]) returns (uint256[])"
   - "remove_liquidity(uint256,uint256[],address) returns (uint256[])"
+  - "remove_liquidity(uint256,uint256[],address,bool) returns (uint256[])"
+  - "remove_liquidity_one_coin(uint256,int128,uint256) returns (uint256)"
   - "remove_liquidity_one_coin(uint256,int128,uint256,address) returns (uint256)"
+  - "remove_liquidity_imbalance(uint256[],uint256) returns (uint256)"
   - "remove_liquidity_imbalance(uint256[],uint256,address) returns (uint256)"
   - "ramp_A(uint256,uint256)"
   - "stop_ramp_A()"
   - "set_new_fee(uint256,uint256)"
   - "set_ma_exp_time(uint256,uint256)"
   - "withdraw_admin_fees()"
+  - "approve(address,uint256) returns (bool)"
+  - "transfer(address,uint256) returns (bool)"
+  - "transferFrom(address,address,uint256) returns (bool)"
   - "permit(address,address,uint256,uint256,uint8,bytes32,bytes32) returns (bool)"
   - "A() returns (uint256)"
   - "A_precise() returns (uint256)"
@@ -41,6 +51,11 @@ abi:
   - "D_oracle() returns (uint256)"
   - "coins(uint256) returns (address)"
   - "calc_withdraw_one_coin(uint256,int128) returns (uint256)"
+  - "name() returns (string)"
+  - "symbol() returns (string)"
+  - "decimals() returns (uint8)"
+  - "version() returns (string)"
+  - "salt() returns (bytes32)"
   - "balanceOf(address) returns (uint256)"
   - "allowance(address,address) returns (uint256)"
   - "nonces(address) returns (uint256)"
@@ -76,7 +91,8 @@ real_derived:
     - imbalanced liquidity removal
     - admin amplification ramping, fee updates, moving-average window updates, and admin-fee withdrawal entrypoint
     - EIP-712 LP-token permit for EOA signatures and ERC1271 smart contract wallets
-    - LP token accounting
+    - LP token accounting, transfers, approvals, allowance spending, and metadata views
+    - default-receiver overloads and the admin-fee claim flag of liquidity removal
     - deterministic standard-token dynamic-fee and admin-fee accounting
     - virtual price and observable balances
     - amplification, stored-rate, aggregate-balance, and one-coin withdrawal quote views
@@ -113,6 +129,17 @@ real_derived:
     - erc4626_rate_exchange
     - permit_valid
     - permit_erc1271_valid
+    - lp_transfer
+    - lp_approve
+    - lp_transfer_from_finite_allowance
+    - lp_transfer_from_infinite_allowance
+    - add_liquidity_default_receiver
+    - exchange_default_receiver
+    - exchange_received_default_receiver
+    - remove_liquidity_default_receiver
+    - remove_liquidity_keep_admin_fees
+    - remove_one_coin_default_receiver
+    - remove_liquidity_imbalance_default_receiver
   mock_assumptions:
     - default benchmark scenarios deploy two standard 18-decimal ERC20 test coins with switchable optional return data
     - factory/admin/fee receiver hooks and the delegated NG views implementation are provided by the generated harness
@@ -142,6 +169,8 @@ real_derived:
     - constructor-driven stored rates, oracle rates, rebasing balance reads, and ERC4626 conversion rates
     - NG-style transfer-in, transfer-out, admin-fee, and oracle-upkeep accounting
     - valid EIP-712 LP permit acceptance for EOA signatures and ERC1271 smart contract wallets
+    - LP token transfer, approve, and finite/unlimited-allowance transferFrom
+    - default-receiver add, exchange, exchange_received, and withdrawal overloads plus withdrawal without admin-fee claim
     - normalized event/log parity across the listed differential scenarios
   excluded_features:
     - exhaustive dynamic N-coin conformance coverage across every N_COINS value and operation; headline rows keep only representative three-coin and MAX_COINS canaries
@@ -239,6 +268,39 @@ scenarios:
   - name: permit_erc1271_valid
     call: "permit from a smart contract wallet whose isValidSignature returns the ERC1271 magic value for the EIP-712 digest"
     expected: "sets LP allowance and increments the contract owner's nonce"
+  - name: lp_transfer
+    call: "transfer(BOB, 10_000) after initial liquidity"
+    expected: "moves LP shares between holders"
+  - name: lp_approve
+    call: "approve(BOB, 10_000) after initial liquidity"
+    expected: "sets the LP allowance"
+  - name: lp_transfer_from_finite_allowance
+    call: "transferFrom(address(this), CAROL, 4_000) from BOB with a finite allowance"
+    expected: "moves LP shares and decreases the allowance"
+  - name: lp_transfer_from_infinite_allowance
+    call: "transferFrom(address(this), CAROL, 4_000) from BOB with an unlimited allowance"
+    expected: "moves LP shares and leaves the unlimited allowance untouched"
+  - name: add_liquidity_default_receiver
+    call: "add_liquidity([100_000, 300_000], 0) after initial liquidity"
+    expected: "mints LP shares to the caller through the default-receiver overload"
+  - name: exchange_default_receiver
+    call: "exchange(0, 1, 25_000, 0)"
+    expected: "swaps and pays the caller through the default-receiver overload"
+  - name: exchange_received_default_receiver
+    call: "exchange_received(1, 0, 25_000, 0) after direct token transfer to the pool"
+    expected: "swaps optimistic input and pays the caller through the default-receiver overload"
+  - name: remove_liquidity_default_receiver
+    call: "remove_liquidity(10_000, [0, 0]) after an exchange accrues admin fees"
+    expected: "withdraws to the caller and claims admin fees through the default overload"
+  - name: remove_liquidity_keep_admin_fees
+    call: "remove_liquidity(10_000, [0, 0], address(this), false) after an exchange accrues admin fees"
+    expected: "withdraws proportionally without claiming admin fees"
+  - name: remove_one_coin_default_receiver
+    call: "remove_liquidity_one_coin(10_000, 0, 0)"
+    expected: "burns LP shares for one coin paid to the caller"
+  - name: remove_liquidity_imbalance_default_receiver
+    call: "remove_liquidity_imbalance([10_000, 40_000], 100_000)"
+    expected: "burns the required LP amount and pays the caller"
 implementations:
   solidity: "benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
   vyper: "benches/implementations/curve_stableswap_2coin/vyper/latest/CurveStableSwapNG.vy"
