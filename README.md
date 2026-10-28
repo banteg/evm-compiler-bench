@@ -94,8 +94,12 @@ bytecode is identical to the integrated build, but measured wrapper overhead dif
 Gas cache keys also include the exact generated shard source. Each shard always
 contains its complete test set, including when one missing cache entry triggers
 its rerun. The run manifest lists shard hashes and their artifact membership.
-Generated shard layout can also change harness overhead, so use v4's integrated
-dataset for comparisons within the main matrix.
+Factory-side callbacks that targets make during measured calls (Curve factory
+getters and views, Uniswap `feeTo`, Yearn protocol fee config) are served by a
+fixed `BenchFactoryHub` contract rather than the generated shard, so measured gas
+does not depend on how many tests share a shard. Datasets measured before this
+change carry shard-dependent callback overhead and should not be mixed with newer
+runs.
 
 ## Running locally
 

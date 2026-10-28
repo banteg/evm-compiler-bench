@@ -106,290 +106,9 @@
         return true;
     }
 
-    // bench-cli:helpers begin curve
-    function fee_receiver() external pure returns (address) {
-        return address(0);
-    }
-
-    function admin() external view returns (address) {
-        return address(this);
-    }
-
-    function views_implementation() external view returns (address) {
-        return address(this);
-    }
-
-    function get_dy(int128 i, int128 j, uint256 dx, address pool) external view returns (uint256) {
-        return benchCurveGetDy(i, j, dx, pool);
-    }
-
-    function get_dx(int128 i, int128 j, uint256 dy, address pool) external view returns (uint256) {
-        return benchCurveGetDx(i, j, dy, pool);
-    }
-
-    function calc_token_amount(uint256[] calldata amounts, bool isDeposit, address pool)
-        external
-        view
-        returns (uint256)
-    {
-        return benchCurveCalcTokenAmount(amounts, isDeposit, pool);
-    }
-
-    function dynamic_fee(int128 i, int128 j, address pool) external view returns (uint256) {
-        (uint256 coinIn, uint256 coinOut) = benchCurveCoinPair(i, j, pool);
-        (,, uint256[] memory xp) = benchCurveRatesBalancesXp(pool);
-        return benchCurvePoolDynamicFee(pool, xp[coinIn], xp[coinOut]);
-    }
-
-    function benchCurvePoolDynamicFee(address pool, uint256 xpi, uint256 xpj) internal view returns (uint256) {
-        return benchCurveDynamicFeeXp(
-            xpi,
-            xpj,
-            benchCurveUint(pool, "fee()"),
-            benchCurveUint(pool, "offpeg_fee_multiplier()")
-        );
-    }
-
-    function benchCurveGetDy(int128 i, int128 j, uint256 dx, address pool) internal view returns (uint256) {
-        require(dx > 0, "curve dx");
-        (uint256 coinIn, uint256 coinOut) = benchCurveCoinPair(i, j, pool);
-        (uint256[] memory rates,, uint256[] memory xp) = benchCurveRatesBalancesXp(pool);
-        uint256 amp = benchCurveUint(pool, "A()") * 100;
-        return benchCurveGetDyFromState(pool, coinIn, coinOut, dx, rates, xp, amp, benchCurveGetD(xp, amp));
-    }
-
-    function benchCurveGetDyFromState(
-        address pool,
-        uint256 coinIn,
-        uint256 coinOut,
-        uint256 dx,
-        uint256[] memory rates,
-        uint256[] memory xp,
-        uint256 amp,
-        uint256 d
-    ) internal view returns (uint256) {
-        uint256 x = xp[coinIn] + dx * rates[coinIn] / 1e18;
-        uint256 y = benchCurveGetY(coinIn, coinOut, x, xp, amp, d);
-        uint256 dy = xp[coinOut] - y - 1;
-        dy -= benchCurveGetDyFee(pool, coinIn, coinOut, x, y, dy, xp);
-        return dy * 1e18 / rates[coinOut];
-    }
-
-    function benchCurveGetDyFee(
-        address pool,
-        uint256 coinIn,
-        uint256 coinOut,
-        uint256 x,
-        uint256 y,
-        uint256 dy,
-        uint256[] memory xp
-    ) internal view returns (uint256) {
-        return benchCurvePoolDynamicFee(pool, (xp[coinIn] + x) / 2, (xp[coinOut] + y) / 2) * dy / 10_000_000_000;
-    }
-
-    function benchCurveGetDx(int128 i, int128 j, uint256 dy, address pool) internal view returns (uint256) {
-        require(dy > 0, "curve dy");
-        (uint256 coinIn, uint256 coinOut) = benchCurveCoinPair(i, j, pool);
-        (uint256[] memory rates,, uint256[] memory xp) = benchCurveRatesBalancesXp(pool);
-        uint256 amp = benchCurveUint(pool, "A()") * 100;
-        uint256 d = benchCurveGetD(xp, amp);
-        uint256 dyWithFee = dy * rates[coinOut] / 1e18 + 1;
-        uint256 feeAmount = benchCurvePoolDynamicFee(pool, xp[coinIn], xp[coinOut]);
-        uint256 y = xp[coinOut] - dyWithFee * 10_000_000_000 / (10_000_000_000 - feeAmount);
-        uint256 x = benchCurveGetY(coinOut, coinIn, y, xp, amp, d);
-        return (x - xp[coinIn]) * 1e18 / rates[coinIn];
-    }
-
-    function benchCurveCalcTokenAmount(uint256[] calldata amounts, bool isDeposit, address pool)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 nCoins = benchCurveUint(pool, "N_COINS()");
-        require(amounts.length >= nCoins && amounts.length <= 8, "curve amounts");
-        (uint256[] memory rates, uint256[] memory oldBalances, uint256[] memory xp) = benchCurveRatesBalancesXp(pool);
-        uint256 amp = benchCurveUint(pool, "A()") * 100;
-        uint256 d0 = benchCurveGetD(xp, amp);
-        uint256[] memory newBalances = benchCurveCopy(oldBalances);
-        for (uint256 i = 0; i < nCoins; i++) {
-            if (isDeposit) {
-                newBalances[i] += amounts[i];
-            } else {
-                newBalances[i] -= amounts[i];
-            }
-            xp[i] = rates[i] * newBalances[i] / 1e18;
-        }
-        uint256 d1 = benchCurveGetD(xp, amp);
-        uint256 totalSupply = benchCurveUint(pool, "totalSupply()");
-        if (totalSupply == 0) {
-            return d1;
-        }
-        for (uint256 i = 0; i < nCoins; i++) {
-            newBalances[i] = benchCurveCalcFeeAdjustedBalance(
-                pool,
-                rates[i],
-                oldBalances[i],
-                newBalances[i],
-                d0,
-                d1
-            );
-            xp[i] = rates[i] * newBalances[i] / 1e18;
-        }
-        uint256 d2 = benchCurveGetD(xp, amp);
-        return isDeposit ? (d2 - d0) * totalSupply / d0 : (d0 - d2) * totalSupply / d0;
-    }
-
-    function benchCurveCalcFeeAdjustedBalance(
-        address pool,
-        uint256 rate,
-        uint256 oldBalance,
-        uint256 newBalance,
-        uint256 d0,
-        uint256 d1
-    ) internal view returns (uint256) {
-        uint256 idealBalance = d1 * oldBalance / d0;
-        uint256 difference = idealBalance > newBalance ? idealBalance - newBalance : newBalance - idealBalance;
-        uint256 xs = rate * (oldBalance + newBalance) / 1e18;
-        return newBalance - benchCurveCalcBalanceFee(pool, xs, (d0 + d1) / 2) * difference / 10_000_000_000;
-    }
-
-    function benchCurveCalcBalanceFee(address pool, uint256 xs, uint256 ys) internal view returns (uint256) {
-        uint256 nCoins = benchCurveUint(pool, "N_COINS()");
-        return benchCurveDynamicFeeXp(
-            xs,
-            ys,
-            benchCurveUint(pool, "fee()") * nCoins / (4 * (nCoins - 1)),
-            benchCurveUint(pool, "offpeg_fee_multiplier()")
-        );
-    }
-
-    function benchCurveRatesBalancesXp(address pool)
-        internal
-        view
-        returns (uint256[] memory rates, uint256[] memory balances, uint256[] memory xp)
-    {
-        uint256[] memory rawRates = benchCurveUintArray(pool, "stored_rates()");
-        uint256[] memory rawBalances = benchCurveUintArray(pool, "get_balances()");
-        uint256 nCoins = benchCurveUint(pool, "N_COINS()");
-        require(rawRates.length >= nCoins && rawBalances.length >= nCoins, "curve arrays");
-        rates = new uint256[](nCoins);
-        balances = new uint256[](nCoins);
-        xp = new uint256[](nCoins);
-        for (uint256 i = 0; i < nCoins; i++) {
-            rates[i] = rawRates[i];
-            balances[i] = rawBalances[i];
-            xp[i] = rawRates[i] * rawBalances[i] / 1e18;
-        }
-    }
-
-    function benchCurveCoinPair(int128 i, int128 j, address pool) internal view returns (uint256 coinIn, uint256 coinOut) {
-        require(i >= 0 && j >= 0 && i != j, "curve coin");
-        coinIn = uint256(int256(i));
-        coinOut = uint256(int256(j));
-        uint256 nCoins = benchCurveUint(pool, "N_COINS()");
-        require(coinIn < nCoins && coinOut < nCoins, "curve coin");
-    }
-
-    function benchCurveUint(address pool, string memory signature) internal view returns (uint256 value) {
-        (bool ok, bytes memory raw) = pool.staticcall(abi.encodeWithSignature(signature));
-        require(ok, "curve view");
-        value = abi.decode(raw, (uint256));
-    }
-
-    function benchCurveUintArray(address pool, string memory signature) internal view returns (uint256[] memory values) {
-        (bool ok, bytes memory raw) = pool.staticcall(abi.encodeWithSignature(signature));
-        require(ok, "curve view");
-        values = abi.decode(raw, (uint256[]));
-    }
-
-    function benchCurveDynamicFeeXp(uint256 xpi, uint256 xpj, uint256 baseFee, uint256 feeMultiplier)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (feeMultiplier <= 10_000_000_000) {
-            return baseFee;
-        }
-        uint256 xps2 = (xpi + xpj) * (xpi + xpj);
-        return feeMultiplier * baseFee / (((feeMultiplier - 10_000_000_000) * 4 * xpi * xpj / xps2) + 10_000_000_000);
-    }
-
-    function benchCurveCopy(uint256[] memory source) internal pure returns (uint256[] memory result) {
-        result = new uint256[](source.length);
-        for (uint256 i = 0; i < source.length; i++) {
-            result[i] = source[i];
-        }
-    }
-
-    function benchCurveGetD(uint256[] memory xp, uint256 amp) internal pure returns (uint256) {
-        uint256 nCoins = xp.length;
-        uint256 sum;
-        for (uint256 i = 0; i < nCoins; i++) {
-            sum += xp[i];
-        }
-        if (sum == 0) {
-            return 0;
-        }
-        uint256 d = sum;
-        uint256 ann = amp * nCoins;
-        for (uint256 i = 0; i < 255; i++) {
-            uint256 dP = d;
-            for (uint256 j = 0; j < nCoins; j++) {
-                dP = dP * d / xp[j];
-            }
-            dP /= nCoins ** nCoins;
-            uint256 previousD = d;
-            d = (ann * sum / 100 + dP * nCoins) * d / ((ann - 100) * d / 100 + (nCoins + 1) * dP);
-            if (d > previousD) {
-                if (d - previousD <= 1) return d;
-            } else if (previousD - d <= 1) {
-                return d;
-            }
-        }
-        revert("curve D");
-    }
-
-    function benchCurveGetY(uint256 i, uint256 j, uint256 x, uint256[] memory xp, uint256 amp, uint256 d)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 nCoins = xp.length;
-        require(i != j && i < nCoins && j < nCoins, "curve y coin");
-        uint256 c = d;
-        uint256 s;
-        for (uint256 idx = 0; idx < nCoins; idx++) {
-            if (idx == j) {
-                continue;
-            }
-            uint256 currentX = idx == i ? x : xp[idx];
-            s += currentX;
-            c = c * d / (currentX * nCoins);
-        }
-        c = c * d * 100 / (amp * nCoins * nCoins);
-        uint256 b = s + d * 100 / (amp * nCoins);
-        uint256 y = d;
-        for (uint256 yIdx = 0; yIdx < 255; yIdx++) {
-            uint256 previousY = y;
-            y = (y * y + c) / (2 * y + b - d);
-            if (y > previousY) {
-                if (y - previousY <= 1) return y;
-            } else if (previousY - y <= 1) {
-                return y;
-            }
-        }
-        revert("curve y");
-    }
-    // bench-cli:helpers end curve
-
     // bench-cli:helpers begin yearn
-    function protocol_fee_config() external view returns (uint16, address) {
-        return (protocolFeeBps, protocolFeeRecipient);
-    }
-
     function benchYearnSetProtocolFee(uint16 feeBps, address recipient) external returns (bool) {
-        protocolFeeBps = feeBps;
-        protocolFeeRecipient = recipient;
+        factoryHub.setProtocolFee(feeBps, recipient);
         return true;
     }
     // bench-cli:helpers end yearn
@@ -401,7 +120,8 @@
         BenchUniswapFlashCallee flashCallee = new BenchUniswapFlashCallee();
         BenchUniswapReentrantCallee reentrantCallee = new BenchUniswapReentrantCallee();
         pairDeps[target] = PairDeps(token0, token1, flashCallee, reentrantCallee, BenchUniswapCreate2Factory(address(0)));
-        feeTo = feeOn ? address(0xFEE) : address(0);
+        factoryHub.setFeeTo(feeOn ? address(0xFEE) : address(0));
+        vm.prank(address(factoryHub));
         (bool ok,) = target.call(
             abi.encodeWithSignature("initialize(address,address)", address(token0), address(token1))
         );
@@ -413,7 +133,8 @@
         BenchERC20NoReturn token0 = new BenchERC20NoReturn();
         BenchERC20NoReturn token1 = new BenchERC20NoReturn();
         noReturnPairDeps[target] = NoReturnPairDeps(token0, token1);
-        feeTo = feeOn ? address(0xFEE) : address(0);
+        factoryHub.setFeeTo(feeOn ? address(0xFEE) : address(0));
+        vm.prank(address(factoryHub));
         (bool ok,) = target.call(
             abi.encodeWithSignature("initialize(address,address)", address(token0), address(token1))
         );
@@ -557,7 +278,7 @@
     }
 
     function benchUniswapSetFeeTo(address newFeeTo) external returns (bool) {
-        feeTo = newFeeTo;
+        factoryHub.setFeeTo(newFeeTo);
         return true;
     }
 
@@ -900,6 +621,7 @@
     {
         _benchYearnPrepare(target);
         BenchERC20 asset = yearnDeps[target].asset;
+        vm.prank(address(factoryHub));
         (bool ok,) = target.call(
             abi.encodeWithSignature(
                 "initialize(address,string,string,address,uint256)",
@@ -1634,13 +1356,12 @@
         returns (bool ok, bytes32 retHash, uint256 gasUsed)
     {
         bytes memory ret;
-        uint256 startGas = gasleft();
-        if (sender == address(this)) {
-            (ok, ret) = target.call{value: value}(data);
-        } else {
+        // Keep the prank cheatcode call outside the measured bracket.
+        if (sender != address(this)) {
             vm.prank(sender);
-            (ok, ret) = target.call{value: value}(data);
         }
+        uint256 startGas = gasleft();
+        (ok, ret) = target.call{value: value}(data);
         gasUsed = startGas - gasleft();
         retHash = keccak256(ret);
     }
