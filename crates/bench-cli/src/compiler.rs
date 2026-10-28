@@ -211,6 +211,18 @@ fn refresh_cached_failure_metadata(failure: &mut CompileFailure, benchmark: &Ben
     failure.provenance.clone_from(&benchmark.provenance);
 }
 
+/// A compiler that ran to completion and rejected its input.
+#[derive(Debug)]
+struct CompilerRejected(String);
+
+impl std::fmt::Display for CompilerRejected {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for CompilerRejected {}
+
 struct CompileCacheInput {
     key: String,
     logical_id: String,
@@ -254,16 +266,19 @@ fn compile_and_record(
             Ok(true)
         }
         Err(error) => {
+            let rejected = error.downcast_ref::<CompilerRejected>().is_some();
             let mut failure = compile_failure(
                 root,
                 benchmark,
                 profile,
                 toolchain,
                 evm_version,
-                error.to_string(),
+                format!("{error:#}"),
             )?;
             failure.cache = cache_info;
-            if let Some(input) = cache_input {
+            // Only the compiler's verdict is a function of the cache key;
+            // failing to run it (spawn errors, signals, I/O) is retried.
+            if let Some(input) = cache_input.filter(|_| rejected) {
                 cache::store(
                     root,
                     "compile",
@@ -404,6 +419,9 @@ fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerP
         profiles.push(no_metadata_profile(&base));
     }
     profiles.sort_by(|a, b| a.id.cmp(&b.id));
+    if let Some(pair) = profiles.windows(2).find(|pair| pair[0].id == pair[1].id) {
+        bail!("duplicate compiler profile id {}", pair[0].id);
+    }
     if !profile_filter.is_empty() {
         let available = profiles
             .iter()
@@ -542,7 +560,7 @@ fn reject_solc_errors(output: &serde_json::Value) -> Result<()> {
     if fatal.is_empty() {
         return Ok(());
     }
-    bail!("{}", serde_json::to_string_pretty(&fatal)?);
+    Err(CompilerRejected(serde_json::to_string_pretty(&fatal)?).into())
 }
 
 fn solidity_sources(source_path: &Path) -> Result<(String, BTreeMap<String, serde_json::Value>)> {
@@ -1391,18 +1409,20 @@ fn rewrite_solidity_04_staticcalls(source: &str) -> String {
         )
         .replace(
             "(bool ok, bytes memory returndata) = coin.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
-            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(uint256(returndataWord) != 0, message);\n        }",
+            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(returndataSize >= 32 && uint256(returndataWord) == 1, message);\n        }",
         )
         .replace(
             "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
-            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)), \"Transfer failed!\");",
         )
         .replace(
             "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
-            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)), \"Transfer failed!\");",
         )
+        // `rewrite_solidity_pre_08` has already turned `unchecked {` into a
+        // plain block around the nonce increment.
         .replace(
-            "allowance[owner][spender] = value;\n        nonces[owner] = nonce + 1;\n        emit Approval(owner, spender, value);\n        return true;",
+            "allowance[owner][spender] = value;\n        {\n            nonces[owner] = nonce + 1;\n        }\n        emit Approval(owner, spender, value);\n        return true;",
             "return _benchAcceptPermit(owner, spender, value, nonce);",
         );
     let source = if source.contains("_benchStaticcallWord(") {
@@ -2258,7 +2278,17 @@ where
     let mut peak_rss_kib = 0;
     for sample_index in 0..sample_count {
         let mut command = command_factory();
-        let measured = require_success(run_measured(&mut command, stdin)?, label)?;
+        let measured = run_measured(&mut command, stdin)?;
+        // An exit code is the compiler's verdict; a signal (crash, OOM kill,
+        // interrupt) says nothing about the input.
+        let exited = measured.output.status.code().is_some();
+        let measured = require_success(measured, label).map_err(|error| {
+            if exited {
+                CompilerRejected(error.to_string()).into()
+            } else {
+                error
+            }
+        })?;
         let CommandStats {
             wall_ms,
             cpu_ms,
@@ -2607,7 +2637,7 @@ mod tests {
         assert!(rewritten.contains(
             "_benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));"
         ));
-        assert!(rewritten.contains("dataSize == 0 || uint256(dataWord) != 0"));
+        assert!(rewritten.contains("dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)"));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
     }
 
@@ -2860,5 +2890,36 @@ mod tests {
         .unwrap();
         assert!(migrated.contains("returndataSize >= 32 && uint256(returndataWord) == 1"));
         assert!(migrated.contains("function _benchCallWord("));
+    }
+
+    #[test]
+    fn solidity_04_curve_moves_permit_acceptance_and_checks_optional_returns() {
+        let curve = include_str!(
+            "../../../benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
+        );
+        let migrated = transform_solidity_source(
+            curve,
+            Some("solidity-0.4"),
+            "pragma solidity >=0.4.26 <0.5.0;",
+        )
+        .unwrap();
+        assert!(migrated.contains("return _benchAcceptPermit(owner, spender, value, nonce);"));
+        assert!(migrated.contains("function _benchAcceptPermit("));
+        assert_eq!(migrated.matches("nonces[owner] = nonce + 1;").count(), 1);
+        assert!(migrated.contains("returndataSize >= 32 && uint256(returndataWord) == 1"));
+        assert!(!migrated.contains("abi.decode(returndata, (bool))"));
+    }
+
+    #[test]
+    fn rejects_duplicate_profile_ids() {
+        let root = tempfile::tempdir().unwrap();
+        let profiles = root.path().join("compiler-profiles");
+        fs::create_dir(&profiles).unwrap();
+        let profile = "id = \"solc-latest-noopt\"\nlanguage = \"solidity\"\ncompiler = \"solc\"\noptimizer = false\nevm_version = \"prague\"\n";
+        fs::write(profiles.join("a.toml"), profile).unwrap();
+        assert_eq!(super::load_profiles(root.path(), &[]).unwrap().len(), 1);
+        fs::write(profiles.join("b.toml"), profile).unwrap();
+        let error = super::load_profiles(root.path(), &[]).unwrap_err();
+        assert!(error.to_string().contains("duplicate compiler profile id"));
     }
 }
