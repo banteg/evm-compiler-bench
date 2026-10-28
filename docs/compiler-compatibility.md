@@ -59,7 +59,8 @@ pass five tests, including 256 square-root and 256 exponential fuzz cases.
 Successful syntax adaptation does not imply successful compilation or execution.
 After the solc 0.4.26 syntax fixes, the pair reaches a stack-depth failure and
 Yearn v3 reaches the compiler's unimplemented calldata-array encoding path.
-Those results remain compile errors. Stack-depth stress cases, Fe operand
+Curve reaches a stack-depth failure in `_removeLiquidityImbalance`, because 0.4
+scopes locals to the whole function. Those results remain compile errors. Stack-depth stress cases, Fe operand
 limits, missing historical `raw_create`, and broader Vyper 0.2 feature gaps are
 also retained rather than simplified out of the corpus.
 
