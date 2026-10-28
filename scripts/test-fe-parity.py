@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix="fe-parity-regression-") as directory:
     root = Path(directory)
     for name in ("benches", "compiler-profiles", "schemas", "foundry"):
         shutil.copytree(ROOT / name, root / name,
-                        ignore=shutil.ignore_patterns("cache", "out", "GeneratedBench*.t.sol"))
+                        ignore=shutil.ignore_patterns("cache", "out", "Generated*.t.sol"))
     # Keep test gas/compile caches isolated, while reusing downloaded toolchains.
     (root / ".cache").mkdir()
     (root / ".cache/toolchains").symlink_to(ROOT / ".cache/toolchains", target_is_directory=True)
@@ -60,7 +60,7 @@ with tempfile.TemporaryDirectory(prefix="fe-parity-regression-") as directory:
     shard = subprocess.run(
         ["forge", "test", "--root", str(project), "--match-path",
          "test/GeneratedBenchShard000.t.sol", "--match-test", "testDiff_.*_vs_fe_",
-         "--evm-version", "prague", "--via-ir", "--optimize"],
+         "--evm-version", "prague", "--via-ir", "--optimize", "--isolate"],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     assert "[FAIL: differential return mismatch]" in shard.stdout, shard.stdout
