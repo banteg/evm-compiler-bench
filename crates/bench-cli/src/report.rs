@@ -113,10 +113,7 @@ impl ReportSummary {
                 } else {
                     summary.scenario_status_fail += 1;
                 }
-                if str_at(row, "/correctness/baseline_differential_check")
-                    .as_deref()
-                    .is_some_and(|status| matches!(status, "pass" | "baseline_only"))
-                {
+                if passed_check(row, "/correctness/baseline_differential_check") {
                     summary.baseline_differential_rows += 1;
                 }
                 if str_at(row, "/correctness/randomized_differential_check").as_deref()
@@ -127,16 +124,10 @@ impl ReportSummary {
                 if str_at(row, "/correctness/property_tests").as_deref() == Some("pass") {
                     summary.property_rows += 1;
                 }
-                if !matches!(
-                    str_at(row, "/correctness/golden_behavior_check").as_deref(),
-                    Some("not_run" | "not_applicable") | None
-                ) {
+                if passed_check(row, "/correctness/golden_behavior_check") {
                     summary.golden_rows += 1;
                 }
-                if !matches!(
-                    str_at(row, "/correctness/log_check").as_deref(),
-                    Some("not_run" | "not_applicable") | None
-                ) {
+                if passed_check(row, "/correctness/log_check") {
                     summary.log_rows += 1;
                 }
             } else if status == "compile_error" {
@@ -150,6 +141,13 @@ impl ReportSummary {
     fn attempted_artifacts(&self) -> usize {
         self.successful_artifacts.len() + self.failed_artifacts.len()
     }
+}
+
+fn passed_check(row: &serde_json::Value, pointer: &str) -> bool {
+    matches!(
+        str_at(row, pointer).as_deref(),
+        Some("pass" | "baseline_only")
+    )
 }
 
 pub fn write_outputs(
@@ -306,7 +304,8 @@ fn report_model(
                 "solidity_viair": SOL_VIAIR_CODEGEN,
                 "vyper": VYPER_GAS_CODEGEN,
                 "vyper_experimental": VYPER_GAS_VENOM_CODEGEN,
-                "vyper_prerelease": VYPER_PRERELEASE_GAS_CODEGEN
+                "vyper_prerelease": VYPER_PRERELEASE_GAS_CODEGEN,
+                "fe": FE_CODEGEN_BASELINE
             }
         },
         "summary": {
@@ -400,7 +399,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "I",
                 "title": "Cross-profile behavior checks",
-                "body": "Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario; expected-revert rows are compared by status and observer state, not raw revert bytes."
+                "body": "Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario, including compatibility source variants of the same checked-in source; baseline-profile rows are marked baseline_only. Expected-revert rows are compared by status and observer state, not raw revert bytes."
             },
             {
                 "tag": "J",
@@ -830,7 +829,7 @@ fn normalized_rows(
                         })
                 } else {
                     profile_behavior_baselines
-                        .get(&profile_behavior_key(gas))
+                        .get(&profile_behavior_key(gas, artifact.language))
                         .copied()
                 },
                 scenario_file
@@ -1009,17 +1008,20 @@ fn profile_behavior_baselines<'a>(
             Language::Fe => FE_CODEGEN_BASELINE,
         };
         if gas.profile_id == baseline_profile {
-            baselines.insert(profile_behavior_key(gas), gas);
+            baselines.insert(profile_behavior_key(gas, artifact.language), gas);
         }
     }
     baselines
 }
 
-fn profile_behavior_key(gas: &GasRecord) -> String {
+/// Every source variant is materialized from the benchmark's single checked-in
+/// source for its language, so the key deliberately omits `implementation_id`,
+/// which only labels the variant.
+fn profile_behavior_key(gas: &GasRecord, language: Language) -> String {
     format!(
         "{}\0{}\0{}\0{}\0{}",
         gas.benchmark_id,
-        gas.implementation_id,
+        language.as_str(),
         gas.scenario,
         gas.state_access_profile.as_str(),
         gas.metadata_mode.as_str()
@@ -1055,6 +1057,22 @@ fn profile_behavior_check(
             },
         };
     };
+    if baseline.profile_id == gas.profile_id {
+        let baseline_only = |applicable| {
+            if applicable {
+                "baseline_only"
+            } else {
+                "not_applicable"
+            }
+        };
+        return ProfileBehaviorCheck {
+            baseline_profile: Some(baseline.profile_id.clone()),
+            profile_behavior_check: "baseline_only",
+            return_data_check: baseline_only(compares_return && gas.call_succeeded),
+            observer_check: baseline_only(has_observers),
+            log_check: baseline_only(supports_logs && gas.call_succeeded),
+        };
+    }
 
     let status_matches = gas.call_succeeded == baseline.call_succeeded;
     let return_data_check = if compares_return && gas.call_succeeded && baseline.call_succeeded {
@@ -1463,9 +1481,13 @@ fn failure_links_by_benchmark(root: &Path) -> Result<BTreeMap<String, Vec<String
         let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
             continue;
         };
-        let Some((benchmark_id, _)) = file_name
+        // Foundry jobs prefix copied failures with their shard file name.
+        let failure_name = file_name
+            .split_once(".t.sol-")
+            .map_or(file_name, |(_, name)| name);
+        let Some((benchmark_id, _)) = failure_name
             .split_once("-randomized_differential-")
-            .or_else(|| file_name.split_once("-property-"))
+            .or_else(|| failure_name.split_once("-property-"))
         else {
             continue;
         };
@@ -1604,6 +1626,104 @@ mod tests {
             "pass"
         );
     }
+    #[test]
+    fn compatibility_variants_compare_against_the_language_baseline() {
+        use crate::test_support::{artifact, gas};
+        let baseline = artifact("solc", super::SOL_CODEGEN_BASELINE);
+        let mut variant = artifact("solc", "solc-0.8.30-legacy-runs200");
+        variant.implementation_id = "solidity/handwritten/solidity-0.8".into();
+        let records = [gas(&baseline), gas(&variant)];
+        let artifacts = [&baseline, &variant]
+            .into_iter()
+            .map(|a| {
+                (
+                    super::artifact_key(&a.benchmark_id, &a.implementation_id, &a.profile_id),
+                    a,
+                )
+            })
+            .collect();
+        let baselines = super::profile_behavior_baselines(&records, &artifacts);
+        let lookup = |record| {
+            baselines
+                .get(&super::profile_behavior_key(record, Language::Solidity))
+                .copied()
+        };
+
+        let compared = super::profile_behavior_check(&records[1], lookup(&records[1]), None, false);
+        assert_eq!(
+            compared.baseline_profile.as_deref(),
+            Some(super::SOL_CODEGEN_BASELINE)
+        );
+        assert_eq!(compared.profile_behavior_check, "pass");
+
+        let own = super::profile_behavior_check(&records[0], lookup(&records[0]), None, true);
+        assert_eq!(own.profile_behavior_check, "baseline_only");
+        assert_eq!(own.log_check, "baseline_only");
+        assert_eq!(own.observer_check, "not_applicable");
+    }
+
+    #[test]
+    fn failure_links_strip_the_foundry_shard_prefix() {
+        let root = tempfile::tempdir().unwrap();
+        let failures = root.path().join("results/raw/failures");
+        std::fs::create_dir_all(&failures).unwrap();
+        for name in [
+            "GeneratedBehaviorShard000.t.sol-erc20_minimal-randomized_differential-1-2.json",
+            "ownable_pausable-property-3-4.json",
+        ] {
+            std::fs::write(failures.join(name), "{}").unwrap();
+        }
+        let links = super::failure_links_by_benchmark(root.path()).unwrap();
+        assert_eq!(
+            links["erc20_minimal"],
+            [
+                "results/raw/failures/GeneratedBehaviorShard000.t.sol-erc20_minimal-randomized_differential-1-2.json"
+            ]
+        );
+        assert_eq!(
+            links["ownable_pausable"],
+            ["results/raw/failures/ownable_pausable-property-3-4.json"]
+        );
+    }
+
+    #[test]
+    fn rendered_rows_match_the_result_schema() {
+        use crate::test_support::{artifact, gas};
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .unwrap();
+        let mut schemas = boon::Schemas::new();
+        let index = boon::Compiler::new()
+            .compile(
+                &root.join("schemas/result.schema.json").to_string_lossy(),
+                &mut schemas,
+            )
+            .unwrap();
+        let mut artifact = artifact("solc", super::SOL_CODEGEN_BASELINE);
+        artifact.compiler_settings["metadataMode"] = "off".into();
+        artifact.compiler_settings["sourceVariant"] = "latest".into();
+        let gas = gas(&artifact);
+        let scenario: crate::models::ScenarioFile = serde_yaml::from_str(include_str!(
+            "../../../benches/scenarios/erc20_minimal.yaml"
+        ))
+        .unwrap();
+        let row = super::row(
+            root,
+            &artifact,
+            &gas,
+            &scenario,
+            vec![],
+            "prague",
+            &[],
+            super::profile_behavior_check(&gas, Some(&gas), scenario.scenarios.first(), true),
+        );
+        assert!(row["provenance"].is_null());
+        if let Err(error) = schemas.validate(&row, index) {
+            panic!("{error}");
+        }
+    }
+
     use super::{manifest_profiles, report_methodology};
     use crate::models::{CompilerProfile, Language, MetadataMode};
 
