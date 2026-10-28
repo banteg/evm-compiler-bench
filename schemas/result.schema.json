@@ -15,49 +15,9 @@
         "vyper-0.3",
         "vyper-0.4"
       ]
-    }
-  },
-  "required": [
-    "status",
-    "benchmark_id",
-    "implementation_id",
-    "profile_id",
-    "suite",
-    "family",
-    "parameter_name",
-    "parameter_value",
-    "generated",
-    "provenance",
-    "language",
-    "compiler",
-    "cache",
-    "source_path",
-    "source_hash",
-    "compile",
-    "bytecode",
-    "gas",
-    "correctness"
-  ],
-  "properties": {
-    "status": { "enum": ["ok", "compile_error"] },
-    "benchmark_id": { "type": "string" },
-    "implementation_id": { "type": "string" },
-    "profile_id": { "type": "string" },
-    "suite": { "enum": ["fixed", "scale", "real_derived"] },
-    "family": { "type": ["string", "null"] },
-    "parameter_name": { "type": ["string", "null"] },
-    "parameter_value": { "type": ["integer", "null"], "minimum": 1 },
-    "generated": {
-      "type": "object",
-      "required": ["generator_version", "scenario_path", "scenario_hash"],
-      "properties": {
-        "generator_version": { "type": ["string", "null"] },
-        "scenario_path": { "type": ["string", "null"] },
-        "scenario_hash": { "type": ["string", "null"] }
-      }
     },
     "provenance": {
-      "type": ["object", "null"],
+      "type": "object",
       "required": [
         "upstream_project",
         "repository_url",
@@ -222,6 +182,49 @@
           }
         }
       ]
+    }
+  },
+  "required": [
+    "status",
+    "benchmark_id",
+    "implementation_id",
+    "profile_id",
+    "suite",
+    "family",
+    "parameter_name",
+    "parameter_value",
+    "generated",
+    "provenance",
+    "language",
+    "compiler",
+    "cache",
+    "source_path",
+    "source_hash",
+    "compile",
+    "bytecode",
+    "gas",
+    "correctness"
+  ],
+  "properties": {
+    "status": { "enum": ["ok", "compile_error"] },
+    "benchmark_id": { "type": "string" },
+    "implementation_id": { "type": "string" },
+    "profile_id": { "type": "string" },
+    "suite": { "enum": ["fixed", "scale", "real_derived"] },
+    "family": { "type": ["string", "null"] },
+    "parameter_name": { "type": ["string", "null"] },
+    "parameter_value": { "type": ["integer", "null"], "minimum": 1 },
+    "generated": {
+      "type": "object",
+      "required": ["generator_version", "scenario_path", "scenario_hash"],
+      "properties": {
+        "generator_version": { "type": ["string", "null"] },
+        "scenario_path": { "type": ["string", "null"] },
+        "scenario_hash": { "type": ["string", "null"] }
+      }
+    },
+    "provenance": {
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/provenance" }]
     },
     "language": { "enum": ["solidity", "vyper", "fe"] },
     "compiler": {
@@ -331,6 +334,17 @@
         "measurement_scope": { "const": "foundry_internal_call_harness" }
       }
     },
+    "behavior": {
+      "type": "object",
+      "description": "Per-scenario outcome hashes and the profile they were compared against; present on measured rows.",
+      "required": ["return_hash", "observer_hash", "log_hash", "profile_baseline"],
+      "properties": {
+        "return_hash": { "type": ["string", "null"] },
+        "observer_hash": { "type": ["string", "null"] },
+        "log_hash": { "type": ["string", "null"] },
+        "profile_baseline": { "type": ["string", "null"] }
+      }
+    },
     "correctness": {
       "type": "object",
       "required": [
@@ -350,7 +364,7 @@
         "scenario_status_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "golden_behavior_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
         "baseline_differential_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
-        "profile_behavior_check": { "enum": ["pass", "fail", "not_applicable", "not_run"] },
+        "profile_behavior_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "observer_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "return_data_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },
         "log_check": { "enum": ["pass", "fail", "not_applicable", "not_run", "baseline_only"] },

@@ -5,7 +5,7 @@ use crate::{
     scenarios::{load_scenario_catalog, validate_scenario_file},
     util::sha256_file,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -29,6 +29,48 @@ const SOURCE_VARIANT_LABELS: &[&str] = &[
     "vyper-0.4",
 ];
 
+/// Documents that must conform to a JSON Schema: checked-in inputs, plus generated
+/// and run outputs when present. Directories contain YAML documents.
+struct SchemaInstances {
+    schema: &'static str,
+    paths: &'static [&'static str],
+    /// The document is an array whose elements are each one schema instance.
+    each_element: bool,
+}
+
+const SCHEMA_INSTANCES: &[SchemaInstances] = &[
+    SchemaInstances {
+        schema: "benchmark_spec.schema.json",
+        paths: &["benches/specs", "target/bench-generated/specs"],
+        each_element: false,
+    },
+    SchemaInstances {
+        schema: "scenario.schema.json",
+        paths: &["benches/scenarios", "target/bench-generated/scenarios"],
+        each_element: false,
+    },
+    SchemaInstances {
+        schema: "scale_family.schema.json",
+        paths: &["benches/families/scale.yaml"],
+        each_element: false,
+    },
+    SchemaInstances {
+        schema: "result.schema.json",
+        paths: &["results/normalized/results.json"],
+        each_element: true,
+    },
+    SchemaInstances {
+        schema: "run_manifest.schema.json",
+        paths: &["results/normalized/run-manifest.json"],
+        each_element: false,
+    },
+    SchemaInstances {
+        schema: "report_model.schema.json",
+        paths: &["results/normalized/report-model.json"],
+        each_element: false,
+    },
+];
+
 #[derive(Debug, Clone, Copy)]
 pub struct ValidationSummary {
     pub specs: usize,
@@ -41,13 +83,15 @@ pub struct ValidationSummary {
 pub fn validate_all(root: &Path) -> Result<ValidationSummary> {
     let specs = validate_specs(root)?;
     let scenario_files = validate_scenarios(root)?;
-    validate_schema_files(root)?;
     validate_latest_source_pragmas(root)?;
     validate_compiler_profile_source_variants(root)?;
     let (scale_config, _) = load_scale_config(root)?;
     let scale_families = scale_config.families.len();
     let generated_benchmarks = validate_generated_outputs_if_present(root, &scale_config)?;
     let result_rows = validate_outputs_if_present(root)?;
+    // After the specific checks, which report stale generator or run outputs
+    // more actionably than a schema mismatch.
+    validate_schema_files(root)?;
     Ok(ValidationSummary {
         specs,
         scenario_files,
@@ -58,7 +102,7 @@ pub fn validate_all(root: &Path) -> Result<ValidationSummary> {
 }
 
 fn validate_specs(root: &Path) -> Result<usize> {
-    let mut count = 0;
+    let mut ids = BTreeSet::new();
     let benchmarks: BTreeMap<_, _> = checked_in_benchmarks()
         .into_iter()
         .map(|bench| (bench.id.clone(), bench))
@@ -79,23 +123,82 @@ fn validate_specs(root: &Path) -> Result<usize> {
             );
         };
         validate_checked_in_spec_metadata(root, &value, &path, benchmark)?;
-        count += 1;
+        if !ids.insert(id.to_string()) {
+            bail!("{} duplicates benchmark spec id {id}", path.display());
+        }
     }
-    if count != benchmarks.len() {
+    if ids.len() != benchmarks.len() {
         bail!(
-            "expected {} benchmark specs, found {count}",
-            benchmarks.len()
+            "expected {} benchmark specs, found {}",
+            benchmarks.len(),
+            ids.len()
         );
     }
-    Ok(count)
+    Ok(ids.len())
 }
 
 fn validate_schema_files(root: &Path) -> Result<()> {
+    let mut schemas = boon::Schemas::new();
+    let mut compiler = boon::Compiler::new();
+    let mut compiled = BTreeMap::new();
     for path in json_schema_files(&root.join("schemas"))? {
         let value: Value = serde_json::from_str(&fs::read_to_string(&path)?)
             .with_context(|| format!("parsing {}", path.display()))?;
         for pointer in ["/$schema", "/title", "/type"] {
             require_string_pointer(&value, pointer, &path)?;
+        }
+        let index = compiler
+            .compile(&path.to_string_lossy(), &mut schemas)
+            .map_err(|error| anyhow!("compiling {}: {error:#}", path.display()))?;
+        compiled.insert(
+            path.file_name().unwrap().to_string_lossy().into_owned(),
+            index,
+        );
+    }
+    for instances in SCHEMA_INSTANCES {
+        let index = compiled
+            .get(instances.schema)
+            .with_context(|| format!("missing schemas/{}", instances.schema))?;
+        for path in instances.paths.iter().map(|path| root.join(path)) {
+            let files = if path.is_dir() {
+                yaml_files(&path)?
+            } else if path.is_file() {
+                vec![path]
+            } else {
+                continue;
+            };
+            for file in files {
+                let text = fs::read_to_string(&file)?;
+                let document: Value = if file.extension() == Some(OsStr::new("json")) {
+                    serde_json::from_str(&text)
+                        .with_context(|| format!("parsing {}", file.display()))?
+                } else {
+                    serde_yaml::from_str(&text)
+                        .with_context(|| format!("parsing {}", file.display()))?
+                };
+                let elements = if instances.each_element {
+                    document
+                        .as_array()
+                        .with_context(|| format!("{} must be an array", file.display()))?
+                        .iter()
+                        .collect()
+                } else {
+                    vec![&document]
+                };
+                for (position, element) in elements.into_iter().enumerate() {
+                    schemas.validate(element, *index).map_err(|error| {
+                        let location = if instances.each_element {
+                            format!("{}[{position}]", file.display())
+                        } else {
+                            file.display().to_string()
+                        };
+                        anyhow!(
+                            "{location} does not match schemas/{}: {error}",
+                            instances.schema
+                        )
+                    })?;
+                }
+            }
         }
     }
     Ok(())
@@ -779,6 +882,7 @@ fn validate_report_methodology(value: &Value, path: &Path) -> Result<()> {
         bail!("{} methodology.notes must not be empty", path.display());
     }
     let mut tags = BTreeSet::new();
+    let mut titles = BTreeSet::new();
     for note in notes {
         for pointer in ["/tag", "/title", "/body"] {
             require_string_pointer(note, pointer, path)?;
@@ -787,11 +891,14 @@ fn validate_report_methodology(value: &Value, path: &Path) -> Result<()> {
         if !tags.insert(tag.to_string()) {
             bail!("{} duplicate methodology note tag {tag}", path.display());
         }
+        titles.insert(string_at(note, "/title", path)?);
     }
-    for required in ["F", "G"] {
-        if !tags.contains(required) {
+    // Notes are identified by title: tags are display letters that shift when
+    // notes are inserted.
+    for required in ["Real-derived provenance", "Compatibility source variants"] {
+        if !titles.contains(required) {
             bail!(
-                "{} methodology must include note {required} for real-derived source policy",
+                "{} methodology must include the {required:?} note for real-derived source policy",
                 path.display()
             );
         }
@@ -2190,6 +2297,8 @@ mod tests {
         let checked_in_count = crate::catalog::checked_in_benchmarks().len();
         assert_eq!(super::validate_specs(root).unwrap(), checked_in_count);
         assert_eq!(super::validate_scenarios(root).unwrap(), checked_in_count);
+        super::validate_schema_files(root).unwrap();
+        super::validate_latest_source_pragmas(root).unwrap();
         super::validate_compiler_profile_source_variants(root).unwrap();
         let (config, _) = crate::scale::load_scale_config(root).unwrap();
         assert_eq!(config.families.len(), 7);

@@ -41,9 +41,10 @@ and exponential range boundaries and fuzz inputs. Inputs, bytecode hashes, and
 Foundry output are retained in `target/vyper-compat/`. Full-contract scenario
 checks remain part of the main matrix; these probes supplement them.
 The script also explicitly compares recovered historical rows against
-`vyper-latest-gas`: call outcomes and return, observer, and log hashes. Historical
-variants do not automatically receive those differential checks in the main
-report, so this comparison is recorded separately in the compatibility audit.
+`vyper-latest-gas`: call outcomes and return, observer, and log hashes. The main
+report applies the same cross-profile hash checks to every historical variant
+row against its language baseline profile; the script records the focused
+comparison for the compatibility audit.
 
 Run `20260909T233233Z` contains 7,843 compiled artifacts and 29,775 scenario
 measurements. The adapters recover 19 artifacts, reducing compilation failures
