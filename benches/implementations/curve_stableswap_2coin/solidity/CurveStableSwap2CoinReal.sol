@@ -74,7 +74,9 @@ contract CurveStableSwap2CoinReal {
     uint256 public D_ma_time;
     uint256 public ma_last_time;
     uint256 internal _totalSupply;
-    bool internal locked;
+    // Transient like Vyper's @nonreentrant. Targets without transient storage
+    // compile it as storage, where the nonzero sentinels avoid a zero-slot write.
+    uint256 internal transient lock;
     uint256 internal cachedChainId;
     bytes32 public salt;
     bytes32 internal nameHash;
@@ -107,14 +109,14 @@ contract CurveStableSwap2CoinReal {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     modifier nonReentrant() {
-        require(!locked, "reentrant");
-        locked = true;
+        require(lock != 2, "reentrant");
+        lock = 2;
         _;
-        locked = false;
+        lock = 3;
     }
 
     modifier nonReentrantView() {
-        require(!locked, "reentrant");
+        require(lock != 2, "reentrant");
         _;
     }
 

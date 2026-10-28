@@ -324,7 +324,7 @@ fn compile_cache_input(
     toolchain: &Toolchain,
     evm_version: &str,
 ) -> Result<CompileCacheInput> {
-    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain, evm_version)?;
     let source = source_fingerprint(profile.language, &source_path)?;
     let compiler_settings = match profile.language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -463,7 +463,7 @@ fn compile_solidity(
     solc: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, solc)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, solc, evm_version)?;
     let (file_name, sources) = solidity_sources(&source_path)?;
     let input = json!({
         "language": "Solidity",
@@ -706,7 +706,7 @@ fn compile_vyper(
     vyper: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, vyper)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, vyper, evm_version)?;
     let measured = repeat_compile_samples(
         || {
             let mut command = Command::new(&vyper.binary_path);
@@ -781,7 +781,7 @@ fn compile_fe(
     fe: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, fe)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, fe, evm_version)?;
     let out_dir = root
         .join("target/fe-build")
         .join(&profile.id)
@@ -883,9 +883,11 @@ fn source_path_for_profile(
     benchmark: &Benchmark,
     profile: &CompilerProfile,
     toolchain: &Toolchain,
+    evm_version: &str,
 ) -> Result<PathBuf> {
     match profile.language {
         Language::Solidity => {
+            let transient_storage = solidity_supports_transient_storage(toolchain, evm_version)?;
             let source_path = root.join(&benchmark.solidity_path);
             let source_root = source_path.parent().context("solidity source parent")?;
             let variant_path = root
@@ -906,7 +908,10 @@ fn source_path_for_profile(
                 if let Some(parent) = target.parent() {
                     fs::create_dir_all(parent)?;
                 }
-                let source = fs::read_to_string(&path)?;
+                let mut source = fs::read_to_string(&path)?;
+                if !transient_storage {
+                    source = rewrite_solidity_transient_to_storage(&source);
+                }
                 let transformed = transform_solidity_source(
                     &source,
                     profile.source_variant.as_deref(),
@@ -1012,6 +1017,45 @@ fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) 
         Some(other) => bail!("unknown Solidity source variant {other}"),
     };
     Ok(source)
+}
+
+/// Hard forks in activation order, as `--evm-version` names them.
+const EVM_FORKS: &[&str] = &[
+    "homestead",
+    "tangerineWhistle",
+    "spuriousDragon",
+    "byzantium",
+    "constantinople",
+    "petersburg",
+    "istanbul",
+    "berlin",
+    "london",
+    "paris",
+    "shanghai",
+    "cancun",
+    "prague",
+    "osaka",
+];
+
+fn evm_at_least(evm_version: &str, fork: &str) -> Result<bool> {
+    let index = |name: &str| {
+        EVM_FORKS
+            .iter()
+            .position(|known| *known == name)
+            .with_context(|| format!("unknown EVM version {name}"))
+    };
+    Ok(index(evm_version)? >= index(fork)?)
+}
+
+/// Transient state variables need solc 0.8.28 and a Cancun target.
+fn solidity_supports_transient_storage(solc: &Toolchain, evm_version: &str) -> Result<bool> {
+    Ok(solidity_version_tuple(solc) >= Some((0, 8, 28)) && evm_at_least(evm_version, "cancun")?)
+}
+
+/// Where transient storage is unavailable, transient state variables become
+/// storage variables, as Vyper's `@nonreentrant` locks do.
+fn rewrite_solidity_transient_to_storage(source: &str) -> String {
+    source.replace(" transient ", " ")
 }
 
 fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
@@ -2359,7 +2403,7 @@ fn compile_failure(
     error: String,
 ) -> Result<CompileFailure> {
     let language = profile.language;
-    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain, evm_version)?;
     let source = fs::read(&source_path)?;
     let compiler_settings = match language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -2506,13 +2550,40 @@ mod tests {
         let b = crate::models::Benchmark::fixed("main", "Main", "source/Main.sol", "unused.vy");
         let p = profile("solc", Language::Solidity);
         let t = toolchain("solc", "0.8.35");
-        let path = super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        let path = super::source_path_for_profile(root.path(), &b, &p, &t, "prague").unwrap();
         assert!(path.parent().unwrap().join("Deleted.sol").exists());
         fs::remove_file(root.path().join("source/Deleted.sol")).unwrap();
-        super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        super::source_path_for_profile(root.path(), &b, &p, &t, "prague").unwrap();
         let (_, sources) = super::solidity_sources(&path).unwrap();
         assert_eq!(sources.len(), 1);
         assert!(!sources.contains_key("Deleted.sol"));
+    }
+
+    #[test]
+    fn transient_state_falls_back_to_storage_without_transient_support() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("source")).unwrap();
+        fs::write(
+            root.path().join("source/Main.sol"),
+            "pragma solidity ^0.8.35;\ncontract Main { uint256 private transient lock; }",
+        )
+        .unwrap();
+        let b = crate::models::Benchmark::fixed("main", "Main", "source/Main.sol", "unused.vy");
+        let p = profile("solc", Language::Solidity);
+        for (version, evm, transient) in [
+            ("0.8.28", "cancun", true),
+            ("0.8.27", "cancun", false),
+            ("0.8.38", "shanghai", false),
+        ] {
+            let t = toolchain("solc", version);
+            let path = super::source_path_for_profile(root.path(), &b, &p, &t, evm).unwrap();
+            let source = fs::read_to_string(path).unwrap();
+            assert_eq!(
+                source.contains("uint256 private transient lock;"),
+                transient
+            );
+            assert!(source.contains("uint256 private"));
+        }
     }
 
     #[test]

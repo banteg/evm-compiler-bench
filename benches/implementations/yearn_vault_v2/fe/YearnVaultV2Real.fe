@@ -1,6 +1,6 @@
 use std::evm::packed::encode_packed
 use std::abi::{Bytes, Bytes32, DynString}
-use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TSlot, TokenCall, encode_abi_payload}
 use std::evm::{crypto, eip712, erc20, signature}
 
 msg VaultMsg {
@@ -416,9 +416,6 @@ const PERMIT_TYPEHASH: u256 = core::keccak(
 const UPDATE_WITHDRAWAL_QUEUE_TOPIC: u256 = core::keccak("UpdateWithdrawalQueue(address[20])")
 const STR_NAME: u256 = 0
 const STR_SYMBOL: u256 = 1
-// Like the Solidity port, the lock never returns to zero after its first use.
-const LOCK_ENTERED: u256 = 2
-const LOCK_EXITED: u256 = 3
 
 struct VaultStore {
     strings: StorageBytes<u256>,
@@ -454,7 +451,8 @@ struct VaultStore {
     management_fee: u256,
     performance_fee: u256,
     nonces: StorageMap<Address, u256>,
-    nonreentrant_lock: u256,
+    // Transient like Vyper's @nonreentrant.
+    nonreentrant_lock: TSlot<bool>,
 }
 
 fn min(_ x: u256, _ y: u256) -> u256 {
@@ -625,12 +623,12 @@ uses (store: VaultStore, ctx: Ctx, call: mut Call)
 }
 
 fn enter_nonreentrant() uses (store: mut VaultStore) {
-    assert!(store.nonreentrant_lock != LOCK_ENTERED, "reentrant call")
-    store.nonreentrant_lock = LOCK_ENTERED
+    assert!(!store.nonreentrant_lock.read(), "reentrant call")
+    store.nonreentrant_lock.write(true)
 }
 
 fn exit_nonreentrant() uses (store: mut VaultStore) {
-    store.nonreentrant_lock = LOCK_EXITED
+    store.nonreentrant_lock.write(false)
 }
 
 fn report_loss(strategy: Address, loss: u256) uses (store: mut VaultStore) {

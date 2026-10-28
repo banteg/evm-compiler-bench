@@ -71,7 +71,9 @@ contract YearnVaultV2Real {
     uint256 public managementFee;
     uint256 public performanceFee;
     mapping(address => uint256) public nonces;
-    uint256 private nonreentrantLock;
+    // Transient like Vyper's @nonreentrant. Targets without transient storage
+    // compile it as storage, where the nonzero sentinels avoid a zero-slot write.
+    uint256 private transient nonreentrantLock;
 
     event Transfer(address indexed sender, address indexed receiver, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);

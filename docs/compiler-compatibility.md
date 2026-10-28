@@ -15,6 +15,7 @@ September 2026 migration resolves 0.5.0b1 in place of the pinned 0.5.0a1 profile
 | Yearn v2 / Vyper 0.3 | Translate `StrategyParams(field=value)` to dictionary-style construction | Preserve fields, their order and expressions, nested calls, and comments. |
 | Curve / Vyper 0.3.7 | Use `shift`, a static loop bound with an early break, and an explicit ERC-4626 interface | Preserve signed/unsigned shifts and coefficients; iterate to the immutable coin count, bounded by the constructor's `DynArray`; preserve external selectors. |
 | Uniswap pair / solc 0.4.26 | Hash literals directly and adapt low-level token calls | Hash identical bytes; accept empty returns or a canonical 32-byte true value, including trailing data; reject short returns, false, and noncanonical booleans. |
+| Reentrancy locks / solc < 0.8.28 or pre-Cancun EVM | Declare `transient` lock variables as storage, as Vyper's `@nonreentrant` does on those targets | Preserve lock rejection. Nonzero sentinels (2 entered, 3 exited) avoid a zero-slot write after first use. |
 | Yearn v3 / solc 0.4.26 | Disambiguate function-scoped locals, use array length decrement, opt into ABIEncoderV2, and adapt low-level token calls | Preserve branch-local evaluation order, removal of the final array element, and optional-return checks. |
 
 The one-byte Yearn limit is an existing benchmark-source behavior, not a newly

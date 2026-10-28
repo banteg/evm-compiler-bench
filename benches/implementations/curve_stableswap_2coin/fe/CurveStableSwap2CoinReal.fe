@@ -1,7 +1,7 @@
 use core::ptr::{MemBuffer, MemSpan}
 use std::evm::packed::encode_packed
 use std::abi::{Bytes, Bytes32, DynArray, DynString}
-use std::evm::{Call, Ctx, Log, RawOps, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{Call, Ctx, Log, RawOps, StorageBytes, StorageMap, TSlot, TokenCall, encode_abi_payload}
 use std::evm::{crypto, erc20, revert_empty}
 
 msg PoolMsg {
@@ -329,7 +329,8 @@ struct PoolStore {
     d_ma_time: u256,
     ma_last_time: u256,
     total_supply: u256,
-    locked: bool,
+    // Transient like Vyper's @nonreentrant.
+    locked: TSlot<bool>,
     cached_chain_id: u256,
     salt: u256,
     strings: StorageBytes<u256>,
@@ -1019,8 +1020,8 @@ uses (store: PoolStore, ctx: Ctx, call: mut Call)
 fn add_liquidity(amounts: DynArray<u256>, min_mint_amount: u256, receiver: Address) -> u256
 uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
-    assert!(!store.locked, "reentrant")
-    store.locked = true
+    assert!(!store.locked.read(), "reentrant")
+    store.locked.write(true)
     assert!(receiver != Address::zero(), "receiver")
     let n = store.n_coins
     check_amount_length(amounts.len() as u256, n_coins: n)
@@ -1110,7 +1111,7 @@ uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
             d: d1,
         )
     }
-    store.locked = false
+    store.locked.write(false)
     minted
 }
 
@@ -1124,13 +1125,13 @@ fn exchange(
 ) -> u256
 uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
-    assert!(!store.locked, "reentrant")
-    store.locked = true
+    assert!(!store.locked.read(), "reentrant")
+    store.locked.write(true)
     if expect_optimistic_transfer {
         assert!(!store.pool_contains_rebasing_tokens, "rebasing")
     }
     let dy = do_exchange(i, j, dx, min_dy, receiver, expect_optimistic_transfer)
-    store.locked = false
+    store.locked.write(false)
     dy
 }
 
@@ -1142,8 +1143,8 @@ fn remove_liquidity(
 ) -> DynArray<u256>
 uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
-    assert!(!store.locked, "reentrant")
-    store.locked = true
+    assert!(!store.locked.read(), "reentrant")
+    store.locked.write(true)
     assert!(lp_amount > 0, "lp")
     let n = store.n_coins
     assert!(min_amounts.len() as u256 == n, "amount length")
@@ -1172,15 +1173,15 @@ uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
     if claim_admin_fees {
         withdraw_admin_fees_internal()
     }
-    store.locked = false
+    store.locked.write(false)
     amounts
 }
 
 fn remove_liquidity_one_coin(lp_amount: u256, i: i128, min_amount: u256, receiver: Address) -> u256
 uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
-    assert!(!store.locked, "reentrant")
-    store.locked = true
+    assert!(!store.locked.read(), "reentrant")
+    store.locked.write(true)
     let coin = coin_index(i, n_coins: store.n_coins)
     assert!(lp_amount > 0, "lp")
     let (user_amount, fee_amount, xp, amp, d) = calc_withdraw_one_coin_internal(
@@ -1207,15 +1208,15 @@ uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
         },
     )
     upkeep_oracles(xp, amp, d)
-    store.locked = false
+    store.locked.write(false)
     user_amount
 }
 
 fn remove_liquidity_imbalance(amounts: DynArray<u256>, max_burn_amount: u256, receiver: Address) -> u256
 uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
-    assert!(!store.locked, "reentrant")
-    store.locked = true
+    assert!(!store.locked.read(), "reentrant")
+    store.locked.write(true)
     let n = store.n_coins
     check_amount_length(amounts.len() as u256, n_coins: n)
     let old_balances = balances_mem()
@@ -1279,7 +1280,7 @@ uses (store: mut PoolStore, ctx: Ctx, log: mut Log, call: mut Call)
         amp: current_a(),
         d: d1,
     )
-    store.locked = false
+    store.locked.write(false)
     burn_amount
 }
 
@@ -1598,10 +1599,10 @@ pub contract CurveStableSwap2CoinReal uses (
         }
 
         WithdrawAdminFees uses (mut store, ctx, mut call) {
-            assert!(!store.locked, "reentrant")
-            store.locked = true
+            assert!(!store.locked.read(), "reentrant")
+            store.locked.write(true)
             withdraw_admin_fees_internal()
-            store.locked = false
+            store.locked.write(false)
         }
 
         Permit { owner, spender, value, deadline, v, r, s } -> bool
@@ -1661,7 +1662,7 @@ pub contract CurveStableSwap2CoinReal uses (
         }
 
         GetVirtualPrice -> u256 uses (store, ctx, mut call, ops) {
-            assert!(!store.locked, "reentrant")
+            assert!(!store.locked.read(), "reentrant")
             if store.total_supply == 0 {
                 ops.revert(data: MemSpan::empty())
             }
@@ -1726,7 +1727,7 @@ pub contract CurveStableSwap2CoinReal uses (
         }
 
         PriceOracle { i } -> u256 uses (store, ctx) {
-            assert!(!store.locked, "reentrant")
+            assert!(!store.locked.read(), "reentrant")
             assert!(i < store.n_coins - 1, "price")
             calc_moving_average(
                 packed_value: store.last_prices_packed.get(key: i),
@@ -1736,7 +1737,7 @@ pub contract CurveStableSwap2CoinReal uses (
         }
 
         DOracle -> u256 uses (store, ctx) {
-            assert!(!store.locked, "reentrant")
+            assert!(!store.locked.read(), "reentrant")
             calc_moving_average(
                 packed_value: store.last_d_packed,
                 averaging_window: store.d_ma_time,
@@ -1790,7 +1791,7 @@ pub contract CurveStableSwap2CoinReal uses (
             Bytes32 { val: domain_separator() }
         }
         TotalSupply -> u256 uses store {
-            assert!(!store.locked, "reentrant")
+            assert!(!store.locked.read(), "reentrant")
             store.total_supply
         }
 
