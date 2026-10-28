@@ -549,17 +549,13 @@
     function benchCurveSetReturnData(address target, bool enabled) external returns (bool) {
         CurveDeps storage deps = curveDeps[target];
         require(address(deps.coin0) != address(0), "curve deps");
-        deps.coin0.setReturnData(enabled);
-        deps.coin1.setReturnData(enabled);
-        if (address(deps.coin2) != address(0)) {
-            deps.coin2.setReturnData(enabled);
-        }
-        if (address(deps.coin3) != address(0)) {
-            deps.coin3.setReturnData(enabled);
-            deps.coin4.setReturnData(enabled);
-            deps.coin5.setReturnData(enabled);
-            deps.coin6.setReturnData(enabled);
-            deps.coin7.setReturnData(enabled);
+        // Pools with fewer than eight coins leave the trailing slots empty.
+        BenchERC20OptionalReturn[8] memory coins =
+            [deps.coin0, deps.coin1, deps.coin2, deps.coin3, deps.coin4, deps.coin5, deps.coin6, deps.coin7];
+        for (uint256 i = 0; i < coins.length; i++) {
+            if (address(coins[i]) != address(0)) {
+                coins[i].setReturnData(enabled);
+            }
         }
         return true;
     }
@@ -1355,15 +1351,22 @@
         internal
         returns (bool ok, bytes32 retHash, uint256 gasUsed)
     {
-        bytes memory ret;
         // Keep the prank cheatcode call outside the measured bracket.
         if (sender != address(this)) {
             vm.prank(sender);
         }
-        uint256 startGas = gasleft();
-        (ok, ret) = target.call{value: value}(data);
-        gasUsed = startGas - gasleft();
-        retHash = keccak256(ret);
+        // Bracket only the call: copying return data is harness work, and its
+        // cost would differ between compilers' revert payloads.
+        assembly ("memory-safe") {
+            let input := add(data, 0x20)
+            let size := mload(data)
+            let startGas := gas()
+            ok := call(gas(), target, value, input, size, 0, 0)
+            gasUsed := sub(startGas, gas())
+            let ret := mload(0x40)
+            returndatacopy(ret, 0, returndatasize())
+            retHash := keccak256(ret, returndatasize())
+        }
     }
 
     // An external self-call is its own transaction under `forge test --isolate`:
