@@ -1,6 +1,6 @@
 id = "vyper-0.2.16-default"
 language = "vyper"
 compiler = "vyper-0.2.16"
-optimizer = false
+optimizer = true
 source_variant = "vyper-0.2"
 evm_version = "berlin"
