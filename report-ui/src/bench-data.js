@@ -130,6 +130,19 @@
     return out.sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
   }
 
+  // For each parameter value, keep the rows of the first scenario in `scenarios` measured there.
+  function preferredScenarioRows(rows, scenarios){
+    const rank = r => scenarios.indexOf(r.gas?.scenario);
+    const best = new Map();
+    for (const r of rows){
+      const i = rank(r);
+      if (i < 0) continue;
+      const current = best.get(r.parameter_value);
+      if (current == null || i < current) best.set(r.parameter_value, i);
+    }
+    return rows.filter(r => rank(r) === best.get(r.parameter_value));
+  }
+
   function profilePairCompileCoverage(rows, pa, pb, suiteSet){
     const profiles = new Map([
       [pa, { attempted: new Set(), passed: new Set() }],
@@ -654,7 +667,7 @@
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
     hasCorrectnessFailure, isComparableArtifact, correctnessFailureGroups,
-    compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
+    compareProfiles, preferredScenarioRows, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage, defaultProfileForCompiler,
     profileCompilerKey, compilerOptions,

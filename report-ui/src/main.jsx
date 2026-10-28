@@ -474,10 +474,21 @@ function VersionEvolution({ metric }) {
 // ============================================================
 // Scale-N family chart strip
 // ============================================================
+function scaleScenarioLabel(rows) {
+  const valuesByScenario = new Map();
+  for (const r of rows) {
+    if (!valuesByScenario.has(r.gas.scenario)) valuesByScenario.set(r.gas.scenario, new Set());
+    valuesByScenario.get(r.gas.scenario).add(r.parameter_value);
+  }
+  const [[primary], ...standIns] = [...valuesByScenario].sort((a, b) => b[1].size - a[1].size);
+  return [primary, ...standIns.map(([scenario, values]) =>
+    `${scenario} at N=${[...values].sort((a, b) => a - b).join(',')}`)].join(' · ');
+}
+
 function ScaleStrip({ metric }) {
-  const families = ['dispatch_N', 'storage_slots_N', 'mapping_depth_N', 'abi_args_N',
-                    'loop_bound_N', 'events_N', 'external_calls_N']
-    .filter(f => Bench.D.rows.some(r => r.family === f));
+  const families = useMemo(() => Object.keys(BenchCharts.FAMILY_SCENARIOS)
+    .map(family => ({ family, rows: BenchCharts.scaleFamilyRows(family) }))
+    .filter(({ rows }) => rows.length), []);
   const profiles = [SOLAR_BASELINE, SOLAR_GAS, SOLX_BASELINE, SOLX_O3, 'solc-latest-viair-runs200', 'vyper-latest-gas', 'vyper-latest-gas-venom', 'fe-latest-O2']
     .filter(p => Bench.profileById(p));
   const palette = {
@@ -494,16 +505,16 @@ function ScaleStrip({ metric }) {
     React.createElement('div', {
       style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', border: '1px solid var(--line)', background: 'var(--bg-elev)' }
     },
-      families.map(f => React.createElement('div', { key: f, style: { padding: '22px', borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line)' } },
+      families.map(({ family, rows }) => React.createElement('div', { key: family, style: { padding: '22px', borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line)' } },
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'baseline' } },
           React.createElement('div', { style: { fontFamily: 'var(--mono)', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--fg-2)' } },
-            f.replace(/_N$/, '').replace(/_/g, ' ')),
+            family.replace(/_N$/, '').replace(/_/g, ' ')),
           React.createElement('div', { style: { fontFamily: 'var(--mono)', fontSize: '9.5px', color: 'var(--fg-4)', letterSpacing: '0.08em' } }, 'N=1…64')
         ),
         React.createElement('div', { style: { fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--fg-4)', marginBottom: '10px' } },
-          'scenario · ' + (BenchCharts.FAMILY_SCENARIO[f] || '—')
+          'scenario · ' + scaleScenarioLabel(rows)
         ),
-        React.createElement(ScaleChart, { family: f, metric, profiles, height: 150 })
+        React.createElement(ScaleChart, { rows, metric, profiles, height: 150 })
       ))
     ),
     React.createElement('div', { style: { display: 'flex', gap: '14px', marginTop: '14px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--fg-3)', flexWrap: 'wrap' } },

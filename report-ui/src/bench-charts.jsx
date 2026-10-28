@@ -211,28 +211,29 @@ import React from "react";
     );
   }
 
-  // ScaleChart: picks a canonical scenario per family to avoid mixing curves.
-  const FAMILY_SCENARIO = {
-    'abi_args_N': 'sum_args',
-    'dispatch_N': 'last_selector',
-    'events_N': 'emit_many',
-    'external_calls_N': 'call_many',
-    'loop_bound_N': 'run_loop',
-    'mapping_depth_N': 'read_after_write',
-    'storage_slots_N': 'write_all',
+  // Canonical scenarios per scale family, in preference order, so a curve never mixes
+  // scenarios at one N. Later entries stand in where an earlier one is not generated:
+  // dispatch_N has no last_selector at N=1, where the first selector is also the last.
+  const FAMILY_SCENARIOS = {
+    'dispatch_N': ['last_selector', 'first_selector'],
+    'storage_slots_N': ['write_all'],
+    'mapping_depth_N': ['read_after_write'],
+    'abi_args_N': ['sum_args'],
+    'loop_bound_N': ['run_loop'],
+    'events_N': ['emit_many'],
+    'external_calls_N': ['call_many'],
   };
-  function ScaleChart({ family, metric, profiles, height = 180 }){
+  function scaleFamilyRows(family){
+    const rows = Bench.D.rows.filter(r => r.family === family && r.status === 'ok');
+    return Bench.preferredScenarioRows(rows, FAMILY_SCENARIOS[family]);
+  }
+  // rows: one family's rows from scaleFamilyRows
+  function ScaleChart({ rows, metric, profiles, height = 180 }){
     const [ref, width] = useContainerWidth(360);
     const padL = 40, padR = 12, padT = 14, padB = 26;
     const innerW = Math.max(80, width - padL - padR);
     const innerH = height - padT - padB;
 
-    // Filter rows by canonical scenario only, no aggregation needed
-    const scenario = FAMILY_SCENARIO[family];
-    const rows = Bench.D.rows.filter(r =>
-      r.family === family && r.status === 'ok' &&
-      (!scenario || r.gas?.scenario === scenario)
-    );
     const series = new Map();
     for (const r of rows){
       if (!profiles.includes(r.profile_id)) continue;
@@ -249,8 +250,9 @@ import React from "react";
 
     const xMin = Math.min(...allX), xMax = Math.max(...allX);
     const yMin = 0, yMax = Math.max(...allY) * 1.06;
-    // log-x for scale (1..64)
-    const xOf = v => padL + (Math.log(v) - Math.log(xMin)) / (Math.log(xMax) - Math.log(xMin)) * innerW;
+    // log-x for scale (1..64); a single N sits in the middle
+    const xOf = v => padL + (xMax === xMin ? innerW / 2
+      : (Math.log(v) - Math.log(xMin)) / (Math.log(xMax) - Math.log(xMin)) * innerW);
     const yOf = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
 
     const palette = {
@@ -348,5 +350,5 @@ import React from "react";
     );
   }
 
-  window.BenchCharts = { ScenarioDeltaChart, EvolutionChart, ScaleChart, DeltaHistogram, FAMILY_SCENARIO };
+  window.BenchCharts = { ScenarioDeltaChart, EvolutionChart, ScaleChart, DeltaHistogram, FAMILY_SCENARIOS, scaleFamilyRows };
 })();

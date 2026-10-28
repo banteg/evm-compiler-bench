@@ -92,3 +92,13 @@ test('Solar revision and gas/size runs remain distinct from the package and Soli
   assert.match(b.profileLabel(gas.id), /^Solar 0\.2\.0 @716e9cbc gas runs200$/);
   assert.equal(b.latestBaselineProfile(gas), undefined);
 });
+
+test('scale scenario preference falls back per N where the preferred scenario is not generated', () => {
+  const scaleRows = [1, 2, 4].flatMap(n => [
+    ...(n > 1 ? ['last_selector'] : []), 'first_selector', 'set_sink',
+  ].map(scenario => ({parameter_value: n, gas: {scenario}})));
+  const b = load();
+  const picked = b.preferredScenarioRows(scaleRows, ['last_selector', 'first_selector']);
+  assert.deepEqual(picked.map(r => `${r.parameter_value}:${r.gas.scenario}`),
+    ['1:first_selector', '2:last_selector', '4:last_selector']);
+});
