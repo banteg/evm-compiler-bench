@@ -1,4 +1,4 @@
-use std::evm::{Call, Ctx, Log, StorageMap}
+use std::evm::{Call, Ctx, Log, StorageMap, wei}
 
 msg VaultMsg {
     #[selector = sol("balanceOf(address)")]
@@ -27,24 +27,28 @@ struct Withdraw {
     amount: u256,
 }
 
-struct VaultStore {
-    balances: StorageMap<Address, u256>,
-    total_shares: u256,
-}
+struct VaultStore { balances: StorageMap<Address, u256>, total_shares: u256 }
 
 pub contract VaultDepositWithdraw uses (ctx: Ctx, log: mut Log, call: mut Call) {
-    mut store: VaultStore
+    mut store: VaultStore,
 
     recv VaultMsg {
-        BalanceOf { account } -> u256 uses store { store.balances.get(key: account) }
-        TotalShares -> u256 uses store { store.total_shares }
+        BalanceOf { account } -> u256 uses store {
+            store.balances.get(key: account)
+        }
+        TotalShares -> u256 uses store {
+            store.total_shares
+        }
 
         #[payable]
         Deposit -> u256 uses (mut store, ctx, mut log) {
-            let amount = ctx.value()
+            let amount = ctx.value().as_wei()
             assert!(amount > 0, "value")
             let sender = ctx.caller()
-            store.balances.set(key: sender, value: store.balances.get(key: sender) + amount)
+            store.balances.set(
+                    key: sender,
+                    value: store.balances.get(key: sender) + amount,
+                )
             store.total_shares += amount
             log.emit(Deposit { account: sender, amount })
             amount
@@ -56,18 +60,13 @@ pub contract VaultDepositWithdraw uses (ctx: Ctx, log: mut Log, call: mut Call) 
             assert!(balance >= amount, "shares")
             store.balances.set(key: sender, value: balance - amount)
             store.total_shares -= amount
-            let ok = call.raw_call(
-                addr: sender,
-                gas: ctx.gas(),
-                value: amount,
-                args_offset: 0,
-                args_len: 0,
-            )
-            assert!(ok, "eth")
+            assert!(call.send_value(addr: sender, gas: ctx.gas(), value: wei(amount)).success(), "eth")
             log.emit(Withdraw { account: sender, amount })
             amount
         }
 
-        TotalAssets -> u256 uses ctx { ctx.selfbalance() }
+        TotalAssets -> u256 uses ctx {
+            ctx.selfbalance().as_wei()
+        }
     }
 }

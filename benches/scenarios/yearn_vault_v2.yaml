@@ -35,6 +35,15 @@ scenarios:
       - data: 'abi.encodeWithSignature("strategies(address)", benchYearnStrategy({target}))'
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2QueueIds(address)", {target})'
+  - name: initialize_long_metadata
+    state_access_profile: cold
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnPrepare(address)", {target})'
+    measured:
+      data: 'abi.encodeWithSignature("initialize(address,address,address,string,string,address,address)", benchYearnAsset({target}), address(this), address(this), "Yearn Vault with a name crossing two storage words and a tail", "yvSymbol-at32-byte-word-boundary", address(this), address(this))'
+    expect_success: true
+    observers: *yearn_v2_observers
   - name: set_deposit_limit
     state_access_profile: warm
     setup:
@@ -183,3 +192,265 @@ scenarios:
       data: 'abi.encodeWithSignature("setEmergencyShutdown(bool)", true)'
     expect_success: true
     observers: *yearn_v2_observers
+  - name: permit_valid
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: true
+    observers:
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'
+  - name: permit_replay_reverts
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    measured:
+      data: 'benchYearnV2PermitCalldata({target}, BOB, uint256(123), block.timestamp + 100000)'
+    expect_success: false
+    observers:
+      - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'
+  - name: set_name
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setName(string)", "Renamed Yearn V2 Vault with a name crossing two words")'
+    expect_success: true
+    observers: &yearn_v2_management_observers
+      - data: 'abi.encodeWithSignature("name()")'
+      - data: 'abi.encodeWithSignature("symbol()")'
+      - data: 'abi.encodeWithSignature("decimals()")'
+      - data: 'abi.encodeWithSignature("governance()")'
+      - data: 'abi.encodeWithSignature("management()")'
+      - data: 'abi.encodeWithSignature("guardian()")'
+      - data: 'abi.encodeWithSignature("rewards()")'
+      - data: 'abi.encodeWithSignature("emergencyShutdown()")'
+      - data: 'abi.encodeWithSignature("depositLimit()")'
+      - data: 'abi.encodeWithSignature("debtRatio()")'
+      - data: 'abi.encodeWithSignature("totalIdle()")'
+      - data: 'abi.encodeWithSignature("totalDebt()")'
+      - data: 'abi.encodeWithSignature("managementFee()")'
+      - data: 'abi.encodeWithSignature("performanceFee()")'
+      - data: 'abi.encodeWithSignature("activation()")'
+      - data: 'abi.encodeWithSignature("lastReport()")'
+      - data: 'abi.encodeWithSignature("lockedProfit()")'
+      - data: 'abi.encodeWithSignature("lockedProfitDegradation()")'
+      - data: 'abi.encodeWithSignature("nonces(address)", benchYearnPermitOwner())'
+      - data: 'abi.encodeWithSignature("balanceOf(address)", address(this))'
+      - data: 'abi.encodeWithSignature("strategies(address)", benchYearnStrategy({target}))'
+      - data: 'abi.encodeWithSignature("strategies(address)", benchYearnStrategy2({target}))'
+      - data: 'abi.encodeWithSignature("strategies(address)", benchYearnStrategy3({target}))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2QueueIds(address)", {target})'
+  - name: set_symbol
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setSymbol(string)", "yvRenamed")'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_governance
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setGovernance(address)", BOB)'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: accept_governance
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("setGovernance(address)", BOB)'
+    measured:
+      data: 'abi.encodeWithSignature("acceptGovernance()")'
+      sender: BOB
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_management
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setManagement(address)", BOB)'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_rewards
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setRewards(address)", BOB)'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_guardian
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setGuardian(address)", BOB)'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_locked_profit_degradation
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setLockedProfitDegradation(uint256)", uint256(1e15))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_performance_fee
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setPerformanceFee(uint256)", uint256(500))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_management_fee
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+    measured:
+      data: 'abi.encodeWithSignature("setManagementFee(uint256)", uint256(500))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: set_withdrawal_queue
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy2({target}), uint256(2_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'benchYearnV2SwapQueueCalldata({target})'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: update_strategy_min_debt_per_harvest
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("updateStrategyMinDebtPerHarvest(address,uint256)", benchYearnStrategy({target}), uint256(10_000))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: update_strategy_max_debt_per_harvest
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("updateStrategyMaxDebtPerHarvest(address,uint256)", benchYearnStrategy({target}), uint256(300_000))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: update_strategy_performance_fee
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("updateStrategyPerformanceFee(address,uint256)", benchYearnStrategy({target}), uint256(500))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: migrate_strategy
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+      - data: 'abi.encodeWithSignature("report(uint256,uint256,uint256)", uint256(0), uint256(0), uint256(0))'
+        sender: 'benchYearnStrategy({target})'
+    measured:
+      data: 'abi.encodeWithSignature("migrateStrategy(address,address)", benchYearnStrategy({target}), benchYearnStrategy3({target}))'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: revoke_strategy_self
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("revokeStrategy()")'
+      sender: 'benchYearnStrategy({target})'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: credit_available_self
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("creditAvailable()")'
+      sender: 'benchYearnStrategy({target})'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: debt_outstanding_self
+    state_access_profile: warm
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+      - data: 'abi.encodeWithSignature("report(uint256,uint256,uint256)", uint256(0), uint256(0), uint256(0))'
+        sender: 'benchYearnStrategy({target})'
+      - data: 'abi.encodeWithSignature("updateStrategyDebtRatio(address,uint256)", benchYearnStrategy({target}), uint256(1_000))'
+    measured:
+      data: 'abi.encodeWithSignature("debtOutstanding()")'
+      sender: 'benchYearnStrategy({target})'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: expected_return_self
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - data: 'abi.encodeWithSignature("addStrategy(address,uint256,uint256,uint256,uint256)", benchYearnStrategy({target}), uint256(5_000), uint256(0), uint256(150_000), uint256(1_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(1_000))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnSetReport(address,uint256,uint256)", {target}, uint256(10_000), uint256(0))'
+      - data: 'abi.encodeWithSignature("report(uint256,uint256,uint256)", uint256(10_000), uint256(0), uint256(0))'
+        sender: 'benchYearnStrategy({target})'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchWarp(uint256)", uint256(500))'
+    measured:
+      data: 'abi.encodeWithSignature("expectedReturn()")'
+      sender: 'benchYearnStrategy({target})'
+    expect_success: true
+    observers: *yearn_v2_management_observers
+  - name: sweep_all
+    state_access_profile: mixed
+    setup:
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
+      - data: 'abi.encodeWithSignature("deposit(uint256,address)", uint256(200_000), address(this))'
+      - destination: harness
+        data: 'abi.encodeWithSignature("benchYearnAirdrop(address,uint256)", {target}, uint256(5_000))'
+    measured:
+      data: 'abi.encodeWithSignature("sweep(address)", benchYearnAsset({target}))'
+    expect_success: true
+    observers: *yearn_v2_management_observers

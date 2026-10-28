@@ -16,12 +16,12 @@ pub contract {{CONTRACT_NAME}} {
 
     recv MappingDepthMsg {
         WriteChain { seed } -> u256 uses (mut store) {
-            let mut current = seed
+            var current = seed
 {{WRITE_BODY}}
             current
         }
         ReadChain { seed } -> u256 uses store {
-            let mut current = seed
+            var current = seed
 {{READ_BODY}}
             current
         }

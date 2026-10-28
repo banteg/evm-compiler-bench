@@ -37,7 +37,7 @@ pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize
                 update_candidate(&mut entry.vyper, index, score, &artifact.profile_id)
             }
             // Baseline pairs drive the Solidity-vs-Vyper pairwise lane; Fe rows
-            // are reported standalone and do not form baseline pairs.
+            // are compared with Solidity in `comparison_pairs` instead.
             Language::Fe => {}
         }
     }
@@ -53,8 +53,9 @@ pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize
         .collect()
 }
 
-/// Cross-language baselines plus same-source alternative Solidity compiler comparisons. A backend
-/// release is never treated as a Solidity language version or a solc baseline.
+/// Cross-language baselines, same-source alternative Solidity compiler comparisons, and each Fe
+/// artifact against the preferred solc artifact. A backend release is never treated as a Solidity
+/// language version or a solc baseline.
 pub fn comparison_pairs(artifacts: &[CompiledArtifact]) -> Vec<(String, usize, usize)> {
     let mut pairs: Vec<_> = baseline_pairs(artifacts)
         .into_iter()
@@ -98,7 +99,33 @@ pub fn comparison_pairs(artifacts: &[CompiledArtifact]) -> Vec<(String, usize, u
             pairs.push((artifact.benchmark_id.clone(), baseline, candidate));
         }
     }
+    pairs.extend(fe_comparison_pairs(artifacts));
     pairs
+}
+
+fn fe_comparison_pairs(artifacts: &[CompiledArtifact]) -> Vec<(String, usize, usize)> {
+    artifacts
+        .iter()
+        .enumerate()
+        .filter(|(_, artifact)| artifact.language == Language::Fe)
+        .filter_map(|(fe_index, fe)| {
+            let (solidity_index, _) = artifacts
+                .iter()
+                .enumerate()
+                .filter(|(_, candidate)| {
+                    candidate.language == Language::Solidity
+                        && candidate.compiler.name == "solc"
+                        && candidate.benchmark_id == fe.benchmark_id
+                })
+                .min_by_key(|(_, candidate)| {
+                    (
+                        baseline_score(candidate.language, &candidate.profile_id),
+                        &candidate.profile_id,
+                    )
+                })?;
+            Some((fe.benchmark_id.clone(), solidity_index, fe_index))
+        })
+        .collect()
 }
 
 #[derive(Default)]
@@ -159,6 +186,21 @@ fn fallback_score(language: Language, profile_id: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn fe_pairs_with_the_preferred_solc_artifact_only() {
+        use crate::test_support::artifact;
+        let mut fe = artifact("fe", "fe-latest-O2");
+        fe.language = crate::models::Language::Fe;
+        let solx = artifact("solx", "solx-0.1.8-O3");
+        let viair = artifact("solc", "solc-latest-viair-runs200");
+        let legacy = artifact("solc", "solc-latest-legacy-runs200");
+        assert_eq!(
+            super::comparison_pairs(&[fe.clone(), viair, legacy]),
+            vec![("erc20_minimal".into(), 2, 0)]
+        );
+        assert!(super::comparison_pairs(&[fe, solx]).is_empty());
+    }
+
     #[test]
     fn solar_compares_by_compatibility_and_never_becomes_a_solc_baseline() {
         use crate::test_support::artifact;

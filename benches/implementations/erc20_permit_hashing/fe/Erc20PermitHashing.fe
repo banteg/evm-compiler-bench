@@ -1,4 +1,4 @@
-use std::evm::{StorageMap, encode_abi_payload}
+use std::evm::StorageMap
 use std::evm::crypto
 use std::abi::Bytes32
 
@@ -6,27 +6,32 @@ msg PermitMsg {
     #[selector = sol("nonces(address)")]
     Nonces { owner: Address } -> u256,
     #[selector = sol("hashPermit(address,address,uint256,uint256,uint256)")]
-    HashPermit { owner: Address, spender: Address, value: u256, nonce: u256, deadline: u256 } -> Bytes32,
+    HashPermit {
+        owner: Address,
+        spender: Address,
+        value: u256,
+        nonce: u256,
+        deadline: u256,
+    } -> Bytes32,
     #[selector = sol("useNonce(address)")]
     UseNonce { owner: Address } -> u256,
     #[selector = sol("hashCurrentPermit(address,address,uint256,uint256)")]
     HashCurrentPermit { owner: Address, spender: Address, value: u256, deadline: u256 } -> Bytes32,
 }
 
-struct PermitStore {
-    nonces: StorageMap<Address, u256>,
-}
+struct PermitStore { nonces: StorageMap<Address, u256> }
 
 fn hash_permit(owner: Address, spender: Address, value: u256, nonce: u256, deadline: u256) -> u256 {
-    let (ptr, len) = encode_abi_payload((owner, spender, value, nonce, deadline))
-    crypto::keccak256(ptr, len)
+    crypto::keccak_words([owner.word(), spender.word(), value, nonce, deadline])
 }
 
 pub contract Erc20PermitHashing {
-    mut store: PermitStore
+    mut store: PermitStore,
 
     recv PermitMsg {
-        Nonces { owner } -> u256 uses store { store.nonces.get(key: owner) }
+        Nonces { owner } -> u256 uses store {
+            store.nonces.get(key: owner)
+        }
 
         HashPermit { owner, spender, value, nonce, deadline } -> Bytes32 {
             Bytes32 { val: hash_permit(owner, spender, value, nonce, deadline) }
@@ -38,7 +43,9 @@ pub contract Erc20PermitHashing {
             current
         }
 
-        HashCurrentPermit { owner, spender, value, deadline } -> Bytes32 uses store {
+        HashCurrentPermit { owner, spender, value, deadline } -> Bytes32
+        uses store
+        {
             let nonce = store.nonces.get(key: owner)
             Bytes32 { val: hash_permit(owner, spender, value, nonce, deadline) }
         }

@@ -14,12 +14,12 @@ pub contract {{CONTRACT_NAME}} {
 
     recv StorageSlotsMsg {
         WriteAll { seed } -> u256 uses (mut store) {
-            let mut total: u256 = 0
+            var total: u256 = 0
 {{WRITE_BODY}}
             total
         }
         ReadAll -> u256 uses store {
-            let mut total: u256 = 0
+            var total: u256 = 0
 {{READ_BODY}}
             total
         }

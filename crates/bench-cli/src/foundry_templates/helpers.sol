@@ -1092,6 +1092,40 @@
         );
     }
 
+    function benchYearnV2PermitCalldata(address target, address spender, uint256 value, uint256 deadline)
+        public
+        returns (bytes memory)
+    {
+        // Freshly initialized vaults start at nonce zero. Reusing this signed
+        // payload also exercises nonce consumption in the replay scenario.
+        address owner = benchYearnPermitOwner();
+        bytes32 domain = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256("Yearn Vault"),
+            keccak256("0.4.6"),
+            block.chainid,
+            target
+        ));
+        bytes32 digest = keccak256(abi.encodePacked(
+            bytes2(0x1901),
+            domain,
+            keccak256(abi.encode(YEARN_PERMIT_TYPE_HASH, owner, spender, value, uint256(0), deadline))
+        ));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(YEARN_PERMIT_KEY, digest);
+        return abi.encodeWithSignature(
+            "permit(address,address,uint256,uint256,bytes)",
+            owner, spender, value, deadline, abi.encodePacked(r, s, v)
+        );
+    }
+
+    function benchYearnV2SwapQueueCalldata(address target) public view returns (bytes memory) {
+        // Reorders a queue holding strategy then strategy2 into the reverse order.
+        address[20] memory queue;
+        queue[0] = address(yearnDeps[target].strategy2);
+        queue[1] = address(yearnDeps[target].strategy);
+        return abi.encodeWithSignature("setWithdrawalQueue(address[20])", queue);
+    }
+
     function benchYearnSetReport(address target, uint256 gain, uint256 loss) external returns (bool) {
         require(address(yearnDeps[target].strategy) != address(0), "yearn deps");
         yearnDeps[target].strategy.setReport(gain, loss);
