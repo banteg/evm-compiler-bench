@@ -93,7 +93,7 @@ import React from "react";
   // points: [{version, versionKey, config, deltaPct, profile, label, comparable}]
   function EvolutionChart({ points, language, height = 240 }){
     const [ref, width] = useContainerWidth(540);
-    const pts = points.filter(p => p.language === language && !p.venom);
+    const pts = points.filter(p => p.language === language);
     // Group by config
     const byConfig = new Map();
     for (const p of pts){

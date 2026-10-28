@@ -382,6 +382,8 @@
     const ids = new Set(D.profiles.map(p => p.id));
     const out = [];
     for (const p of D.profiles){
+      // Version curves track the default codegen; Venom stays in the comparator.
+      if (p.experimental_codegen) continue;
       const runs = profileOptimizerRuns(p);
       if (p.language === 'solidity' && runs != null && runs !== 200) continue;
       if (p.language === 'vyper' && profileOptimizer(p) === 'default') {
@@ -389,7 +391,7 @@
           candidate.language === 'vyper'
           && profileVersionKey(candidate) === profileVersionKey(p)
           && profileOptimizer(candidate) === 'none'
-          && !!candidate.experimental_codegen === !!p.experimental_codegen
+          && !candidate.experimental_codegen
         );
         if (hasExplicitNone) continue;
       }
@@ -402,7 +404,6 @@
       out.push({
         language: p.language,
         config: versionAxisConfig(p),
-        venom: !!p.experimental_codegen,
         profile: p.id,
         label: profileDisplayLabel(p),
         baseline,

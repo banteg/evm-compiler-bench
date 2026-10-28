@@ -102,6 +102,18 @@ test('pair compile coverage counts artifacts once per profile, including compile
   assert.deepEqual([same.passed, same.attempted, same.failed], [1, 1, 0]);
 });
 
+test('version axis compares default-codegen profiles only', () => {
+  const vyper = profiles[3];
+  const extra = [
+    {...vyper, id: 'vyper-latest-gas-venom', experimental_codegen: true},
+    {...vyper, id: 'vyper-0.4.0-gas', compiler_version: '0.4.0'},
+    {...vyper, id: 'vyper-0.4.0-gas-venom', compiler_version: '0.4.0', experimental_codegen: true},
+  ];
+  const data = [...rows, ...extra.map(p => ({...rows.at(-1), profile_id: p.id}))];
+  const b = load(extra, data);
+  assert.equal(b.versionAxisRows('runtime_bytes_stripped').map(r => r.profile).join(), 'vyper-0.4.0-gas');
+});
+
 test('scale scenario preference falls back per N where the preferred scenario is not generated', () => {
   const scaleRows = [1, 2, 4].flatMap(n => [
     ...(n > 1 ? ['last_selector'] : []), 'first_selector', 'set_sink',
