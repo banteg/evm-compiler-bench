@@ -39,26 +39,16 @@ zip out="":
     if [[ -z "$archive" ]]; then
       archive="${root:h}/${repo}-code-and-reports-${sha}-${stamp}.zip"
     fi
+    archive="${archive:A}"
 
     rm -f "$archive"
-    (
-      cd "$root:h"
-      zip -rq "$archive" "$repo" \
-        -x "$repo/.git/*" \
-        -x "$repo/.cache/*" \
-        -x "$repo/report-ui/node_modules/*" \
-        -x "$repo/report-ui/dist/*" \
-        -x "$repo/report-ui/.vite/*" \
-        -x "$repo/target/debug/*" \
-        -x "$repo/target/release/*" \
-        -x "$repo/target/.rustc_info.json" \
-        -x "$repo/target/CACHEDIR.TAG" \
-        -x "$repo/foundry/cache/*" \
-        -x "$repo/foundry/out/*" \
-        -x "$repo/**/*.DS_Store" \
-        -x "$repo/.DS_Store" \
-        -x "$repo/*.zip"
-    )
+    # Source is every file git does not ignore, plus the ignored local results.
+    # Build outputs, caches, and generated harness sources are left out.
+    { git ls-files --cached --others --exclude-standard; find results -type f } \
+      | grep -v -E '(^|/)\.DS_Store$|^[^/]+\.zip$' \
+      | sort -u \
+      | sed "s|^|$repo/|" \
+      | (cd "$root:h" && zip -q "$archive" -@)
 
     ls -lh "$archive"
 
