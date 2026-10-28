@@ -84,3 +84,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/uniswap_v2_factory/solidity/latest/UniswapV2FactoryReal.sol"
   vyper: "benches/implementations/uniswap_v2_factory/vyper/UniswapV2FactoryReal.vy"
+  fe: "benches/implementations/uniswap_v2_factory/fe/UniswapV2FactoryReal.fe"

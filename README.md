@@ -148,8 +148,8 @@ cargo run --release -- run --no-cache
 ```
 
 The full current matrix is large: 127 compiler profiles across 64 benchmarks.
-Because Fe is skipped for the five real-derived benchmarks without an `fe/`
-implementation, this yields 7,867 compile attempts before gas scenarios are
+Because Fe is skipped for the one real-derived benchmark without an `fe/`
+implementation, this yields 7,871 compile attempts before gas scenarios are
 measured.
 
 Foundry gas shards run in isolated projects under `target/foundry-jobs/`, with
@@ -312,14 +312,23 @@ just zip-design
   historical version axis. Fe implementations cover the fixed benchmark suite
   and all seven generated scale families; benchmarks without an `fe/`
   implementation are skipped for Fe profiles rather than reported as compile
-  failures. Fe rows do not participate in the Solidity-vs-Vyper baseline pairs.
+  failures. Each Fe artifact forms a behavior pair with the preferred selected
+  solc artifact for the same benchmark and runs its scenario differential tests
+  and applicable randomized/property checks, recorded like the other verified
+  compiler pairs. Fe rows do not join the Solidity-vs-Vyper baseline pairs.
   The Fe release ships no checksum file, so the resolver records the downloaded
   binary's SHA-256 in the run manifest but cannot verify it against an upstream
   digest the way solc downloads are verified.
-- Like the Solidity stack-too-deep limit on the `abi_args_N` family, Fe's
-  sonatina backend caps internal-call operands at 16, so generated
-  `abi_args_N` rows for N>16 remain Fe compile failures rather than being
-  reshaped to fit. They are shown as compile failures, not omitted.
+- The Fe benchmark sources target Fe 26.5.0, which breaks source
+  compatibility with 26.4.1. The ports of Uniswap V2
+  Factory/Pair, Yearn V2, and Curve StableSwap use typed memory APIs, storage
+  bytes, packed encoding, and native events. The Pair uses `core::num::isqrt`, so its gas
+  measurements include an algorithm change from the Solidity reference.
+  Token transfers use the stdlib's non-reverting `erc20::try_transfer` helpers
+  to preserve the references' optional-return and error behavior. See the
+  [Fe 26.5 migration notes](docs/fe-26.5-migration.md) for the current
+  APIs and the [Fe 26.4 migration notes](docs/fe-26.4-migration.md) for the
+  earlier port.
 - In the `external_calls_N` family, Solidity's `this.ping(i)` and Vyper's
   `extcall` each perform a per-call EXTCODESIZE contract-existence check that
   Fe's typed `call` (bare CALL with revert bubbling) does not. Each language

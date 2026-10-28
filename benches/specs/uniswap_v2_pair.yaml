@@ -68,6 +68,7 @@ real_derived:
     - factory_create2_mint_initial
     - mint_subsequent
     - swap_fee_invariant
+    - swap_false_return_reverts
     - swap_dual_output
     - swap_token0_input
     - swap_token1_input
@@ -116,6 +117,7 @@ real_derived:
     - adversarial revert, malformed calldata, decoder-boundary, zero-address, and exhaustive guard-path parity
 semantics:
   - "Benchmarks upstream Uniswap V2 Pair Solidity and a scoped Vyper port against the same external-token harness."
+  - "The Fe port uses core::num::isqrt; its fixed Newton iterations differ from the Solidity reference algorithm while preserving the floor square root."
   - "The scenarios cover factory CREATE2 pair deployment plus pair reserve, LP share, swap invariant, fee-on, cumulative price, sync, and skim hot paths."
 scenarios:
   - name: initialize
@@ -136,6 +138,9 @@ scenarios:
   - name: swap_fee_invariant
     call: "swap(0, 100, address(this), empty bytes) after token input is sent to the pair"
     expected: "updates balances and reserves while preserving the adjusted constant-product invariant"
+  - name: swap_false_return_reverts
+    call: "swap with an output token returning false"
+    expected: "reverts without committing token transfers, reserve updates, or logs"
   - name: swap_dual_output
     call: "swap(100, 100, address(this), empty bytes) after token0 input is sent to the pair"
     expected: "permits simultaneous token0 and token1 output when the adjusted constant-product invariant is satisfied"
@@ -190,3 +195,4 @@ scenarios:
 implementations:
   solidity: "benches/implementations/uniswap_v2_pair/solidity/latest/UniswapV2PairReal.sol"
   vyper: "benches/implementations/uniswap_v2_pair/vyper/UniswapV2PairReal.vy"
+  fe: "benches/implementations/uniswap_v2_pair/fe/UniswapV2PairReal.fe"

@@ -1,6 +1,4 @@
-use std::evm::RawMem
-use std::evm::crypto
-use std::evm::mem
+use std::evm::merkle
 use std::abi::Bytes32
 
 msg MerkleMsg {
@@ -10,35 +8,13 @@ msg MerkleMsg {
     HashPair { left: Bytes32, right: Bytes32 } -> Bytes32,
 }
 
-fn hash_pair(a: u256, b: u256) -> u256 uses (raw: mut RawMem) {
-    let ptr = mem::alloc(64)
-    raw.mstore(addr: ptr, value: a)
-    raw.mstore(addr: ptr + 32, value: b)
-    crypto::keccak256(ptr, 64)
-}
-
-pub contract MerkleVerifier uses (raw: mut RawMem) {
+pub contract MerkleVerifier {
     recv MerkleMsg {
-        Verify { proof, root, leaf } -> bool uses (mut raw) {
-            let mut computed = leaf.val
-            for i in 0..proof.len() as usize {
-                let sibling = raw.mload(proof.data + 32 + (i as u256) * 32)
-                computed = if computed < sibling {
-                    hash_pair(a: computed, b: sibling)
-                } else {
-                    hash_pair(a: sibling, b: computed)
-                }
-            }
-            computed == root.val
+        Verify { proof, root, leaf } -> bool {
+            merkle::verify(proof, root: root.val, leaf: leaf.val)
         }
-
-        HashPair { left, right } -> Bytes32 uses (mut raw) {
-            let hashed = if left.val < right.val {
-                hash_pair(a: left.val, b: right.val)
-            } else {
-                hash_pair(a: right.val, b: left.val)
-            }
-            Bytes32 { val: hashed }
+        HashPair { left, right } -> Bytes32 {
+            Bytes32 { val: merkle::hash_pair_sorted(left.val, right.val) }
         }
     }
 }

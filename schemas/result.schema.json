@@ -146,7 +146,7 @@
         "storage_layout_compatibility": { "type": "boolean" },
         "external_token_semantics": { "type": "string" },
         "source_derivation": { "type": "string" },
-        "port_language": { "enum": ["solidity", "vyper"] },
+        "port_language": { "enum": ["solidity", "vyper", "fe"] },
         "port_version": { "type": "string" },
         "equivalence_scope": { "type": "array", "items": { "type": "string" } },
         "scenario_coverage": { "type": "array", "items": { "type": "string" } },

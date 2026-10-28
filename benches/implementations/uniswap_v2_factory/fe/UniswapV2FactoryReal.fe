@@ -1,0 +1,137 @@
+use std::abi::Bytes
+use std::evm::{Call, Create, Ctx, Log, StorageBytes, StorageMap, Wei}
+use std::evm::packed::keccak_packed
+
+msg FactoryMsg {
+    #[selector = sol("feeTo()")]
+    FeeTo -> Address,
+    #[selector = sol("feeToSetter()")]
+    FeeToSetter -> Address,
+    #[selector = sol("getPair(address,address)")]
+    GetPair { token_a: Address, token_b: Address } -> Address,
+    #[selector = sol("allPairs(uint256)")]
+    AllPairs { index: u256 } -> Address,
+    #[selector = sol("allPairsLength()")]
+    AllPairsLength -> u256,
+    #[selector = sol("createPair(address,address)")]
+    CreatePair { token_a: Address, token_b: Address } -> Address,
+    #[selector = sol("setFeeTo(address)")]
+    SetFeeTo { fee_to: Address },
+    #[selector = sol("setFeeToSetter(address)")]
+    SetFeeToSetter { fee_to_setter: Address },
+}
+
+msg PairMsg {
+    #[selector = sol("initialize(address,address)")]
+    Initialize { token0: Address, token1: Address },
+}
+
+#[event]
+struct PairCreated {
+    #[indexed]
+    token0: Address,
+    #[indexed]
+    token1: Address,
+    pair: Address,
+    pair_count: u256,
+}
+
+struct FactoryStore {
+    fee_to: Address,
+    fee_to_setter: Address,
+    get_pair: StorageMap<(Address, Address), Address>,
+    all_pairs: StorageMap<u256, Address>,
+    all_pairs_length: u256,
+    pair_code: StorageBytes<u256>,
+}
+
+pub contract UniswapV2FactoryReal uses (
+    ctx: Ctx,
+    log: mut Log,
+    call: mut Call,
+    create: mut Create,
+) {
+    mut store: FactoryStore,
+
+    init(pair_code: Bytes, fee_to_setter: Address)
+    uses (mut store)
+    {
+        store.fee_to_setter = fee_to_setter
+        store.pair_code.store_view(key: 0, view: pair_code.payload_span())
+    }
+
+    recv FactoryMsg {
+        FeeTo -> Address uses store {
+            store.fee_to
+        }
+        FeeToSetter -> Address uses store {
+            store.fee_to_setter
+        }
+
+        GetPair { token_a, token_b } -> Address uses store {
+            store.get_pair.get(key: (token_a, token_b))
+        }
+
+        AllPairs { index } -> Address uses store {
+            assert!(
+                index < store.all_pairs_length,
+                "UniswapV2: INDEX_OUT_OF_BOUNDS",
+            )
+            store.all_pairs.get(key: index)
+        }
+
+        AllPairsLength -> u256 uses store {
+            store.all_pairs_length
+        }
+
+        CreatePair { token_a, token_b } -> Address
+        uses (mut store, ctx, mut log, mut call, mut create)
+        {
+            assert!(token_a != token_b, "UniswapV2: IDENTICAL_ADDRESSES")
+            let (token0, token1) = if token_a < token_b {
+                (token_a, token_b)
+            } else {
+                (token_b, token_a)
+            }
+            assert!(token0 != Address::zero(), "UniswapV2: ZERO_ADDRESS")
+            assert!(
+                store.get_pair.get(key: (token0, token1)) == Address::zero(),
+                "UniswapV2: PAIR_EXISTS",
+            )
+
+            let salt = keccak_packed((token0, token1))
+            let code = store.pair_code.to_memory(key: 0)
+            let pair = create.create2_raw(value: Wei::zero(), init_code: code.span(), salt)
+            assert!(
+                pair != Address::zero() && ctx.extcodesize(pair) > 0,
+                "UniswapV2: CREATE2_FAILED",
+            )
+
+            pair.call(PairMsg::Initialize { token0, token1 })
+            store.get_pair.set(key: (token0, token1), value: pair)
+            store.get_pair.set(key: (token1, token0), value: pair)
+            store.all_pairs.set(key: store.all_pairs_length, value: pair)
+            store.all_pairs_length += 1
+            log.emit(
+                PairCreated { token0, token1, pair, pair_count: store.all_pairs_length },
+            )
+            pair
+        }
+
+        SetFeeTo { fee_to } uses (mut store, ctx) {
+            assert!(
+                ctx.caller() == store.fee_to_setter,
+                "UniswapV2: FORBIDDEN",
+            )
+            store.fee_to = fee_to
+        }
+
+        SetFeeToSetter { fee_to_setter } uses (mut store, ctx) {
+            assert!(
+                ctx.caller() == store.fee_to_setter,
+                "UniswapV2: FORBIDDEN",
+            )
+            store.fee_to_setter = fee_to_setter
+        }
+    }
+}

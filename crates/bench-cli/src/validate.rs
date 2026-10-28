@@ -1867,7 +1867,7 @@ fn validate_suite_metadata(row: &Value, path: &Path) -> Result<()> {
             require_enum(
                 row,
                 "/provenance/port_language",
-                &["solidity", "vyper"],
+                &["solidity", "vyper", "fe"],
                 path,
             )?;
             for pointer in [
