@@ -130,7 +130,7 @@ def build_bridge():
         'name = "evm-compiler-bench"', 'name = "solx-spike"'))
     modules = "#![allow(dead_code)]\n" + "\n".join(
         f'#[path = "{ROOT}/crates/bench-cli/src/{m}.rs"] mod {m};'
-        for m in ("cache", "harness", "models", "runner", "scenarios", "util"))
+        for m in ("cache", "foundry_jobs", "harness", "models", "runner", "scenarios", "util"))
     # Only change pair selection. Both artifacts retain honest Solidity identities.
     bridge = r'''
 mod baselines {
@@ -184,11 +184,14 @@ def summarize():
     key = lambda r: (r["benchmark_id"], r["scenario"], r["state_access_profile"], r["profile_id"])
     if sorted(first, key=key) != sorted(second, key=key):
         raise RuntimeError("Gas records differ between the O3 and Oz behavior-check runs")
-    if len(first) != 164 or not all(r["scenario_status_ok"] for r in first):
-        raise RuntimeError("Unexpected scenario count or status")
+    if not all(r["scenario_status_ok"] for r in first):
+        raise RuntimeError("Unexpected scenario status")
     by_key = {key(r): r for r in first}
     if len(by_key) != len(first):
         raise RuntimeError("Duplicate gas records")
+    cases = {k[:3] for k in by_key}
+    if {r["benchmark_id"] for r in first} != CASES.keys() or by_key.keys() != {(*c, p) for c in cases for p in PROFILES}:
+        raise RuntimeError("Every benchmark scenario must be measured for every profile")
     sizes = {(a["benchmark_id"], a["profile_id"]): a["bytecode"] for a in artifacts}
     summary = []
     for bench in CASES:
