@@ -194,9 +194,9 @@ function Hero() {
       `Compiler bench · ${REPORT_VERSION} · ${gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
     ),
     React.createElement('h1', { className: 'hero-title' },
-      'Different compilers.',
-      React.createElement('br'),
-      React.createElement('em', null, 'Measured tradeoffs.')
+      'The ',
+      React.createElement('em', null, 'definitive'),
+      ' EVM compiler benchmark.'
     ),
     React.createElement('p', { className: 'hero-lede' },
       'Compare solc, Solar, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
