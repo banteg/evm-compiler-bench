@@ -60,7 +60,7 @@ with tempfile.TemporaryDirectory(prefix="fe-parity-regression-") as directory:
     shard = subprocess.run(
         ["forge", "test", "--root", str(project), "--match-path",
          "test/GeneratedBehaviorShard000.t.sol", "--match-test", "testDiff_.*_vs_fe_",
-         "--evm-version", "prague", "--via-ir", "--optimize", "--isolate"],
+         "--evm-version", "prague", "--via-ir", "--optimize", "--isolate", "--chain-id", "1"],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     assert "[FAIL: differential return mismatch]" in shard.stdout, shard.stdout
