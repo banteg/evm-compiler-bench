@@ -849,7 +849,6 @@ fn normalized_rows(
                     .scenarios
                     .iter()
                     .find(|scenario| scenario.name == gas.scenario),
-                crate::harness::supports_log_diff(&artifact.benchmark_id),
             ),
         ));
     }
@@ -1045,7 +1044,6 @@ fn profile_behavior_check(
     gas: &GasRecord,
     baseline: Option<&GasRecord>,
     scenario: Option<&Scenario>,
-    supports_logs: bool,
 ) -> ProfileBehaviorCheck {
     let has_observers = scenario.is_some_and(|scenario| !scenario.observers.is_empty());
     let compares_return = scenario.is_some_and(|scenario| scenario.compare_return);
@@ -1063,11 +1061,7 @@ fn profile_behavior_check(
             } else {
                 "not_applicable"
             },
-            log_check: if supports_logs {
-                "not_run"
-            } else {
-                "not_applicable"
-            },
+            log_check: "not_run",
         };
     };
     if baseline.profile_id == gas.profile_id {
@@ -1083,7 +1077,7 @@ fn profile_behavior_check(
             profile_behavior_check: "baseline_only",
             return_data_check: baseline_only(compares_return && gas.call_succeeded),
             observer_check: baseline_only(has_observers),
-            log_check: baseline_only(supports_logs && gas.call_succeeded),
+            log_check: baseline_only(gas.call_succeeded),
         };
     }
 
@@ -1098,7 +1092,7 @@ fn profile_behavior_check(
     } else {
         "not_applicable"
     };
-    let log_check = if supports_logs && gas.call_succeeded && baseline.call_succeeded {
+    let log_check = if gas.call_succeeded && baseline.call_succeeded {
         compare_hashes(gas.log_hash.as_ref(), baseline.log_hash.as_ref())
     } else {
         "not_applicable"
@@ -1605,7 +1599,7 @@ mod tests {
                 vec![],
                 "prague",
                 evidence,
-                super::profile_behavior_check(&gas, None, scenario.scenarios.first(), false),
+                super::profile_behavior_check(&gas, None, scenario.scenarios.first()),
             )
         };
         let absent = render(&[]);
@@ -1662,14 +1656,14 @@ mod tests {
                 .copied()
         };
 
-        let compared = super::profile_behavior_check(&records[1], lookup(&records[1]), None, false);
+        let compared = super::profile_behavior_check(&records[1], lookup(&records[1]), None);
         assert_eq!(
             compared.baseline_profile.as_deref(),
             Some(super::SOL_CODEGEN_BASELINE)
         );
         assert_eq!(compared.profile_behavior_check, "pass");
 
-        let own = super::profile_behavior_check(&records[0], lookup(&records[0]), None, true);
+        let own = super::profile_behavior_check(&records[0], lookup(&records[0]), None);
         assert_eq!(own.profile_behavior_check, "baseline_only");
         assert_eq!(own.log_check, "baseline_only");
         assert_eq!(own.observer_check, "not_applicable");
@@ -1729,7 +1723,7 @@ mod tests {
             vec![],
             "prague",
             &[],
-            super::profile_behavior_check(&gas, Some(&gas), scenario.scenarios.first(), true),
+            super::profile_behavior_check(&gas, Some(&gas), scenario.scenarios.first()),
         );
         assert!(row["provenance"].is_null());
         if let Err(error) = schemas.validate(&row, index) {

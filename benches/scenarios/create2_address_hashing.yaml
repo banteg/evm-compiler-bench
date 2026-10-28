@@ -5,6 +5,11 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("initCodeHash(uint256)", uint256(7))'
     expect_success: true
+  - name: compute_address
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodeWithSignature("computeAddress(bytes32,uint256)", SALT, uint256(7))'
+    expect_success: true
   - name: record_value
     state_access_profile: warm
     warmup:
@@ -14,6 +19,7 @@ scenarios:
     expect_success: true
     observers:
       - data: 'abi.encodeWithSignature("saltValue(bytes32)", SALT)'
+      - data: 'abi.encodeWithSignature("computeAddress(bytes32,uint256)", SALT, uint256(7))'
   - name: read_value
     state_access_profile: mixed
     setup:

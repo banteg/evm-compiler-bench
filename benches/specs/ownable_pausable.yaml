@@ -19,6 +19,12 @@ scenarios:
   - name: pause
     call: "pause()"
     expected: "sets paused"
+  - name: unpause
+    call: "unpause() while paused"
+    expected: "clears paused"
+  - name: transfer_ownership
+    call: "transferOwnership(receiver)"
+    expected: "sets owner"
   - name: paused_revert
     call: "guardedIncrement() while paused"
     expected: "reverts"

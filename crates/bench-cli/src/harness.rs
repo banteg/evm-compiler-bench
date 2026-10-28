@@ -20,13 +20,6 @@ pub fn constructor_args(benchmark_id: &str) -> Option<&'static str> {
     }
 }
 
-pub fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(
-        benchmark_id,
-        "curve_stableswap_2coin" | "uniswap_v2_pair" | "yearn_vault_v2" | "yearn_vault_v3"
-    )
-}
-
 pub fn randomized_helper_name(benchmark_id: &str) -> Option<&'static str> {
     match benchmark_id {
         "counter" => Some("_randomDiff_counter"),

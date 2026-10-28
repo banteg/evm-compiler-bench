@@ -12,9 +12,12 @@ scenarios:
   - name: proxy_code_hash
     call: "proxyCodeHash(implementation)"
     expected: "returns EIP-1167 bytecode hash"
+  - name: predict_clone
+    call: "predictClone(implementation, salt)"
+    expected: "returns the CREATE2 clone address for this deployer"
   - name: record_clone
     call: "recordClone(implementation, salt, 42)"
-    expected: "stores clone value"
+    expected: "stores clone value and logs the predicted address"
   - name: clone_value
     call: "cloneValue(salt)"
     expected: "returns stored value"

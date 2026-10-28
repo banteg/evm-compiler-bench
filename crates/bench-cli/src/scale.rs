@@ -15,7 +15,7 @@ use std::{
     process,
 };
 
-pub const SCALE_GENERATOR_VERSION: &str = "scale-v2";
+pub const SCALE_GENERATOR_VERSION: &str = "scale-v3";
 const GENERATED_ROOT: &str = "target/bench-generated";
 const DISPATCH_SOL_TEMPLATE: &str = include_str!("scale_templates/dispatch.sol");
 const DISPATCH_VY_TEMPLATE: &str = include_str!("scale_templates/dispatch.vy");
@@ -404,7 +404,7 @@ fn dispatch_family(n: u64) -> GeneratedSource {
 fn storage_slots_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("StorageSlots", n);
     let sol_slots = (0..n)
-        .map(|i| format!("    uint256 public slot{i:03};"))
+        .map(|i| format!("    uint256 slot{i:03};"))
         .collect::<Vec<_>>()
         .join("\n");
     let sol_writes = (0..n)
@@ -426,7 +426,7 @@ fn storage_slots_family(n: u64) -> GeneratedSource {
     );
 
     let vy_slots = (0..n)
-        .map(|i| format!("slot{i:03}: public(uint256)"))
+        .map(|i| format!("slot{i:03}: uint256"))
         .collect::<Vec<_>>()
         .join("\n");
     let vy_writes = (0..n)
@@ -491,7 +491,7 @@ fn storage_slots_family(n: u64) -> GeneratedSource {
 fn mapping_depth_family(n: u64) -> GeneratedSource {
     let contract_name = contract_name("MappingDepth", n);
     let sol_links = (0..n)
-        .map(|i| format!("    mapping(uint256 => uint256) public link{i:03};"))
+        .map(|i| format!("    mapping(uint256 => uint256) link{i:03};"))
         .collect::<Vec<_>>()
         .join("\n");
     let sol_writes = (0..n)
@@ -518,7 +518,7 @@ fn mapping_depth_family(n: u64) -> GeneratedSource {
     );
 
     let vy_links = (0..n)
-        .map(|i| format!("link{i:03}: public(HashMap[uint256, uint256])"))
+        .map(|i| format!("link{i:03}: HashMap[uint256, uint256]"))
         .collect::<Vec<_>>()
         .join("\n");
     let vy_writes = (0..n)
@@ -740,11 +740,11 @@ fn external_calls_family(n: u64) -> GeneratedSource {
         fe,
         scenarios: vec![simple_scenario("call_many", "callMany()")],
         abi: vec![
-            "ping(uint256)".to_string(),
+            "ping(uint256) returns (uint256)".to_string(),
             "callMany() returns (uint256)".to_string(),
         ],
         semantics: vec![format!(
-            "Performs {n} deterministic external static calls to a local callee."
+            "Performs {n} deterministic external static calls to the contract itself."
         )],
     }
 }
@@ -942,5 +942,35 @@ mod tests {
             assert!(!first.fe.is_empty());
             assert!(!first.scenarios.is_empty());
         }
+    }
+
+    #[test]
+    fn state_families_expose_only_the_spec_abi() {
+        for family in ["storage_slots_N", "mapping_depth_N"] {
+            let generated = generate_family(family, 4).unwrap();
+            assert!(!generated.solidity.contains(" public "), "{family}");
+            assert!(!generated.vyper.contains("public("), "{family}");
+        }
+    }
+
+    #[test]
+    fn external_calls_family_uses_static_calls_with_return_data() {
+        let generated = generate_family("external_calls_N", 4).unwrap();
+        assert!(
+            generated
+                .solidity
+                .contains("function ping(uint256 x) external pure returns (uint256)")
+        );
+        assert!(generated.solidity.contains("total += this.ping(i);"));
+        assert!(
+            generated
+                .vyper
+                .contains("total += staticcall SelfPing(self).ping(i)")
+        );
+        assert!(
+            generated
+                .fe
+                .contains("total += me.static(ExternalCallsMsg::Ping")
+        );
     }
 }

@@ -1,8 +1,9 @@
 # pragma version >=0.4.3,<0.5.0
 
-name: public(immutable(String[32]))
-symbol: public(immutable(String[8]))
-decimals: public(immutable(uint8))
+NAME: constant(String[11]) = "Bench Token"
+SYMBOL: constant(String[5]) = "BENCH"
+DECIMALS: constant(uint8) = 18
+
 totalSupply: public(uint256)
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
@@ -19,12 +20,24 @@ event Approval:
 
 @deploy
 def __init__(initialSupply: uint256):
-    name = "Bench Token"
-    symbol = "BENCH"
-    decimals = 18
     self.totalSupply = initialSupply
     self.balanceOf[msg.sender] = initialSupply
     log Transfer(sender=empty(address), receiver=msg.sender, value=initialSupply)
+
+@external
+@pure
+def name() -> String[11]:
+    return NAME
+
+@external
+@pure
+def symbol() -> String[5]:
+    return SYMBOL
+
+@external
+@pure
+def decimals() -> uint8:
+    return DECIMALS
 
 @external
 def transfer(to: address, amount: uint256) -> bool:

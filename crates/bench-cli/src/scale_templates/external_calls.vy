@@ -1,16 +1,17 @@
 # pragma version >=0.4.3,<0.5.0
 
 interface SelfPing:
-    def ping(x: uint256): nonpayable
+    def ping(x: uint256) -> uint256: view
 
 @external
-def ping(x: uint256):
-    pass
+@pure
+def ping(x: uint256) -> uint256:
+    return x
 
 @external
+@view
 def callMany() -> uint256:
     total: uint256 = 0
     for i: uint256 in range({{N}}):
-        extcall SelfPing(self).ping(i)
-        total += i
+        total += staticcall SelfPing(self).ping(i)
     return total

@@ -1127,13 +1127,7 @@ fn write_gas_test(
         out.push_str(";\n");
     }
     out.push_str("        uint256 calldataGas = _calldataGas(measured.data);\n");
-    out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, measured, ");
-    out.push_str(if harness::supports_log_diff(&artifact.benchmark_id) {
-        "true"
-    } else {
-        "false"
-    });
-    out.push_str(");\n");
+    out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, measured);\n");
     out.push_str("        bytes32 observerHash = _observeAll_");
     out.push_str(&sanitize(&artifact.benchmark_id));
     out.push('_');
@@ -1184,14 +1178,20 @@ fn write_diff_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
-    out.push_str("        (address solTarget,) = ");
-    out.push_str(&deploy_call(solidity_idx, solidity, scenario));
-    out.push_str(";\n");
-    out.push_str("        (address vyperTarget,) = ");
-    out.push_str(&deploy_call(vyper_idx, vyper, scenario));
-    out.push_str(";\n");
-    for side in ["sol", "vyper"] {
+    // Both sides start from the same state, so targets share an address and
+    // address-derived results (CREATE2 predictions, pair addresses) compare.
+    out.push_str("        uint256 diffStart = vm.snapshotState();\n");
+    for (index, side, artifact_idx, artifact) in [
+        (0, "sol", solidity_idx, solidity),
+        (1, "vyper", vyper_idx, vyper),
+    ] {
         let target = format!("{side}Target");
+        if index > 0 {
+            out.push_str("        vm.revertToStateAndDelete(diffStart);\n");
+        }
+        out.push_str(&format!("        (address {target},) = "));
+        out.push_str(&deploy_call(artifact_idx, artifact, scenario));
+        out.push_str(";\n");
         out.push_str("        vm.warp(1);\n");
         write_setup(out, &target, &scenario.setup, "setup");
         // Same evaluation order as the gas test: after setup, before warmup.
@@ -1202,15 +1202,9 @@ fn write_diff_test(
         let call = format!(
             "{side}Measured.destination, {side}Measured.data, {side}Measured.value, {side}Measured.sender"
         );
-        if harness::supports_log_diff(benchmark_id) {
-            out.push_str(&format!(
-                "        (bool {side}Ok, bytes32 {side}Hash, bytes32 {side}LogHash,) = _runWithLogs({target}, {call});\n"
-            ));
-        } else {
-            out.push_str(&format!(
-                "        (bool {side}Ok, bytes32 {side}Hash,) = _run({call});\n"
-            ));
-        }
+        out.push_str(&format!(
+            "        (bool {side}Ok, bytes32 {side}Hash, bytes32 {side}LogHash,) = _runWithLogs({target}, {call});\n"
+        ));
         out.push_str(&format!("        bytes32 {side}Observed = _observeAll_"));
         out.push_str(&sanitize(&solidity.benchmark_id));
         out.push('_');
@@ -1233,11 +1227,7 @@ fn write_diff_test(
     out.push_str(
         "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
     );
-    if harness::supports_log_diff(benchmark_id) {
-        out.push_str(
-            "        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n",
-        );
-    }
+    out.push_str("        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n");
     out.push_str("    }\n\n");
     write_observer_function(out, &solidity.benchmark_id, scenario);
 }

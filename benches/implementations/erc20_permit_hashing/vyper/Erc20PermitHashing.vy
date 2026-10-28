@@ -4,19 +4,14 @@ nonces: public(HashMap[address, uint256])
 
 @internal
 @pure
-def _as_bytes32(word: uint256) -> bytes32:
-    return convert(word, bytes32)
-
-@internal
-@pure
 def _hash_permit(owner: address, spender: address, amount: uint256, nonce: uint256, deadline: uint256) -> bytes32:
     return keccak256(
         concat(
-            self._as_bytes32(convert(owner, uint256)),
-            self._as_bytes32(convert(spender, uint256)),
-            self._as_bytes32(amount),
-            self._as_bytes32(nonce),
-            self._as_bytes32(deadline),
+            convert(owner, bytes32),
+            convert(spender, bytes32),
+            convert(amount, bytes32),
+            convert(nonce, bytes32),
+            convert(deadline, bytes32),
         )
     )
 
