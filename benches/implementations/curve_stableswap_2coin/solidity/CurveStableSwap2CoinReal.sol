@@ -59,7 +59,6 @@ contract CurveStableSwap2CoinReal {
     uint256 public fee;
     uint256 public constant admin_fee = 5_000_000_000;
     uint256 public offpeg_fee_multiplier;
-    bool internal initialized;
 
     uint256[] internal rate_multipliers;
     uint8[] internal asset_types;
@@ -107,11 +106,6 @@ contract CurveStableSwap2CoinReal {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    modifier ready() {
-        require(initialized, "not initialized");
-        _;
-    }
-
     modifier nonReentrant() {
         require(!locked, "reentrant");
         locked = true;
@@ -146,7 +140,6 @@ contract CurveStableSwap2CoinReal {
         require(methodIds.length >= nCoins && methodIds.length <= MAX_COINS, "method length");
         require(oracles.length >= nCoins && oracles.length <= MAX_COINS, "oracle length");
         require(maExpTime != 0, "ma");
-        initialized = true;
         name = name_;
         symbol = symbol_;
         coins = new address[](nCoins);
@@ -225,7 +218,6 @@ contract CurveStableSwap2CoinReal {
 
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount)
         external
-        ready
         nonReentrant
         returns (uint256 minted)
     {
@@ -234,7 +226,6 @@ contract CurveStableSwap2CoinReal {
 
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256 minted)
     {
@@ -303,13 +294,12 @@ contract CurveStableSwap2CoinReal {
         }
     }
 
-    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external ready nonReentrant returns (uint256 dy) {
+    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external nonReentrant returns (uint256 dy) {
         return _exchange(i, j, dx, minDy, msg.sender, false);
     }
 
     function exchange(int128 i, int128 j, uint256 dx, uint256 minDy, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256 dy)
     {
@@ -318,7 +308,6 @@ contract CurveStableSwap2CoinReal {
 
     function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy)
         external
-        ready
         nonReentrant
         returns (uint256 dy)
     {
@@ -328,7 +317,6 @@ contract CurveStableSwap2CoinReal {
 
     function exchange_received(int128 i, int128 j, uint256 dx, uint256 minDy, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256 dy)
     {
@@ -377,7 +365,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts)
         external
-        ready
         nonReentrant
         returns (uint256[] memory amounts)
     {
@@ -386,7 +373,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256[] memory amounts)
     {
@@ -395,7 +381,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity(uint256 lpAmount, uint256[] calldata minAmounts, address receiver, bool claimAdminFees)
         external
-        ready
         nonReentrant
         returns (uint256[] memory amounts)
     {
@@ -428,7 +413,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity_imbalance(uint256[] calldata amounts, uint256 maxBurnAmount)
         external
-        ready
         nonReentrant
         returns (uint256 burnAmount)
     {
@@ -437,7 +421,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity_imbalance(uint256[] calldata amounts, uint256 maxBurnAmount, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256 burnAmount)
     {
@@ -493,7 +476,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount)
         external
-        ready
         nonReentrant
         returns (uint256 userAmount)
     {
@@ -502,7 +484,6 @@ contract CurveStableSwap2CoinReal {
 
     function remove_liquidity_one_coin(uint256 lpAmount, int128 i, uint256 minAmount, address receiver)
         external
-        ready
         nonReentrant
         returns (uint256 userAmount)
     {
@@ -608,7 +589,7 @@ contract CurveStableSwap2CoinReal {
         require(i < N_COINS - 1, "price");
         uint256[] memory xp = _xpMem(_storedRates(), _balances());
         uint256 d = _getD(xp);
-        return _getP(i, xp, _A(), d);
+        return _getP(xp, _A(), d)[i];
     }
 
     function price_oracle(uint256 i) external view nonReentrantView returns (uint256) {
@@ -795,10 +776,8 @@ contract CurveStableSwap2CoinReal {
         }
     }
 
-    function _getP(uint256 i, uint256[] memory xp, uint256 amp, uint256 d) internal view returns (uint256) {
-        if (d == 0 || xp[0] == 0 || xp[i + 1] == 0) {
-            return PRECISION;
-        }
+    function _getP(uint256[] memory xp, uint256 amp, uint256 d) internal view returns (uint256[] memory p) {
+        p = new uint256[](N_COINS - 1);
         unchecked {
             uint256 ann = amp * N_COINS;
             uint256 dr = d / (N_COINS ** N_COINS);
@@ -806,7 +785,9 @@ contract CurveStableSwap2CoinReal {
                 dr = dr * d / xp[idx];
             }
             uint256 xp0A = ann * xp[0] / A_PRECISION;
-            return PRECISION * (xp0A + dr * xp[0] / xp[i + 1]) / (xp0A + dr);
+            for (uint256 i = 1; i < N_COINS; i++) {
+                p[i - 1] = PRECISION * (xp0A + dr * xp[0] / xp[i]) / (xp0A + dr);
+            }
         }
     }
 
@@ -814,8 +795,12 @@ contract CurveStableSwap2CoinReal {
         uint256 lastTime = ma_last_time;
         uint256 priceTime = lastTime & ((uint256(1) << 128) - 1);
         uint256 dTime = lastTime >> 128;
+        uint256[] memory spotPrices = _getP(xp, amp, d);
         for (uint256 i = 0; i < N_COINS - 1; i++) {
-            uint256 spotPrice = _getP(i, xp, amp, d);
+            uint256 spotPrice = spotPrices[i];
+            if (spotPrice == 0) {
+                continue;
+            }
             if (spotPrice > 2 * PRECISION) {
                 spotPrice = 2 * PRECISION;
             }
@@ -1002,7 +987,7 @@ contract CurveStableSwap2CoinReal {
                 return d;
             }
         }
-        return d;
+        revert();
     }
 
     function _baseFee() internal view returns (uint256) {
@@ -1115,7 +1100,7 @@ contract CurveStableSwap2CoinReal {
                 return y;
             }
         }
-        return y;
+        revert();
     }
 
     function _getYD(uint256 i, uint256[] memory xp, uint256 d) internal view returns (uint256) {
@@ -1142,7 +1127,7 @@ contract CurveStableSwap2CoinReal {
                 return y;
             }
         }
-        return y;
+        revert();
     }
 
     function _calcWithdrawOneCoin(uint256 lpAmount, uint256 i)
