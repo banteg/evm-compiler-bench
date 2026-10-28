@@ -839,7 +839,7 @@ function drillField(row, profile, metric, axis) {
     case 'profile': return row.profile_id;
     case 'status': return row.status !== 'ok' ? 'compile_error' : Bench.isComparableArtifact(row) ? 'ok' : 'correctness_error';
     case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
-    case 'deployment': return artifactLevel ? 'artifact' : (row.gas?.deployment_variant || 'standard');
+    case 'deployment': return artifactLevel ? 'artifact' : (row.gas?.deployment_variant || 'artifact');
     case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
     default: return 'unknown';
   }
@@ -903,8 +903,8 @@ function buildDrillRecords(metric) {
       if (seenArtifacts.has(key)) continue;
       seenArtifacts.add(key);
     }
-    const failed = !Bench.isComparableArtifact(row);
-    if (!failed && (value == null || !isFinite(value))) continue;
+    const failure = row.status !== 'ok' ? 'compile' : Bench.isComparableArtifact(row) ? null : 'correctness';
+    if (!failure && (value == null || !isFinite(value))) continue;
     const profile = Bench.profileById(row.profile_id);
     const fields = Object.fromEntries(DRILL_AXES.map(axis => [
       axis.id,
@@ -912,9 +912,10 @@ function buildDrillRecords(metric) {
     ]));
     records.push({
       row,
-      value: failed ? null : value,
-      failed,
-      failureReason: failed ? (row.status === 'ok' ? 'Observed correctness failure in this artifact' : Bench.failureReason(row.compile?.error)) : null,
+      value: failure ? null : value,
+      failure,
+      failureReason: failure === 'compile' ? Bench.failureReason(row.compile?.error)
+        : failure === 'correctness' ? 'Observed correctness failure in this artifact' : null,
       fields,
     });
   }
@@ -969,12 +970,15 @@ function drillFilterLabel(axis, filter) {
   return `${DRILL_AXIS_BY_ID[axis].label}: ${values.length} selected`;
 }
 
+// Compile failures have no scenarios, so scenario-level filters cannot exclude them.
+const SCENARIO_DRILL_AXES = new Set(['scenario', 'deployment', 'state']);
+
 function passesDrillFilters(record, filters, skipAxis = null) {
   return Object.entries(filters).every(([axis, filter]) => {
     if (axis === skipAxis) return true;
     const values = filter?.values || [];
     if (!values.length) return true;
-    if (record.failed && (axis === 'scenario' || axis === 'state')) return true;
+    if (record.failure === 'compile' && SCENARIO_DRILL_AXES.has(axis)) return true;
     const includes = values.includes(record.fields[axis]);
     return filter.op === 'not-in' ? !includes : includes;
   });
@@ -1140,11 +1144,12 @@ function DrilldownMatrix({ metric, setMetric }) {
     const grouped = new Map();
     for (const record of filtered) {
       const key = `${record.fields[yAxis]}\0${record.fields[xAxis]}`;
-      if (!grouped.has(key)) grouped.set(key, { values: [], failures: 0, total: 0, reasons: new Map() });
+      if (!grouped.has(key)) grouped.set(key, { values: [], failures: 0, failureKinds: { compile: 0, correctness: 0 }, total: 0, reasons: new Map() });
       const group = grouped.get(key);
       group.total += 1;
-      if (record.failed) {
+      if (record.failure) {
         group.failures += 1;
+        group.failureKinds[record.failure] += 1;
         if (record.failureReason) {
           group.reasons.set(record.failureReason, (group.reasons.get(record.failureReason) || 0) + 1);
         }
@@ -1161,6 +1166,7 @@ function DrilldownMatrix({ metric, setMetric }) {
         value: summarizeDrillCell(group, aggregation),
         count: group.values.length,
         failures: group.failures,
+        failureKinds: group.failureKinds,
         total: group.total,
         reasons,
       });
@@ -1168,7 +1174,7 @@ function DrilldownMatrix({ metric, setMetric }) {
     return out;
   }, [filtered, xAxis, yAxis, aggregation]);
   const values = [...cells.values()].map(cell => cell.value).filter(value => value != null && isFinite(value));
-  const failureRows = filtered.filter(record => record.failed).length;
+  const failureRows = filtered.filter(record => record.failure).length;
   const min = values.length ? Math.min(...values) : null;
   const max = values.length ? Math.max(...values) : null;
   const activeFilters = Object.entries(filters);
@@ -1192,7 +1198,9 @@ function DrilldownMatrix({ metric, setMetric }) {
       parts.push(`${cell.total} matching row${cell.total === 1 ? '' : 's'}`);
     }
     if (cell.failures) {
-      parts.push(`${cell.failures} compile failure${cell.failures === 1 ? '' : 's'}`);
+      for (const [kind, count] of Object.entries(cell.failureKinds)) {
+        if (count) parts.push(`${count} ${kind} failure${count === 1 ? '' : 's'}`);
+      }
       if (cell.reasons.length) parts.push(cell.reasons.slice(0, 3).join(' · '));
     }
     return parts.join(' · ') || 'no matching rows';
