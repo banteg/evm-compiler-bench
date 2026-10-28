@@ -5,16 +5,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { assertProductionSnapshot } from "./publish-policy.mjs";
+import { assertProductionSnapshot, publishOptions } from "./publish-policy.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const args = new Set(process.argv.slice(2));
-
-const bucket = valueArg("--bucket") || process.env.CF_R2_BUCKET || "evm-compilers";
-const prefix = stripSlashes(valueArg("--prefix") || process.env.CF_R2_PREFIX || "evm-compiler-bench");
-const channel = normalizeChannel(valueArg("--channel") || process.env.EVM_BENCH_CHANNEL || process.env.CF_R2_CHANNEL || "dev");
-const upload = args.has("--upload");
-const deploy = args.has("--deploy");
+const { bucket, prefix, channel, upload, deploy } = publishOptions(process.argv.slice(2), process.env);
 const wrangler = process.env.WRANGLER_BIN || "wrangler";
 
 const paths = {
@@ -38,6 +32,8 @@ if (upload && channel === "prod") {
 
 const publishDir = join(root, "target/publish", runId);
 mkdirSync(publishDir, { recursive: true });
+// Local paths of prepared objects by R2 key; kept out of the published manifests.
+const localFiles = new Map();
 
 const artifacts = {
   report_model: artifact("report-model.json", paths.reportModel, "application/json; charset=utf-8", false),
@@ -61,34 +57,36 @@ const publishManifest = {
   artifacts,
 };
 
+// A manifest cannot list its own hash, so the run's publish manifest covers the
+// data artifacts and the channel pointer additionally covers the publish manifest.
 const publishManifestPath = join(publishDir, "publish-manifest.json");
 writeFileSync(publishManifestPath, JSON.stringify(publishManifest, null, 2) + "\n");
-publishManifest.artifacts.publish_manifest = artifact(
-  "publish-manifest.json",
-  publishManifestPath,
-  "application/json; charset=utf-8",
-  false,
-);
+const latest = {
+  ...publishManifest,
+  artifacts: {
+    ...artifacts,
+    publish_manifest: artifact("publish-manifest.json", publishManifestPath, "application/json; charset=utf-8", false),
+  },
+};
 
 const latestPath = join(publishDir, "latest.json");
-writeFileSync(latestPath, JSON.stringify(publishManifest, null, 2) + "\n");
+writeFileSync(latestPath, JSON.stringify(latest, null, 2) + "\n");
 
-console.log(`prepared ${Object.keys(publishManifest.artifacts).length} artifacts for ${channel} run ${runId}`);
+console.log(`prepared ${Object.keys(latest.artifacts).length} artifacts for ${channel} run ${runId}`);
 console.log(`publish manifest: ${publishManifestPath}`);
-for (const [name, item] of Object.entries(publishManifest.artifacts)) {
+for (const [name, item] of Object.entries(latest.artifacts)) {
   console.log(`${name}: ${item.size_bytes} bytes -> ${item.encoded_size_bytes} bytes at r2://${bucket}/${item.key}`);
 }
 
 if (upload) {
-  for (const [name, item] of Object.entries(publishManifest.artifacts)) {
-    uploadObject(name, item, "public, max-age=31536000, immutable");
+  for (const [name, item] of Object.entries(latest.artifacts)) {
+    uploadObject(name, item, localFiles.get(item.key), "public, max-age=31536000, immutable");
   }
   uploadObject("latest", {
     key: `${prefix}/channels/${channel}/latest.json`,
-    file: latestPath,
     content_type: "application/json; charset=utf-8",
     content_encoding: null,
-  }, "public, max-age=60");
+  }, latestPath, "public, max-age=60");
 }
 
 if (deploy) {
@@ -107,10 +105,10 @@ function artifact(fileName, sourcePath, contentType, compress) {
       })
     : source;
   writeFileSync(outPath, encoded);
+  localFiles.set(key, outPath);
   return {
     key,
     path: `/runs/${runId}/${fileName}`,
-    file: outPath,
     content_type: contentType,
     content_encoding: compress ? "br" : null,
     size_bytes: source.byteLength,
@@ -120,7 +118,7 @@ function artifact(fileName, sourcePath, contentType, compress) {
   };
 }
 
-function uploadObject(name, item, cacheControl) {
+function uploadObject(name, item, file, cacheControl) {
   const cmd = [
     "r2",
     "object",
@@ -128,7 +126,7 @@ function uploadObject(name, item, cacheControl) {
     `${bucket}/${item.key}`,
     "--remote",
     "--file",
-    item.file,
+    file,
     "--content-type",
     item.content_type,
     "--cache-control",
@@ -155,22 +153,4 @@ function run(command, commandArgs) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
-}
-
-function stripSlashes(value) {
-  return value.replace(/^\/+|\/+$/g, "");
-}
-
-function normalizeChannel(value) {
-  const channel = String(value).trim().toLowerCase();
-  if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel)) {
-    throw new Error(`invalid channel ${JSON.stringify(value)}; expected [a-z0-9][a-z0-9_-]{0,31}`);
-  }
-  return channel;
-}
-
-function valueArg(name) {
-  const prefix = `${name}=`;
-  const value = process.argv.slice(2).find(arg => arg.startsWith(prefix));
-  return value ? value.slice(prefix.length) : null;
 }
