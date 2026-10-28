@@ -6,9 +6,7 @@ scenarios:
       data: 'abi.encodeWithSignature("hashPair(bytes32,bytes32)", LEAF, SIBLING)'
     expect_success: true
   - name: verify_single
-    state_access_profile: warm
-    warmup:
-      - data: 'abi.encodeWithSignature("hashPair(bytes32,bytes32)", LEAF, SIBLING)'
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("verify(bytes32[],bytes32,bytes32)", proofOne(), ROOT, LEAF)'
     expect_success: true
