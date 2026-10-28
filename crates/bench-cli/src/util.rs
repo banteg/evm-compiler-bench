@@ -29,13 +29,21 @@ pub fn run_measured(command: &mut Command, stdin: Option<&[u8]>) -> Result<Measu
     let stdout_handle = read_pipe(stdout);
     let stderr_handle = read_pipe(stderr);
     if let Some(input) = stdin {
-        child
+        let written = child
             .stdin
-            .as_mut()
+            .take()
             .context("opening child stdin")?
-            .write_all(input)?;
+            .write_all(input);
+        // A child may exit without reading all of its input; its status and
+        // output then explain the failure better than the broken pipe does.
+        if let Err(error) = written
+            && error.kind() != std::io::ErrorKind::BrokenPipe
+        {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error).context("writing child stdin");
+        }
     }
-    drop(child.stdin.take());
     let (status, usage) = wait_with_usage(child)?;
     let output = Output {
         status,
@@ -101,31 +109,39 @@ pub fn byte_len(hex_value: &str) -> Result<usize> {
 
 pub fn stripped_cbor_len(hex_value: &str) -> Result<usize> {
     let bytes = hex::decode(strip_0x(hex_value))?;
-    if bytes.len() < 2 {
+    let Some(suffix) = bytes.len().checked_sub(2) else {
         return Ok(bytes.len());
-    }
-    let metadata_len =
-        u16::from_be_bytes([bytes[bytes.len() - 2], bytes[bytes.len() - 1]]) as usize;
-    if metadata_len + 2 <= bytes.len() {
-        let start = bytes.len() - metadata_len - 2;
-        let metadata = &bytes[start..bytes.len() - 2];
-        if looks_like_solc_or_vyper_metadata(metadata) {
-            Ok(start)
-        } else {
-            Ok(bytes.len())
-        }
-    } else {
-        Ok(bytes.len())
-    }
+    };
+    let declared = u16::from_be_bytes([bytes[suffix], bytes[suffix + 1]]) as usize;
+    // solc and Vyper before 0.3.10 count only the CBOR payload; later Vyper
+    // releases also count the two length bytes.
+    let starts = [
+        suffix.checked_sub(declared),
+        bytes.len().checked_sub(declared),
+    ];
+    Ok(starts
+        .into_iter()
+        .flatten()
+        .find(|&start| start <= suffix && looks_like_compiler_metadata(&bytes[start..suffix]))
+        .unwrap_or(bytes.len()))
 }
 
-fn looks_like_solc_or_vyper_metadata(metadata: &[u8]) -> bool {
-    if metadata.is_empty() || !matches!(metadata[0], 0xa1..=0xbf) {
+/// Keys of solc (`solc`, `ipfs`, `bzzr0`, `bzzr1`) and Vyper (`vyper`)
+/// metadata, matched in their CBOR text-string encoding.
+const METADATA_KEYS: [&str; 5] = ["solc", "vyper", "ipfs", "bzzr0", "bzzr1"];
+
+fn looks_like_compiler_metadata(metadata: &[u8]) -> bool {
+    // solc emits a CBOR map; Vyper 0.3.10+ wraps its map in a CBOR array.
+    if !matches!(metadata.first(), Some(0x81..=0x9f | 0xa1..=0xbf)) {
         return false;
     }
-    metadata
-        .windows(4)
-        .any(|window| matches!(window, b"solc" | b"vyper" | b"ipfs" | b"bzzr"))
+    METADATA_KEYS.iter().any(|key| {
+        let mut encoded = vec![0x60 + key.len() as u8];
+        encoded.extend_from_slice(key.as_bytes());
+        metadata
+            .windows(encoded.len())
+            .any(|window| window == encoded)
+    })
 }
 
 pub fn ensure_dir(path: &Path) -> Result<()> {
@@ -237,23 +253,18 @@ struct Usage {
 }
 
 #[cfg(unix)]
-fn wait_with_usage(mut child: std::process::Child) -> Result<(std::process::ExitStatus, Usage)> {
+fn wait_with_usage(child: std::process::Child) -> Result<(std::process::ExitStatus, Usage)> {
     use libc::{rusage, wait4};
     use std::os::unix::process::ExitStatusExt;
 
     let pid = child.id() as libc::pid_t;
     let mut status = 0;
     let mut raw = std::mem::MaybeUninit::<rusage>::zeroed();
-    let waited = unsafe { wait4(pid, &mut status, 0, raw.as_mut_ptr()) };
-    if waited < 0 {
-        let output = child.wait()?;
-        return Ok((
-            output,
-            Usage {
-                cpu_ms: 0.0,
-                peak_rss_kib: 0,
-            },
-        ));
+    while unsafe { wait4(pid, &mut status, 0, raw.as_mut_ptr()) } < 0 {
+        let error = std::io::Error::last_os_error();
+        if error.kind() != std::io::ErrorKind::Interrupted {
+            return Err(error).context("waiting for child");
+        }
     }
     let raw = unsafe { raw.assume_init() };
     let user_ms = raw.ru_utime.tv_sec as f64 * 1000.0 + raw.ru_utime.tv_usec as f64 / 1000.0;
@@ -286,9 +297,37 @@ fn wait_with_usage(mut child: std::process::Child) -> Result<(std::process::Exit
 mod tests {
     use super::stripped_cbor_len;
 
+    #[cfg(unix)]
+    #[test]
+    fn reports_child_status_when_child_ignores_stdin() {
+        let input = vec![0u8; 1 << 20];
+        let measured = super::run_measured(
+            std::process::Command::new("sh").args(["-c", "echo early; exit 3"]),
+            Some(&input),
+        )
+        .unwrap();
+        assert_eq!(measured.output.status.code(), Some(3));
+        assert_eq!(measured.output.stdout, b"early\n");
+    }
+
     #[test]
     fn strips_known_metadata_trailer() {
         assert_eq!(stripped_cbor_len("0x6000a164736f6c630006").unwrap(), 2);
+    }
+
+    #[test]
+    fn strips_vyper_metadata_trailers() {
+        // Vyper 0.3.7 appends {"vyper": [0, 3, 7]}; the length excludes itself.
+        assert_eq!(
+            stripped_cbor_len("0x6000a165767970657283000307000b").unwrap(),
+            2
+        );
+        // Vyper 0.4.0 appends [runtime, data, immutables, {"vyper": [0, 4, 0]}];
+        // the length includes itself.
+        assert_eq!(
+            stripped_cbor_len("0x600084185b810400a1657679706572830004000013").unwrap(),
+            2
+        );
     }
 
     #[test]
