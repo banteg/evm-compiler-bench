@@ -1366,6 +1366,28 @@
         retHash = keccak256(ret);
     }
 
+    // An external self-call is its own transaction under `forge test --isolate`:
+    // deployment and setup state is committed, so storage starts cold with its
+    // original values, while warmup calls made here stay warm for the measured call.
+    function benchMeasure(address target, BenchCall[] calldata warmup, BenchCall calldata measured, bool withLogs)
+        external
+        returns (bool ok, bytes32 retHash, bytes32 logHash, uint256 gasUsed)
+    {
+        for (uint256 i = 0; i < warmup.length; i++) {
+            (bool warmupOk,,) = _run(warmup[i].destination, warmup[i].data, warmup[i].value, warmup[i].sender);
+            require(warmupOk, "warmup call failed");
+        }
+        // A transaction's destination account is warm, so touch it before the
+        // measured internal call instead of charging a cold account access.
+        require(measured.destination.code.length != 0, "measured destination");
+        if (withLogs) {
+            (ok, retHash, logHash, gasUsed) =
+                _runWithLogs(target, measured.destination, measured.data, measured.value, measured.sender);
+        } else {
+            (ok, retHash, gasUsed) = _run(measured.destination, measured.data, measured.value, measured.sender);
+        }
+    }
+
     function _runWithLogs(address target, address destination, bytes memory data, uint256 value, address sender)
         internal
         returns (bool ok, bytes32 retHash, bytes32 logHash, uint256 gasUsed)

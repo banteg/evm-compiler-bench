@@ -133,7 +133,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: approve
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -176,7 +176,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: max_withdraw_default
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -186,7 +186,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: max_redeem_default
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -196,7 +196,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: conversion_zero_edges
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -210,7 +210,7 @@ scenarios:
       - data: 'abi.encodeWithSignature("previewWithdraw(uint256)", uint256(0))'
       - data: 'abi.encodeWithSignature("previewRedeem(uint256)", uint256(0))'
   - name: max_mint_unlimited
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, type(uint256).max, uint256(86400), uint256(1000))'
@@ -257,7 +257,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: update_max_debt_for_strategy
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -276,7 +276,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: revoke_strategy_preserves_queue_order
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -288,7 +288,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: add_remove_role
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -299,7 +299,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: role_manager_transfer_accept
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -310,7 +310,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_metadata
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -320,7 +320,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_accountant
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -329,7 +329,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_auto_allocate
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -350,7 +350,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_minimum_total_idle
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -359,7 +359,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_profit_max_unlock_time
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -464,7 +464,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: assess_unrealized_loss
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -510,7 +510,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_default_queue
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -521,7 +521,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: shutdown_vault
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'
@@ -532,7 +532,7 @@ scenarios:
     expect_success: true
     observers: *yearn_observers
   - name: set_deposit_limit_default
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnInit(address,uint256,uint256,uint256)", {target}, uint256(1_000_000), uint256(86400), uint256(1000))'

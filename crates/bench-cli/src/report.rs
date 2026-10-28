@@ -360,7 +360,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "A",
                 "title": "Foundry internal-call harness gas",
-                "body": "Gas is measured via Foundry's internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead."
+                "body": "Gas is measured via Foundry's internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead. Each measured call runs in its own isolated transaction after deployment and setup are committed, so storage starts cold unless the scenario's warmup calls touch it first."
             },
             {
                 "tag": "B",
@@ -1361,6 +1361,7 @@ fn public_harness_config(config: &serde_json::Value) -> Result<serde_json::Value
         "optimizer_runs",
         "optimizer_details",
         "via_ir",
+        "isolate",
         "bytecode_hash",
         "cbor_metadata",
         "revert_strings",
@@ -1535,11 +1536,12 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 mod tests {
     #[test]
     fn published_harness_config_keeps_build_flags_and_excludes_credentials() {
-        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true,
+        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true, "isolate":true,
             "etherscan_api_key":"private-account-key", "rpc_endpoints":{"mainnet":"private-rpc-token"}});
         let public = super::public_harness_config(&config).unwrap();
         assert_eq!(public["solc"], "0.8.34");
         assert_eq!(public["optimizer"], true);
+        assert_eq!(public["isolate"], true);
         assert!(public["config_sha256"].as_str().is_some());
         assert!(public.get("etherscan_api_key").is_none());
         assert!(public.get("rpc_endpoints").is_none());

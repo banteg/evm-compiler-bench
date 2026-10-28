@@ -214,7 +214,7 @@ scenarios:
     expect_success: true
     observers: *curve_observers
   - name: get_dy_quote
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
@@ -225,7 +225,7 @@ scenarios:
     observers: *curve_observers
 
   - name: price_oracle_after_time
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
@@ -238,7 +238,7 @@ scenarios:
     expect_success: true
     observers: *curve_observers
   - name: d_oracle_after_time
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'
@@ -294,7 +294,7 @@ scenarios:
     expect_success: true
     observers: *curve_observers
   - name: calc_withdraw_one_coin
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchCurveInit(address,uint256,uint256,uint256)", {target}, uint256(200), uint256(4_000_000), uint256(5_000_000_000))'

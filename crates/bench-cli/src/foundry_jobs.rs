@@ -13,6 +13,13 @@ use std::{
     },
 };
 
+/// Flags shared by `forge test` and the recorded `forge config`, so the
+/// captured configuration matches the measurement run. Under `--isolate`, every
+/// top-level call from the test contract runs as its own committed transaction,
+/// so measured calls start from cold storage whose original values were written
+/// by earlier transactions.
+pub(crate) const HARNESS_FLAGS: [&str; 3] = ["--via-ir", "--optimize", "--isolate"];
+
 fn worker_count() -> Result<usize> {
     match std::env::var("EVM_BENCH_FOUNDRY_JOBS") {
         Ok(value) => match value.parse::<usize>() {
@@ -108,8 +115,7 @@ pub fn execute(root: &Path, evm: &str, relative: &str) -> Result<()> {
             .arg(relative)
             .arg("--evm-version")
             .arg(evm)
-            .arg("--via-ir")
-            .arg("--optimize")
+            .args(HARNESS_FLAGS)
             .arg("--threads")
             .arg("1")
             .arg("-q"),
