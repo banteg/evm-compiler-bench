@@ -1544,12 +1544,8 @@ fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> 
             source = source.replace("@pure", "@view");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
-            source = source.replace("public(immutable(String[32]))", "public(String[32])");
-            source = source.replace("public(immutable(String[8]))", "public(String[8])");
-            source = source.replace("public(immutable(uint8))", "public(uint256)");
-            source = source.replace("    name = ", "    self.name = ");
-            source = source.replace("    symbol = ", "    self.symbol = ");
-            source = source.replace("    decimals = ", "    self.decimals = ");
+            // Vyper 0.2 has no uint8; the ABI word is identical for in-range values.
+            source = replace_token(&source, "uint8", "uint256");
             source = source.replace(
                 "max_value(uint256)",
                 "115792089237316195423570985008687907853269984665640564039457584007913129639935",
