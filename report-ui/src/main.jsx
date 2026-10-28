@@ -382,50 +382,6 @@ function FindingsGrid() {
 }
 
 // ============================================================
-// Suite scorecards
-// ============================================================
-function SuiteScorecards({ profileA, profileB, metric }) {
-  const rows = useMemo(() =>
-    Bench.compareProfiles(Bench.D.rows, profileA, profileB, metric),
-    [profileA, profileB, metric]
-  );
-  const tieBand = Bench.tieBandForMetric(metric);
-  const bySuite = useMemo(() => Bench.bySuite(rows, tieBand), [rows, tieBand]);
-
-  return React.createElement('div', { className: 'suite-grid' },
-    bySuite.map((s, i) => {
-      const pct = s.geomean == null ? null : (s.geomean - 1) * 100;
-      const tone = pct == null ? 'tie' : pct < -tieBand * 100 ? 'good' : pct > tieBand * 100 ? 'bad' : 'tie';
-      const total = s.count || 1;
-      return React.createElement('div', { key: i, className: 'suite-card' },
-        React.createElement('div', { className: 'nm' }, SUITES[s.suite].label + ' Suite'),
-        React.createElement('div', { className: 'dsc' }, SUITES[s.suite].desc),
-        React.createElement('div', { className: `big ${tone}` }, Bench.fmtDelta(s.geomean)),
-        React.createElement('div', { className: 'wtl-bar' },
-          React.createElement('div', { className: 'w', style: { width: (s.cheaper/total*100) + '%' } }),
-          React.createElement('div', { className: 't', style: { width: (s.tie/total*100) + '%' } }),
-          React.createElement('div', { className: 'l', style: { width: (s.costlier/total*100) + '%' } }),
-        ),
-        React.createElement('div', { className: 'ftr' },
-          React.createElement('div', null,
-            React.createElement('div', { className: 'k' }, 'Cheaper'),
-            React.createElement('div', { className: 'v', style: { color: 'var(--accent)' } }, s.cheaper),
-          ),
-          React.createElement('div', null,
-            React.createElement('div', { className: 'k' }, 'Tie'),
-            React.createElement('div', { className: 'v' }, s.tie),
-          ),
-          React.createElement('div', null,
-            React.createElement('div', { className: 'k' }, 'Costlier'),
-            React.createElement('div', { className: 'v', style: { color: 'var(--bad)' } }, s.costlier),
-          ),
-        )
-      );
-    })
-  );
-}
-
-// ============================================================
 // Version evolution
 // ============================================================
 function VersionEvolution({ metric }) {
@@ -1616,63 +1572,8 @@ function ReliabilityPanel() {
 // Methodology
 // ============================================================
 function Methodology() {
-  const fallbackNotes = [
-    {
-      tag: 'A',
-      title: 'Foundry internal-call harness gas',
-      body: 'Gas is measured via Foundry\'s internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead. Each measured call runs in its own isolated transaction after deployment and setup are committed, so storage starts cold unless the scenario\'s warmup calls touch it first.'
-    },
-    {
-      tag: 'B',
-      title: 'Stripped runtime bytes',
-      body: 'Bytecode comparisons use runtime bytecode with appended metadata stripped, so trailing CBOR doesn\'t skew code-size deltas.'
-    },
-    {
-      tag: 'C',
-      title: 'Idiomatic source comparison',
-      body: 'Headline results compare fixed and scale-suite idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes.'
-    },
-    {
-      tag: 'D',
-      title: 'Metric-aware geomeans',
-      body: 'Runtime gas is aggregated over matched headline scenarios. Current harness deployment gas is scenario/deployment-variant scoped; bytecode size and compile time are deduplicated per benchmark artifact before computing ratios.'
-    },
-    {
-      tag: 'E',
-      title: 'Metric-specific bands',
-      body: 'Gas and bytecode use a +/-0.5% materiality band for W/T/L counts. Compile time uses a +/-2% noise band.'
-    },
-    {
-      tag: 'F',
-      title: 'Real-derived provenance',
-      body: 'Real-derived suites separate benchmark lanes from source lanes. Production-conformance rows use latest-syntax originals plus counterpart-language ports; pinned historical sources remain provenance references, not compiled headline artifacts.'
-    },
-    {
-      tag: 'G',
-      title: 'Trimmed diagnostic rows',
-      body: 'Malformed calldata, decoder-boundary, admin/auth reject, and other adversarial revert rows are excluded from the measured scenario corpus so real-derived results focus on common workflow paths.'
-    },
-    {
-      tag: 'H',
-      title: 'Compatibility source variants',
-      body: 'Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied.'
-    },
-    {
-      tag: 'I',
-      title: 'Cross-profile behavior checks',
-      body: 'Gas rows persist return-data, observer-state, and normalized-log hashes. Report rows compare those hashes against the language baseline profile when both profiles compiled the same scenario; expected-revert rows are compared by status and observer state, not raw revert bytes.'
-    },
-    {
-      tag: 'J',
-      title: 'Vyper Venom and prereleases',
-      body: 'Vyper "Venom" rows pass --experimental-codegen. Prerelease profiles track the latest non-yanked Vyper prerelease on PyPI; the exact version is recorded for each run.'
-    },
-  ];
-  const methods = Array.isArray(Bench.D.methodology?.notes) && Bench.D.methodology.notes.length
-    ? Bench.D.methodology.notes
-    : fallbackNotes;
   return React.createElement('div', { className: 'methods' },
-    methods.map(m => React.createElement('div', { key: m.tag, className: 'method' },
+    Bench.D.methodology.notes.map(m => React.createElement('div', { key: m.tag, className: 'method' },
       React.createElement('div', { className: 'nm' }, `Note ${m.tag}`),
       React.createElement('div', { className: 'ttl' }, m.title),
       React.createElement('div', { className: 'body' }, m.body),
