@@ -6,4 +6,8 @@ libs = []
 optimizer = false
 # Keep measurement-wrapper codegen independent from the compiler under test.
 solc = "0.8.34"
+# Without metadata, fixture creation code (and so its CREATE2 address in logs)
+# does not depend on which generated shard compiled it.
+bytecode_hash = "none"
+cbor_metadata = false
 fs_permissions = [{ access = "read-write", path = "../results/raw" }]

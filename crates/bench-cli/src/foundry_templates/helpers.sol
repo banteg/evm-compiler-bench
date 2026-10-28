@@ -411,8 +411,7 @@
             firstPairMatches = factory.allPairs(0) == pair;
         }
         if (pair != address(0)) {
-            // The fixture's CBOR metadata depends on the generated shard.
-            // Certify its exact local runtime, then hash the stable verdict.
+            // Certify the fixture's exact runtime, then hash the stable verdict.
             pairCodeMatches = pair.codehash == keccak256(type(BenchUniswapFactoryPair).runtimeCode);
         }
         return keccak256(
