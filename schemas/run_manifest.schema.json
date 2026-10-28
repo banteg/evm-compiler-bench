@@ -15,6 +15,11 @@
         "vyper-0.3",
         "vyper-0.4"
       ]
+    },
+    "cacheStatusCounts": {
+      "type": "object",
+      "propertyNames": { "enum": ["hit", "miss", "stale", "refreshed", "disabled"] },
+      "additionalProperties": { "type": "integer", "minimum": 0 }
     }
   },
   "required": [
@@ -319,8 +324,52 @@
         "host": { "type": "object" }
       }
     },
+    "harness_config": {
+      "type": "object",
+      "description": "Published Foundry measurement-harness controls plus a hash of the full effective configuration.",
+      "required": ["solc", "evm_version", "config_sha256"],
+      "properties": {
+        "solc": { "type": ["string", "null"] },
+        "evm_version": { "type": "string" },
+        "config_sha256": { "type": "string" }
+      }
+    },
+    "harness_shards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "source_sha256", "artifacts"],
+        "properties": {
+          "path": { "type": "string" },
+          "source_sha256": { "type": "string" },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["benchmark_id", "implementation_id", "profile_id"],
+              "properties": {
+                "benchmark_id": { "type": "string" },
+                "implementation_id": { "type": "string" },
+                "profile_id": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
     "artifacts": { "type": "integer", "minimum": 0 },
     "compile_failures": { "type": "integer", "minimum": 0 },
-    "gas_records": { "type": "integer", "minimum": 0 }
+    "gas_records": { "type": "integer", "minimum": 0 },
+    "cache": {
+      "type": "object",
+      "required": ["enabled", "root", "compile", "gas", "statuses"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "root": { "type": "string" },
+        "compile": { "$ref": "#/$defs/cacheStatusCounts" },
+        "gas": { "$ref": "#/$defs/cacheStatusCounts" },
+        "statuses": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
   }
 }
