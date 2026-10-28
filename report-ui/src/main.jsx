@@ -118,8 +118,10 @@ function buildHeadlines() {
 
   const v = (a, b, metric) => {
     const cmp = Bench.compareProfiles(rows, a, b, metric, HEADLINE_SUITES);
+    const tieBand = Bench.tieBandForMetric(metric);
     return {
-      ...Bench.summarize(cmp),
+      ...Bench.summarize(cmp, tieBand),
+      tieBand,
       cmp,
       coverage: Bench.profilePairCompileCoverage(rows, a, b, HEADLINE_SUITES),
     };
@@ -259,108 +261,89 @@ function FindingsGrid() {
       tag: 'New · Solar',
       span: 6, headline: 'A new compiler, the same Solidity source.',
       body: `${Bench.profileLabel(SOLAR_GAS)} gives ${lowerHigher(HEADLINES.solarGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solarSize.geomean, 'runtime bytecode')} against solc 0.8.36 viaIR / runs 200 on identical materialized sources. Solar has its own Rust frontend and EVM code generator.`,
-      stat: HEADLINES.solarGas.geomean, statLabel: 'runtime gas (Solar gas vs matched solc viaIR)',
-      altStat: HEADLINES.solarSize.geomean, altLabel: 'runtime bytes',
-      count: HEADLINES.solarGas.count, coverage: HEADLINES.solarGas.coverage,
+      stat: HEADLINES.solarGas, statLabel: 'runtime gas (Solar gas vs matched solc viaIR)',
+      altStat: HEADLINES.solarSize, altLabel: 'runtime bytes',
     }, {
       tag: 'New · Solar size',
       span: 6, headline: 'Two optimizer modes, visible tradeoffs.',
       body: `Solar size / runs 1 gives ${lowerHigher(HEADLINES.solarSizeMode.geomean, 'runtime bytecode')} than solc viaIR / runs 200. Size mode can increase both gas and bytecode on individual workloads; use the gas-versus-size preset to inspect the tradeoff.`,
-      stat: HEADLINES.solarSizeMode.geomean, statLabel: 'runtime bytes (Solar size vs matched solc viaIR)',
-      count: HEADLINES.solarSizeMode.count, coverage: HEADLINES.solarSizeMode.coverage,
+      stat: HEADLINES.solarSizeMode, statLabel: 'runtime bytes (Solar size vs matched solc viaIR)',
     }, {
       tag: 'solx',
       span: 6,
       headline: 'A different backend for the same Solidity source.',
       body: `Against ${Bench.profileLabel(SOLX_BASELINE)}, ${Bench.profileLabel(SOLX_O3)} gives ${lowerHigher(HEADLINES.solxGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solxSize.geomean, 'runtime bytecode')}. Both materialize Solidity 0.8.34 sources; solx embeds a modified frontend.`,
-      stat: HEADLINES.solxGas.geomean,
+      stat: HEADLINES.solxGas,
       statLabel: 'runtime gas (solx O3 vs matched solc viaIR)',
-      altStat: HEADLINES.solxSize.geomean,
+      altStat: HEADLINES.solxSize,
       altLabel: 'runtime bytes',
-      count: HEADLINES.solxGas.count,
-      coverage: HEADLINES.solxGas.coverage,
     },
     {
       tag: 'solx Oz',
       span: 6,
       headline: 'Measure the size-oriented optimizer separately.',
       body: `${Bench.profileLabel(SOLX_OZ)} gives ${lowerHigher(HEADLINES.solxOzSize.geomean, 'runtime bytecode')} than the matched solc viaIR / runs 200 profile. Oz does not always produce smaller or cheaper code than O3; inspect the individual workloads.`,
-      stat: HEADLINES.solxOzSize.geomean,
+      stat: HEADLINES.solxOzSize,
       statLabel: 'runtime bytes (solx Oz vs matched solc viaIR)',
-      count: HEADLINES.solxOzSize.count,
-      coverage: HEADLINES.solxOzSize.coverage,
     },
     {
       tag: 'Finding 01',
       span: 4,
       headline: 'Vyper gas and solc legacy.',
       body: `Comparing stable, optimizer-enabled profiles over fixed and scale benchmarks, ${vyperGas} gives ${lowerHigher(HEADLINES.stableSolVsVyperGas.geomean, 'runtime gas')} than ${solcLegacy}.`,
-      stat: HEADLINES.stableSolVsVyperGas.geomean,
+      stat: HEADLINES.stableSolVsVyperGas,
       statLabel: 'runtime gas (Vyper gas vs solc legacy)',
-      altStat: HEADLINES.stableSolVsVyperSize.geomean,
+      altStat: HEADLINES.stableSolVsVyperSize,
       altLabel: 'runtime bytes',
-      count: HEADLINES.stableSolVsVyperGas.count,
-      coverage: HEADLINES.stableSolVsVyperGas.coverage,
     },
     {
       tag: 'Finding 02',
       span: 4,
       headline: 'Vyper Venom and solc viaIR.',
       body: `Against ${solcViaIR}, ${vyperVenom} gives ${lowerHigher(HEADLINES.solVsVyperVenomGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solVsVyperVenomSize.geomean, 'runtime bytecode')}.`,
-      stat: HEADLINES.solVsVyperVenomGas.geomean,
+      stat: HEADLINES.solVsVyperVenomGas,
       statLabel: 'runtime gas (Vyper Venom vs solc viaIR)',
-      altStat: HEADLINES.solVsVyperVenomSize.geomean,
+      altStat: HEADLINES.solVsVyperVenomSize,
       altLabel: 'runtime bytes',
-      count: HEADLINES.solVsVyperVenomGas.count,
-      coverage: HEADLINES.solVsVyperVenomGas.coverage,
     },
     {
       tag: 'Finding 03',
       span: 4,
       headline: 'Vyper’s experimental backend changes the tradeoff.',
       body: `Enabling --experimental-codegen ("Venom") in Vyper gives ${lowerHigher(HEADLINES.venomSize.geomean, 'runtime bytecode')}, ${lowerHigher(HEADLINES.venomGas.geomean, 'runtime gas')}, and ${lowerHigher(HEADLINES.venomCompile.geomean, 'compile time')} versus legacy Vyper codegen.`,
-      stat: HEADLINES.venomSize.geomean,
+      stat: HEADLINES.venomSize,
       statLabel: 'runtime bytes vs Vyper legacy codegen',
-      altStat: HEADLINES.venomGas.geomean,
+      altStat: HEADLINES.venomGas,
       altLabel: 'runtime gas',
-      count: HEADLINES.venomSize.count,
-      coverage: HEADLINES.venomSize.coverage,
     },
     {
       tag: 'Finding 04',
       span: 4,
       headline: 'solc legacy and viaIR.',
       body: `Switching from ${solcLegacy} to ${solcViaIR} gives ${lowerHigher(HEADLINES.viaIRGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.viaIRSize.geomean, 'runtime bytecode')}, but ${lowerHigher(HEADLINES.viaIRCompile.geomean, 'compile time')}.`,
-      stat: HEADLINES.viaIRGas.geomean,
+      stat: HEADLINES.viaIRGas,
       statLabel: 'runtime gas vs solc legacy',
-      altStat: HEADLINES.viaIRCompile.geomean,
+      altStat: HEADLINES.viaIRCompile,
       altLabel: 'compile wall time',
-      altInvert: true,
-      count: HEADLINES.viaIRGas.count,
-      coverage: HEADLINES.viaIRGas.coverage,
     },
     {
       tag: 'Finding 05',
       span: 4,
       headline: 'Solidity compiler versions affect different workloads.',
       body: `Solc 0.4.26 to ${solcLegacy} gives ${lowerHigher(HEADLINES.solEra.geomean, 'runtime gas')} across comparable cases. The version view separates workload and codegen effects.`,
-      stat: HEADLINES.solEra.geomean,
+      stat: HEADLINES.solEra,
       statLabel: `runtime gas (solc 0.4.26 → ${Bench.profileVersionLabel(Bench.profileById(SOL_LEGACY) || {})} legacy)`,
       neutral: true,
-      count: HEADLINES.solEra.count,
-      coverage: HEADLINES.solEra.coverage,
     },
     {
       tag: 'Finding 06',
       span: 4,
       headline: 'Optimization changes runtime cost and size.',
       body: `${Bench.profileLabel(SOL_NOOPT)} gives ${lowerHigher(HEADLINES.nooptGas.geomean, 'runtime gas')} than ${solcViaIR}. This comparison changes both optimization and the codegen path.`,
-      stat: HEADLINES.nooptGas.geomean,
+      stat: HEADLINES.nooptGas,
       statLabel: 'runtime gas without optimizer',
-      altStat: HEADLINES.nooptSize.geomean,
+      altStat: HEADLINES.nooptSize,
       altLabel: 'runtime bytes without optimizer',
-      count: HEADLINES.nooptGas.count,
-      coverage: HEADLINES.nooptGas.coverage,
     },
   ];
 
@@ -373,24 +356,23 @@ function FindingsGrid() {
       )
     ),
     React.createElement('div', { className: 'stories' },
-      cards.filter(c => c.count > 0).map((c, i) => {
-        const ratio = c.stat;
-        const pct = ratio == null ? 0 : (ratio - 1) * 100;
+      cards.filter(c => c.stat.count > 0).map((c, i) => {
+        const ratio = c.stat.geomean;
         const tone = c.neutral
           ? 'neutral'
-          : pct < -2 ? '' : pct > 2 ? 'bad' : 'warn';
+          : { good: '', bad: 'bad', tie: 'warn' }[Bench.deltaTone(ratio, c.stat.tieBand)];
         return React.createElement('div', { key: i, className: `story span-${c.span}` },
           React.createElement('div', { className: 'story-tag' },
             React.createElement('span', null, c.tag),
-            React.createElement('span', null, `n=${c.count} · pass ${passRate(c.coverage)}`)
+            React.createElement('span', null, `n=${c.stat.count} · pass ${passRate(c.stat.coverage)}`)
           ),
           React.createElement('h3', { className: 'story-headline' }, c.headline),
           React.createElement('p', { className: 'story-body' }, c.body),
           React.createElement('div', { className: `story-num ${tone}` }, Bench.fmtDelta(ratio)),
           React.createElement('div', { className: 'story-sub' },
             c.statLabel,
-            c.altStat != null ? React.createElement('span', { style: { display: 'block', marginTop: '4px', color: 'var(--fg-4)' } },
-              `${Bench.fmtDelta(c.altStat)} · ${c.altLabel}`
+            c.altStat ? React.createElement('span', { style: { display: 'block', marginTop: '4px', color: 'var(--fg-4)' } },
+              `${Bench.fmtDelta(c.altStat.geomean)} · ${c.altLabel}`
             ) : null
           )
         );
@@ -1403,7 +1385,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
     React.createElement('div', { className: 'stat-row' },
       React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Geomean Δ'),
-        React.createElement('div', { className: `v ${agg.geomean == null ? 'tie' : (agg.geomean < 1 - tieBand ? 'good' : agg.geomean > 1 + tieBand ? 'bad' : 'tie')}` },
+        React.createElement('div', { className: `v ${Bench.deltaTone(agg.geomean, tieBand)}` },
           Bench.fmtDelta(agg.geomean)),
         React.createElement('div', { className: 'sub' }, `${Bench.profileLabel(profileB)} vs ${Bench.profileLabel(profileA)}`)
       ),
@@ -1442,14 +1424,14 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
           )
         ),
         React.createElement('div', { style: { padding: '0 24px 16px 24px' } },
-          React.createElement(DeltaHistogram, { rows: cmp, height: 80 })
+          React.createElement(DeltaHistogram, { rows: cmp, tieBand, height: 80 })
         ),
         React.createElement('div', { style: { padding: '14px 24px 24px 24px', maxHeight: '620px', overflow: 'auto', borderTop: '1px solid var(--line)' } },
           React.createElement('div', { className: 'card-head', style: { marginTop: '4px' } },
             React.createElement('div', { className: 'card-title' }, `Per-${unit.singular} Δ`),
             React.createElement('div', { className: 'card-sub' }, `top ${Math.min(120, cmp.length)} by |Δ|`)
           ),
-          React.createElement(ScenarioDeltaChart, { rows: cmp, height: Math.min(2200, Math.max(200, cmp.length * 14 + 30)), limit: 120 })
+          React.createElement(ScenarioDeltaChart, { rows: cmp, tieBand, height: Math.min(2200, Math.max(200, cmp.length * 14 + 30)), limit: 120 })
         )
       ),
       React.createElement('div', { className: 'compare-detail-side' },
@@ -1478,7 +1460,7 @@ function BySuiteCard({ rows, tieBand }) {
       ),
       React.createElement('tbody', null,
         split.map(s => {
-          const tone = s.geomean == null ? 'tie' : s.geomean < 1 - tieBand ? 'good' : s.geomean > 1 + tieBand ? 'bad' : 'tie';
+          const tone = Bench.deltaTone(s.geomean, tieBand);
           return React.createElement('tr', { key: s.suite },
             React.createElement('td', null, SUITES[s.suite].label),
             React.createElement('td', { className: `num delta ${tone}` }, Bench.fmtDelta(s.geomean)),

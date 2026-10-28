@@ -435,16 +435,16 @@
     if (Math.abs(v) >= 100) return v.toFixed(0);
     return v.toFixed(v % 1 === 0 ? 0 : 2);
   }
-  function deltaTone(ratio, tieBand = 0.02){
+  function deltaTone(ratio, tieBand){
     if (ratio == null || !isFinite(ratio)) return 'tie';
     if (ratio < 1 - tieBand) return 'good';
     if (ratio > 1 + tieBand) return 'bad';
     return 'tie';
   }
-  function pctTone(pct, tieBand = 2){
+  function pctTone(pct, tieBand){
     if (pct == null || !isFinite(pct)) return 'tie';
-    if (pct < -tieBand) return 'good';
-    if (pct > tieBand) return 'bad';
+    if (pct < -tieBand * 100) return 'good';
+    if (pct > tieBand * 100) return 'bad';
     return 'tie';
   }
 

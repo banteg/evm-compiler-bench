@@ -21,9 +21,11 @@ import React from "react";
     return [ref, w];
   }
 
+  const TONE_FILL = { good: 'var(--accent)', bad: 'var(--bad)', tie: 'var(--fg-4)' };
+
   // === ScenarioDeltaChart — horizontal bar chart of per-scenario delta% ===
   // rows: [{label, suite, deltaPct}], limit: max bars
-  function ScenarioDeltaChart({ rows, height = 360, limit = 80 }){
+  function ScenarioDeltaChart({ rows, tieBand, height = 360, limit = 80 }){
     const [ref, width] = useContainerWidth(900);
     const data = rows.slice(0, limit);
     if (!data.length) return React.createElement('div', { className: 'placeholder' }, 'No comparable scenarios.');
@@ -68,7 +70,7 @@ import React from "react";
           const y = padT + i * rowH + 1;
           const bw = Math.abs(xScale(d.deltaPct));
           const xs = d.deltaPct >= 0 ? xZero : xZero - bw;
-          const tone = d.deltaPct < -2 ? 'var(--accent)' : d.deltaPct > 2 ? 'var(--bad)' : 'var(--fg-4)';
+          const tone = TONE_FILL[Bench.pctTone(d.deltaPct, tieBand)];
           const labelLimit = compact ? 22 : 44;
           return React.createElement('g', { key: 'b'+i },
             // label
@@ -304,7 +306,7 @@ import React from "react";
   }
 
   // === DeltaHistogram — distribution of deltas as a small histogram ===
-  function DeltaHistogram({ rows, height = 70 }){
+  function DeltaHistogram({ rows, tieBand, height = 70 }){
     const [ref, width] = useContainerWidth(400);
     if (!rows.length) return React.createElement('div', { ref });
     const padL = 0, padR = 0, padT = 4, padB = 16;
@@ -330,7 +332,7 @@ import React from "react";
         }),
         counts.map((c, i) => {
           const center = -niceMax + (i + 0.5) / bins * 2 * niceMax;
-          const tone = center < -2 ? 'var(--accent)' : center > 2 ? 'var(--bad)' : 'var(--fg-4)';
+          const tone = TONE_FILL[Bench.pctTone(center, tieBand)];
           const bh = (c / maxC) * innerH;
           return React.createElement('rect', {
             key: i,
