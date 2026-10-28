@@ -1059,7 +1059,10 @@ fn rewrite_solidity_pre_08(source: &str) -> String {
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")
         .replace("type(uint112).max", "uint112(-1)")
-        .replace("block.chainid", "uint256(1)");
+        .replace(
+            "block.chainid",
+            &format!("uint256({})", crate::foundry_jobs::HARNESS_CHAIN_ID),
+        );
     rewrite_solidity_address_code_length(&source)
 }
 
