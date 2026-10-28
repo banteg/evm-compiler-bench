@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix="fe-parity-regression-") as directory:
     root = Path(directory)
     for name in ("benches", "compiler-profiles", "schemas", "foundry"):
         shutil.copytree(ROOT / name, root / name,
-                        ignore=shutil.ignore_patterns("cache", "out", "GeneratedBench*.t.sol"))
+                        ignore=shutil.ignore_patterns("cache", "out", "Generated*.t.sol"))
     # Keep test gas/compile caches isolated, while reusing downloaded toolchains.
     (root / ".cache").mkdir()
     (root / ".cache/toolchains").symlink_to(ROOT / ".cache/toolchains", target_is_directory=True)
@@ -56,11 +56,11 @@ with tempfile.TemporaryDirectory(prefix="fe-parity-regression-") as directory:
     mutated = run(root)
     assert mutated.returncode != 0, "Incorrect LP mint unexpectedly passed"
     # The harness runs forge quietly; rerun the failed shard to see the reasons.
-    project = root / "target/foundry-jobs/GeneratedBenchShard000.t.sol/foundry"
+    project = root / "target/foundry-jobs/GeneratedBehaviorShard000.t.sol/foundry"
     shard = subprocess.run(
         ["forge", "test", "--root", str(project), "--match-path",
-         "test/GeneratedBenchShard000.t.sol", "--match-test", "testDiff_.*_vs_fe_",
-         "--evm-version", "prague", "--via-ir", "--optimize"],
+         "test/GeneratedBehaviorShard000.t.sol", "--match-test", "testDiff_.*_vs_fe_",
+         "--evm-version", "prague", "--via-ir", "--optimize", "--isolate", "--chain-id", "1"],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     assert "[FAIL: differential return mismatch]" in shard.stdout, shard.stdout

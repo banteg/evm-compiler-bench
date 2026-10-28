@@ -410,54 +410,95 @@
     function _property_erc20_minimal(address target, uint256 seed, uint256 iterations) internal {
         uint256 rng = seed;
         uint256 supply = _readUint(target, abi.encodeWithSignature("totalSupply()"));
+        // Model the sampled balances and the one spent allowance, so each call's
+        // status is checked too: an always-reverting token trivially conserves supply.
+        uint256[4] memory model = [
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", address(this))),
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", BOB)),
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", CAROL)),
+            _readUint(target, abi.encodeWithSignature("allowance(address,address)", address(this), BOB))
+        ];
         string memory traceLog = "";
         for (uint256 i = 0; i < iterations; i++) {
             rng = _next(rng);
-            uint256 op = rng % 5;
-            uint256 amount = ((rng % 20) + 1) * 1 ether;
-            string memory trace;
-            if (op == 0) {
-                trace = string.concat("transfer_this_to_BOB:", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("transfer(address,uint256)", BOB, amount), 0, address(this));
-            } else if (op == 1) {
-                trace = string.concat("transfer_BOB_to_CAROL:", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("transfer(address,uint256)", CAROL, amount), 0, BOB);
-            } else if (op == 2) {
-                trace = string.concat("approve_this_to_BOB:", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("approve(address,uint256)", BOB, amount), 0, address(this));
-            } else if (op == 3) {
-                trace = string.concat("transferFrom_this_to_CAROL_by_BOB:", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, amount), 0, BOB);
-            } else {
-                trace = string.concat("approve_BOB_to_CAROL:", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("approve(address,uint256)", CAROL, amount), 0, BOB);
-            }
+            (string memory trace, bool statusOk) = _propertyErc20Step(target, rng, model);
             traceLog = _appendTrace(traceLog, trace);
+            _requireCheck(statusOk, "property", "erc20_minimal", seed, i, traceLog, "call status mismatch");
             uint256 thisBalance = _readUint(target, abi.encodeWithSignature("balanceOf(address)", address(this)));
             uint256 bobBalance = _readUint(target, abi.encodeWithSignature("balanceOf(address)", BOB));
             uint256 carolBalance = _readUint(target, abi.encodeWithSignature("balanceOf(address)", CAROL));
+            _requireCheck(thisBalance == model[0] && bobBalance == model[1] && carolBalance == model[2], "property", "erc20_minimal", seed, i, traceLog, "balance model mismatch");
             _requireCheck(_readUint(target, abi.encodeWithSignature("totalSupply()")) == supply, "property", "erc20_minimal", seed, i, traceLog, "total supply changed");
             _requireCheck(thisBalance <= supply && bobBalance <= supply && carolBalance <= supply, "property", "erc20_minimal", seed, i, traceLog, "sampled balance exceeds supply");
             _requireCheck(thisBalance + bobBalance + carolBalance == supply, "property", "erc20_minimal", seed, i, traceLog, "sampled balances do not sum to supply");
         }
     }
 
+    // Model slots: balances of this, BOB and CAROL, then this's allowance to BOB.
+    function _propertyErc20Step(address target, uint256 rng, uint256[4] memory model)
+        internal
+        returns (string memory trace, bool statusOk)
+    {
+        uint256 op = rng % 5;
+        uint256 amount = ((rng % 20) + 1) * 1 ether;
+        bool ok;
+        bool expected = true;
+        if (op == 0) {
+            trace = string.concat("transfer_this_to_BOB:", vm.toString(amount));
+            (ok,,) = _run(target, abi.encodeWithSignature("transfer(address,uint256)", BOB, amount), 0, address(this));
+            expected = model[0] >= amount;
+            if (expected) (model[0], model[1]) = (model[0] - amount, model[1] + amount);
+        } else if (op == 1) {
+            trace = string.concat("transfer_BOB_to_CAROL:", vm.toString(amount));
+            (ok,,) = _run(target, abi.encodeWithSignature("transfer(address,uint256)", CAROL, amount), 0, BOB);
+            expected = model[1] >= amount;
+            if (expected) (model[1], model[2]) = (model[1] - amount, model[2] + amount);
+        } else if (op == 2) {
+            trace = string.concat("approve_this_to_BOB:", vm.toString(amount));
+            (ok,,) = _run(target, abi.encodeWithSignature("approve(address,uint256)", BOB, amount), 0, address(this));
+            model[3] = amount;
+        } else if (op == 3) {
+            trace = string.concat("transferFrom_this_to_CAROL_by_BOB:", vm.toString(amount));
+            (ok,,) = _run(target, abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), CAROL, amount), 0, BOB);
+            expected = model[3] >= amount && model[0] >= amount;
+            if (expected) (model[3], model[0], model[2]) = (model[3] - amount, model[0] - amount, model[2] + amount);
+        } else {
+            trace = string.concat("approve_BOB_to_CAROL:", vm.toString(amount));
+            (ok,,) = _run(target, abi.encodeWithSignature("approve(address,uint256)", CAROL, amount), 0, BOB);
+        }
+        statusOk = ok == expected;
+    }
+
     function _property_vault_deposit_withdraw(address target, uint256 seed, uint256 iterations) internal {
         uint256 rng = seed;
+        // Shares per `_actor` index, so withdrawals have an expected status.
+        uint256[3] memory shares = [
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", address(this))),
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", BOB)),
+            _readUint(target, abi.encodeWithSignature("balanceOf(address)", CAROL))
+        ];
         string memory traceLog = "";
         for (uint256 i = 0; i < iterations; i++) {
             rng = _next(rng);
             address actor = _actor(rng);
+            uint256 actorIndex = rng % 3;
             uint256 amount = ((rng % 9) + 1) * (1 ether / 10);
             string memory trace;
+            bool ok;
+            bool expected = true;
             if (rng % 2 == 0) {
                 trace = string.concat("deposit_", _actorName(actor), ":", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("deposit()"), amount, actor);
+                (ok,,) = _run(target, abi.encodeWithSignature("deposit()"), amount, actor);
+                shares[actorIndex] += amount;
             } else {
                 trace = string.concat("withdraw_", _actorName(actor), ":", vm.toString(amount));
-                _run(target, abi.encodeWithSignature("withdraw(uint256)", amount), 0, actor);
+                (ok,,) = _run(target, abi.encodeWithSignature("withdraw(uint256)", amount), 0, actor);
+                expected = shares[actorIndex] >= amount;
+                if (expected) shares[actorIndex] -= amount;
             }
             traceLog = _appendTrace(traceLog, trace);
+            _requireCheck(ok == expected, "property", "vault_deposit_withdraw", seed, i, traceLog, "call status mismatch");
+            _requireCheck(_readUint(target, abi.encodeWithSignature("balanceOf(address)", actor)) == shares[actorIndex], "property", "vault_deposit_withdraw", seed, i, traceLog, "share model mismatch");
             uint256 sampledShares =
                 _readUint(target, abi.encodeWithSignature("balanceOf(address)", address(this))) +
                 _readUint(target, abi.encodeWithSignature("balanceOf(address)", BOB)) +
@@ -522,16 +563,20 @@
             rng = _next(rng);
             uint256 op = rng % 4;
             string memory trace;
+            bool ok;
+            // Generated inputs keep every call valid except burning with no liquidity.
+            bool expected = true;
             if (op == 0) {
                 uint256 amount0 = (rng % 200) + 1;
                 uint256 amount1 = ((rng / 17) % 200) + 1;
                 trace = string.concat("mint:", vm.toString(amount0), ":", vm.toString(amount1));
-                _run(target, abi.encodeWithSignature("mint(uint256,uint256)", amount0, amount1), 0, address(this));
+                (ok,,) = _run(target, abi.encodeWithSignature("mint(uint256,uint256)", amount0, amount1), 0, address(this));
             } else if (op == 1) {
                 uint256 liquidity = _readUint(target, abi.encodeWithSignature("totalLiquidity()"));
                 uint256 burnAmount = liquidity == 0 ? 1 : ((rng % liquidity) + 1);
                 trace = string.concat("burn:", vm.toString(burnAmount));
-                _run(target, abi.encodeWithSignature("burn(uint256)", burnAmount), 0, address(this));
+                (ok,,) = _run(target, abi.encodeWithSignature("burn(uint256)", burnAmount), 0, address(this));
+                expected = liquidity > 0;
             } else if (op == 2) {
                 (uint256 reserve0Before, uint256 reserve1Before) = _readReserves(target);
                 uint256 amount0Out = reserve0Before == 0 ? 0 : rng % (reserve0Before + 1);
@@ -539,14 +584,15 @@
                 uint256 amount0In = (rng % 13) + 1;
                 uint256 amount1In = ((rng / 13) % 17) + 1;
                 trace = string.concat("swap:", vm.toString(amount0Out), ":", vm.toString(amount1Out), ":", vm.toString(amount0In), ":", vm.toString(amount1In));
-                _run(target, abi.encodeWithSignature("swap(uint256,uint256,uint256,uint256)", amount0Out, amount1Out, amount0In, amount1In), 0, address(this));
+                (ok,,) = _run(target, abi.encodeWithSignature("swap(uint256,uint256,uint256,uint256)", amount0Out, amount1Out, amount0In, amount1In), 0, address(this));
             } else {
                 uint256 balance0 = (rng % 500) + 1;
                 uint256 balance1 = ((rng / 19) % 500) + 1;
                 trace = string.concat("sync:", vm.toString(balance0), ":", vm.toString(balance1));
-                _run(target, abi.encodeWithSignature("sync(uint256,uint256)", balance0, balance1), 0, address(this));
+                (ok,,) = _run(target, abi.encodeWithSignature("sync(uint256,uint256)", balance0, balance1), 0, address(this));
             }
             traceLog = _appendTrace(traceLog, trace);
+            _requireCheck(ok == expected, "property", "amm_pair_subset", seed, i, traceLog, "call status mismatch");
             uint256 reserve0 = _readUint(target, abi.encodeWithSignature("reserve0()"));
             uint256 reserve1 = _readUint(target, abi.encodeWithSignature("reserve1()"));
             uint256 totalLiquidity = _readUint(target, abi.encodeWithSignature("totalLiquidity()"));

@@ -211,6 +211,18 @@ fn refresh_cached_failure_metadata(failure: &mut CompileFailure, benchmark: &Ben
     failure.provenance.clone_from(&benchmark.provenance);
 }
 
+/// A compiler that ran to completion and rejected its input.
+#[derive(Debug)]
+struct CompilerRejected(String);
+
+impl std::fmt::Display for CompilerRejected {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for CompilerRejected {}
+
 struct CompileCacheInput {
     key: String,
     logical_id: String,
@@ -254,16 +266,19 @@ fn compile_and_record(
             Ok(true)
         }
         Err(error) => {
+            let rejected = error.downcast_ref::<CompilerRejected>().is_some();
             let mut failure = compile_failure(
                 root,
                 benchmark,
                 profile,
                 toolchain,
                 evm_version,
-                error.to_string(),
+                format!("{error:#}"),
             )?;
             failure.cache = cache_info;
-            if let Some(input) = cache_input {
+            // Only the compiler's verdict is a function of the cache key;
+            // failing to run it (spawn errors, signals, I/O) is retried.
+            if let Some(input) = cache_input.filter(|_| rejected) {
                 cache::store(
                     root,
                     "compile",
@@ -309,7 +324,7 @@ fn compile_cache_input(
     toolchain: &Toolchain,
     evm_version: &str,
 ) -> Result<CompileCacheInput> {
-    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain, evm_version)?;
     let source = source_fingerprint(profile.language, &source_path)?;
     let compiler_settings = match profile.language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -404,6 +419,9 @@ fn load_profiles(root: &Path, profile_filter: &[String]) -> Result<Vec<CompilerP
         profiles.push(no_metadata_profile(&base));
     }
     profiles.sort_by(|a, b| a.id.cmp(&b.id));
+    if let Some(pair) = profiles.windows(2).find(|pair| pair[0].id == pair[1].id) {
+        bail!("duplicate compiler profile id {}", pair[0].id);
+    }
     if !profile_filter.is_empty() {
         let available = profiles
             .iter()
@@ -445,7 +463,7 @@ fn compile_solidity(
     solc: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, solc)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, solc, evm_version)?;
     let (file_name, sources) = solidity_sources(&source_path)?;
     let input = json!({
         "language": "Solidity",
@@ -542,7 +560,7 @@ fn reject_solc_errors(output: &serde_json::Value) -> Result<()> {
     if fatal.is_empty() {
         return Ok(());
     }
-    bail!("{}", serde_json::to_string_pretty(&fatal)?);
+    Err(CompilerRejected(serde_json::to_string_pretty(&fatal)?).into())
 }
 
 fn solidity_sources(source_path: &Path) -> Result<(String, BTreeMap<String, serde_json::Value>)> {
@@ -688,7 +706,7 @@ fn compile_vyper(
     vyper: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, vyper)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, vyper, evm_version)?;
     let measured = repeat_compile_samples(
         || {
             let mut command = Command::new(&vyper.binary_path);
@@ -763,7 +781,7 @@ fn compile_fe(
     fe: &Toolchain,
     evm_version: &str,
 ) -> Result<CompiledArtifact> {
-    let source_path = source_path_for_profile(root, benchmark, profile, fe)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, fe, evm_version)?;
     let out_dir = root
         .join("target/fe-build")
         .join(&profile.id)
@@ -865,9 +883,11 @@ fn source_path_for_profile(
     benchmark: &Benchmark,
     profile: &CompilerProfile,
     toolchain: &Toolchain,
+    evm_version: &str,
 ) -> Result<PathBuf> {
     match profile.language {
         Language::Solidity => {
+            let transient_storage = solidity_supports_transient_storage(toolchain, evm_version)?;
             let source_path = root.join(&benchmark.solidity_path);
             let source_root = source_path.parent().context("solidity source parent")?;
             let variant_path = root
@@ -888,7 +908,10 @@ fn source_path_for_profile(
                 if let Some(parent) = target.parent() {
                     fs::create_dir_all(parent)?;
                 }
-                let source = fs::read_to_string(&path)?;
+                let mut source = fs::read_to_string(&path)?;
+                if !transient_storage {
+                    source = rewrite_solidity_transient_to_storage(&source);
+                }
                 let transformed = transform_solidity_source(
                     &source,
                     profile.source_variant.as_deref(),
@@ -996,6 +1019,45 @@ fn transform_solidity_source(source: &str, variant: Option<&str>, pragma: &str) 
     Ok(source)
 }
 
+/// Hard forks in activation order, as `--evm-version` names them.
+const EVM_FORKS: &[&str] = &[
+    "homestead",
+    "tangerineWhistle",
+    "spuriousDragon",
+    "byzantium",
+    "constantinople",
+    "petersburg",
+    "istanbul",
+    "berlin",
+    "london",
+    "paris",
+    "shanghai",
+    "cancun",
+    "prague",
+    "osaka",
+];
+
+fn evm_at_least(evm_version: &str, fork: &str) -> Result<bool> {
+    let index = |name: &str| {
+        EVM_FORKS
+            .iter()
+            .position(|known| *known == name)
+            .with_context(|| format!("unknown EVM version {name}"))
+    };
+    Ok(index(evm_version)? >= index(fork)?)
+}
+
+/// Transient state variables need solc 0.8.28 and a Cancun target.
+fn solidity_supports_transient_storage(solc: &Toolchain, evm_version: &str) -> Result<bool> {
+    Ok(solidity_version_tuple(solc) >= Some((0, 8, 28)) && evm_at_least(evm_version, "cancun")?)
+}
+
+/// Where transient storage is unavailable, transient state variables become
+/// storage variables, as Vyper's `@nonreentrant` locks do.
+fn rewrite_solidity_transient_to_storage(source: &str) -> String {
+    source.replace(" transient ", " ")
+}
+
 fn rewrite_solidity_pragma(source: &str, pragma: &str) -> String {
     let mut replaced = false;
     let mut lines = Vec::new();
@@ -1059,7 +1121,10 @@ fn rewrite_solidity_pre_08(source: &str) -> String {
         .replace("10_000", "10000")
         .replace("type(uint256).max", "uint256(-1)")
         .replace("type(uint112).max", "uint112(-1)")
-        .replace("block.chainid", "uint256(1)");
+        .replace(
+            "block.chainid",
+            &format!("uint256({})", crate::foundry_jobs::HARNESS_CHAIN_ID),
+        );
     rewrite_solidity_address_code_length(&source)
 }
 
@@ -1391,18 +1456,20 @@ fn rewrite_solidity_04_staticcalls(source: &str) -> String {
         )
         .replace(
             "(bool ok, bytes memory returndata) = coin.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
-            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(uint256(returndataWord) != 0, message);\n        }",
+            "(bool ok, bytes32 returndataWord, uint256 returndataSize) = _benchCallWord(coin, data);\n        require(ok, message);\n        if (returndataSize > 0) {\n            require(returndataSize >= 32 && uint256(returndataWord) == 1, message);\n        }",
         )
         .replace(
             "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
-            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));\n        require(ok && (dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)), \"Transfer failed!\");",
         )
         .replace(
             "(bool ok, bytes memory data) =\n            token_.call(abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (data.length == 0 || abi.decode(data, (bool))), \"Transfer failed!\");",
-            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (dataSize == 0 || uint256(dataWord) != 0), \"Transfer failed!\");",
+            "(bool ok, bytes32 dataWord, uint256 dataSize) =\n            _benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transferFrom(address,address,uint256)\")), sender, receiver, amount));\n        require(ok && (dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)), \"Transfer failed!\");",
         )
+        // `rewrite_solidity_pre_08` has already turned `unchecked {` into a
+        // plain block around the nonce increment.
         .replace(
-            "allowance[owner][spender] = value;\n        nonces[owner] = nonce + 1;\n        emit Approval(owner, spender, value);\n        return true;",
+            "allowance[owner][spender] = value;\n        {\n            nonces[owner] = nonce + 1;\n        }\n        emit Approval(owner, spender, value);\n        return true;",
             "return _benchAcceptPermit(owner, spender, value, nonce);",
         );
     let source = if source.contains("_benchStaticcallWord(") {
@@ -1544,12 +1611,8 @@ fn transform_vyper_source(source: &str, variant: Option<&str>, pragma: &str) -> 
             source = source.replace("@pure", "@view");
             source = source.replace("//", "/");
             source = source.replace("abi_encode(", "_abi_encode(");
-            source = source.replace("public(immutable(String[32]))", "public(String[32])");
-            source = source.replace("public(immutable(String[8]))", "public(String[8])");
-            source = source.replace("public(immutable(uint8))", "public(uint256)");
-            source = source.replace("    name = ", "    self.name = ");
-            source = source.replace("    symbol = ", "    self.symbol = ");
-            source = source.replace("    decimals = ", "    self.decimals = ");
+            // Vyper 0.2 has no uint8; the ABI word is identical for in-range values.
+            source = replace_token(&source, "uint8", "uint256");
             source = source.replace(
                 "max_value(uint256)",
                 "115792089237316195423570985008687907853269984665640564039457584007913129639935",
@@ -1809,8 +1872,42 @@ fn rewrite_vyper_02_manager_checks(source: &str) -> String {
         .replace("self._only_manager()", "self._only_manager(msg.sender)")
 }
 
+/// Vyper 0.2 has no `bytes20`. Pack the low 20 bytes of the left-padded
+/// 32-byte word instead; the `concat` gives `slice` a memory operand, which
+/// 0.2 requires when slicing a computed `bytes32`.
 fn rewrite_vyper_02_fixed_bytes(source: &str) -> String {
-    source.replace("bytes20", "bytes32")
+    const CALL: &str = "convert(";
+    const TARGET: &str = ", bytes20)";
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(end) = rest.find(TARGET) {
+        let head = &rest[..end];
+        let mut depth = 0usize;
+        let open = head.rfind(|ch| {
+            match ch {
+                ')' => depth += 1,
+                '(' if depth == 0 => return true,
+                '(' => depth -= 1,
+                _ => {}
+            }
+            false
+        });
+        match open.filter(|&open| head[..=open].ends_with(CALL)) {
+            Some(open) => {
+                out.push_str(&head[..open + 1 - CALL.len()]);
+                out.push_str("slice(concat(convert(");
+                out.push_str(&head[open + 1..]);
+                out.push_str(", bytes32), b\"\"), 12, 20)");
+            }
+            None => {
+                out.push_str(head);
+                out.push_str(TARGET);
+            }
+        }
+        rest = &rest[end + TARGET.len()..];
+    }
+    out.push_str(rest);
+    out
 }
 
 fn rewrite_vyper_02_reserved_fields(source: &str) -> String {
@@ -2258,7 +2355,17 @@ where
     let mut peak_rss_kib = 0;
     for sample_index in 0..sample_count {
         let mut command = command_factory();
-        let measured = require_success(run_measured(&mut command, stdin)?, label)?;
+        let measured = run_measured(&mut command, stdin)?;
+        // An exit code is the compiler's verdict; a signal (crash, OOM kill,
+        // interrupt) says nothing about the input.
+        let exited = measured.output.status.code().is_some();
+        let measured = require_success(measured, label).map_err(|error| {
+            if exited {
+                CompilerRejected(error.to_string()).into()
+            } else {
+                error
+            }
+        })?;
         let CommandStats {
             wall_ms,
             cpu_ms,
@@ -2296,7 +2403,7 @@ fn compile_failure(
     error: String,
 ) -> Result<CompileFailure> {
     let language = profile.language;
-    let source_path = source_path_for_profile(root, benchmark, profile, toolchain)?;
+    let source_path = source_path_for_profile(root, benchmark, profile, toolchain, evm_version)?;
     let source = fs::read(&source_path)?;
     let compiler_settings = match language {
         Language::Solidity => solidity_compiler_settings(profile, toolchain, evm_version),
@@ -2372,8 +2479,8 @@ mod tests {
             solidity_pragma_for_toolchain(&compiler).unwrap(),
             "pragma solidity >=0.8.36 <0.9.0;"
         );
-        let mut p = profile("solar-716e9cbc-gas-runs200", Language::Solidity);
-        p.compiler = "solar-716e9cbcde88165f931173f1c1fda852ed63afa0".into();
+        let mut p = profile("solar-cb38e986-gas-runs200", Language::Solidity);
+        p.compiler = "solar-cb38e98632eebdf6c5bb60a792b83320c1312b28".into();
         p.optimizer = true;
         for (mode, runs) in [("gas", 200), ("size", 1)] {
             p.optimizer_mode = Some(mode.into());
@@ -2443,13 +2550,40 @@ mod tests {
         let b = crate::models::Benchmark::fixed("main", "Main", "source/Main.sol", "unused.vy");
         let p = profile("solc", Language::Solidity);
         let t = toolchain("solc", "0.8.35");
-        let path = super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        let path = super::source_path_for_profile(root.path(), &b, &p, &t, "prague").unwrap();
         assert!(path.parent().unwrap().join("Deleted.sol").exists());
         fs::remove_file(root.path().join("source/Deleted.sol")).unwrap();
-        super::source_path_for_profile(root.path(), &b, &p, &t).unwrap();
+        super::source_path_for_profile(root.path(), &b, &p, &t, "prague").unwrap();
         let (_, sources) = super::solidity_sources(&path).unwrap();
         assert_eq!(sources.len(), 1);
         assert!(!sources.contains_key("Deleted.sol"));
+    }
+
+    #[test]
+    fn transient_state_falls_back_to_storage_without_transient_support() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("source")).unwrap();
+        fs::write(
+            root.path().join("source/Main.sol"),
+            "pragma solidity ^0.8.35;\ncontract Main { uint256 private transient lock; }",
+        )
+        .unwrap();
+        let b = crate::models::Benchmark::fixed("main", "Main", "source/Main.sol", "unused.vy");
+        let p = profile("solc", Language::Solidity);
+        for (version, evm, transient) in [
+            ("0.8.28", "cancun", true),
+            ("0.8.27", "cancun", false),
+            ("0.8.38", "shanghai", false),
+        ] {
+            let t = toolchain("solc", version);
+            let path = super::source_path_for_profile(root.path(), &b, &p, &t, evm).unwrap();
+            let source = fs::read_to_string(path).unwrap();
+            assert_eq!(
+                source.contains("uint256 private transient lock;"),
+                transient
+            );
+            assert!(source.contains("uint256 private"));
+        }
     }
 
     #[test]
@@ -2568,6 +2702,16 @@ mod tests {
     }
 
     #[test]
+    fn rewrites_vyper_02_bytes20_conversions_as_20_byte_slices() {
+        assert_eq!(
+            super::rewrite_vyper_02_fixed_bytes(
+                "keccak256(concat(0xff, convert(self, bytes20), convert(convert(x, uint256), bytes20)))"
+            ),
+            "keccak256(concat(0xff, slice(concat(convert(self, bytes32), b\"\"), 12, 20), slice(concat(convert(convert(x, uint256), bytes32), b\"\"), 12, 20)))"
+        );
+    }
+
+    #[test]
     fn rewrites_vyper_03_compatibility_syntax() {
         let source = "# pragma version >=0.4.3,<0.5.0\n# pragma optimize codesize\n# pragma evm-version prague\nfrom ethereum.ercs import IERC20\n\n@deploy\ndef __init__():\n    log Transfer(sender=empty(address), receiver=msg.sender, value=1)\n\n@external\n@view\ndef f(xs: DynArray[uint256, 4], token: address) -> bytes32:\n    for item: uint256 in xs:\n        pass\n    assert extcall IERC20(token).transfer(msg.sender, 1, default_return_value=True)\n    amount: uint256 = staticcall IERC20(token).balanceOf(msg.sender)\n    log Approval(\n        owner=msg.sender,\n        spender=token,\n        value=amount,\n    )\n    return keccak256(abi_encode(4 // 2))\n";
         let rewritten =
@@ -2607,7 +2751,7 @@ mod tests {
         assert!(rewritten.contains(
             "_benchCallWord(token_, abi.encodeWithSelector(bytes4(keccak256(\"transfer(address,uint256)\")), receiver, amount));"
         ));
-        assert!(rewritten.contains("dataSize == 0 || uint256(dataWord) != 0"));
+        assert!(rewritten.contains("dataSize == 0 || (dataSize >= 32 && uint256(dataWord) == 1)"));
         assert!(rewritten.contains("uint256(-1) + uint112(-1)"));
     }
 
@@ -2860,5 +3004,36 @@ mod tests {
         .unwrap();
         assert!(migrated.contains("returndataSize >= 32 && uint256(returndataWord) == 1"));
         assert!(migrated.contains("function _benchCallWord("));
+    }
+
+    #[test]
+    fn solidity_04_curve_moves_permit_acceptance_and_checks_optional_returns() {
+        let curve = include_str!(
+            "../../../benches/implementations/curve_stableswap_2coin/solidity/CurveStableSwap2CoinReal.sol"
+        );
+        let migrated = transform_solidity_source(
+            curve,
+            Some("solidity-0.4"),
+            "pragma solidity >=0.4.26 <0.5.0;",
+        )
+        .unwrap();
+        assert!(migrated.contains("return _benchAcceptPermit(owner, spender, value, nonce);"));
+        assert!(migrated.contains("function _benchAcceptPermit("));
+        assert_eq!(migrated.matches("nonces[owner] = nonce + 1;").count(), 1);
+        assert!(migrated.contains("returndataSize >= 32 && uint256(returndataWord) == 1"));
+        assert!(!migrated.contains("abi.decode(returndata, (bool))"));
+    }
+
+    #[test]
+    fn rejects_duplicate_profile_ids() {
+        let root = tempfile::tempdir().unwrap();
+        let profiles = root.path().join("compiler-profiles");
+        fs::create_dir(&profiles).unwrap();
+        let profile = "id = \"solc-latest-noopt\"\nlanguage = \"solidity\"\ncompiler = \"solc\"\noptimizer = false\nevm_version = \"prague\"\n";
+        fs::write(profiles.join("a.toml"), profile).unwrap();
+        assert_eq!(super::load_profiles(root.path(), &[]).unwrap().len(), 1);
+        fs::write(profiles.join("b.toml"), profile).unwrap();
+        let error = super::load_profiles(root.path(), &[]).unwrap_err();
+        assert!(error.to_string().contains("duplicate compiler profile id"));
     }
 }

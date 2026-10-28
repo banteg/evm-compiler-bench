@@ -7,7 +7,6 @@ use anyhow::{Context, Result, bail};
 use regex::Regex;
 use std::{collections::BTreeMap, env, fs, path::Path, process::Command};
 const REPOSITORY: &str = "https://github.com/paradigmxyz/solar";
-const RUST: &str = "1.96.0";
 pub fn profile_revision(compiler: &str) -> Option<&str> {
     compiler.strip_prefix("solar-")
 }
@@ -70,13 +69,6 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
             bail!("cached Solar {revision} unavailable; resolve online or set EVM_BENCH_SOLAR");
         }
         ensure_dir(&dir)?;
-        checked(Command::new("rustup").args([
-            "toolchain",
-            "install",
-            RUST,
-            "--profile",
-            "minimal",
-        ]))?;
         let source = dir.join("source");
         if !source.exists() {
             checked(Command::new("git").arg("init").arg(&source))?;
@@ -92,6 +84,14 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
                 .current_dir(&source)
                 .args(["checkout", "--detach", revision]),
         )?;
+        // This checkout belongs to the cache, so stray untracked files (such
+        // as Finder's .DS_Store) are removed; ignored build output is kept, and
+        // edits to tracked files still fail the cleanliness check below.
+        checked(
+            Command::new("git")
+                .current_dir(&source)
+                .args(["clean", "-fd"]),
+        )?;
         let head = checked(
             Command::new("git")
                 .current_dir(&source)
@@ -105,7 +105,15 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
         if head != revision || !dirty.is_empty() {
             bail!("Solar build source must be clean at {revision}");
         }
-        let rustc = checked(Command::new("rustup").args(["run", RUST, "rustc", "-vV"]))?;
+        let rust = rust_version(&source)?;
+        checked(Command::new("rustup").args([
+            "toolchain",
+            "install",
+            &rust,
+            "--profile",
+            "minimal",
+        ]))?;
+        let rustc = checked(Command::new("rustup").args(["run", &rust, "rustc", "-vV"]))?;
         let target = rustc
             .lines()
             .find_map(|l| l.strip_prefix("host: "))
@@ -115,7 +123,7 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
             Command::new("cargo")
                 .current_dir(&source)
                 .args([
-                    &format!("+{RUST}"),
+                    &format!("+{rust}"),
                     "build",
                     "--release",
                     "--locked",
@@ -159,6 +167,17 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
     }
     describe(&binary, revision, "source_build", built.metadata)
 }
+/// Solar builds with the minimum supported Rust version its workspace declares.
+fn rust_version(source: &Path) -> Result<String> {
+    let manifest: toml::Value = toml::from_str(&fs::read_to_string(source.join("Cargo.toml"))?)?;
+    manifest
+        .get("workspace")
+        .and_then(|workspace| workspace.get("package"))
+        .and_then(|package| package.get("rust-version"))
+        .and_then(toml::Value::as_str)
+        .map(str::to_owned)
+        .context("Solar workspace rust-version")
+}
 fn describe(
     binary: &Path,
     revision: &str,
@@ -170,7 +189,7 @@ fn describe(
             .arg("--version")
             .env_remove("SOLC_WRAPPER"),
     )?;
-    let captures = Regex::new(r"(?m)^(?:solar )?Version:\s*(\d+\.\d+\.\d+)")?
+    let captures = Regex::new(r"(?m)^(?:solar )?(?:Version:\s*)?(\d+\.\d+\.\d+)")?
         .captures(&version_output)
         .context("Solar package version")?;
     let version = captures[1].to_string();

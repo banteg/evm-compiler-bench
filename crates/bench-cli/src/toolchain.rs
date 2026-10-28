@@ -150,7 +150,13 @@ pub fn resolve_toolchains(
 
 fn resolve_solc(root: &Path, offline: bool) -> Result<Toolchain> {
     if offline {
-        return resolve_path_toolchain("solc", env::var_os("EVM_BENCH_SOLC").map(PathBuf::from));
+        let local = env::var_os("EVM_BENCH_SOLC").map(PathBuf::from);
+        if local.is_none()
+            && let Some(cached) = cached_solc_latest(root)?
+        {
+            return Ok(cached);
+        }
+        return resolve_path_toolchain("solc", local);
     }
     let index = fetch_solc_index()?;
     let latest_release = index.latest_release.clone();
@@ -236,17 +242,50 @@ fn resolve_solc_from_index(
     })
 }
 
-fn cached_solc_toolchain(root: &Path, version: &str, channel: &str) -> Result<Option<Toolchain>> {
+/// The highest cached stable solc, standing in for the index's latest release
+/// offline, like `cached_fe_latest` and `cached_vyper_latest`.
+fn cached_solc_latest(root: &Path) -> Result<Option<Toolchain>> {
+    let dir = root.join(".cache/toolchains/solc");
+    if !dir.exists() {
+        return Ok(None);
+    }
+    let mut versions = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let name = entry?.file_name().to_string_lossy().into_owned();
+        if let Some(tuple) = stable_version_tuple(&name)
+            && cached_solc_binary(root, &name)?.is_some()
+        {
+            versions.push((tuple, name));
+        }
+    }
+    match versions.into_iter().max() {
+        Some((_, version)) => cached_solc_toolchain(root, &version, "latest"),
+        None => Ok(None),
+    }
+}
+
+/// Downloads are named after the index's build path, `solc-<platform>-v...`;
+/// other files (such as `.DS_Store`) are not compilers.
+fn cached_solc_binary(root: &Path, version: &str) -> Result<Option<PathBuf>> {
     let target_dir = root.join(".cache/toolchains/solc").join(version);
     if !target_dir.exists() {
         return Ok(None);
     }
     let mut entries = fs::read_dir(&target_dir)?
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-        .filter(|path| path.is_file())
+        .filter(|path| {
+            path.is_file()
+                && path
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().starts_with("solc-"))
+        })
         .collect::<Vec<_>>();
     entries.sort();
-    let Some(binary_path) = entries.into_iter().next() else {
+    Ok(entries.into_iter().next())
+}
+
+fn cached_solc_toolchain(root: &Path, version: &str, channel: &str) -> Result<Option<Toolchain>> {
+    let Some(binary_path) = cached_solc_binary(root, version)? else {
         return Ok(None);
     };
     let version_output = command_stdout(Command::new(&binary_path).arg("--version"))?;
@@ -424,7 +463,13 @@ fn fe_release_asset_name() -> Result<&'static str> {
 
 fn resolve_vyper(root: &Path, offline: bool) -> Result<Toolchain> {
     if offline {
-        return resolve_path_toolchain("vyper", env::var_os("EVM_BENCH_VYPER").map(PathBuf::from));
+        let local = env::var_os("EVM_BENCH_VYPER").map(PathBuf::from);
+        if local.is_none()
+            && let Some(version) = cached_vyper_latest(root, false)?
+        {
+            return resolve_vyper_version(root, offline, &version, "EVM_BENCH_VYPER", "stable");
+        }
+        return resolve_path_toolchain("vyper", local);
     }
     let latest = latest_vyper_release(&fetch_vyper_releases()?, false)?;
     resolve_vyper_version(root, offline, &latest, "EVM_BENCH_VYPER", "stable")
@@ -440,7 +485,7 @@ fn resolve_vyper_prerelease(root: &Path, offline: bool) -> Result<Toolchain> {
             local.metadata.insert("channel".into(), "prerelease".into());
             return Ok(local);
         }
-        cached_vyper_prerelease(root)?
+        cached_vyper_latest(root, true)?
             .context("no cached Vyper prerelease; run online or set EVM_BENCH_VYPER_PRERELEASE")?
     } else {
         latest_vyper_release(&fetch_vyper_releases()?, true)?
@@ -458,7 +503,8 @@ fn resolve_vyper_prerelease(root: &Path, offline: bool) -> Result<Toolchain> {
     Ok(toolchain)
 }
 
-fn cached_vyper_prerelease(root: &Path) -> Result<Option<String>> {
+/// The highest cached Vyper of one channel, ordered like PyPI releases.
+fn cached_vyper_latest(root: &Path, prerelease: bool) -> Result<Option<String>> {
     let directory = root.join(".cache/toolchains/vyper");
     if !directory.exists() {
         return Ok(None);
@@ -470,7 +516,7 @@ fn cached_vyper_prerelease(root: &Path) -> Result<Option<String>> {
         let Ok(version) = name.parse::<Version>() else {
             continue;
         };
-        if version.any_prerelease()
+        if version.any_prerelease() == prerelease
             && entry
                 .path()
                 .join(bin_dir())
@@ -887,9 +933,9 @@ struct GithubAsset {
 #[cfg(test)]
 mod tests {
     use super::{
-        PypiPackage, cached_fe_latest, cached_vyper_prerelease, compiler_refs_from_profiles,
-        fe_release_asset_name, latest_vyper_release, make_executable, parse_solc_version,
-        parse_vyper_version, stable_version_tuple,
+        PypiPackage, cached_fe_latest, cached_solc_latest, cached_vyper_latest,
+        compiler_refs_from_profiles, fe_release_asset_name, latest_vyper_release, make_executable,
+        parse_solc_version, parse_vyper_version, stable_version_tuple,
     };
     use std::fs;
 
@@ -958,17 +1004,19 @@ mod tests {
     }
 
     #[test]
-    fn offline_prerelease_selection_ignores_stable_and_incomplete_caches() {
+    fn offline_vyper_selection_separates_channels_and_skips_incomplete_caches() {
         let root = tempfile::tempdir().unwrap();
-        assert_eq!(cached_vyper_prerelease(root.path()).unwrap(), None);
-        for version in ["0.5.0a99", "0.5.0b2", "0.5.0b10", "0.5.0rc1", "0.6.0"] {
+        assert_eq!(cached_vyper_latest(root.path(), true).unwrap(), None);
+        for version in [
+            "0.4.3", "0.5.0a99", "0.5.0b2", "0.5.0b10", "0.5.0rc1", "0.6.0", "0.10.0",
+        ] {
             let directory = root
                 .path()
                 .join(".cache/toolchains/vyper")
                 .join(version)
                 .join(super::bin_dir());
             fs::create_dir_all(&directory).unwrap();
-            if version != "0.5.0rc1" {
+            if !matches!(version, "0.5.0rc1" | "0.10.0") {
                 fs::write(
                     directory.join(super::binary_name("vyper")),
                     "cached compiler",
@@ -977,8 +1025,42 @@ mod tests {
             }
         }
         assert_eq!(
-            cached_vyper_prerelease(root.path()).unwrap().as_deref(),
+            cached_vyper_latest(root.path(), true).unwrap().as_deref(),
             Some("0.5.0b10")
+        );
+        assert_eq!(
+            cached_vyper_latest(root.path(), false).unwrap().as_deref(),
+            Some("0.6.0")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn offline_solc_selection_uses_highest_cached_compiler() {
+        let root = tempfile::tempdir().unwrap();
+        assert!(cached_solc_latest(root.path()).unwrap().is_none());
+        let solc = root.path().join(".cache/toolchains/solc");
+        for version in ["0.8.9", "0.8.30", "0.9.0"] {
+            let dir = solc.join(version);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join(".DS_Store"), "finder").unwrap();
+            if version != "0.9.0" {
+                let binary = dir.join(format!("solc-test-v{version}+commit.00000000"));
+                fs::write(
+                    &binary,
+                    format!("#!/bin/sh\necho 'Version: {version}+commit.00000000'\n"),
+                )
+                .unwrap();
+                make_executable(&binary).unwrap();
+            }
+        }
+        let cached = cached_solc_latest(root.path()).unwrap().unwrap();
+        assert_eq!(cached.version, "0.8.30");
+        assert_eq!(cached.metadata["channel"], "latest");
+        assert!(
+            cached
+                .binary_path
+                .ends_with("solc-test-v0.8.30+commit.00000000")
         );
     }
 

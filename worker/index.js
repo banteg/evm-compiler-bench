@@ -2,6 +2,7 @@ const DEFAULT_R2_PREFIX = "evm-compiler-bench";
 const DEFAULT_CHANNEL = "prod";
 const DEV_PREVIEW_HOST = "dev-evm-compiler-bench.banteeg.workers.dev";
 const HSTS = "max-age=31536000; includeSubDomains";
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 const DATA_ROUTES = new Map([
   ["/latest.json", "latest"],
@@ -67,6 +68,9 @@ function objectResponse(object, cacheControl, artifact = {}) {
   }
   if (artifact.content_encoding) {
     headers.set("content-encoding", artifact.content_encoding);
+  }
+  // The encoding comes from the run manifest or from the object's R2 metadata.
+  if (headers.has("content-encoding")) {
     headers.append("vary", "Accept-Encoding");
     if (!cacheControl.includes("no-transform")) {
       cacheControl = `${cacheControl}, no-transform`;
@@ -94,13 +98,11 @@ async function serveArtifact(env, artifactName, url) {
   return objectResponse(object, "public, max-age=60, must-revalidate", artifact);
 }
 
-async function serveRunObject(env, pathname, url) {
-  const latest = await latestManifest(env, url);
+async function serveRunObject(env, pathname) {
   const key = `${r2Prefix(env)}${pathname}`;
   const object = await env.RESULTS.get(key);
   if (!object) return notFound(`No R2 object at ${key}.`);
-  const artifact = Object.values(latest?.artifacts ?? {}).find(item => item.key === key) ?? {};
-  return objectResponse(object, "public, max-age=31536000, immutable", artifact);
+  return objectResponse(object, "public, max-age=31536000, immutable");
 }
 
 function r2Prefix(env) {
@@ -119,6 +121,10 @@ function channelFromHost(url) {
   return null;
 }
 
+function isLoopback(url) {
+  return LOOPBACK_HOSTS.has(url.hostname) || url.hostname.endsWith(".localhost");
+}
+
 function stripSlashes(value) {
   return String(value).replace(/^\/+|\/+$/g, "");
 }
@@ -132,14 +138,15 @@ function normalizeChannel(value) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.protocol === "http:") {
+    // `wrangler dev` serves plain HTTP on loopback.
+    if (url.protocol === "http:" && !isLoopback(url)) {
       return httpsRedirect(url);
     }
 
     const route = DATA_ROUTES.get(url.pathname);
     if (route) return withSecurityHeaders(await serveArtifact(env, route, url));
     if (url.pathname.startsWith("/runs/")) {
-      return withSecurityHeaders(await serveRunObject(env, url.pathname, url));
+      return withSecurityHeaders(await serveRunObject(env, url.pathname));
     }
     return withSecurityHeaders(await env.ASSETS.fetch(request));
   },

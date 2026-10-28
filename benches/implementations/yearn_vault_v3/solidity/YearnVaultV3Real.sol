@@ -101,17 +101,16 @@ contract YearnVaultV3Real {
         uint256 profitMaxUnlockTime_;
     }
 
-    uint256 internal nonreentrant_lock;
+    // Transient like Vyper's @nonreentrant. Targets without transient storage
+    // compile it as storage, where the nonzero sentinels avoid a zero-slot write.
+    uint256 internal transient nonreentrant_lock;
     address public asset;
     uint8 public decimals;
-    uint248 private __decimals_padding;
     address internal factory;
     mapping(address => StrategyParams) internal _strategies;
     address[] public default_queue;
     bool public use_default_queue;
-    uint248 private __use_default_queue_padding;
     bool public auto_allocate;
-    uint248 private __auto_allocate_padding;
 
     mapping(address => uint256) internal _balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;

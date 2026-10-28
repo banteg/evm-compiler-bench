@@ -1,5 +1,4 @@
 use crate::{
-    baselines::{baseline_pairs, comparison_pairs},
     cache::{self, CacheLookup},
     harness,
     models::{
@@ -23,6 +22,7 @@ const GAS_CACHE_SCHEMA: &str = "gas-v3";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 const MAX_GAS_ROWS_PER_SHARD: usize = 800;
 const MAX_GAS_SHARD_ESTIMATED_BYTES: usize = 1_200_000;
+const GENERATED_TEST_PREFIXES: [&str; 2] = ["GeneratedBench", "GeneratedBehaviorShard"];
 
 pub(crate) fn harness_identity() -> String {
     static IDENTITY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
@@ -92,7 +92,7 @@ pub fn run_foundry(
         let contract = format!("GeneratedBenchShard{index:03}");
         let path = format!("test/{contract}.t.sol");
         let gas_path = format!("../results/raw/foundry-gas-shard-{index:03}.jsonl");
-        let source = generate_test(&contract, artifacts, scenarios, &gas_path, None, true)?;
+        let source = generate_test(&contract, artifacts, scenarios, &gas_path, ShardTests::Gas)?;
         let source_hash = sha256_bytes(source.as_bytes());
         for artifact in artifacts {
             shard_hashes.insert(artifact_context_key(artifact), source_hash.clone());
@@ -190,7 +190,7 @@ pub fn run_foundry(
         let shard_rows = read_gas_records(
             &root.join(format!("results/raw/foundry-gas-shard-{shard_id}.jsonl")),
         )?;
-        let expected = expected_shard_gas_rows(shard, scenarios, None)?;
+        let expected = expected_shard_gas_rows(shard, scenarios)?;
         if shard_rows.len() != expected {
             bail!(
                 "Foundry shard {shard_id} returned {} gas rows; expected {expected}",
@@ -445,7 +445,7 @@ fn read_gas_records(path: &Path) -> Result<Vec<GasRecord>> {
     Ok(records)
 }
 
-pub(crate) fn gas_shards(
+fn gas_shards(
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
 ) -> Result<Vec<Vec<CompiledArtifact>>> {
@@ -467,15 +467,9 @@ pub(crate) fn gas_shards(
     let mut current_bytes = 0;
     for (benchmark_id, group) in groups {
         let scenario_count = scenarios.get(&benchmark_id)?.scenarios.len().max(1);
-        let group = baseline_pair_first(group);
         let group_bytes = estimated_group_bytes(&group)?;
-        let min_chunk_artifacts = if baseline_pairs(&group).contains_key(&benchmark_id) {
-            2
-        } else {
-            1
-        };
-        let max_group_artifacts = MAX_ARTIFACTS_PER_GAS_SHARD
-            .min((MAX_GAS_ROWS_PER_SHARD / scenario_count).max(min_chunk_artifacts));
+        let max_group_artifacts =
+            MAX_ARTIFACTS_PER_GAS_SHARD.min((MAX_GAS_ROWS_PER_SHARD / scenario_count).max(1));
 
         if group.len() > max_group_artifacts || group_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES {
             if !current.is_empty() {
@@ -488,7 +482,6 @@ pub(crate) fn gas_shards(
                 group,
                 scenario_count,
                 max_group_artifacts,
-                min_chunk_artifacts,
             )?);
             continue;
         }
@@ -518,7 +511,6 @@ fn split_group_for_gas_shards(
     group: Vec<CompiledArtifact>,
     scenario_count: usize,
     max_group_artifacts: usize,
-    min_chunk_artifacts: usize,
 ) -> Result<Vec<Vec<CompiledArtifact>>> {
     let mut chunks = Vec::new();
     let mut current = Vec::new();
@@ -527,8 +519,7 @@ fn split_group_for_gas_shards(
 
     for artifact in group {
         let artifact_bytes = estimated_artifact_bytes(&artifact)?;
-        let can_split = current.len() >= min_chunk_artifacts;
-        if can_split
+        if !current.is_empty()
             && (current.len() + 1 > max_group_artifacts
                 || current_rows + scenario_count > MAX_GAS_ROWS_PER_SHARD
                 || current_bytes + artifact_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES)
@@ -568,45 +559,14 @@ fn estimated_artifact_bytes(artifact: &CompiledArtifact) -> Result<usize> {
         + 4_096)
 }
 
-fn baseline_pair_first(group: Vec<CompiledArtifact>) -> Vec<CompiledArtifact> {
-    let Some((solidity_idx, vyper_idx)) = baseline_pairs(&group).values().next().copied() else {
-        return group;
-    };
-
-    let mut ordered = Vec::with_capacity(group.len());
-    ordered.push(group[solidity_idx].clone());
-    if vyper_idx != solidity_idx {
-        ordered.push(group[vyper_idx].clone());
-    }
-    for (index, artifact) in group.into_iter().enumerate() {
-        if index != solidity_idx && index != vyper_idx {
-            ordered.push(artifact);
-        }
-    }
-    ordered
-}
-
 fn expected_shard_gas_rows(
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
-    selected_gas_keys: Option<&BTreeSet<String>>,
 ) -> Result<usize> {
-    let mut rows = 0;
-    for artifact in artifacts {
-        for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            let record_key = gas_record_key(
-                &artifact.benchmark_id,
-                &artifact.implementation_id,
-                &artifact.profile_id,
-                &scenario.name,
-                scenario.state_access_profile.as_str(),
-            );
-            if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
-                rows += 1;
-            }
-        }
-    }
-    Ok(rows)
+    artifacts
+        .iter()
+        .map(|artifact| Ok(scenarios.get(&artifact.benchmark_id)?.scenarios.len()))
+        .sum()
 }
 
 fn gas_record_key(
@@ -638,7 +598,12 @@ fn clear_generated_shards(root: &Path) -> Result<()> {
         let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
             continue;
         };
-        if name.starts_with("GeneratedBenchShard") && name.ends_with(".t.sol") {
+        // Also covers behavior shards and the legacy single-file harness.
+        if GENERATED_TEST_PREFIXES
+            .iter()
+            .any(|prefix| name.starts_with(prefix))
+            && name.ends_with(".t.sol")
+        {
             fs::remove_file(&path)
                 .with_context(|| format!("removing stale generated test {}", path.display()))?;
         }
@@ -656,13 +621,20 @@ fn clear_generated_shards(root: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Gas shards measure every scenario of their artifacts. Behavior shards run
+/// only the differential and property tests of explicitly assigned pairs, so a
+/// shard never synthesizes comparisons from whichever artifacts it happens to hold.
+enum ShardTests<'a> {
+    Gas,
+    Behavior(&'a [(String, usize, usize)]),
+}
+
 fn generate_test(
     contract_name: &str,
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
     gas_jsonl: &str,
-    selected_gas_keys: Option<&BTreeSet<String>>,
-    include_behavior_checks: bool,
+    tests: ShardTests,
 ) -> Result<String> {
     if artifacts.is_empty() {
         bail!("no compiled artifacts for Foundry runner");
@@ -675,95 +647,171 @@ fn generate_test(
         write_deploy_function(&mut body, index, artifact);
     }
 
-    let mut bench_deploys = BTreeSet::new();
-    for (index, artifact) in artifacts.iter().enumerate() {
-        for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
-            let record_key = gas_record_key(
-                &artifact.benchmark_id,
-                &artifact.implementation_id,
-                &artifact.profile_id,
-                &scenario.name,
-                scenario.state_access_profile.as_str(),
-            );
-            if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
-                write_observer_function(&mut body, &artifact.benchmark_id, scenario);
-                write_gas_test(&mut body, index, artifact, scenario);
-                bench_deploys.insert((index, deployment_variant_arg(artifact, scenario)));
-            }
-        }
-    }
-    for (index, variant) in bench_deploys {
-        write_bench_deploy_function(&mut body, index, variant);
-    }
-
-    if include_behavior_checks {
-        for (benchmark_id, solidity_idx, vyper_idx) in comparison_pairs(artifacts) {
-            let offset = body.len();
-            for scenario in &scenarios.get(&benchmark_id)?.scenarios {
-                write_diff_test(
+    match tests {
+        ShardTests::Gas => write_gas_tests(&mut body, artifacts, scenarios)?,
+        ShardTests::Behavior(pairs) => {
+            for (benchmark_id, solidity_idx, vyper_idx) in pairs {
+                write_pair_tests(
                     &mut body,
-                    &benchmark_id,
-                    solidity_idx,
-                    vyper_idx,
-                    artifacts
-                        .get(solidity_idx)
-                        .context("missing solidity baseline")?,
-                    artifacts.get(vyper_idx).context("missing vyper baseline")?,
-                    scenario,
-                );
-            }
-            let scenario_file = scenarios.get(&benchmark_id)?;
-            if let Some(randomized) = &scenario_file.randomized {
-                write_randomized_diff_test(
-                    &mut body,
-                    &benchmark_id,
-                    solidity_idx,
-                    vyper_idx,
-                    randomized,
+                    artifacts,
+                    scenarios,
+                    benchmark_id,
+                    *solidity_idx,
+                    *vyper_idx,
                 )?;
             }
-            for property in &scenario_file.properties {
-                write_property_test(
-                    &mut body,
-                    &benchmark_id,
-                    solidity_idx,
-                    vyper_idx,
-                    scenario_file.randomized.as_ref(),
-                    property,
-                )?;
-            }
-            // Multiple compiler comparisons share a benchmark and observers.
-            // Only test entrypoint names need the pair identity appended.
-            let suffix = sanitize(&format!(
-                "{}_vs_{}",
-                artifacts[solidity_idx].profile_id, artifacts[vyper_idx].profile_id
-            ));
-            let added = body.split_off(offset);
-            body.push_str(
-                &added
-                    .replace(
-                        "function testDiff_",
-                        &format!("function testDiff_{suffix}_"),
-                    )
-                    .replace(
-                        "function testRandomDiff_",
-                        &format!("function testRandomDiff_{suffix}_"),
-                    )
-                    .replace(
-                        "function testProperty_",
-                        &format!("function testProperty_{suffix}_"),
-                    ),
-            );
         }
     }
 
     Ok(render_generated_shard(contract_name, gas_jsonl, &body))
 }
 
+fn write_gas_tests(
+    body: &mut String,
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+) -> Result<()> {
+    let mut bench_deploys = BTreeSet::new();
+    for (index, artifact) in artifacts.iter().enumerate() {
+        for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
+            write_observer_function(body, &artifact.benchmark_id, scenario);
+            write_gas_test(body, index, artifact, scenario);
+            bench_deploys.insert((index, deployment_variant_arg(artifact, scenario)));
+        }
+    }
+    for (index, variant) in bench_deploys {
+        write_bench_deploy_function(body, index, variant);
+    }
+    Ok(())
+}
+
+fn write_pair_tests(
+    body: &mut String,
+    artifacts: &[CompiledArtifact],
+    scenarios: &ScenarioCatalog,
+    benchmark_id: &str,
+    solidity_idx: usize,
+    vyper_idx: usize,
+) -> Result<()> {
+    let offset = body.len();
+    let solidity = artifacts
+        .get(solidity_idx)
+        .context("missing solidity baseline")?;
+    let vyper = artifacts.get(vyper_idx).context("missing vyper baseline")?;
+    let scenario_file = scenarios.get(benchmark_id)?;
+    for scenario in &scenario_file.scenarios {
+        write_diff_test(
+            body,
+            benchmark_id,
+            solidity_idx,
+            vyper_idx,
+            solidity,
+            vyper,
+            scenario,
+        );
+    }
+    if let Some(randomized) = &scenario_file.randomized {
+        write_randomized_diff_test(body, benchmark_id, solidity_idx, vyper_idx, randomized)?;
+    }
+    for property in &scenario_file.properties {
+        write_property_test(
+            body,
+            benchmark_id,
+            solidity_idx,
+            vyper_idx,
+            scenario_file.randomized.as_ref(),
+            property,
+        )?;
+    }
+    // Multiple compiler comparisons share a benchmark and observers.
+    // Only test entrypoint names need the pair identity appended.
+    let suffix = sanitize(&format!("{}_vs_{}", solidity.profile_id, vyper.profile_id));
+    let added = body.split_off(offset);
+    body.push_str(
+        &added
+            .replace(
+                "function testDiff_",
+                &format!("function testDiff_{suffix}_"),
+            )
+            .replace(
+                "function testRandomDiff_",
+                &format!("function testRandomDiff_{suffix}_"),
+            )
+            .replace(
+                "function testProperty_",
+                &format!("function testProperty_{suffix}_"),
+            ),
+    );
+    Ok(())
+}
+
+/// Artifacts for one behavior shard and the comparison pairs it runs, as
+/// indices into `artifacts`.
+#[derive(Debug, Default)]
+pub(crate) struct BehaviorShard {
+    pub artifacts: Vec<CompiledArtifact>,
+    pub pairs: Vec<(String, usize, usize)>,
+}
+
+/// Packs comparison pairs (indices into `artifacts`) into shards that each hold
+/// both sides of every pair they run. An artifact shared by pairs in different
+/// shards, such as a baseline, is deployed in each of them.
+pub(crate) fn behavior_shards(
+    artifacts: &[CompiledArtifact],
+    pairs: &[(String, usize, usize)],
+    scenarios: &ScenarioCatalog,
+) -> Result<Vec<BehaviorShard>> {
+    let mut pairs = pairs.to_vec();
+    // Keep a benchmark's pairs together so shared baselines deploy once.
+    pairs.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut shards = Vec::new();
+    let mut current = BehaviorShard::default();
+    // Positions of compile-set artifacts within the current shard.
+    let mut local = BTreeMap::new();
+    let mut current_rows = 0;
+    let mut current_bytes = 0;
+    for (benchmark_id, left, right) in pairs {
+        let rows = scenarios.get(&benchmark_id)?.scenarios.len().max(1);
+        let added: Vec<_> = [left, right]
+            .into_iter()
+            .filter(|index| !local.contains_key(index))
+            .collect();
+        let added_bytes = added
+            .iter()
+            .map(|&index| estimated_artifact_bytes(&artifacts[index]))
+            .sum::<Result<usize>>()?;
+        if !current.pairs.is_empty()
+            && (current.artifacts.len() + added.len() > MAX_ARTIFACTS_PER_GAS_SHARD
+                || current_rows + rows > MAX_GAS_ROWS_PER_SHARD
+                || current_bytes + added_bytes > MAX_GAS_SHARD_ESTIMATED_BYTES)
+        {
+            shards.push(std::mem::take(&mut current));
+            local.clear();
+            current_rows = 0;
+            current_bytes = 0;
+        }
+        for index in [left, right] {
+            if let std::collections::btree_map::Entry::Vacant(entry) = local.entry(index) {
+                entry.insert(current.artifacts.len());
+                current_bytes += estimated_artifact_bytes(&artifacts[index])?;
+                current.artifacts.push(artifacts[index].clone());
+            }
+        }
+        current_rows += rows;
+        current
+            .pairs
+            .push((benchmark_id, local[&left], local[&right]));
+    }
+    if !current.pairs.is_empty() {
+        shards.push(current);
+    }
+    Ok(shards)
+}
+
 pub(crate) fn run_behavior_shard(
     root: &Path,
     evm: &str,
-    artifacts: &[CompiledArtifact],
+    shard: &BehaviorShard,
     scenarios: &ScenarioCatalog,
     index: usize,
 ) -> Result<()> {
@@ -773,11 +821,10 @@ pub(crate) fn run_behavior_shard(
         root.join("foundry").join(&relative),
         generate_test(
             &name,
-            artifacts,
+            &shard.artifacts,
             scenarios,
             "../results/raw/behavior-unused.jsonl",
-            Some(&BTreeSet::new()),
-            true,
+            ShardTests::Behavior(&shard.pairs),
         )?,
     )?;
     crate::foundry_jobs::execute(root, evm, &relative)?;
@@ -1064,6 +1111,11 @@ fn write_gas_test(
     ));
     out.push_str("();\n");
     write_setup(out, "target", &scenario.setup, "setup");
+    // Evaluate the measured call once, after setup and before warmup, exactly
+    // as the differential tests do.
+    out.push_str("        BenchCall memory measured = ");
+    write_bench_call(out, &scenario.measured, "target");
+    out.push_str(";\n");
     out.push_str("        BenchCall[] memory warmup = new BenchCall[](");
     out.push_str(&scenario.warmup.len().to_string());
     out.push_str(");\n");
@@ -1074,18 +1126,8 @@ fn write_gas_test(
         write_bench_call(out, call, "target");
         out.push_str(";\n");
     }
-    out.push_str("        uint256 calldataGas = _calldataGas(");
-    out.push_str(&call_data(&scenario.measured, "target"));
-    out.push_str(");\n");
-    out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, ");
-    write_bench_call(out, &scenario.measured, "target");
-    out.push_str(", ");
-    out.push_str(if harness::supports_log_diff(&artifact.benchmark_id) {
-        "true"
-    } else {
-        "false"
-    });
-    out.push_str(");\n");
+    out.push_str("        uint256 calldataGas = _calldataGas(measured.data);\n");
+    out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, measured);\n");
     out.push_str("        bytes32 observerHash = _observeAll_");
     out.push_str(&sanitize(&artifact.benchmark_id));
     out.push('_');
@@ -1136,58 +1178,39 @@ fn write_diff_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
-    out.push_str("        (address solTarget,) = ");
-    out.push_str(&deploy_call(solidity_idx, solidity, scenario));
-    out.push_str(";\n");
-    out.push_str("        (address vyperTarget,) = ");
-    out.push_str(&deploy_call(vyper_idx, vyper, scenario));
-    out.push_str(";\n");
-    out.push_str("        vm.warp(1);\n");
-    write_setup(out, "solTarget", &scenario.setup, "setup");
-    write_setup(out, "solTarget", &scenario.warmup, "warmup");
-    if harness::supports_log_diff(benchmark_id) {
-        out.push_str(
-            "        (bool solOk, bytes32 solHash, bytes32 solLogHash,) = _runWithLogs(solTarget, ",
+    // Both sides start from the same state, so targets share an address and
+    // address-derived results (CREATE2 predictions, pair addresses) compare.
+    out.push_str("        uint256 diffStart = vm.snapshotState();\n");
+    for (index, side, artifact_idx, artifact) in [
+        (0, "sol", solidity_idx, solidity),
+        (1, "vyper", vyper_idx, vyper),
+    ] {
+        let target = format!("{side}Target");
+        if index > 0 {
+            out.push_str("        vm.revertToStateAndDelete(diffStart);\n");
+        }
+        out.push_str(&format!("        (address {target},) = "));
+        out.push_str(&deploy_call(artifact_idx, artifact, scenario));
+        out.push_str(";\n");
+        out.push_str("        vm.warp(1);\n");
+        write_setup(out, &target, &scenario.setup, "setup");
+        // Same evaluation order as the gas test: after setup, before warmup.
+        out.push_str(&format!("        BenchCall memory {side}Measured = "));
+        write_bench_call(out, &scenario.measured, &target);
+        out.push_str(";\n");
+        write_setup(out, &target, &scenario.warmup, "warmup");
+        let call = format!(
+            "{side}Measured.destination, {side}Measured.data, {side}Measured.value, {side}Measured.sender"
         );
-        out.push_str(call_destination(&scenario.measured, "solTarget"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "solTarget");
-        out.push_str(");\n");
-    } else {
-        out.push_str("        (bool solOk, bytes32 solHash,) = _run(");
-        out.push_str(call_destination(&scenario.measured, "solTarget"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "solTarget");
-        out.push_str(");\n");
+        out.push_str(&format!(
+            "        (bool {side}Ok, bytes32 {side}Hash, bytes32 {side}LogHash,) = _runWithLogs({target}, {call});\n"
+        ));
+        out.push_str(&format!("        bytes32 {side}Observed = _observeAll_"));
+        out.push_str(&sanitize(&solidity.benchmark_id));
+        out.push('_');
+        out.push_str(&sanitize(&scenario.name));
+        out.push_str(&format!("({target});\n"));
     }
-    out.push_str("        bytes32 solObserved = _observeAll_");
-    out.push_str(&sanitize(&solidity.benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&scenario.name));
-    out.push_str("(solTarget);\n");
-    out.push_str("        vm.warp(1);\n");
-    write_setup(out, "vyperTarget", &scenario.setup, "setup");
-    write_setup(out, "vyperTarget", &scenario.warmup, "warmup");
-    if harness::supports_log_diff(benchmark_id) {
-        out.push_str(
-            "        (bool vyperOk, bytes32 vyperHash, bytes32 vyperLogHash,) = _runWithLogs(vyperTarget, ",
-        );
-        out.push_str(call_destination(&scenario.measured, "vyperTarget"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "vyperTarget");
-        out.push_str(");\n");
-    } else {
-        out.push_str("        (bool vyperOk, bytes32 vyperHash,) = _run(");
-        out.push_str(call_destination(&scenario.measured, "vyperTarget"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "vyperTarget");
-        out.push_str(");\n");
-    }
-    out.push_str("        bytes32 vyperObserved = _observeAll_");
-    out.push_str(&sanitize(&vyper.benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&scenario.name));
-    out.push_str("(vyperTarget);\n");
     out.push_str("        require(solOk == vyperOk, \"differential status mismatch\");\n");
     out.push_str("        require(solOk == ");
     out.push_str(if scenario.expect_success {
@@ -1204,11 +1227,7 @@ fn write_diff_test(
     out.push_str(
         "        require(solObserved == vyperObserved, \"differential observer mismatch\");\n",
     );
-    if harness::supports_log_diff(benchmark_id) {
-        out.push_str(
-            "        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n",
-        );
-    }
+    out.push_str("        require(solLogHash == vyperLogHash, \"differential log mismatch\");\n");
     out.push_str("    }\n\n");
     write_observer_function(out, &solidity.benchmark_id, scenario);
 }
@@ -1453,5 +1472,64 @@ mod tests {
         let c = crate::cache::key_for(&fingerprint("solc-0.8.34-config", "shard-b")).unwrap();
         assert_ne!(a, b);
         assert_ne!(a, c);
+    }
+
+    #[test]
+    fn behavior_shards_keep_every_requested_pair_together() {
+        use crate::{models::Language, test_support::artifact};
+        let root = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."));
+        let scenarios =
+            crate::scenarios::load_scenario_catalog(root, Some("erc20_minimal"), &[]).unwrap();
+        // Large enough that only a few artifacts fit in one shard.
+        let bytecode = "60".repeat(super::MAX_GAS_SHARD_ESTIMATED_BYTES / 3);
+        let mut artifacts: Vec<_> = (0..8)
+            .map(|index| artifact("solc", &format!("solc-0.8.{index}-legacy-runs200")))
+            .chain([
+                artifact("solc", "solc-latest-legacy-runs200"),
+                artifact("solc", "solc-0.8.34-viair-runs200"),
+                artifact("solx", "solx-0.1.8-O3"),
+            ])
+            .collect();
+        for (language, profile) in [
+            (Language::Vyper, "vyper-latest-gas"),
+            (Language::Fe, "fe-latest-O2"),
+        ] {
+            let mut other = artifact(profile, profile);
+            other.language = language;
+            artifacts.push(other);
+        }
+        for artifact in &mut artifacts {
+            artifact.source_path = root.join("Cargo.toml");
+            artifact.creation_bytecode = bytecode.clone();
+        }
+        let pairs = crate::baselines::comparison_pairs(&artifacts);
+        assert_eq!(pairs.len(), 3);
+
+        let shards = super::behavior_shards(&artifacts, &pairs, &scenarios).unwrap();
+        assert!(shards.len() > 1);
+        let mut covered = Vec::new();
+        for shard in &shards {
+            assert!(shard.artifacts.len() <= 3);
+            for (benchmark, left, right) in &shard.pairs {
+                covered.push((
+                    benchmark.clone(),
+                    shard.artifacts[*left].profile_id.clone(),
+                    shard.artifacts[*right].profile_id.clone(),
+                ));
+            }
+        }
+        let mut expected: Vec<_> = pairs
+            .iter()
+            .map(|(benchmark, left, right)| {
+                (
+                    benchmark.clone(),
+                    artifacts[*left].profile_id.clone(),
+                    artifacts[*right].profile_id.clone(),
+                )
+            })
+            .collect();
+        covered.sort();
+        expected.sort();
+        assert_eq!(covered, expected);
     }
 }

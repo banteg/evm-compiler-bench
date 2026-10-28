@@ -16,6 +16,10 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo test --locked
       - run: cargo clippy --all-targets --locked -- -D warnings
+      # Compiler-free: validates checked-in inputs and generated scale outputs
+      # against the hand-written checks and schemas/.
+      - run: cargo run --locked -q -- generate
+      - run: cargo run --locked -q -- validate
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -23,5 +27,5 @@ jobs:
           cache-dependency-path: report-ui/package-lock.json
       - run: npm --prefix report-ui ci
       - run: npm --prefix report-ui test
-      - run: node --test scripts/publish-policy.test.mjs
+      - run: node --test scripts/publish-policy.test.mjs worker/index.test.mjs
       - run: npm --prefix report-ui run build

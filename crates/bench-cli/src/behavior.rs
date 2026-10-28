@@ -11,12 +11,7 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    path::Path,
-    process::Command,
-};
+use std::{collections::BTreeMap, fs, path::Path, process::Command};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Evidence {
@@ -63,7 +58,8 @@ pub fn run(
     let config_hash = cache::key_for(&runner::harness_config(root, evm)?)?;
     let mut records = Vec::new();
     let mut pending = BTreeMap::new();
-    let mut wanted = BTreeSet::new();
+    let mut wanted = Vec::new();
+    // Pairs come from the full compile set; shards only run what they are given.
     for (benchmark, a, b) in comparison_pairs(&compiled.artifacts) {
         let left = &compiled.artifacts[a];
         let right = &compiled.artifacts[b];
@@ -86,7 +82,7 @@ pub fn run(
             records.push(evidence);
             continue;
         }
-        wanted.extend([a, b]);
+        wanted.push((benchmark.clone(), a, b));
         let evidence = Evidence {
             benchmark_id: benchmark,
             baseline_profile: left.profile_id.clone(),
@@ -109,38 +105,29 @@ pub fn run(
             (id, key, input, evidence),
         );
     }
-    let artifacts: Vec<_> = wanted
-        .into_iter()
-        .map(|i| compiled.artifacts[i].clone())
-        .collect();
     eprintln!(
         "behavior: {} verified pairs cached, {} pairs to test",
         records.len(),
         pending.len()
     );
-    let shards = runner::gas_shards(&artifacts, scenarios)?;
+    let shards = runner::behavior_shards(&compiled.artifacts, &wanted, scenarios)?;
     for (index, shard) in shards.iter().enumerate() {
         eprintln!("behavior: running shard {}/{}", index + 1, shards.len());
         runner::run_behavior_shard(root, evm, shard, scenarios, index)?;
-        for (benchmark, a, b) in comparison_pairs(shard) {
+        for (benchmark, a, b) in &shard.pairs {
             let identity = (
-                benchmark,
-                shard[a].profile_id.clone(),
-                shard[b].profile_id.clone(),
+                benchmark.clone(),
+                shard.artifacts[*a].profile_id.clone(),
+                shard.artifacts[*b].profile_id.clone(),
             );
-            if let Some((id, key, input, evidence)) = pending.remove(&identity) {
-                if use_cache {
-                    cache::store(root, "behavior", &id, &key, &input, &evidence)?;
-                }
-                records.push(evidence);
+            let (id, key, input, evidence) = pending
+                .remove(&identity)
+                .context("behavior shard ran an unrequested pair")?;
+            if use_cache {
+                cache::store(root, "behavior", &id, &key, &input, &evidence)?;
             }
+            records.push(evidence);
         }
-    }
-    if !pending.is_empty() {
-        bail!(
-            "behavior sharding separated {} required compiler pairs",
-            pending.len()
-        );
     }
     records.sort_by(|a, b| {
         (&a.benchmark_id, &a.baseline_profile, &a.compared_profile).cmp(&(

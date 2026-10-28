@@ -5,6 +5,11 @@ scenarios:
     measured:
       data: 'abi.encodeWithSignature("proxyCodeHash(address)", IMPLEMENTATION)'
     expect_success: true
+  - name: predict_clone
+    state_access_profile: cold
+    measured:
+      data: 'abi.encodeWithSignature("predictClone(address,bytes32)", IMPLEMENTATION, SALT)'
+    expect_success: true
   - name: record_clone
     state_access_profile: warm
     warmup:
@@ -14,6 +19,7 @@ scenarios:
     expect_success: true
     observers:
       - data: 'abi.encodeWithSignature("cloneValue(bytes32)", SALT)'
+      - data: 'abi.encodeWithSignature("predictClone(address,bytes32)", IMPLEMENTATION, SALT)'
   - name: clone_value
     state_access_profile: mixed
     setup:

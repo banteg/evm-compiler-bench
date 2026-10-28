@@ -18,9 +18,29 @@ scenarios:
   - name: pause
     state_access_profile: warm
     warmup:
+      - data: 'abi.encodeWithSignature("owner()")'
       - data: 'abi.encodeWithSignature("paused()")'
     measured:
       data: 'abi.encodeWithSignature("pause()")'
+    expect_success: true
+    observers: *ownable_observers
+  - name: unpause
+    state_access_profile: warm
+    setup:
+      - data: 'abi.encodeWithSignature("pause()")'
+    warmup:
+      - data: 'abi.encodeWithSignature("owner()")'
+      - data: 'abi.encodeWithSignature("paused()")'
+    measured:
+      data: 'abi.encodeWithSignature("unpause()")'
+    expect_success: true
+    observers: *ownable_observers
+  - name: transfer_ownership
+    state_access_profile: warm
+    warmup:
+      - data: 'abi.encodeWithSignature("owner()")'
+    measured:
+      data: 'abi.encodeWithSignature("transferOwnership(address)", BOB)'
     expect_success: true
     observers: *ownable_observers
   - name: paused_revert

@@ -24,6 +24,6 @@ pub fn gas(artifact: &CompiledArtifact) -> GasRecord {
         "profile_id":artifact.profile_id, "scenario":"total_supply", "state_access_profile":"cold", "metadata_mode":"off",
         "internal_create_gas":1, "harness_call_gas":1, "intrinsic_gas":21000, "calldata_gas":1,
         "harness_estimated_tx_gas":21002, "expected_success":true, "call_succeeded":true, "scenario_status_ok":true,
-        "return_hash":"return", "observer_hash":"state"
+        "return_hash":"return", "observer_hash":"state", "log_hash":"logs"
     })).unwrap()
 }

@@ -262,6 +262,15 @@ scenarios:
   - name: withdraw_admin_fees
     call: "withdraw_admin_fees() after an exchange accrues admin fees"
     expected: "executes the public admin-fee withdrawal entrypoint"
+  - name: oracle_rate_exchange
+    call: "exchange(0, 1, 25_000, 0, address(this)) on a pool whose coin rate comes from a rate oracle"
+    expected: "scales balances by the oracle-provided stored rate and swaps along the invariant"
+  - name: rebasing_balance_exchange
+    call: "exchange(0, 1, 25_000, 0, address(this)) after a rebasing coin's pool balance grows"
+    expected: "reads the rebased coin balance and swaps along the invariant"
+  - name: erc4626_rate_exchange
+    call: "exchange(0, 1, 25_000, 0, address(this)) on a pool holding an ERC4626 vault-share coin"
+    expected: "scales balances by the ERC4626 share conversion rate and swaps along the invariant"
   - name: permit_valid
     call: "permit with a harness-signed EIP-712 digest"
     expected: "sets LP allowance and increments the owner's nonce"

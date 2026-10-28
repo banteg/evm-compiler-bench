@@ -68,15 +68,17 @@ library Math {
     }
 
     function sqrt(uint256 y) internal pure returns (uint256 z) {
-        if (y > 3) {
-            z = y;
-            uint256 x = y / 2 + 1;
-            while (x < z) {
-                z = x;
-                x = (y / x + x) / 2;
+        unchecked {
+            if (y > 3) {
+                z = y;
+                uint256 x = y / 2 + 1;
+                while (x < z) {
+                    z = x;
+                    x = (y / x + x) / 2;
+                }
+            } else if (y != 0) {
+                z = 1;
             }
-        } else if (y != 0) {
-            z = 1;
         }
     }
 }
@@ -85,7 +87,9 @@ library UQ112x112 {
     uint224 internal constant Q112 = 2 ** 112;
 
     function encode(uint112 y) internal pure returns (uint224 z) {
-        z = uint224(y) * Q112;
+        unchecked {
+            z = uint224(y) * Q112;
+        }
     }
 
     function uqdiv(uint224 x, uint112 y) internal pure returns (uint224 z) {
@@ -366,8 +370,12 @@ contract UniswapV2Pair is UniswapV2ERC20 {
             balance0 = IERC20(_token0).balanceOf(address(this));
             balance1 = IERC20(_token1).balanceOf(address(this));
         }
-        uint256 amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
-        uint256 amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+        uint256 amount0In;
+        uint256 amount1In;
+        unchecked {
+            amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+            amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+        }
         require(amount0In > 0 || amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
         {
             uint256 balance0Adjusted = balance0 * 1000 - amount0In * 3;

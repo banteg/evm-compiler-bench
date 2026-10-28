@@ -1,26 +1,8 @@
 use crate::models::{CompiledArtifact, Language};
-use std::collections::BTreeMap;
+use std::{cmp::Reverse, collections::BTreeMap};
 
-const SOLIDITY_BASELINE_PREFERENCES: &[&str] = &[
-    "solc-latest-legacy-runs200",
-    "solc-0.8.30-legacy-runs200",
-    "solc-0.8.20-legacy-runs200",
-    "solc-0.8.13-legacy-runs200",
-    "solc-0.8.0-legacy-runs200",
-    "solc-0.5.17-legacy-runs200",
-    "solc-0.5.16-legacy-runs200",
-    "solc-0.4.26-legacy-runs200",
-];
-
-const VYPER_BASELINE_PREFERENCES: &[&str] = &[
-    "vyper-latest-gas",
-    "vyper-prerelease-gas",
-    "vyper-0.4.0-gas",
-    "vyper-0.3.10-gas",
-    "vyper-0.3.7-default",
-    "vyper-0.3.7-none",
-    "vyper-0.2.16-default",
-];
+/// Lower sorts first: optimizer mode, then release channel, then newest pinned version.
+type BaselineScore = (usize, usize, Reverse<Vec<u64>>);
 
 pub fn baseline_pairs(artifacts: &[CompiledArtifact]) -> BTreeMap<String, (usize, usize)> {
     let mut candidates: BTreeMap<String, BaselineCandidates> = BTreeMap::new();
@@ -136,18 +118,18 @@ struct BaselineCandidates {
 
 struct BaselineCandidate {
     index: usize,
-    score: usize,
+    score: BaselineScore,
     profile_id: String,
 }
 
 fn update_candidate(
     slot: &mut Option<BaselineCandidate>,
     index: usize,
-    score: usize,
+    score: BaselineScore,
     profile_id: &str,
 ) {
     let should_replace = match slot.as_ref() {
-        Some(candidate) => (score, profile_id) < (candidate.score, candidate.profile_id.as_str()),
+        Some(candidate) => (&score, profile_id) < (&candidate.score, candidate.profile_id.as_str()),
         None => true,
     };
     if should_replace {
@@ -159,28 +141,33 @@ fn update_candidate(
     }
 }
 
-fn baseline_score(language: Language, profile_id: &str) -> usize {
-    let preferences = match language {
-        Language::Solidity => SOLIDITY_BASELINE_PREFERENCES,
-        Language::Vyper => VYPER_BASELINE_PREFERENCES,
-        Language::Fe => &[],
+/// Profile ids are `<compiler>-<latest|prerelease|version>-<mode...>`. Stable latest
+/// releases come first, then prereleases, then pinned versions from newest to oldest.
+fn baseline_score(language: Language, profile_id: &str) -> BaselineScore {
+    let (channel, version) = match profile_id.split('-').nth(1).unwrap_or_default() {
+        "latest" => (0, Vec::new()),
+        "prerelease" => (1, Vec::new()),
+        version => (
+            2,
+            version
+                .split('.')
+                .filter_map(|part| part.parse().ok())
+                .collect(),
+        ),
     };
-    preferences
-        .iter()
-        .position(|preferred| *preferred == profile_id)
-        .unwrap_or_else(|| fallback_score(language, profile_id))
+    (mode_score(language, profile_id), channel, Reverse(version))
 }
 
-fn fallback_score(language: Language, profile_id: &str) -> usize {
+fn mode_score(language: Language, profile_id: &str) -> usize {
     match language {
-        Language::Solidity if profile_id.contains("-legacy-runs200") => 100,
-        Language::Solidity if profile_id.contains("-viair-runs200") => 200,
-        Language::Solidity => 300,
-        Language::Vyper if profile_id.contains("-gas") && !profile_id.contains("-venom") => 100,
-        Language::Vyper if profile_id.contains("-default") => 200,
-        Language::Vyper if profile_id.contains("-none") && !profile_id.contains("-venom") => 300,
-        Language::Vyper => 400,
-        Language::Fe => 100,
+        Language::Solidity if profile_id.contains("-legacy-runs200") => 0,
+        Language::Solidity if profile_id.contains("-viair-runs200") => 1,
+        Language::Solidity => 2,
+        Language::Vyper if profile_id.contains("-gas") && !profile_id.contains("-venom") => 0,
+        Language::Vyper if profile_id.contains("-default") => 1,
+        Language::Vyper if profile_id.contains("-none") && !profile_id.contains("-venom") => 2,
+        Language::Vyper => 3,
+        Language::Fe => 0,
     }
 }
 
@@ -204,7 +191,7 @@ mod tests {
     #[test]
     fn solar_compares_by_compatibility_and_never_becomes_a_solc_baseline() {
         use crate::test_support::artifact;
-        let mut solar = artifact("solar", "solar-716e9cbc-gas-runs200");
+        let mut solar = artifact("solar", "solar-cb38e986-gas-runs200");
         solar.compiler.version = "0.2.0".into();
         solar
             .compiler
@@ -266,6 +253,30 @@ mod tests {
         assert!(
             baseline_score(Language::Vyper, "vyper-0.3.7-default")
                 < baseline_score(Language::Vyper, "vyper-0.3.7-none")
+        );
+    }
+
+    #[test]
+    fn ranks_pinned_profiles_by_newest_version() {
+        assert!(
+            baseline_score(Language::Solidity, "solc-0.8.36-legacy-runs200")
+                < baseline_score(Language::Solidity, "solc-0.8.30-legacy-runs200")
+        );
+        assert!(
+            baseline_score(Language::Solidity, "solc-0.7.6-legacy-runs200")
+                < baseline_score(Language::Solidity, "solc-0.4.26-legacy-runs200")
+        );
+        assert!(
+            baseline_score(Language::Solidity, "solc-latest-viair-runs200")
+                < baseline_score(Language::Solidity, "solc-0.8.13-viair-runs200")
+        );
+        assert!(
+            baseline_score(Language::Vyper, "vyper-latest-gas")
+                < baseline_score(Language::Vyper, "vyper-prerelease-gas")
+        );
+        assert!(
+            baseline_score(Language::Vyper, "vyper-prerelease-gas")
+                < baseline_score(Language::Vyper, "vyper-0.4.0-gas")
         );
     }
 }

@@ -1,6 +1,6 @@
 use std::evm::packed::encode_packed
 use std::abi::{Bytes, Bytes32, DynString}
-use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TokenCall, encode_abi_payload}
+use std::evm::{Call, Ctx, Log, StorageBytes, StorageMap, TSlot, TokenCall, encode_abi_payload}
 use std::evm::{crypto, eip712, erc20, signature}
 
 msg VaultMsg {
@@ -451,7 +451,8 @@ struct VaultStore {
     management_fee: u256,
     performance_fee: u256,
     nonces: StorageMap<Address, u256>,
-    locked: bool,
+    // Transient like Vyper's @nonreentrant.
+    nonreentrant_lock: TSlot<bool>,
 }
 
 fn min(_ x: u256, _ y: u256) -> u256 {
@@ -621,11 +622,26 @@ uses (store: VaultStore, ctx: Ctx, call: mut Call)
     0
 }
 
+fn enter_nonreentrant() uses (store: mut VaultStore) {
+    assert!(!store.nonreentrant_lock.read(), "reentrant call")
+    store.nonreentrant_lock.write(true)
+}
+
+fn exit_nonreentrant() uses (store: mut VaultStore) {
+    store.nonreentrant_lock.write(false)
+}
+
 fn report_loss(strategy: Address, loss: u256) uses (store: mut VaultStore) {
     let strategy_debt = store.strat_total_debt.get(key: strategy)
-    let loss = min(loss, strategy_debt)
-    if store.total_debt > 0 {
-        store.debt_ratio -= loss * store.debt_ratio / store.total_debt
+    assert!(strategy_debt >= loss, "loss")
+    if store.debt_ratio != 0 {
+        let strategy_debt_ratio = store.strat_debt_ratio.get(key: strategy)
+        let ratio_change = min(
+            loss * store.debt_ratio / store.total_debt,
+            strategy_debt_ratio,
+        )
+        store.strat_debt_ratio.set(key: strategy, value: strategy_debt_ratio - ratio_change)
+        store.debt_ratio -= ratio_change
     }
     store
         .strat_total_loss
@@ -772,6 +788,7 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
 fn do_deposit(requested: u256, recipient: Address) -> u256
 uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
+    enter_nonreentrant()
     assert!(!store.emergency_shutdown, "shutdown")
     assert!(
         recipient != ctx.address() && recipient != Address::zero(),
@@ -799,14 +816,16 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
     )
     store.total_idle += amount
     log.emit(Deposit { recipient, shares, amount })
+    exit_nonreentrant()
     shares
 }
 
 fn do_withdraw(max_shares: u256, recipient: Address, max_loss: u256) -> u256
 uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
 {
+    enter_nonreentrant()
     assert!(max_loss <= MAX_BPS, "max loss")
-    let shares = if max_shares == MAX_U256 {
+    var shares = if max_shares == MAX_U256 {
         store.balance_of.get(key: ctx.caller())
     } else {
         max_shares
@@ -815,14 +834,18 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
         shares <= store.balance_of.get(key: ctx.caller()),
         "shares",
     )
+    assert!(shares > 0, "zero shares")
     var value = share_value(shares)
-    if value > store.total_idle {
+    var vault_balance = store.total_idle
+    if value > vault_balance {
         var total_loss: u256 = 0
-        var vault_balance = store.total_idle
         var i: u256 = 0
         while i < MAXIMUM_STRATEGIES {
             let strategy = store.withdrawal_queue.get(key: i)
             if strategy == Address::zero() {
+                break
+            }
+            if value <= vault_balance {
                 break
             }
             let amount_needed = min(
@@ -856,16 +879,17 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
                     loss,
                 },
             )
-            if vault_balance >= value {
-                break
-            }
             i += 1
+        }
+        store.total_idle = vault_balance
+        if value > vault_balance {
+            value = vault_balance
+            shares = shares_for_amount(amount: value + total_loss)
         }
         assert!(
             total_loss <= max_loss * (value + total_loss) / MAX_BPS,
             "loss",
         )
-        store.total_idle = vault_balance
     }
     store.total_supply -= shares
     store.balance_of.set(
@@ -878,6 +902,7 @@ uses (store: mut VaultStore, ctx: Ctx, log: mut Log, call: mut Call)
     store.total_idle -= value
     safe_transfer(token: store.token, receiver: recipient, amount: value)
     log.emit(Withdraw { recipient, shares, amount: value })
+    exit_nonreentrant()
     value
 }
 
@@ -966,11 +991,7 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         }
 
         Deposit { amount, recipient } -> u256 uses (mut store, ctx, mut log, mut call) {
-            assert!(!store.locked, "reentrant call")
-            store.locked = true
-            let shares = do_deposit(requested: amount, recipient)
-            store.locked = false
-            shares
+            do_deposit(requested: amount, recipient)
         }
 
         WithdrawAll -> u256 uses (mut store, ctx, mut log, mut call) {
@@ -990,11 +1011,7 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         Withdraw { max_shares, recipient, max_loss } -> u256
         uses (mut store, ctx, mut log, mut call)
         {
-            assert!(!store.locked, "reentrant call")
-            store.locked = true
-            let value = do_withdraw(max_shares, recipient, max_loss)
-            store.locked = false
-            value
+            do_withdraw(max_shares, recipient, max_loss)
         }
 
         Approve { spender, amount } -> bool uses (mut store, ctx, mut log) {
@@ -1155,31 +1172,32 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
                 ctx.caller() == store.governance || ctx.caller() == store.management,
                 "auth",
             )
-            // Entries are compared against the queue as it was before this
-            // call, so snapshot it before overwriting slots.
+            // Like the upstream vault, snapshot each old entry as it is
+            // reached; entries past `i` are still zero in the snapshot.
             var old_queue = MemArray<Address>::new_zeroed(MAXIMUM_STRATEGIES as usize)
-            var k: u256 = 0
-            while k < MAXIMUM_STRATEGIES {
-                old_queue[k as usize] = store.withdrawal_queue.get(key: k)
-                k += 1
-            }
             var i: u256 = 0
             while i < MAXIMUM_STRATEGIES {
+                old_queue[i as usize] = store.withdrawal_queue.get(key: i)
                 let strategy = queue[i as usize]
                 if strategy == Address::zero() {
                     assert!(old_queue[i as usize] == Address::zero(), "cannot remove")
                     break
                 }
                 assert!(old_queue[i as usize] != Address::zero(), "new strategy")
+                assert!(store.strat_activation.get(key: strategy) > 0, "inactive")
                 var exists_in_old_queue = false
                 var j: u256 = 0
                 while j < MAXIMUM_STRATEGIES {
-                    if queue[j as usize] == Address::zero() {
+                    let other = queue[j as usize]
+                    if other == Address::zero() {
+                        exists_in_old_queue = true
                         break
                     }
                     if strategy == old_queue[j as usize] {
                         exists_in_old_queue = true
-                        break
+                    }
+                    if j > i {
+                        assert!(strategy != other, "duplicate")
                     }
                     j += 1
                 }
@@ -1304,10 +1322,6 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             assert!(new_version != Address::zero(), "new")
             assert!(store.strat_activation.get(key: old_version) > 0, "old")
             assert!(store.strat_activation.get(key: new_version) == 0, "new active")
-            let new_vault: Address = new_version.static(StrategyMsg::Vault {})
-            assert!(new_vault == ctx.address(), "vault")
-            let new_want: Address = new_version.static(StrategyMsg::Want {})
-            assert!(new_want == store.token, "want")
             let debt_ratio = store.strat_debt_ratio.get(key: old_version)
             let last_report = store.strat_last_report.get(key: old_version)
             let total_debt = store.strat_total_debt.get(key: old_version)
@@ -1330,27 +1344,31 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
             store.strat_total_gain.set(key: new_version, value: 0)
             store.strat_total_loss.set(key: new_version, value: 0)
             old_version.call(StrategyMsg::Migrate { new_strategy: new_version })
+            log.emit(StrategyMigrated { old_version, new_version })
             var i: u256 = 0
             while i < MAXIMUM_STRATEGIES {
                 if store.withdrawal_queue.get(key: i) == old_version {
                     store.withdrawal_queue.set(key: i, value: new_version)
+                    return
                 }
                 i += 1
             }
-            log.emit(StrategyMigrated { old_version, new_version })
         }
 
         RevokeStrategySelf uses (mut store, ctx, mut log) {
-            revoke_strategy_internal(strategy: ctx.caller())
+            let strategy = ctx.caller()
+            assert!(store.strat_debt_ratio.get(key: strategy) != 0, "already zero")
+            revoke_strategy_internal(strategy)
         }
 
         RevokeStrategy { strategy } uses (mut store, ctx, mut log) {
             assert!(
-                ctx.caller() == store.governance
-                    || ctx.caller() == store.guardian
-                    || ctx.caller() == strategy,
+                ctx.caller() == strategy
+                    || ctx.caller() == store.governance
+                    || ctx.caller() == store.guardian,
                 "auth",
             )
+            assert!(store.strat_debt_ratio.get(key: strategy) != 0, "already zero")
             revoke_strategy_internal(strategy)
         }
 
@@ -1571,17 +1589,17 @@ pub contract YearnVaultV2Real uses (ctx: Ctx, log: mut Log, call: mut Call) {
         }
 
         MaxAvailableShares -> u256 uses (store, ctx) {
-            var value = store.total_idle
+            var shares = shares_for_amount(amount: store.total_idle)
             var i: u256 = 0
             while i < MAXIMUM_STRATEGIES {
                 let strategy = store.withdrawal_queue.get(key: i)
                 if strategy == Address::zero() {
                     break
                 }
-                value += store.strat_total_debt.get(key: strategy)
+                shares += shares_for_amount(amount: store.strat_total_debt.get(key: strategy))
                 i += 1
             }
-            shares_for_amount(amount: value)
+            shares
         }
 
         AvailableDepositLimit -> u256 uses store {

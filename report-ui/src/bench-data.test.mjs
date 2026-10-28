@@ -79,9 +79,9 @@ test('a cheap unexpected revert cannot become a gas or size win, even through an
 });
 
 test('Solar revision and gas/size runs remain distinct from the package and Solidity version', () => {
-  const revision = '716e9cbcde88165f931173f1c1fda852ed63afa0';
-  const gas = {id: 'solar-716e9cbc-gas-runs200', language: 'solidity', compiler_name: 'solar', compiler_version: '0.2.0', source_revision: revision, solidity_version: '0.8.36', optimizer: 'gas', optimizer_runs: 200};
-  const size = {...gas, id: 'solar-716e9cbc-size-runs1', optimizer: 'size', optimizer_runs: 1};
+  const revision = 'cb38e98632eebdf6c5bb60a792b83320c1312b28';
+  const gas = {id: 'solar-cb38e986-gas-runs200', language: 'solidity', compiler_name: 'solar', compiler_version: '0.2.0', source_revision: revision, solidity_version: '0.8.38', optimizer: 'gas', optimizer_runs: 200};
+  const size = {...gas, id: 'solar-cb38e986-size-runs1', optimizer: 'size', optimizer_runs: 1};
   const next = {...gas, id: 'solar-next-gas-runs200', source_revision: 'a'.repeat(40)};
   const b = load([gas, size, next]);
   const knobs = b.profileKnobs(gas);
@@ -89,6 +89,37 @@ test('Solar revision and gas/size runs remain distinct from the package and Soli
   assert.equal(knobs.runs, 200);
   assert.equal(b.profileFacets('solidity', revision, 'size', 'solar').runs.join(), '1');
   assert.equal(b.resolveProfile({...knobs, optimizer: 'size', runs: 1}), size.id);
-  assert.match(b.profileLabel(gas.id), /^Solar 0\.2\.0 @716e9cbc gas runs200$/);
+  assert.match(b.profileLabel(gas.id), /^Solar 0\.2\.0 @cb38e986 gas runs200$/);
   assert.equal(b.latestBaselineProfile(gas), undefined);
+});
+
+test('pair compile coverage counts artifacts once per profile, including compile failures', () => {
+  const data = [...rows, {profile_id: profiles[1].id, status: 'compile_error', suite: 'fixed', benchmark_id: 'vault'}];
+  const b = load([], data);
+  const pair = b.profilePairCompileCoverage(data, profiles[0].id, profiles[1].id);
+  assert.deepEqual([pair.passed, pair.attempted, pair.failed], [2, 3, 1]);
+  const same = b.profilePairCompileCoverage(data, profiles[0].id, profiles[0].id);
+  assert.deepEqual([same.passed, same.attempted, same.failed], [1, 1, 0]);
+});
+
+test('version axis compares default-codegen profiles only', () => {
+  const vyper = profiles[3];
+  const extra = [
+    {...vyper, id: 'vyper-latest-gas-venom', experimental_codegen: true},
+    {...vyper, id: 'vyper-0.4.0-gas', compiler_version: '0.4.0'},
+    {...vyper, id: 'vyper-0.4.0-gas-venom', compiler_version: '0.4.0', experimental_codegen: true},
+  ];
+  const data = [...rows, ...extra.map(p => ({...rows.at(-1), profile_id: p.id}))];
+  const b = load(extra, data);
+  assert.equal(b.versionAxisRows('runtime_bytes_stripped').map(r => r.profile).join(), 'vyper-0.4.0-gas');
+});
+
+test('scale scenario preference falls back per N where the preferred scenario is not generated', () => {
+  const scaleRows = [1, 2, 4].flatMap(n => [
+    ...(n > 1 ? ['last_selector'] : []), 'first_selector', 'set_sink',
+  ].map(scenario => ({parameter_value: n, gas: {scenario}})));
+  const b = load();
+  const picked = b.preferredScenarioRows(scaleRows, ['last_selector', 'first_selector']);
+  assert.deepEqual(picked.map(r => `${r.parameter_value}:${r.gas.scenario}`),
+    ['1:first_selector', '2:last_selector', '4:last_selector']);
 });

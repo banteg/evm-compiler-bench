@@ -18,7 +18,17 @@ use std::{
 /// top-level call from the test contract runs as its own committed transaction,
 /// so measured calls start from cold storage whose original values were written
 /// by earlier transactions.
-pub(crate) const HARNESS_FLAGS: [&str; 3] = ["--via-ir", "--optimize", "--isolate"];
+pub(crate) const HARNESS_FLAGS: [&str; 5] = [
+    "--via-ir",
+    "--optimize",
+    "--isolate",
+    "--chain-id",
+    HARNESS_CHAIN_ID,
+];
+
+/// Pre-0.8 Solidity has no `block.chainid`, so its source rewrite embeds the
+/// chain id the harness runs on; targets and fixtures then sign the same domain.
+pub(crate) const HARNESS_CHAIN_ID: &str = "1";
 
 fn worker_count() -> Result<usize> {
     match std::env::var("EVM_BENCH_FOUNDRY_JOBS") {

@@ -35,12 +35,13 @@
           "warmup": { "$ref": "#/$defs/calls" },
           "measured": { "$ref": "#/$defs/call" },
           "expect_success": { "type": "boolean" },
+          "compare_return": { "type": "boolean", "default": true },
           "observers": { "$ref": "#/$defs/calls" }
         }
       }
     },
     "randomized": {
-      "type": "object",
+      "type": ["object", "null"],
       "required": ["seed"],
       "additionalProperties": false,
       "properties": {
@@ -56,7 +57,7 @@
         "additionalProperties": false,
         "properties": {
           "name": { "type": "string" },
-          "seed": { "type": "integer", "minimum": 0 }
+          "seed": { "type": ["integer", "null"], "minimum": 0 }
         }
       }
     }
@@ -93,7 +94,7 @@
           "type": "array",
           "items": { "$ref": "#/$defs/arg" }
         },
-        "sender": { "type": "string" },
+        "sender": { "type": ["string", "null"] },
         "value": { "type": "string" },
         "destination": { "enum": ["target", "harness"] }
       }

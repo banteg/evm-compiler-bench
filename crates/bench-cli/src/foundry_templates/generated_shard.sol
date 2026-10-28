@@ -16,6 +16,8 @@ interface Vm {
     function addr(uint256 privateKey) external returns (address);
     function recordLogs() external;
     function getRecordedLogs() external returns (Log[] memory entries);
+    function snapshotState() external returns (uint256 snapshotId);
+    function revertToStateAndDelete(uint256 snapshotId) external returns (bool success);
 }
 
 contract {{CONTRACT_NAME}} {

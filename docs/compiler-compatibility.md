@@ -15,6 +15,7 @@ September 2026 migration resolves 0.5.0b1 in place of the pinned 0.5.0a1 profile
 | Yearn v2 / Vyper 0.3 | Translate `StrategyParams(field=value)` to dictionary-style construction | Preserve fields, their order and expressions, nested calls, and comments. |
 | Curve / Vyper 0.3.7 | Use `shift`, a static loop bound with an early break, and an explicit ERC-4626 interface | Preserve signed/unsigned shifts and coefficients; iterate to the immutable coin count, bounded by the constructor's `DynArray`; preserve external selectors. |
 | Uniswap pair / solc 0.4.26 | Hash literals directly and adapt low-level token calls | Hash identical bytes; accept empty returns or a canonical 32-byte true value, including trailing data; reject short returns, false, and noncanonical booleans. |
+| Reentrancy locks / solc < 0.8.28 or pre-Cancun EVM | Declare `transient` lock variables as storage, as Vyper's `@nonreentrant` does on those targets | Preserve lock rejection. Nonzero sentinels (2 entered, 3 exited) avoid a zero-slot write after first use. |
 | Yearn v3 / solc 0.4.26 | Disambiguate function-scoped locals, use array length decrement, opt into ABIEncoderV2, and adapt low-level token calls | Preserve branch-local evaluation order, removal of the final array element, and optional-return checks. |
 
 The one-byte Yearn limit is an existing benchmark-source behavior, not a newly
@@ -41,9 +42,10 @@ and exponential range boundaries and fuzz inputs. Inputs, bytecode hashes, and
 Foundry output are retained in `target/vyper-compat/`. Full-contract scenario
 checks remain part of the main matrix; these probes supplement them.
 The script also explicitly compares recovered historical rows against
-`vyper-latest-gas`: call outcomes and return, observer, and log hashes. Historical
-variants do not automatically receive those differential checks in the main
-report, so this comparison is recorded separately in the compatibility audit.
+`vyper-latest-gas`: call outcomes and return, observer, and log hashes. The main
+report applies the same cross-profile hash checks to every historical variant
+row against its language baseline profile; the script records the focused
+comparison for the compatibility audit.
 
 Run `20260909T233233Z` contains 7,843 compiled artifacts and 29,775 scenario
 measurements. The adapters recover 19 artifacts, reducing compilation failures
@@ -58,7 +60,8 @@ pass five tests, including 256 square-root and 256 exponential fuzz cases.
 Successful syntax adaptation does not imply successful compilation or execution.
 After the solc 0.4.26 syntax fixes, the pair reaches a stack-depth failure and
 Yearn v3 reaches the compiler's unimplemented calldata-array encoding path.
-Those results remain compile errors. Stack-depth stress cases, Fe operand
+Curve reaches a stack-depth failure in `_removeLiquidityImbalance`, because 0.4
+scopes locals to the whole function. Those results remain compile errors. Stack-depth stress cases, Fe operand
 limits, missing historical `raw_create`, and broader Vyper 0.2 feature gaps are
 also retained rather than simplified out of the corpus.
 

@@ -34,7 +34,6 @@ contract UniswapV2FactoryReal {
         assembly {
             pair := create2(0, add(code, 0x20), mload(code), salt)
         }
-        require(pair != address(0) && _hasCode(pair), "UniswapV2: CREATE2_FAILED");
         IUniswapV2PairFactoryTarget(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair;
@@ -50,13 +49,5 @@ contract UniswapV2FactoryReal {
     function setFeeToSetter(address feeToSetter_) external {
         require(msg.sender == feeToSetter, "UniswapV2: FORBIDDEN");
         feeToSetter = feeToSetter_;
-    }
-
-    function _hasCode(address account) private view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size != 0;
     }
 }

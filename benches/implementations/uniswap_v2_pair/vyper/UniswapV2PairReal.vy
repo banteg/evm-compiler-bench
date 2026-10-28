@@ -217,12 +217,14 @@ def swap(amount0Out: uint256, amount1Out: uint256, receiver: address, data: Byte
     balance1_: uint256 = self._balance(token1_)
     amount0In: uint256 = 0
     amount1In: uint256 = 0
-    reserve0_less_out: uint256 = convert(old_reserve0, uint256) - amount0Out
-    reserve1_less_out: uint256 = convert(old_reserve1, uint256) - amount1Out
+    # Unchecked like the upstream pair: the liquidity assert and the branches
+    # rule out underflow.
+    reserve0_less_out: uint256 = unsafe_sub(convert(old_reserve0, uint256), amount0Out)
+    reserve1_less_out: uint256 = unsafe_sub(convert(old_reserve1, uint256), amount1Out)
     if balance0_ > reserve0_less_out:
-        amount0In = balance0_ - reserve0_less_out
+        amount0In = unsafe_sub(balance0_, reserve0_less_out)
     if balance1_ > reserve1_less_out:
-        amount1In = balance1_ - reserve1_less_out
+        amount1In = unsafe_sub(balance1_, reserve1_less_out)
     assert amount0In > 0 or amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT"
 
     balance0_adjusted: uint256 = balance0_ * 1000 - amount0In * 3
