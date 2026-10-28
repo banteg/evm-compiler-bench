@@ -92,6 +92,14 @@ pub fn resolve(root: &Path, offline: bool, revision: &str) -> Result<Toolchain> 
                 .current_dir(&source)
                 .args(["checkout", "--detach", revision]),
         )?;
+        // This checkout belongs to the cache, so stray untracked files (such
+        // as Finder's .DS_Store) are removed; ignored build output is kept, and
+        // edits to tracked files still fail the cleanliness check below.
+        checked(
+            Command::new("git")
+                .current_dir(&source)
+                .args(["clean", "-fd"]),
+        )?;
         let head = checked(
             Command::new("git")
                 .current_dir(&source)
