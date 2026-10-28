@@ -1332,8 +1332,6 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
   );
   const tieBand = Bench.tieBandForMetric(metric);
   const agg = useMemo(() => Bench.summarize(cmp, tieBand), [cmp, tieBand]);
-  const profA = Bench.profileById(profileA);
-  const profB = Bench.profileById(profileB);
   const compareTitle = `${Bench.profileLabel(profileB)} vs ${Bench.profileLabel(profileA)}.`;
   const unit = Bench.comparisonUnit(metric);
 
@@ -1354,8 +1352,10 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
     [VYPER_GAS,        FE_O2,           'Vyper vs Fe'],
   ].filter(([a, b]) => Bench.profileById(a) && Bench.profileById(b));
 
-  const totalBuilt = (profA?.successful_artifacts ?? 0) + (profileA === profileB ? 0 : profB?.successful_artifacts ?? 0);
-  const totalFail  = (profA?.failed_artifacts ?? 0) + (profileA === profileB ? 0 : profB?.failed_artifacts ?? 0);
+  const coverage = useMemo(() =>
+    Bench.profilePairCompileCoverage(Bench.D.rows, profileA, profileB),
+    [profileA, profileB]
+  );
 
   return React.createElement('section', { id: 'compare', className: 'shell section', 'data-screen-label': '04 Compare' },
     React.createElement('div', { className: 'section-head' },
@@ -1409,8 +1409,8 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       ),
       React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Compile OK'),
-        React.createElement('div', { className: 'v tie tabular' }, totalBuilt + '/' + (totalBuilt + totalFail)),
-        React.createElement('div', { className: 'sub' }, totalFail === 0 ? 'no failures' : `${totalFail} fail${totalFail===1?'':'s'} across both`)
+        React.createElement('div', { className: 'v tie tabular' }, coverage.passed + '/' + coverage.attempted),
+        React.createElement('div', { className: 'sub' }, coverage.failed === 0 ? 'no failures' : `${coverage.failed} fail${coverage.failed===1?'':'s'} across both`)
       ),
     ),
 

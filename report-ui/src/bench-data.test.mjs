@@ -93,6 +93,15 @@ test('Solar revision and gas/size runs remain distinct from the package and Soli
   assert.equal(b.latestBaselineProfile(gas), undefined);
 });
 
+test('pair compile coverage counts artifacts once per profile, including compile failures', () => {
+  const data = [...rows, {profile_id: profiles[1].id, status: 'compile_error', suite: 'fixed', benchmark_id: 'vault'}];
+  const b = load([], data);
+  const pair = b.profilePairCompileCoverage(data, profiles[0].id, profiles[1].id);
+  assert.deepEqual([pair.passed, pair.attempted, pair.failed], [2, 3, 1]);
+  const same = b.profilePairCompileCoverage(data, profiles[0].id, profiles[0].id);
+  assert.deepEqual([same.passed, same.attempted, same.failed], [1, 1, 0]);
+});
+
 test('scale scenario preference falls back per N where the preferred scenario is not generated', () => {
   const scaleRows = [1, 2, 4].flatMap(n => [
     ...(n > 1 ? ['last_selector'] : []), 'first_selector', 'set_sink',
