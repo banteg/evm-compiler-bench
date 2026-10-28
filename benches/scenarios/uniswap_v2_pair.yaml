@@ -4,6 +4,7 @@ scenarios:
     state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("initialize(address,address)", address(0x1000), address(0x1001))'
+      sender: address(factoryHub)
     expect_success: true
     observers: &pair_observers
       - data: 'abi.encodeWithSignature("name()")'

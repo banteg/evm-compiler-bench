@@ -47,9 +47,7 @@ contract {{CONTRACT_NAME}} {
     mapping(address => CurveDeps) internal curveDeps;
     mapping(address => YearnDeps) internal yearnDeps;
     BenchERC1271Wallet internal curve1271Owner;
-    address public feeTo;
-    uint16 public protocolFeeBps;
-    address public protocolFeeRecipient;
+    BenchFactoryHub internal factoryHub;
 
     receive() external payable {}
 
@@ -60,6 +58,7 @@ contract {{CONTRACT_NAME}} {
         vm.deal(BOB, 1000000 ether);
         vm.deal(CAROL, 1000000 ether);
         vm.warp(1);
+        factoryHub = new BenchFactoryHub();
     }
 
 {{CONTRACT_BODY}}}
