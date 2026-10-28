@@ -12,7 +12,7 @@ Published report: https://evm.banteg.xyz/
 
 ## What is measured
 
-- Fixed matched contracts: hand-written Solidity and Vyper ports of common
+- Fixed matched contracts: hand-written Solidity, Vyper, and Fe ports of common
   contract motifs.
 - Generated scale studies: deterministic N=1..64 families for compiler stress
   surfaces such as dispatch, ABI arguments, events, loops, storage slots, and
@@ -39,7 +39,7 @@ because gas is read with `gasleft()` around the internal call.
 
 - `benches/specs/`: benchmark intent and equivalence scope.
 - `benches/scenarios/`: setup and measured calls.
-- `benches/implementations/`: Solidity and Vyper source implementations.
+- `benches/implementations/`: Solidity, Vyper, and Fe source implementations.
 - `benches/families/`: generated scale-family definitions.
 - `compiler-profiles/`: compiler version, optimizer, EVM, and source-variant
   matrix.
@@ -115,6 +115,13 @@ Resolve toolchains:
 cargo run --release -- toolchains
 ```
 
+Build the report UI once (and after frontend changes); `run` copies
+`report-ui/dist` into `results/reports/` and fails without it:
+
+```sh
+just build-report-ui
+```
+
 Run the full pipeline:
 
 ```sh
@@ -148,9 +155,10 @@ cargo run --release -- run --no-cache
 ```
 
 The full current matrix is large: 127 compiler profiles across 64 benchmarks.
-Because Fe is skipped for the one real-derived benchmark without an `fe/`
-implementation, this yields 7,871 compile attempts before gas scenarios are
-measured.
+Every profile compiles every benchmark, except that Fe profiles skip benchmarks
+without an `fe/` implementation (currently only `yearn_vault_v3`). The compile
+progress total and the run manifest's `artifacts` plus `compile_failures` give
+the exact number of compile attempts.
 
 Foundry gas shards run in isolated projects under `target/foundry-jobs/`, with
 up to four workers by default. Set `EVM_BENCH_FOUNDRY_JOBS=1` for serial execution
@@ -196,6 +204,7 @@ static Worker site from `master`; it does not run the benchmark suite.
 After a local benchmark run:
 
 ```sh
+just build-report-ui
 cargo run --release -- run
 cargo run --release -- validate
 just publish-dev-results
@@ -309,10 +318,10 @@ just zip-design
   non-yanked prerelease with published files on PyPI (currently 0.5.0b1).
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
   exist only in the latest-shared-EVM lane: Fe has no EVM-version flag and no
-  historical version axis. Fe implementations cover the fixed benchmark suite
-  and all seven generated scale families; benchmarks without an `fe/`
-  implementation are skipped for Fe profiles rather than reported as compile
-  failures. Each Fe artifact forms a behavior pair with the preferred selected
+  historical version axis. Fe implementations cover the fixed benchmark suite,
+  all seven generated scale families, and every real-derived benchmark except
+  Yearn V3; benchmarks without an `fe/` implementation are skipped for Fe
+  profiles rather than reported as compile failures. Each Fe artifact forms a behavior pair with the preferred selected
   solc artifact for the same benchmark and runs its scenario differential tests
   and applicable randomized/property checks, recorded like the other verified
   compiler pairs. Fe rows do not join the Solidity-vs-Vyper baseline pairs.

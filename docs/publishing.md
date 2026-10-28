@@ -29,6 +29,7 @@ they inherit top-level production vars.
 After a local benchmark run:
 
 ```sh
+just build-report-ui
 cargo run --release -- run
 cargo run --release -- validate
 just publish-dev-results
@@ -38,6 +39,10 @@ just publish-dev-results
 immutable run artifacts under `evm-compiler-bench/runs/{run_id}/`, and updates
 `evm-compiler-bench/channels/dev/latest.json` in R2. Result JSON is stored
 uncompressed in R2; Cloudflare handles HTTP compression for browser requests.
+`just prepare-publish` writes the same objects to `target/publish/{run_id}/`
+without uploading. The publish manifests list R2 keys, sizes, and hashes, never
+local file paths. The script rejects unknown options, and `--channel prod` and
+`--channel=prod` are equivalent.
 
 Use `just publish-prod-results` only after the report is ready for the public
 site. The prod publish recipe refuses to run unless the current branch is
