@@ -979,15 +979,6 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         }
         _ => {}
     }
-    // Targets that treat their deployer as the factory must call back into the
-    // fixed hub, not this shard's dispatcher.
-    match artifact.benchmark_id.as_str() {
-        "curve_stableswap_2coin" => out.push_str("        vm.prank(address(factoryHub));\n"),
-        "uniswap_v2_pair" => {
-            out.push_str("        if (deploymentVariant == 0) vm.prank(address(factoryHub));\n")
-        }
-        _ => {}
-    }
     out.push_str("        uint256 startGas = gasleft();\n");
     if artifact.benchmark_id == "yearn_vault_v3" {
         out.push_str("        address implementation = _deploy(code);\n");
