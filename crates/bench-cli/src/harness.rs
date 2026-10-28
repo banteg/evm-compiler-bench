@@ -20,11 +20,11 @@ pub fn constructor_args(benchmark_id: &str) -> Option<&'static str> {
     }
 }
 
-pub fn supports_log_diff(benchmark_id: &str) -> bool {
-    matches!(
-        benchmark_id,
-        "curve_stableswap_2coin" | "uniswap_v2_pair" | "yearn_vault_v2" | "yearn_vault_v3"
-    )
+/// Every benchmark's logs are comparable: differential targets deploy from the
+/// same snapshot, so they share an address, and log words that name harness
+/// accounts are normalized before hashing.
+pub fn supports_log_diff(_benchmark_id: &str) -> bool {
+    true
 }
 
 pub fn randomized_helper_name(benchmark_id: &str) -> Option<&'static str> {

@@ -12,9 +12,12 @@ scenarios:
   - name: init_code_hash
     call: "initCodeHash(7)"
     expected: "returns bytes32"
+  - name: compute_address
+    call: "computeAddress(salt, 7)"
+    expected: "returns the CREATE2 address for this deployer"
   - name: record_value
     call: "record(salt, 7)"
-    expected: "stores salt value"
+    expected: "stores salt value and logs the predicted address"
   - name: read_value
     call: "saltValue(salt)"
     expected: "returns stored value"

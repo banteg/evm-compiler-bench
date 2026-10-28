@@ -1136,11 +1136,11 @@ fn write_diff_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
+    // Both sides start from the same state, so targets share an address and
+    // address-derived results (CREATE2 predictions, pair addresses) compare.
+    out.push_str("        uint256 diffStart = vm.snapshotState();\n");
     out.push_str("        (address solTarget,) = ");
     out.push_str(&deploy_call(solidity_idx, solidity, scenario));
-    out.push_str(";\n");
-    out.push_str("        (address vyperTarget,) = ");
-    out.push_str(&deploy_call(vyper_idx, vyper, scenario));
     out.push_str(";\n");
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "solTarget", &scenario.setup, "setup");
@@ -1165,6 +1165,10 @@ fn write_diff_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("(solTarget);\n");
+    out.push_str("        vm.revertToStateAndDelete(diffStart);\n");
+    out.push_str("        (address vyperTarget,) = ");
+    out.push_str(&deploy_call(vyper_idx, vyper, scenario));
+    out.push_str(";\n");
     out.push_str("        vm.warp(1);\n");
     write_setup(out, "vyperTarget", &scenario.setup, "setup");
     write_setup(out, "vyperTarget", &scenario.warmup, "warmup");

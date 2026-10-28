@@ -1809,8 +1809,42 @@ fn rewrite_vyper_02_manager_checks(source: &str) -> String {
         .replace("self._only_manager()", "self._only_manager(msg.sender)")
 }
 
+/// Vyper 0.2 has no `bytes20`. Pack the low 20 bytes of the left-padded
+/// 32-byte word instead; the `concat` gives `slice` a memory operand, which
+/// 0.2 requires when slicing a computed `bytes32`.
 fn rewrite_vyper_02_fixed_bytes(source: &str) -> String {
-    source.replace("bytes20", "bytes32")
+    const CALL: &str = "convert(";
+    const TARGET: &str = ", bytes20)";
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(end) = rest.find(TARGET) {
+        let head = &rest[..end];
+        let mut depth = 0usize;
+        let open = head.rfind(|ch| {
+            match ch {
+                ')' => depth += 1,
+                '(' if depth == 0 => return true,
+                '(' => depth -= 1,
+                _ => {}
+            }
+            false
+        });
+        match open.filter(|&open| head[..=open].ends_with(CALL)) {
+            Some(open) => {
+                out.push_str(&head[..open + 1 - CALL.len()]);
+                out.push_str("slice(concat(convert(");
+                out.push_str(&head[open + 1..]);
+                out.push_str(", bytes32), b\"\"), 12, 20)");
+            }
+            None => {
+                out.push_str(head);
+                out.push_str(TARGET);
+            }
+        }
+        rest = &rest[end + TARGET.len()..];
+    }
+    out.push_str(rest);
+    out
 }
 
 fn rewrite_vyper_02_reserved_fields(source: &str) -> String {
@@ -2564,6 +2598,16 @@ mod tests {
         assert_eq!(
             solidity_pragma_for_toolchain(&toolchain("solc-0.5.16", "0.5.16")).unwrap(),
             "pragma solidity >=0.5.16 <0.6.0;"
+        );
+    }
+
+    #[test]
+    fn rewrites_vyper_02_bytes20_conversions_as_20_byte_slices() {
+        assert_eq!(
+            super::rewrite_vyper_02_fixed_bytes(
+                "keccak256(concat(0xff, convert(self, bytes20), convert(convert(x, uint256), bytes20)))"
+            ),
+            "keccak256(concat(0xff, slice(concat(convert(self, bytes32), b\"\"), 12, 20), slice(concat(convert(convert(x, uint256), bytes32), b\"\"), 12, 20)))"
         );
     }
 
