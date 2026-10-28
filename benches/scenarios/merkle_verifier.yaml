@@ -13,17 +13,17 @@ scenarios:
       data: 'abi.encodeWithSignature("verify(bytes32[],bytes32,bytes32)", proofOne(), ROOT, LEAF)'
     expect_success: true
   - name: verify_proof_8
-    state_access_profile: warm
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("verify(bytes32[],bytes32,bytes32)", proofMany(8), proofRoot(proofMany(8), LEAF), LEAF)'
     expect_success: true
   - name: verify_proof_16
-    state_access_profile: warm
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("verify(bytes32[],bytes32,bytes32)", proofMany(16), proofRoot(proofMany(16), LEAF), LEAF)'
     expect_success: true
   - name: verify_proof_16_false
-    state_access_profile: warm
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("verify(bytes32[],bytes32,bytes32)", proofMany(16), ROOT, LEAF)'
     expect_success: true

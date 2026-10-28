@@ -110,6 +110,10 @@ pub fn execute(root: &Path, evm: &str, relative: &str) -> Result<()> {
             .arg(evm)
             .arg("--via-ir")
             .arg("--optimize")
+            // Every top-level call from the test contract runs as its own
+            // committed transaction, so measured calls start from cold storage
+            // whose original values were written by earlier transactions.
+            .arg("--isolate")
             .arg("--threads")
             .arg("1")
             .arg("-q"),

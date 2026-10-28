@@ -36,7 +36,7 @@ scenarios:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2QueueIds(address)", {target})'
   - name: set_deposit_limit
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -104,7 +104,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_observers
   - name: update_strategy_debt_ratio
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -153,7 +153,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_observers
   - name: revoke_strategy
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -163,7 +163,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_observers
   - name: queue_add_remove
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -174,7 +174,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_observers
   - name: emergency_shutdown
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'

@@ -38,6 +38,7 @@ contract {{CONTRACT_NAME}} {
     uint256 constant YEARN_PERMIT_KEY = 0xA11CE;
     bytes32 constant YEARN_PERMIT_TYPE_HASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
+    struct BenchCall { address destination; bytes data; uint256 value; address sender; }
     struct PairDeps { BenchERC20 token0; BenchERC20 token1; BenchUniswapFlashCallee flashCallee; BenchUniswapReentrantCallee reentrantCallee; BenchUniswapCreate2Factory factory; }
     struct NoReturnPairDeps { BenchERC20NoReturn token0; BenchERC20NoReturn token1; }
     struct CurveDeps { BenchERC20OptionalReturn coin0; BenchERC20OptionalReturn coin1; BenchERC20OptionalReturn coin2; BenchERC20OptionalReturn coin3; BenchERC20OptionalReturn coin4; BenchERC20OptionalReturn coin5; BenchERC20OptionalReturn coin6; BenchERC20OptionalReturn coin7; }

@@ -1619,7 +1619,7 @@ function Methodology() {
     {
       tag: 'A',
       title: 'Foundry internal-call harness gas',
-      body: 'Gas is measured via Foundry\'s internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead.'
+      body: 'Gas is measured via Foundry\'s internal-call harness. That isolates compiler-generated runtime costs from intrinsic and calldata overhead. Each measured call runs in its own isolated transaction after deployment and setup are committed, so storage starts cold unless the scenario\'s warmup calls touch it first.'
     },
     {
       tag: 'B',

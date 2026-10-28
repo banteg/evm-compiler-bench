@@ -674,6 +674,7 @@ fn generate_test(
         write_deploy_function(&mut body, index, artifact);
     }
 
+    let mut bench_deploys = BTreeSet::new();
     for (index, artifact) in artifacts.iter().enumerate() {
         for scenario in &scenarios.get(&artifact.benchmark_id)?.scenarios {
             let record_key = gas_record_key(
@@ -686,8 +687,12 @@ fn generate_test(
             if selected_gas_keys.is_none_or(|keys| keys.contains(&record_key)) {
                 write_observer_function(&mut body, &artifact.benchmark_id, scenario);
                 write_gas_test(&mut body, index, artifact, scenario);
+                bench_deploys.insert((index, deployment_variant_arg(artifact, scenario)));
             }
         }
+    }
+    for (index, variant) in bench_deploys {
+        write_bench_deploy_function(&mut body, index, variant);
     }
 
     if include_behavior_checks {
@@ -950,6 +955,8 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("        if (deploymentVariant == 1) {\n");
         out.push_str("            uniswapToken0 = new BenchERC20();\n");
         out.push_str("            uniswapToken1 = new BenchERC20();\n");
+        // The factory sorts pair tokens by address; keep fixture roles aligned.
+        out.push_str("            if (address(uniswapToken1) < address(uniswapToken0)) (uniswapToken0, uniswapToken1) = (uniswapToken1, uniswapToken0);\n");
         out.push_str("            uniswapFlashCallee = new BenchUniswapFlashCallee();\n");
         out.push_str("            uniswapReentrantCallee = new BenchUniswapReentrantCallee();\n");
         out.push_str("            uniswapFactory = new BenchUniswapCreate2Factory(code);\n");
@@ -1024,6 +1031,18 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     out.push_str("    }\n\n");
 }
 
+// External entry points let gas tests deploy in an isolated transaction. Each
+// passes a literal variant so the optimizer can still fold deployment branches.
+fn write_bench_deploy_function(out: &mut String, index: usize, variant: Option<&str>) {
+    out.push_str("    function ");
+    out.push_str(&bench_deploy_name(index, variant));
+    out.push_str("() external returns (address, uint256) {\n        return deployArtifact");
+    out.push_str(&index.to_string());
+    out.push('(');
+    out.push_str(variant.unwrap_or_default());
+    out.push_str(");\n    }\n\n");
+}
+
 fn write_gas_test(
     out: &mut String,
     index: usize,
@@ -1035,28 +1054,37 @@ fn write_gas_test(
     out.push('_');
     out.push_str(&sanitize(&scenario.name));
     out.push_str("() public {\n");
-    out.push_str("        (address target, uint256 deployGas) = ");
-    out.push_str(&deploy_call(index, artifact, scenario));
-    out.push_str(";\n");
+    // Deployment and measurement are external self-calls, so each runs as its
+    // own isolated transaction; setup calls in between commit separately.
+    out.push_str("        (address target, uint256 deployGas) = this.");
+    out.push_str(&bench_deploy_name(
+        index,
+        deployment_variant_arg(artifact, scenario),
+    ));
+    out.push_str("();\n");
     write_setup(out, "target", &scenario.setup, "setup");
-    write_setup(out, "target", &scenario.warmup, "warmup");
+    out.push_str("        BenchCall[] memory warmup = new BenchCall[](");
+    out.push_str(&scenario.warmup.len().to_string());
+    out.push_str(");\n");
+    for (call_index, call) in scenario.warmup.iter().enumerate() {
+        out.push_str("        warmup[");
+        out.push_str(&call_index.to_string());
+        out.push_str("] = ");
+        write_bench_call(out, call, "target");
+        out.push_str(";\n");
+    }
     out.push_str("        uint256 calldataGas = _calldataGas(");
     out.push_str(&call_data(&scenario.measured, "target"));
     out.push_str(");\n");
-    if harness::supports_log_diff(&artifact.benchmark_id) {
-        out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = _runWithLogs(target, ");
-        out.push_str(call_destination(&scenario.measured, "target"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "target");
-        out.push_str(");\n");
+    out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, ");
+    write_bench_call(out, &scenario.measured, "target");
+    out.push_str(", ");
+    out.push_str(if harness::supports_log_diff(&artifact.benchmark_id) {
+        "true"
     } else {
-        out.push_str("        (bool ok, bytes32 returnHash, uint256 executionGas) = _run(");
-        out.push_str(call_destination(&scenario.measured, "target"));
-        out.push_str(", ");
-        write_call_args(out, &scenario.measured, "target");
-        out.push_str(");\n");
-        out.push_str("        bytes32 logHash = bytes32(0);\n");
-    }
+        "false"
+    });
+    out.push_str(");\n");
     out.push_str("        bytes32 observerHash = _observeAll_");
     out.push_str(&sanitize(&artifact.benchmark_id));
     out.push('_');
@@ -1293,6 +1321,14 @@ fn write_setup(out: &mut String, target: &str, setup: &[CallSpec], label: &str) 
     }
 }
 
+fn write_bench_call(out: &mut String, call: &CallSpec, target: &str) {
+    out.push_str("BenchCall(");
+    out.push_str(call_destination(call, target));
+    out.push_str(", ");
+    write_call_args(out, call, target);
+    out.push(')');
+}
+
 fn write_call_args(out: &mut String, call: &CallSpec, target: &str) {
     out.push_str(&call_data(call, target));
     out.push_str(", ");
@@ -1361,17 +1397,26 @@ fn sol_expr(value: &str, target: &str) -> String {
     }
 }
 
+fn deployment_variant_arg(
+    artifact: &CompiledArtifact,
+    scenario: &Scenario,
+) -> Option<&'static str> {
+    (harness::supports_deployment_variant(&artifact.benchmark_id, scenario.deployment_variant)
+        && scenario.deployment_variant != DeploymentVariant::Standard)
+        .then(|| scenario.deployment_variant.as_solidity_arg())
+}
+
 fn deploy_call(index: usize, artifact: &CompiledArtifact, scenario: &Scenario) -> String {
-    if harness::supports_deployment_variant(&artifact.benchmark_id, scenario.deployment_variant)
-        && scenario.deployment_variant != DeploymentVariant::Standard
-    {
-        format!(
-            "deployArtifact{}({})",
-            index,
-            scenario.deployment_variant.as_solidity_arg()
-        )
-    } else {
-        format!("deployArtifact{}()", index)
+    match deployment_variant_arg(artifact, scenario) {
+        Some(variant) => format!("deployArtifact{index}({variant})"),
+        None => format!("deployArtifact{index}()"),
+    }
+}
+
+fn bench_deploy_name(index: usize, variant: Option<&str>) -> String {
+    match variant {
+        Some(variant) => format!("benchDeploy{index}_{variant}"),
+        None => format!("benchDeploy{index}"),
     }
 }
 

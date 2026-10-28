@@ -1,6 +1,6 @@
 use crate::{
     harness::{property_benchmark_id, supports_deployment_variant, supports_randomized},
-    models::{CallSpec, ScenarioFile, SolArg},
+    models::{CallSpec, ScenarioFile, SolArg, StateAccessProfile},
 };
 use anyhow::{Context, Result, bail};
 use std::{
@@ -83,6 +83,15 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
                 path.display(),
                 scenario.name,
                 file.benchmark_id
+            );
+        }
+        // Measured calls start a fresh transaction, so only warmup calls can
+        // leave state warm for them.
+        if scenario.state_access_profile == StateAccessProfile::Warm && scenario.warmup.is_empty() {
+            bail!(
+                "{} scenario {} is labeled warm but has no warmup calls",
+                path.display(),
+                scenario.name
             );
         }
         if names.insert(scenario.name.clone(), ()).is_some() {
@@ -228,32 +237,51 @@ mod tests {
         assert!(validate_scenario_file(&file, Path::new("counter.yaml")).is_err());
     }
 
-    #[test]
-    fn accepts_minimal_scenario_file() {
-        let file = ScenarioFile {
+    fn read_value() -> CallSpec {
+        CallSpec {
+            data: Some("abi.encodeWithSignature(\"value()\")".to_string()),
+            data_expr: None,
+            function_signature: None,
+            args: Vec::new(),
+            sender: None,
+            value: "0".to_string(),
+            destination: CallDestination::Target,
+        }
+    }
+
+    fn single_scenario_file(
+        state_access_profile: StateAccessProfile,
+        warmup: Vec<CallSpec>,
+    ) -> ScenarioFile {
+        ScenarioFile {
             benchmark_id: "counter".to_string(),
             scenarios: vec![Scenario {
                 name: "read".to_string(),
                 deployment_variant: DeploymentVariant::Standard,
-                state_access_profile: StateAccessProfile::Cold,
+                state_access_profile,
                 setup: vec![],
-                warmup: vec![],
-                measured: CallSpec {
-                    data: Some("abi.encodeWithSignature(\"value()\")".to_string()),
-                    data_expr: None,
-                    function_signature: None,
-                    args: Vec::new(),
-                    sender: None,
-                    value: "0".to_string(),
-                    destination: CallDestination::Target,
-                },
+                warmup,
+                measured: read_value(),
                 expect_success: true,
                 compare_return: true,
                 observers: vec![],
             }],
             randomized: None,
             properties: vec![],
-        };
+        }
+    }
+
+    #[test]
+    fn accepts_minimal_scenario_file() {
+        let file = single_scenario_file(StateAccessProfile::Cold, vec![]);
+        validate_scenario_file(&file, Path::new("counter.yaml")).unwrap();
+    }
+
+    #[test]
+    fn warm_scenarios_require_warmup_calls() {
+        let file = single_scenario_file(StateAccessProfile::Warm, vec![]);
+        assert!(validate_scenario_file(&file, Path::new("counter.yaml")).is_err());
+        let file = single_scenario_file(StateAccessProfile::Warm, vec![read_value()]);
         validate_scenario_file(&file, Path::new("counter.yaml")).unwrap();
     }
 }

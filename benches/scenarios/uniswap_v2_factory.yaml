@@ -9,13 +9,13 @@ scenarios:
       - destination: harness
         data: 'abi.encodeWithSignature("benchUniswapFactoryStateHash(address,address,address)", {target}, BOB, CAROL)'
   - name: set_fee_to
-    state_access_profile: warm
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("setFeeTo(address)", BOB)'
     expect_success: true
     observers: *factory_observers
   - name: set_fee_to_setter
-    state_access_profile: warm
+    state_access_profile: cold
     measured:
       data: 'abi.encodeWithSignature("setFeeToSetter(address)", BOB)'
     expect_success: true

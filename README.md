@@ -28,6 +28,12 @@ Published report: https://evm.banteg.xyz/
 
 Gas is measured through the Foundry internal-call harness. It is useful for
 isolating generated runtime code costs, but it is not end-user transaction gas.
+Forge runs with `--isolate`, so deployment, each setup call, and the measured call
+are separate committed transactions: measured calls see cold storage whose
+original values come from earlier transactions, as a fresh transaction would.
+Only the scenario's `warmup` calls share the measured call's transaction, and a
+scenario labeled `warm` must have them. SSTORE refunds are still not credited,
+because gas is read with `gasleft()` around the internal call.
 
 ## Repository layout
 

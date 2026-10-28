@@ -24,7 +24,7 @@ scenarios:
       - data: 'abi.encodeWithSignature("price1CumulativeLast()")'
       - data: 'abi.encodeWithSignature("kLast()")'
   - name: factory_getter
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchUniswapInit(address,bool)", {target}, false)'
