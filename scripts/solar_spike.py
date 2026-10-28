@@ -295,7 +295,7 @@ def summarize():
             continue
         gas.extend(rows)
         passed.append(status["benchmark"])
-        for path in (run / "foundry/test").glob("GeneratedBenchShard*.t.sol"):
+        for path in (run / "foundry/test").glob("Generated*Shard*.t.sol"):
             for name in re.findall(r"function (test\w+)\(", path.read_text()):
                 category = next((k for prefix, k in [("testGas", "gas"), ("testDiff", "differential"),
                                                      ("testRandom", "randomized"), ("testProperty", "property")]
