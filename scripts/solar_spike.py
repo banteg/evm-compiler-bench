@@ -51,9 +51,9 @@ def prepare():
     rows = json.loads((ROOT / "results/normalized/results.json").read_text())
     selected = {}
     for row in rows:
-        if row["profile_id"] == "solc-latest-viair-runs200":
+        if row["profile_id"] == "solc-0.8.36-viair-runs200":
             selected.setdefault(row["benchmark_id"], row)
-    assert len(selected) == 64, "Generate the complete baseline matrix first"
+    assert selected.keys() == {row["benchmark_id"] for row in rows}, "Generate the complete baseline matrix first"
     cases = []
     for bench, row in sorted(selected.items()):
         assert row["compiler"]["version"] == "0.8.36"

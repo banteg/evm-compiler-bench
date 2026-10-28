@@ -253,6 +253,19 @@ fn write_static_report_ui(
             "report-ui/dist/index.html is missing; run `npm --prefix report-ui run build`"
         );
     }
+    // The report is regenerated as a whole; keep only the tracked placeholder.
+    for entry in fs::read_dir(reports_dir)? {
+        let path = entry?.path();
+        if path.file_name() == Some(".gitkeep".as_ref()) {
+            continue;
+        }
+        if path.is_dir() {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        }
+        .with_context(|| format!("removing stale {}", path.display()))?;
+    }
     copy_dir_contents(&dist_dir, reports_dir)?;
     let model_json = serde_json::to_string(model)?;
     fs::write(reports_dir.join("report-model.json"), &model_json)?;

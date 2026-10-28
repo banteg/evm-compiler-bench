@@ -27,5 +27,5 @@ jobs:
           cache-dependency-path: report-ui/package-lock.json
       - run: npm --prefix report-ui ci
       - run: npm --prefix report-ui test
-      - run: node --test scripts/publish-policy.test.mjs
+      - run: node --test scripts/publish-policy.test.mjs worker/index.test.mjs
       - run: npm --prefix report-ui run build
