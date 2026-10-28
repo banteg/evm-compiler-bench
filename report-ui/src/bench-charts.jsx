@@ -21,9 +21,11 @@ import React from "react";
     return [ref, w];
   }
 
+  const TONE_FILL = { good: 'var(--accent)', bad: 'var(--bad)', tie: 'var(--fg-4)' };
+
   // === ScenarioDeltaChart — horizontal bar chart of per-scenario delta% ===
   // rows: [{label, suite, deltaPct}], limit: max bars
-  function ScenarioDeltaChart({ rows, height = 360, limit = 80 }){
+  function ScenarioDeltaChart({ rows, tieBand, height = 360, limit = 80 }){
     const [ref, width] = useContainerWidth(900);
     const data = rows.slice(0, limit);
     if (!data.length) return React.createElement('div', { className: 'placeholder' }, 'No comparable scenarios.');
@@ -68,7 +70,7 @@ import React from "react";
           const y = padT + i * rowH + 1;
           const bw = Math.abs(xScale(d.deltaPct));
           const xs = d.deltaPct >= 0 ? xZero : xZero - bw;
-          const tone = d.deltaPct < -2 ? 'var(--accent)' : d.deltaPct > 2 ? 'var(--bad)' : 'var(--fg-4)';
+          const tone = TONE_FILL[Bench.pctTone(d.deltaPct, tieBand)];
           const labelLimit = compact ? 22 : 44;
           return React.createElement('g', { key: 'b'+i },
             // label
@@ -91,7 +93,7 @@ import React from "react";
   // points: [{version, versionKey, config, deltaPct, profile, label, comparable}]
   function EvolutionChart({ points, language, height = 240 }){
     const [ref, width] = useContainerWidth(540);
-    const pts = points.filter(p => p.language === language && !p.venom);
+    const pts = points.filter(p => p.language === language);
     // Group by config
     const byConfig = new Map();
     for (const p of pts){
@@ -211,28 +213,29 @@ import React from "react";
     );
   }
 
-  // ScaleChart: picks a canonical scenario per family to avoid mixing curves.
-  const FAMILY_SCENARIO = {
-    'abi_args_N': 'sum_args',
-    'dispatch_N': 'last_selector',
-    'events_N': 'emit_many',
-    'external_calls_N': 'call_many',
-    'loop_bound_N': 'run_loop',
-    'mapping_depth_N': 'read_after_write',
-    'storage_slots_N': 'write_all',
+  // Canonical scenarios per scale family, in preference order, so a curve never mixes
+  // scenarios at one N. Later entries stand in where an earlier one is not generated:
+  // dispatch_N has no last_selector at N=1, where the first selector is also the last.
+  const FAMILY_SCENARIOS = {
+    'dispatch_N': ['last_selector', 'first_selector'],
+    'storage_slots_N': ['write_all'],
+    'mapping_depth_N': ['read_after_write'],
+    'abi_args_N': ['sum_args'],
+    'loop_bound_N': ['run_loop'],
+    'events_N': ['emit_many'],
+    'external_calls_N': ['call_many'],
   };
-  function ScaleChart({ family, metric, profiles, height = 180 }){
+  function scaleFamilyRows(family){
+    const rows = Bench.D.rows.filter(r => r.family === family && r.status === 'ok');
+    return Bench.preferredScenarioRows(rows, FAMILY_SCENARIOS[family]);
+  }
+  // rows: one family's rows from scaleFamilyRows
+  function ScaleChart({ rows, metric, profiles, height = 180 }){
     const [ref, width] = useContainerWidth(360);
     const padL = 40, padR = 12, padT = 14, padB = 26;
     const innerW = Math.max(80, width - padL - padR);
     const innerH = height - padT - padB;
 
-    // Filter rows by canonical scenario only, no aggregation needed
-    const scenario = FAMILY_SCENARIO[family];
-    const rows = Bench.D.rows.filter(r =>
-      r.family === family && r.status === 'ok' &&
-      (!scenario || r.gas?.scenario === scenario)
-    );
     const series = new Map();
     for (const r of rows){
       if (!profiles.includes(r.profile_id)) continue;
@@ -249,8 +252,9 @@ import React from "react";
 
     const xMin = Math.min(...allX), xMax = Math.max(...allX);
     const yMin = 0, yMax = Math.max(...allY) * 1.06;
-    // log-x for scale (1..64)
-    const xOf = v => padL + (Math.log(v) - Math.log(xMin)) / (Math.log(xMax) - Math.log(xMin)) * innerW;
+    // log-x for scale (1..64); a single N sits in the middle
+    const xOf = v => padL + (xMax === xMin ? innerW / 2
+      : (Math.log(v) - Math.log(xMin)) / (Math.log(xMax) - Math.log(xMin)) * innerW);
     const yOf = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
 
     const palette = {
@@ -302,7 +306,7 @@ import React from "react";
   }
 
   // === DeltaHistogram — distribution of deltas as a small histogram ===
-  function DeltaHistogram({ rows, height = 70 }){
+  function DeltaHistogram({ rows, tieBand, height = 70 }){
     const [ref, width] = useContainerWidth(400);
     if (!rows.length) return React.createElement('div', { ref });
     const padL = 0, padR = 0, padT = 4, padB = 16;
@@ -328,7 +332,7 @@ import React from "react";
         }),
         counts.map((c, i) => {
           const center = -niceMax + (i + 0.5) / bins * 2 * niceMax;
-          const tone = center < -2 ? 'var(--accent)' : center > 2 ? 'var(--bad)' : 'var(--fg-4)';
+          const tone = TONE_FILL[Bench.pctTone(center, tieBand)];
           const bh = (c / maxC) * innerH;
           return React.createElement('rect', {
             key: i,
@@ -348,5 +352,5 @@ import React from "react";
     );
   }
 
-  window.BenchCharts = { ScenarioDeltaChart, EvolutionChart, ScaleChart, DeltaHistogram, FAMILY_SCENARIO };
+  window.BenchCharts = { ScenarioDeltaChart, EvolutionChart, ScaleChart, DeltaHistogram, FAMILY_SCENARIOS, scaleFamilyRows };
 })();

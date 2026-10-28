@@ -130,6 +130,19 @@
     return out.sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
   }
 
+  // For each parameter value, keep the rows of the first scenario in `scenarios` measured there.
+  function preferredScenarioRows(rows, scenarios){
+    const rank = r => scenarios.indexOf(r.gas?.scenario);
+    const best = new Map();
+    for (const r of rows){
+      const i = rank(r);
+      if (i < 0) continue;
+      const current = best.get(r.parameter_value);
+      if (current == null || i < current) best.set(r.parameter_value, i);
+    }
+    return rows.filter(r => rank(r) === best.get(r.parameter_value));
+  }
+
   function profilePairCompileCoverage(rows, pa, pb, suiteSet){
     const profiles = new Map([
       [pa, { attempted: new Set(), passed: new Set() }],
@@ -369,6 +382,8 @@
     const ids = new Set(D.profiles.map(p => p.id));
     const out = [];
     for (const p of D.profiles){
+      // Version curves track the default codegen; Venom stays in the comparator.
+      if (p.experimental_codegen) continue;
       const runs = profileOptimizerRuns(p);
       if (p.language === 'solidity' && runs != null && runs !== 200) continue;
       if (p.language === 'vyper' && profileOptimizer(p) === 'default') {
@@ -376,7 +391,7 @@
           candidate.language === 'vyper'
           && profileVersionKey(candidate) === profileVersionKey(p)
           && profileOptimizer(candidate) === 'none'
-          && !!candidate.experimental_codegen === !!p.experimental_codegen
+          && !candidate.experimental_codegen
         );
         if (hasExplicitNone) continue;
       }
@@ -389,7 +404,6 @@
       out.push({
         language: p.language,
         config: versionAxisConfig(p),
-        venom: !!p.experimental_codegen,
         profile: p.id,
         label: profileDisplayLabel(p),
         baseline,
@@ -422,16 +436,16 @@
     if (Math.abs(v) >= 100) return v.toFixed(0);
     return v.toFixed(v % 1 === 0 ? 0 : 2);
   }
-  function deltaTone(ratio, tieBand = 0.02){
+  function deltaTone(ratio, tieBand){
     if (ratio == null || !isFinite(ratio)) return 'tie';
     if (ratio < 1 - tieBand) return 'good';
     if (ratio > 1 + tieBand) return 'bad';
     return 'tie';
   }
-  function pctTone(pct, tieBand = 2){
+  function pctTone(pct, tieBand){
     if (pct == null || !isFinite(pct)) return 'tie';
-    if (pct < -tieBand) return 'good';
-    if (pct > tieBand) return 'bad';
+    if (pct < -tieBand * 100) return 'good';
+    if (pct > tieBand * 100) return 'bad';
     return 'tie';
   }
 
@@ -654,7 +668,7 @@
     METRICS, SUITES,
     valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
     hasCorrectnessFailure, isComparableArtifact, correctnessFailureGroups,
-    compareProfiles, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
+    compareProfiles, preferredScenarioRows, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,
     profileOptimizer, resolveProfile, defaultProfileForLanguage, defaultProfileForCompiler,
     profileCompilerKey, compilerOptions,
