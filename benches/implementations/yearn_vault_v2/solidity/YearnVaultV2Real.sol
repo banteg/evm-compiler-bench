@@ -169,9 +169,16 @@ contract YearnVaultV2Real {
     ) internal {
         require(activation == 0, "initialized");
         token = token_;
-        string memory baseSymbol = YearnV2ERC20(token_).symbol();
-        name = bytes(nameOverride).length == 0 ? string(abi.encodePacked(baseSymbol, " yVault")) : nameOverride;
-        symbol = bytes(symbolOverride).length == 0 ? string(abi.encodePacked("yv", baseSymbol)) : symbolOverride;
+        if (bytes(nameOverride).length == 0) {
+            name = string(abi.encodePacked(YearnV2ERC20(token_).symbol(), " yVault"));
+        } else {
+            name = nameOverride;
+        }
+        if (bytes(symbolOverride).length == 0) {
+            symbol = string(abi.encodePacked("yv", YearnV2ERC20(token_).symbol()));
+        } else {
+            symbol = symbolOverride;
+        }
         uint256 decimals_ = YearnV2ERC20(token_).decimals();
         require(decimals_ < 256, "decimals");
         decimals = decimals_;
@@ -286,19 +293,26 @@ contract YearnVaultV2Real {
 
     function setWithdrawalQueue(address[MAXIMUM_STRATEGIES] calldata queue) external {
         require(msg.sender == governance || msg.sender == management);
-        address[MAXIMUM_STRATEGIES] memory oldQueue = withdrawalQueue;
+        address[MAXIMUM_STRATEGIES] memory oldQueue;
         for (uint256 i = 0; i < MAXIMUM_STRATEGIES; i++) {
+            oldQueue[i] = withdrawalQueue[i];
             if (queue[i] == address(0)) {
                 require(oldQueue[i] == address(0), "cannot remove");
                 break;
             }
             require(oldQueue[i] != address(0), "new strategy");
+            require(strategies[queue[i]].activation > 0, "inactive");
             bool existsInOldQueue;
             for (uint256 j = 0; j < MAXIMUM_STRATEGIES; j++) {
-                if (queue[j] == address(0)) break;
-                if (queue[i] == oldQueue[j]) {
+                if (queue[j] == address(0)) {
                     existsInOldQueue = true;
                     break;
+                }
+                if (queue[i] == oldQueue[j]) {
+                    existsInOldQueue = true;
+                }
+                if (j > i) {
+                    require(queue[i] != queue[j], "duplicate");
                 }
             }
             require(existsInOldQueue, "unknown strategy");
@@ -382,11 +396,11 @@ contract YearnVaultV2Real {
         return totalIdle + totalDebt;
     }
 
-    function deposit() external returns (uint256) {
+    function deposit() external nonReentrant returns (uint256) {
         return _deposit(type(uint256).max, msg.sender);
     }
 
-    function deposit(uint256 amount) external returns (uint256) {
+    function deposit(uint256 amount) external nonReentrant returns (uint256) {
         return _deposit(amount, msg.sender);
     }
 
@@ -450,24 +464,24 @@ contract YearnVaultV2Real {
     }
 
     function maxAvailableShares() external view returns (uint256) {
-        uint256 value = totalIdle;
+        uint256 shares = _sharesForAmount(totalIdle);
         for (uint256 i = 0; i < MAXIMUM_STRATEGIES; i++) {
             address strategy = withdrawalQueue[i];
             if (strategy == address(0)) break;
-            value += strategies[strategy].totalDebt;
+            shares += _sharesForAmount(strategies[strategy].totalDebt);
         }
-        return _sharesForAmount(value);
+        return shares;
     }
 
-    function withdraw() external returns (uint256) {
+    function withdraw() external nonReentrant returns (uint256) {
         return _withdraw(type(uint256).max, msg.sender, 1);
     }
 
-    function withdraw(uint256 maxShares) external returns (uint256) {
+    function withdraw(uint256 maxShares) external nonReentrant returns (uint256) {
         return _withdraw(maxShares, msg.sender, 1);
     }
 
-    function withdraw(uint256 maxShares, address recipient) external returns (uint256) {
+    function withdraw(uint256 maxShares, address recipient) external nonReentrant returns (uint256) {
         return _withdraw(maxShares, recipient, 1);
     }
 
@@ -479,13 +493,15 @@ contract YearnVaultV2Real {
         require(maxLoss <= MAX_BPS, "max loss");
         uint256 shares = maxShares == type(uint256).max ? balanceOf[msg.sender] : maxShares;
         require(shares <= balanceOf[msg.sender], "shares");
+        require(shares > 0, "zero shares");
         value = _shareValue(shares);
-        if (value > totalIdle) {
+        uint256 vaultBalance = totalIdle;
+        if (value > vaultBalance) {
             uint256 totalLoss;
-            uint256 vaultBalance = totalIdle;
             for (uint256 i = 0; i < MAXIMUM_STRATEGIES; i++) {
                 address strategy = withdrawalQueue[i];
                 if (strategy == address(0)) break;
+                if (value <= vaultBalance) break;
                 uint256 amountNeeded = value - vaultBalance;
                 amountNeeded = _min(amountNeeded, strategies[strategy].totalDebt);
                 if (amountNeeded == 0) continue;
@@ -501,10 +517,13 @@ contract YearnVaultV2Real {
                 strategies[strategy].totalDebt -= withdrawn;
                 totalDebt -= withdrawn;
                 emit WithdrawFromStrategy(strategy, strategies[strategy].totalDebt, loss);
-                if (vaultBalance >= value) break;
+            }
+            totalIdle = vaultBalance;
+            if (value > vaultBalance) {
+                value = vaultBalance;
+                shares = _sharesForAmount(value + totalLoss);
             }
             require(totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS, "loss");
-            totalIdle = vaultBalance;
         }
         totalSupply -= shares;
         balanceOf[msg.sender] -= shares;
@@ -594,8 +613,6 @@ contract YearnVaultV2Real {
         require(newVersion != address(0), "new");
         require(strategies[oldVersion].activation > 0, "old");
         require(strategies[newVersion].activation == 0, "new active");
-        require(YearnV2Strategy(newVersion).vault() == address(this), "vault");
-        require(YearnV2Strategy(newVersion).want() == token, "want");
         StrategyParams memory strategy = strategies[oldVersion];
         _revokeStrategy(oldVersion);
         debtRatio += strategy.debtRatio;
@@ -612,20 +629,23 @@ contract YearnVaultV2Real {
             totalLoss: 0
         });
         YearnV2Strategy(oldVersion).migrate(newVersion);
+        emit StrategyMigrated(oldVersion, newVersion);
         for (uint256 i = 0; i < MAXIMUM_STRATEGIES; i++) {
             if (withdrawalQueue[i] == oldVersion) {
                 withdrawalQueue[i] = newVersion;
+                return;
             }
         }
-        emit StrategyMigrated(oldVersion, newVersion);
     }
 
     function revokeStrategy() external {
+        require(strategies[msg.sender].debtRatio != 0, "already zero");
         _revokeStrategy(msg.sender);
     }
 
     function revokeStrategy(address strategy) external {
-        require(msg.sender == governance || msg.sender == guardian || msg.sender == strategy, "auth");
+        require(msg.sender == strategy || msg.sender == governance || msg.sender == guardian, "auth");
+        require(strategies[strategy].debtRatio != 0, "already zero");
         _revokeStrategy(strategy);
     }
 
@@ -785,15 +805,14 @@ contract YearnVaultV2Real {
 
     function _reportLoss(address strategy, uint256 loss) internal {
         uint256 strategyDebt = strategies[strategy].totalDebt;
-        if (loss > strategyDebt) {
-            loss = strategyDebt;
-        }
-        if (totalDebt > 0) {
-            uint256 ratioChange = loss * debtRatio / totalDebt;
+        require(strategyDebt >= loss, "loss");
+        if (debtRatio != 0) {
+            uint256 ratioChange = _min(loss * debtRatio / totalDebt, strategies[strategy].debtRatio);
+            strategies[strategy].debtRatio -= ratioChange;
             debtRatio -= ratioChange;
         }
         strategies[strategy].totalLoss += loss;
-        strategies[strategy].totalDebt -= loss;
+        strategies[strategy].totalDebt = strategyDebt - loss;
         totalDebt -= loss;
     }
 
