@@ -214,7 +214,7 @@ scenarios:
     observers:
       - data: 'abi.encodeWithSignature("allowance(address,address)", benchYearnPermitOwner(), BOB)'
   - name: set_name
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -248,7 +248,7 @@ scenarios:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2QueueIds(address)", {target})'
   - name: set_symbol
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -257,7 +257,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_governance
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -266,7 +266,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: accept_governance
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -277,7 +277,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_management
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -286,7 +286,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_rewards
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -295,7 +295,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_guardian
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -304,7 +304,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_locked_profit_degradation
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -313,7 +313,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_performance_fee
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -322,7 +322,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_management_fee
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -331,7 +331,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: set_withdrawal_queue
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -342,7 +342,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: update_strategy_min_debt_per_harvest
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -352,7 +352,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: update_strategy_max_debt_per_harvest
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -362,7 +362,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: update_strategy_performance_fee
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -385,7 +385,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: revoke_strategy_self
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -396,7 +396,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: credit_available_self
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'
@@ -408,7 +408,7 @@ scenarios:
     expect_success: true
     observers: *yearn_v2_management_observers
   - name: debt_outstanding_self
-    state_access_profile: warm
+    state_access_profile: cold
     setup:
       - destination: harness
         data: 'abi.encodeWithSignature("benchYearnV2Init(address,uint256,uint256)", {target}, uint256(1_000_000), uint256(1000))'

@@ -50,7 +50,8 @@ pub(crate) fn harness_config(root: &Path, evm: &str) -> Result<serde_json::Value
     let output = Command::new("forge")
         .args(["config", "--json", "--root"])
         .arg(root.join("foundry"))
-        .args(["--evm-version", evm, "--via-ir", "--optimize"])
+        .args(["--evm-version", evm])
+        .args(crate::foundry_jobs::HARNESS_FLAGS)
         .output()
         .context("reading effective Foundry harness configuration")?;
     if !output.status.success() {

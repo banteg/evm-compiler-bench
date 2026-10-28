@@ -1361,6 +1361,7 @@ fn public_harness_config(config: &serde_json::Value) -> Result<serde_json::Value
         "optimizer_runs",
         "optimizer_details",
         "via_ir",
+        "isolate",
         "bytecode_hash",
         "cbor_metadata",
         "revert_strings",
@@ -1535,11 +1536,12 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 mod tests {
     #[test]
     fn published_harness_config_keeps_build_flags_and_excludes_credentials() {
-        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true,
+        let config = serde_json::json!({"solc":"0.8.34", "optimizer":true, "isolate":true,
             "etherscan_api_key":"private-account-key", "rpc_endpoints":{"mainnet":"private-rpc-token"}});
         let public = super::public_harness_config(&config).unwrap();
         assert_eq!(public["solc"], "0.8.34");
         assert_eq!(public["optimizer"], true);
+        assert_eq!(public["isolate"], true);
         assert!(public["config_sha256"].as_str().is_some());
         assert!(public.get("etherscan_api_key").is_none());
         assert!(public.get("rpc_endpoints").is_none());
