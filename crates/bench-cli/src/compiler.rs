@@ -2479,8 +2479,8 @@ mod tests {
             solidity_pragma_for_toolchain(&compiler).unwrap(),
             "pragma solidity >=0.8.36 <0.9.0;"
         );
-        let mut p = profile("solar-716e9cbc-gas-runs200", Language::Solidity);
-        p.compiler = "solar-716e9cbcde88165f931173f1c1fda852ed63afa0".into();
+        let mut p = profile("solar-cb38e986-gas-runs200", Language::Solidity);
+        p.compiler = "solar-cb38e98632eebdf6c5bb60a792b83320c1312b28".into();
         p.optimizer = true;
         for (mode, runs) in [("gas", 200), ("size", 1)] {
             p.optimizer_mode = Some(mode.into());

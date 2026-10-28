@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn solar_compares_by_compatibility_and_never_becomes_a_solc_baseline() {
         use crate::test_support::artifact;
-        let mut solar = artifact("solar", "solar-716e9cbc-gas-runs200");
+        let mut solar = artifact("solar", "solar-cb38e986-gas-runs200");
         solar.compiler.version = "0.2.0".into();
         solar
             .compiler

@@ -97,9 +97,9 @@ const METRICS = Bench.METRICS;
 const SOL_LEGACY = 'solc-latest-legacy-runs200';
 const SOL_VIAIR = 'solc-latest-viair-runs200';
 const SOL_NOOPT = 'solc-latest-noopt';
-const SOLAR_GAS = 'solar-716e9cbc-gas-runs200';
-const SOLAR_SIZE = 'solar-716e9cbc-size-runs1';
-const SOLAR_BASELINE = 'solc-0.8.36-viair-runs200';
+const SOLAR_GAS = 'solar-cb38e986-gas-runs200';
+const SOLAR_SIZE = 'solar-cb38e986-size-runs1';
+const SOLAR_BASELINE = 'solc-0.8.38-viair-runs200';
 const SOLX_O3 = 'solx-0.1.8-O3';
 const SOLX_OZ = 'solx-0.1.8-Oz';
 const SOLX_BASELINE = 'solc-0.8.34-viair-runs200';
@@ -151,7 +151,7 @@ function buildHeadlines() {
 }
 
 const HEADLINES = buildHeadlines();
-const REPORT_VERSION = 'v4';
+const REPORT_VERSION = 'v5';
 
 // ============================================================
 // Top bar
@@ -203,7 +203,7 @@ function Hero() {
     React.createElement('p', { className: 'hero-lede' },
       'Compare solc, Solar, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
       React.createElement('strong', null, s.ok_rows.toLocaleString()),
-      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v4: Solar’s Rust compiler, pinned at 716e9cbc, with Solidity 0.8.36 comparison profiles.'
+      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v5: each measured call runs as its own transaction, reentrancy locks are transient in every language, and the matrix adds solc 0.8.38, Fe 26.5.0, and Solar at cb38e986.'
     ),
 
     React.createElement('div', { className: 'hero-strip' },
@@ -258,13 +258,13 @@ function FindingsGrid() {
     : `${(coverage.passRate * 100).toFixed(1)}%`;
   const cards = [
     {
-      tag: 'New · Solar',
+      tag: 'Solar',
       span: 6, headline: 'A new compiler, the same Solidity source.',
-      body: `${Bench.profileLabel(SOLAR_GAS)} gives ${lowerHigher(HEADLINES.solarGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solarSize.geomean, 'runtime bytecode')} against solc 0.8.36 viaIR / runs 200 on identical materialized sources. Solar has its own Rust frontend and EVM code generator.`,
+      body: `${Bench.profileLabel(SOLAR_GAS)} gives ${lowerHigher(HEADLINES.solarGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.solarSize.geomean, 'runtime bytecode')} against ${Bench.profileLabel(SOLAR_BASELINE)} on identical materialized sources. Solar has its own Rust frontend and EVM code generator.`,
       stat: HEADLINES.solarGas, statLabel: 'runtime gas (Solar gas vs matched solc viaIR)',
       altStat: HEADLINES.solarSize, altLabel: 'runtime bytes',
     }, {
-      tag: 'New · Solar size',
+      tag: 'Solar size',
       span: 6, headline: 'Two optimizer modes, visible tradeoffs.',
       body: `Solar size / runs 1 gives ${lowerHigher(HEADLINES.solarSizeMode.geomean, 'runtime bytecode')} than solc viaIR / runs 200. Size mode can increase both gas and bytecode on individual workloads; use the gas-versus-size preset to inspect the tradeoff.`,
       stat: HEADLINES.solarSizeMode, statLabel: 'runtime bytes (Solar size vs matched solc viaIR)',
@@ -1292,8 +1292,8 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
   const unit = Bench.comparisonUnit(metric);
 
   const presets = [
-    [SOLAR_BASELINE, SOLAR_GAS, 'solc 0.8.36 vs Solar gas'],
-    [SOLAR_BASELINE, SOLAR_SIZE, 'solc 0.8.36 vs Solar size'],
+    [SOLAR_BASELINE, SOLAR_GAS, 'solc 0.8.38 vs Solar gas'],
+    [SOLAR_BASELINE, SOLAR_SIZE, 'solc 0.8.38 vs Solar size'],
     [SOLAR_GAS, SOLAR_SIZE, 'Solar gas vs size'],
     [SOLX_BASELINE,    SOLX_O3,          'solc 0.8.34 vs solx O3'],
     [SOLX_BASELINE,    SOLX_OZ,          'solc 0.8.34 vs solx Oz'],
@@ -1763,7 +1763,7 @@ function SectionScale({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 05 · Cost vs. shape of the contract'),
         React.createElement('div', { className: 'section-title' }, 'How the metric scales with structural N.'),
-        React.createElement('div', { className: 'section-sub' }, 'Compare selector dispatch, storage, ABI, loops, events, and external calls as each contract grows. Solar and solx curves include their matched Solidity 0.8.36 and 0.8.34 solc comparison profiles.')
+        React.createElement('div', { className: 'section-sub' }, 'Compare selector dispatch, storage, ABI, loops, events, and external calls as each contract grows. Solar and solx curves include their matched Solidity 0.8.38 and 0.8.34 solc comparison profiles.')
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),

@@ -352,7 +352,7 @@
     return D.profiles.find(p => p.language === lang)?.id ?? D.profiles[0].id;
   }
   function defaultProfileForCompiler(compiler){
-    const pref = {solc: 'solc-latest-viair-runs200', solx: 'solx-0.1.8-O3', solar: 'solar-716e9cbc-gas-runs200', vyper: 'vyper-latest-gas', fe: 'fe-latest-O2'}[compiler];
+    const pref = {solc: 'solc-latest-viair-runs200', solx: 'solx-0.1.8-O3', solar: 'solar-cb38e986-gas-runs200', vyper: 'vyper-latest-gas', fe: 'fe-latest-O2'}[compiler];
     return D.profiles.find(p => p.id === pref)?.id
       ?? D.profiles.find(p => profileCompilerKey(p) === compiler)?.id ?? D.profiles[0].id;
   }

@@ -23,7 +23,7 @@ Published report: https://evm.banteg.xyz/
 - Compiler version axes: historical solc and Vyper profiles, current latest
   profiles, the latest Vyper prerelease (currently 0.5.0b1), and Vyper Venom via `--experimental-codegen`.
 - Solidity compiler axis: Solar gas/runs200 and size/runs1 at pinned revision
-  716e9cbc, matched solc 0.8.36 legacy/viaIR profiles; plus solx 0.1.8 with LLVM O3/Oz, alongside matched
+  cb38e986, matched solc 0.8.38 legacy/viaIR profiles; plus solx 0.1.8 with LLVM O3/Oz, alongside matched
   solc 0.8.34 legacy/via-IR profiles and the existing solc version matrix.
 
 Gas is measured through the Foundry internal-call harness. It is useful for
@@ -75,10 +75,10 @@ build reporting that release. Overrides record the actual binary hash but are
 not authenticated against an upstream checksum. The shared EVM target is
 probed against the selected Solar and solx binaries as well as solc and Vyper.
 
-Solar profiles pin commit `716e9cbcde88165f931173f1c1fda852ed63afa0`,
+Solar profiles pin commit `cb38e98632eebdf6c5bb60a792b83320c1312b28`,
 which is newer than the published v0.2.0 release. The resolver fetches that
 commit into `.cache/toolchains/solar`, requires a clean checkout, installs
-Rust 1.96.0 with rustup, and builds `solar-compiler` using `--release --locked`
+the `rust-version` its workspace declares (1.98) with rustup, and builds `solar-compiler` using `--release --locked`
 and the Rust host target. Git, rustup, and platform C build tools are required
 on the first run. Cached binaries are checked against their build receipt.
 `EVM_BENCH_SOLAR=<path>` accepts an existing binary only if its reported full
@@ -86,11 +86,11 @@ commit matches; overrides record their actual binary hash.
 
 Solar gas uses Standard JSON `optimizer: {enabled: true, runs: 200}`;
 size uses runs 1. Both use `--threads 1`. Package version 0.2.0, full source
-revision, and Solidity compatibility 0.8.36 are recorded independently;
-Solar does not embed solc. Matched solc 0.8.36 profiles use the same materialized
+revision, and Solidity compatibility 0.8.38 are recorded independently;
+Solar does not embed solc. Matched solc 0.8.38 profiles use the same materialized
 sources. Main-matrix compile measurements use the resolved executables on the
 recorded host (including any mixed architectures); the spike's repeated timing
-experiment explicitly runs both compilers as x86-64 on this Apple Silicon host.
+experiment (v4, revision 716e9cbc) explicitly ran both compilers as x86-64 on an Apple Silicon host.
 
 The Foundry measurement harness pins solc 0.8.34, separately from every compiler
 under test. Gas and behavior cache keys include the effective Foundry configuration
