@@ -39,6 +39,7 @@ test('run objects are served from their own metadata without reading the channel
   assert.equal(response.headers.get('content-encoding'), 'br');
   assert.equal(response.headers.get('vary'), 'Accept-Encoding');
   assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable, no-transform');
+  assert.equal(response.headers.get('strict-transport-security'), 'max-age=31536000; includeSubDomains');
 });
 
 test('unencoded run objects keep transformable caching', async () => {
@@ -58,5 +59,13 @@ test('plain HTTP redirects to HTTPS except on loopback hosts', async () => {
     const local = await worker.fetch(new Request(`${origin}/`), env);
     assert.equal(local.status, 200, origin);
     assert.equal(await local.text(), 'asset');
+  }
+});
+
+test('data and asset responses carry HSTS', async () => {
+  const env = environment({});
+  for (const path of ['/latest.json', '/runs/missing.json', '/']) {
+    const response = await worker.fetch(new Request(`https://evm.example${path}`), env);
+    assert.equal(response.headers.get('strict-transport-security'), 'max-age=31536000; includeSubDomains', path);
   }
 });
