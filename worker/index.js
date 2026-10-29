@@ -79,7 +79,10 @@ function objectResponse(object, cacheControl, artifact = {}) {
   headers.set("etag", object.httpEtag);
   headers.set("cache-control", cacheControl);
   headers.set("x-r2-key", object.key);
-  return new Response(object.body, { headers });
+  // Encoded objects are stored compressed; without "manual" the runtime would
+  // compress the body again under the same content-encoding.
+  const encodeBody = headers.has("content-encoding") ? "manual" : "automatic";
+  return new Response(object.body, { headers, encodeBody });
 }
 
 async function serveArtifact(env, artifactName, url) {

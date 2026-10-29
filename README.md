@@ -187,8 +187,9 @@ benchmark run, the most useful local files are:
 The report model carries the methodology notes and real-derived source policy
 used by the UI, including the rule that compiled source variants come from
 `target/bench-source-variants/<profile_id>/...` while upstream files remain
-provenance references. Its public shape is documented in
-`schemas/report_model.schema.json`.
+provenance references. Rows refer to deduplicated provenance and compiler
+records in `lookups` by index; `results.json` keeps every field inline. Its
+public shape is documented in `schemas/report_model.schema.json`.
 
 Build the static report:
 

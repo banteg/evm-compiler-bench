@@ -36,7 +36,10 @@ mkdirSync(publishDir, { recursive: true });
 const localFiles = new Map();
 
 const artifacts = {
-  report_model: artifact("report-model.json", paths.reportModel, "application/json; charset=utf-8", false),
+  // The browser loads the report model on every cold visit; store it brotli-encoded
+  // so the worker streams a few MB instead of the edge compressing it per request.
+  // Data downloads stay identity-encoded for clients that cannot decode brotli.
+  report_model: artifact("report-model.json", paths.reportModel, "application/json; charset=utf-8", true),
   results: artifact("results.json", paths.results, "application/json; charset=utf-8", false),
   run_manifest: artifact("run-manifest.json", paths.runManifest, "application/json; charset=utf-8", false),
   foundry_gas: artifact("foundry-gas.jsonl", paths.foundryGas, "application/x-ndjson; charset=utf-8", false),

@@ -609,9 +609,9 @@
     const groups = new Map();
     for (const row of D.rows){
       if (row.status === 'ok') continue;
-      const profile = profileById(row.profile_id);
       const reason = failureReason(row.compile?.error);
-      const compiler = profile?.compiler_name || row.compiler?.name || row.language;
+      // Report profiles are derived from the rows, so every row has one.
+      const compiler = profileById(row.profile_id).compiler_name;
       const key = `${compiler}|${reason}`;
       if (!groups.has(key)) {
         groups.set(key, {

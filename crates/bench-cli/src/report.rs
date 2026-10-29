@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use serde_json::json;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     env, fs,
     path::{Path, PathBuf},
     process::Command,
@@ -24,6 +24,11 @@ const FE_CODEGEN_BASELINE: &str = "fe-latest-O2";
 const VYPER_GAS_VENOM_CODEGEN: &str = "vyper-latest-gas-venom";
 const VYPER_PRERELEASE_GAS_CODEGEN: &str = "vyper-prerelease-gas";
 const SCORECARD_TIE_BAND: f64 = 0.02;
+/// Row fields that repeat across thousands of rows. The report model stores
+/// each distinct value once under `lookups` and rows refer to it by index.
+const LOOKUP_FIELDS: [&str; 2] = ["provenance", "compiler"];
+/// Cache bookkeeping stays in results.json; the report UI does not use it.
+const OMITTED_ROW_FIELDS: [&str; 1] = ["cache"];
 
 pub struct ReportPaths {
     pub normalized_results: PathBuf,
@@ -304,8 +309,9 @@ fn report_model(
     manifest: &serde_json::Value,
 ) -> serde_json::Value {
     let summary = ReportSummary::from_rows(rows);
+    let (compact_rows, lookups) = compact_report_rows(rows);
     json!({
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": Utc::now(),
         "defaults": {
             "primary_metric": "harness_call_gas",
@@ -357,8 +363,47 @@ fn report_model(
         "profiles": report_profiles(rows),
         "benchmarks": report_benchmarks(rows),
         "real_derived_models": report_real_models(rows),
-        "rows": rows
+        "lookups": lookups,
+        "rows": compact_rows
     })
+}
+
+/// Replaces each lookup field with `<field>_ref`, an index into `lookups[field]`.
+fn compact_report_rows(
+    rows: &[serde_json::Value],
+) -> (
+    Vec<serde_json::Value>,
+    BTreeMap<&'static str, Vec<serde_json::Value>>,
+) {
+    let mut lookups: BTreeMap<&'static str, Vec<serde_json::Value>> = BTreeMap::new();
+    let mut indexes: BTreeMap<&'static str, HashMap<String, usize>> = BTreeMap::new();
+    let compact = rows
+        .iter()
+        .map(|row| {
+            let mut row = row
+                .as_object()
+                .expect("report rows are JSON objects")
+                .clone();
+            for field in OMITTED_ROW_FIELDS {
+                row.remove(field);
+            }
+            for field in LOOKUP_FIELDS {
+                let value = row.remove(field).unwrap_or(serde_json::Value::Null);
+                let values = lookups.entry(field).or_default();
+                let index = *indexes
+                    .entry(field)
+                    .or_default()
+                    .entry(value.to_string())
+                    .or_insert_with(|| {
+                        values.push(value);
+                        values.len() - 1
+                    });
+                row.insert(format!("{field}_ref"), index.into());
+            }
+            serde_json::Value::Object(row)
+        })
+        .collect();
+    (compact, lookups)
 }
 
 fn report_methodology() -> serde_json::Value {
@@ -1728,6 +1773,38 @@ mod tests {
         assert!(row["provenance"].is_null());
         if let Err(error) = schemas.validate(&row, index) {
             panic!("{error}");
+        }
+    }
+
+    #[test]
+    fn report_rows_share_lookup_values_and_drop_cache() {
+        let compiler = serde_json::json!({"name": "solc", "settings": {"viaIR": true}});
+        let rows = [
+            serde_json::json!({"profile_id": "a", "provenance": null, "compiler": compiler, "cache": {"gas": {}}}),
+            serde_json::json!({"profile_id": "b", "provenance": {"lane": "x"}, "compiler": compiler, "cache": {}}),
+            serde_json::json!({"profile_id": "c", "provenance": null, "compiler": {"name": "vyper"}}),
+        ];
+        let (compact, lookups) = super::compact_report_rows(&rows);
+        assert_eq!(
+            lookups["provenance"],
+            [serde_json::Value::Null, serde_json::json!({"lane": "x"})]
+        );
+        assert_eq!(
+            lookups["compiler"],
+            [compiler, serde_json::json!({"name": "vyper"})]
+        );
+        let refs: Vec<_> = compact
+            .iter()
+            .map(|row| (row["provenance_ref"].as_u64(), row["compiler_ref"].as_u64()))
+            .collect();
+        assert_eq!(
+            refs,
+            [(Some(0), Some(0)), (Some(1), Some(0)), (Some(0), Some(1))]
+        );
+        for row in &compact {
+            for field in ["provenance", "compiler", "cache"] {
+                assert!(row.get(field).is_none());
+            }
         }
     }
 

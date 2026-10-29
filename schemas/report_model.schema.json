@@ -38,6 +38,7 @@
     "profiles",
     "benchmarks",
     "real_derived_models",
+    "lookups",
     "rows"
   ],
   "properties": {
@@ -158,6 +159,25 @@
         }
       }
     },
-    "rows": { "type": "array", "items": { "type": "object" } }
+    "lookups": {
+      "description": "Distinct values of repeated row fields; each row refers to them by index as <field>_ref.",
+      "type": "object",
+      "required": ["provenance", "compiler"],
+      "properties": {
+        "provenance": { "type": "array", "items": { "type": ["object", "null"] } },
+        "compiler": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provenance_ref", "compiler_ref"],
+        "properties": {
+          "provenance_ref": { "type": "integer", "minimum": 0 },
+          "compiler_ref": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
   }
 }

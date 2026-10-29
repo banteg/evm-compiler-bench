@@ -13,10 +13,7 @@ const model = JSON.parse(fs.readFileSync(inputPath, "utf8"));
 // Per-row evidence the report UI never reads; it dominates the model size.
 const EVIDENCE_FIELDS = new Set([
   "behavior",
-  "cache",
-  "compiler",
   "generated",
-  "provenance",
   "source_hash",
   "source_path",
 ]);
