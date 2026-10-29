@@ -822,10 +822,12 @@ fn validate_report_model(
         "/methodology/source_model",
         "/methodology/notes",
         "/real_derived_models",
+        "/lookups",
         "/rows",
     ] {
         require_json_pointer(value, pointer, path)?;
     }
+    validate_report_lookups(value, path)?;
     validate_report_methodology(value, path)?;
     let manifest = value
         .pointer("/manifest")
@@ -840,6 +842,32 @@ fn validate_report_model(
             "{} report real_derived_models compiled_sources do not match embedded manifest source_variants",
             path.display()
         );
+    }
+    Ok(())
+}
+
+fn validate_report_lookups(value: &Value, path: &Path) -> Result<()> {
+    let rows = value
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .with_context(|| format!("{} rows must be an array", path.display()))?;
+    for field in ["provenance", "compiler"] {
+        let len = value
+            .pointer(&format!("/lookups/{field}"))
+            .and_then(Value::as_array)
+            .with_context(|| format!("{} lookups.{field} must be an array", path.display()))?
+            .len();
+        let key = format!("{field}_ref");
+        if let Some(index) = rows.iter().position(|row| {
+            row.get(&key)
+                .and_then(Value::as_u64)
+                .is_none_or(|reference| reference as usize >= len)
+        }) {
+            bail!(
+                "{} rows[{index}].{key} must index lookups.{field} ({len} values)",
+                path.display()
+            );
+        }
     }
     Ok(())
 }
@@ -2847,9 +2875,14 @@ implementations:
                     ]
                 }
             ],
-            "rows": []
+            "lookups": {"provenance": [null], "compiler": [{"name": "solc"}]},
+            "rows": [{"provenance_ref": 0, "compiler_ref": 0}]
         });
         super::validate_report_model(&report_model, &provenance_by_id, path).unwrap();
+
+        let mut dangling_ref = report_model.clone();
+        *dangling_ref.pointer_mut("/rows/0/compiler_ref").unwrap() = json!(1);
+        assert!(super::validate_report_model(&dangling_ref, &provenance_by_id, path).is_err());
 
         let mut missing_methodology = report_model.clone();
         missing_methodology

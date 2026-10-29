@@ -37,8 +37,10 @@ just publish-dev-results
 
 `just publish-dev-results` uploads the current files under `results/` as
 immutable run artifacts under `evm-compiler-bench/runs/{run_id}/`, and updates
-`evm-compiler-bench/channels/dev/latest.json` in R2. Result JSON is stored
-uncompressed in R2; Cloudflare handles HTTP compression for browser requests.
+`evm-compiler-bench/channels/dev/latest.json` in R2. The report model, which
+the site loads on every visit, is stored brotli-encoded and served as-is by the
+worker. The other data files are stored uncompressed; Cloudflare compresses them
+for clients that accept it.
 `just prepare-publish` writes the same objects to `target/publish/{run_id}/`
 without uploading. The publish manifests list R2 keys, sizes, and hashes, never
 local file paths. The script rejects unknown options, and `--channel prod` and

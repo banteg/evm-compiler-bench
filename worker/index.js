@@ -17,6 +17,7 @@ function jsonResponse(value, init = {}) {
   const headers = new Headers(init.headers);
   headers.set("content-type", "application/json; charset=utf-8");
   headers.set("cache-control", init.cacheControl || "public, max-age=60");
+  headers.set("strict-transport-security", HSTS);
   return new Response(JSON.stringify(value), { ...init, headers });
 }
 
@@ -32,6 +33,8 @@ function httpsRedirect(url) {
   });
 }
 
+// Only for asset responses: data responses set HSTS when they are built, since
+// re-wrapping an encoded object would let the runtime compress it again.
 function withSecurityHeaders(response) {
   const headers = new Headers(response.headers);
   headers.set("strict-transport-security", HSTS);
@@ -79,7 +82,11 @@ function objectResponse(object, cacheControl, artifact = {}) {
   headers.set("etag", object.httpEtag);
   headers.set("cache-control", cacheControl);
   headers.set("x-r2-key", object.key);
-  return new Response(object.body, { headers });
+  headers.set("strict-transport-security", HSTS);
+  // Encoded objects are stored compressed; without "manual" the runtime would
+  // compress the body again under the same content-encoding.
+  const encodeBody = headers.has("content-encoding") ? "manual" : "automatic";
+  return new Response(object.body, { headers, encodeBody });
 }
 
 async function serveArtifact(env, artifactName, url) {
@@ -144,10 +151,8 @@ export default {
     }
 
     const route = DATA_ROUTES.get(url.pathname);
-    if (route) return withSecurityHeaders(await serveArtifact(env, route, url));
-    if (url.pathname.startsWith("/runs/")) {
-      return withSecurityHeaders(await serveRunObject(env, url.pathname));
-    }
+    if (route) return serveArtifact(env, route, url);
+    if (url.pathname.startsWith("/runs/")) return serveRunObject(env, url.pathname);
     return withSecurityHeaders(await env.ASSETS.fetch(request));
   },
 };
