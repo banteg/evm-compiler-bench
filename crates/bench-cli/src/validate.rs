@@ -617,14 +617,60 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
     let results_path = root.join("results/normalized/results.json");
     let manifest_path = root.join("results/normalized/run-manifest.json");
     let report_model_path = root.join("results/normalized/report-model.json");
+    let gas_path = root.join("results/raw/foundry-gas.jsonl");
+    if !results_path.exists()
+        && !manifest_path.exists()
+        && !report_model_path.exists()
+        && !gas_path.exists()
+        && !root.join("results/normalized/bundle-receipt.json").exists()
+    {
+        return Ok(0);
+    }
+    for path in [&results_path, &manifest_path, &report_model_path, &gas_path] {
+        anyhow::ensure!(
+            path.is_file(),
+            "incomplete benchmark outputs: missing {}",
+            path.display()
+        );
+    }
+    let manifest: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
+    let gas_count = manifest["gas_records"]
+        .as_u64()
+        .context("missing manifest gas_records")?;
+    let failure_count = manifest["compile_failures"]
+        .as_u64()
+        .context("missing manifest compile_failures")?;
+    anyhow::ensure!(
+        gas_count > 0 || failure_count > 0,
+        "run manifest contains no results"
+    );
+    if manifest.get("bundle_version").is_some() {
+        crate::bundle::check_working_files(
+            root,
+            manifest["run_id"].as_str().context("missing run ID")?,
+        )?;
+    }
+    let raw_count = fs::read_to_string(&gas_path)?
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count() as u64;
+    anyhow::ensure!(
+        raw_count == gas_count,
+        "raw gas row count disagrees with run manifest"
+    );
     let real_derived_provenance = real_derived_provenance_by_id();
     let mut rows = 0;
-    if results_path.exists() {
+    {
         let value: Value = serde_json::from_str(&fs::read_to_string(&results_path)?)
             .with_context(|| format!("parsing {}", results_path.display()))?;
         let array = value
             .as_array()
             .with_context(|| format!("{} must be an array", results_path.display()))?;
+        let successes = array.iter().filter(|row| row["status"] == "ok").count() as u64;
+        anyhow::ensure!(
+            successes == gas_count && (array.len() as u64 - successes) == failure_count,
+            "normalized row counts disagree with run manifest"
+        );
         for row in array {
             require_json_pointer(row, "/status", &results_path)?;
             require_json_pointer(row, "/benchmark_id", &results_path)?;
@@ -741,9 +787,8 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             rows += 1;
         }
     }
-    if manifest_path.exists() {
-        let value: Value = serde_json::from_str(&fs::read_to_string(&manifest_path)?)
-            .with_context(|| format!("parsing {}", manifest_path.display()))?;
+    {
+        let value = &manifest;
         for pointer in [
             "/run_id",
             "/started_at",
@@ -763,7 +808,7 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
             "/gas_records",
             "/environment",
         ] {
-            require_json_pointer(&value, pointer, &manifest_path)?;
+            require_json_pointer(value, pointer, &manifest_path)?;
         }
         if !value
             .pointer("/scale_generator/benchmarks")
@@ -783,17 +828,24 @@ fn validate_outputs_if_present(root: &Path) -> Result<usize> {
                 manifest_path.display()
             );
         }
-        validate_manifest_profiles(&value, &manifest_path)?;
-        validate_real_derived_manifest(&value, &manifest_path)?;
+        validate_manifest_profiles(value, &manifest_path)?;
+        validate_real_derived_manifest(value, &manifest_path)?;
         validate_real_derived_manifest_matches_catalog(
-            &value,
+            value,
             &real_derived_provenance,
             &manifest_path,
         )?;
     }
-    if report_model_path.exists() {
+    {
         let value: Value = serde_json::from_str(&fs::read_to_string(&report_model_path)?)
             .with_context(|| format!("parsing {}", report_model_path.display()))?;
+        anyhow::ensure!(
+            value["manifest"] == manifest
+                && value["rows"]
+                    .as_array()
+                    .is_some_and(|model_rows| model_rows.len() == rows),
+            "report model disagrees with the measured run manifest or result count"
+        );
         validate_report_model(&value, &real_derived_provenance, &report_model_path)?;
     }
     Ok(rows)
@@ -1816,6 +1868,36 @@ fn git_blob_hash(path: &Path) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+fn validate_tx_estimate(row: &Value, path: &Path) -> Result<()> {
+    // Legacy estimates predate floor-aware metering. New runs are marked by
+    // the presence of actual deployment sizes in the result row.
+    if row.pointer("/bytecode/deployed_runtime_bytes").is_none() {
+        return Ok(());
+    }
+    let number = |pointer: &str| -> Result<u128> {
+        row.pointer(pointer)
+            .and_then(Value::as_u64)
+            .map(u128::from)
+            .with_context(|| format!("{} missing gas quantity {pointer}", path.display()))
+    };
+    let calldata = number("/gas/calldata_gas")?;
+    let intrinsic = number("/gas/intrinsic_gas")?;
+    let ordinary = calldata + number("/gas/harness_call_gas")?;
+    let fork = string_at(row, "/gas/evm_fork", path)?;
+    let calldata_floor = if crate::compiler::evm_at_least(fork, "prague")? {
+        (calldata / 4) * 10
+    } else {
+        0
+    };
+    if number("/gas/harness_estimated_tx_gas")? != intrinsic + ordinary.max(calldata_floor) {
+        bail!(
+            "{} incorrect harness transaction gas estimate for {fork}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
 fn validate_row_status(row: &Value, path: &Path) -> Result<()> {
     require_string_pointer(row, "/compiler/settings/sourceVariant", path)?;
     require_enum(
@@ -1836,6 +1918,7 @@ fn validate_row_status(row: &Value, path: &Path) -> Result<()> {
             require_json_pointer(row, "/gas/intrinsic_gas", path)?;
             require_json_pointer(row, "/gas/calldata_gas", path)?;
             require_json_pointer(row, "/gas/harness_estimated_tx_gas", path)?;
+            validate_tx_estimate(row, path)?;
             require_json_pointer(row, "/gas/total_tx_gas", path)?;
             require_json_pointer(row, "/gas/expected_success", path)?;
             require_json_pointer(row, "/gas/call_succeeded", path)?;
@@ -2317,6 +2400,34 @@ mod tests {
     use std::path::Path;
 
     #[test]
+    fn rejects_empty_measurements_beside_full_run_manifest() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let normalized = root.join("results/normalized");
+        let raw = root.join("results/raw/foundry-gas.jsonl");
+        std::fs::create_dir_all(&normalized).unwrap();
+        std::fs::create_dir_all(raw.parent().unwrap()).unwrap();
+        std::fs::write(&raw, "{}\n").unwrap();
+        assert!(super::validate_outputs_if_present(root).is_err());
+        std::fs::write(
+            normalized.join("run-manifest.json"),
+            r#"{"gas_records":1,"compile_failures":0}"#,
+        )
+        .unwrap();
+        std::fs::write(normalized.join("report-model.json"), "{}").unwrap();
+        std::fs::write(normalized.join("results.json"), "[]").unwrap();
+        std::fs::write(&raw, "").unwrap();
+        let validate = || {
+            super::validate_outputs_if_present(root)
+                .unwrap_err()
+                .to_string()
+        };
+        assert!(validate().contains("raw gas row count"));
+        std::fs::write(raw, "{}\n").unwrap();
+        assert!(validate().contains("normalized row counts"));
+    }
+
+    #[test]
     fn validates_checked_in_inputs() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
@@ -2699,6 +2810,22 @@ implementations:
         super::validate_manifest_profiles(&manifest, path).unwrap();
         assert!(super::validate_manifest_profiles(&missing_variant, path).is_err());
         assert!(super::validate_manifest_profiles(&unknown_variant, path).is_err());
+    }
+
+    #[test]
+    fn merkle_estimate_obeys_the_execution_forks_calldata_floor() {
+        let path = Path::new("results.json");
+        let mut row = json!({
+            "bytecode": {"deployed_runtime_bytes": 191},
+            "gas": {"evm_fork": "prague", "intrinsic_gas": 21000, "calldata_gas": 9548,
+                "harness_call_gas": 2432, "harness_estimated_tx_gas": 32980}
+        });
+        assert!(super::validate_tx_estimate(&row, path).is_err());
+        row["gas"]["evm_fork"] = "cancun".into();
+        super::validate_tx_estimate(&row, path).unwrap();
+        row["gas"]["evm_fork"] = "prague".into();
+        row["gas"]["harness_estimated_tx_gas"] = 44870.into();
+        super::validate_tx_estimate(&row, path).unwrap();
     }
 
     #[test]

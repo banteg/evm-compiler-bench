@@ -33,7 +33,9 @@ are separate committed transactions: measured calls see cold storage whose
 original values come from earlier transactions, as a fresh transaction would.
 Only the scenario's `warmup` calls share the measured call's transaction, and a
 scenario labeled `warm` must have them. SSTORE refunds are still not credited,
-because gas is read with `gasleft()` around the internal call.
+because gas is read with `gasleft()` around the internal call. The separate
+`harness_estimated_tx_gas` field adds intrinsic and calldata costs and applies
+the EIP-7623 calldata floor on Prague and later forks.
 
 ## Repository layout
 
@@ -64,8 +66,11 @@ unreleased build). Resolved compilers and run outputs are cached locally.
 `vyper` follows the latest stable PyPI release; `vyper-prerelease` follows the
 latest prerelease using Python version ordering (including alpha, beta, RC, and
 development releases). Empty and fully yanked releases are excluded. Each run
-records the exact version and binary hash, so a newer release invalidates the
-corresponding compiler cache. Set `EVM_BENCH_VYPER_PRERELEASE=<path>` to provide
+records the full Vyper version, launcher and interpreter hashes, installed
+package versions, and hashes of the Vyper source tree and Python package
+directories. Cache lookup uses these receipts, including for local Python
+console scripts. Compilers with an unidentifiable Python environment still run
+with their compile cache disabled. Set `EVM_BENCH_VYPER_PRERELEASE=<path>` to provide
 that version locally. With `--offline`, this override must report a prerelease;
 otherwise the highest cached prerelease with a compiler binary is selected.
 Solx profiles pin release 0.1.8, verify upstream SHA-256 checksums on download
@@ -164,7 +169,15 @@ Foundry gas shards run in isolated projects under `target/foundry-jobs/`, with
 up to four workers by default. Set `EVM_BENCH_FOUNDRY_JOBS=1` for serial execution
 or a value up to 8 for more concurrency. Each job keeps its own compiler cache
 and raw outputs; generated Solidity and relative evidence paths are unchanged.
-Compiler timing samples are collected separately, before these harness jobs.
+To measure compile time, use `run --timing-samples 5` (3–20 repetitions). The
+runner warms each successful configuration once, then interleaves fresh compiler
+processes by benchmark on the recorded host, reversing profile order in paired
+rounds. Every repetition must reproduce the artifact's bytecode and ABI, even
+on an artifact cache hit. The comparator shows median and range. When pinned
+and latest solc aliases produce the same build, the manifest records their
+observed timing ratio as a noise control. If CPU detection is unavailable, set
+`EVM_BENCH_CPU_MODEL` to the host processor model. Runs without this option skip the
+experiment. Archived single samples remain available in the raw data.
 
 ## Report UI
 
@@ -211,7 +224,7 @@ cargo run --release -- validate
 just publish-dev-results
 ```
 
-`just publish-dev-results` uploads the current `results/` artifacts to the
+`just publish-dev-results` verifies the last completed run bundle and uploads its artifacts to the
 `evm-compilers` R2 bucket and updates only the dev latest-run pointer. Use
 `just publish-prod-results` from a clean `master` worktree when the public report
 is ready. See `docs/publishing.md` for the Cloudflare setup.
@@ -241,10 +254,29 @@ just zip-design
   many-argument Solidity ABI function under legacy non-via-IR codegen, the
   missing row remains a compile failure rather than being replaced with
   assembly or calldata parsing that changes what the family measures.
-- Stripped runtime bytecode is used for bytecode comparisons so appended
-  compiler metadata does not dominate code-size deltas.
-- Missing compile rows are excluded from pairwise ratios; they are still shown
-  as compile failures.
+- Runtime size uses the deployed implementation, including constructor-appended
+  immutable data. Comparisons subtract the compiler template's metadata length.
+  The raw template lengths are recorded separately. Full initcode includes
+  constructor arguments. Each deployment variant records EIP-170 runtime
+  headroom and, on Shanghai and later forks, EIP-3860 initcode headroom.
+  For Yearn V3 the size metrics describe the implementation, while the CREATE
+  gas measurement includes both the implementation and the minimal proxy.
+- Cards label comparisons of identical source, adapted source and idiomatic
+  cross-language ports. Failed compilations remain visible in the coverage totals.
+  Performance comparisons require both deployments to meet the harness fork’s
+  runtime and initcode limits. The comparator can include oversized or
+  size-unverified deployments for diagnosis. Older reports only have template
+  sizes, so their default view excludes known violations and labels remaining
+  size eligibility unverified.
+- Headline n counts matched fixed and scale units. Runtime gas counts scenarios,
+  deployment gas counts each benchmark/deployment variant once, and size and
+  compile time count artifacts. Cards also show the fixed, scale and real-derived
+  suite deltas separately. Family-balanced deltas weight each fixed or real-derived
+  benchmark and each scale family equally, with equal weight per N in a family.
+- Historical charts hold the workload intersection fixed within each optimizer
+  series. Compiler targets, source adaptations and historical arithmetic semantics
+  can still change. Optimized historical Vyper defaults form a separate series
+  relative to the latest stable gas profile.
 - Assembly-heavy or mechanically matched variants should be treated as
   diagnostic comparators, not as the primary report lane.
 - Benchmark specs make lanes explicit: `latest_idiomatic` is the headline
@@ -297,6 +329,11 @@ just zip-design
   timing and revert bytes are tracked as approximations unless the upstream
   contract exposes or depends on them.
 - Vyper Venom rows use `--experimental-codegen`.
+- A scenario can define a Solidity boolean `postcondition` using `{target}`
+  and `{return_hash}` (Keccak-256 of the measured return bytes). The harness
+  evaluates it outside the gas bracket after checking call status. A false
+  result or reverting check fails `golden_behavior_check`. ABI argument
+  sums, Merkle verification, and factory pair initialization use these oracles.
 - Solx rows remain Solidity-language implementations but have compiler identity
   `solx`. Its release version (0.1.8), embedded modified Solidity frontend
   version/commit (0.8.34), and LLVM build are recorded independently. Profiles
@@ -307,7 +344,9 @@ just zip-design
 - Same-source Solar/solc and solx/solc pairs run scenario differential tests and applicable
   randomized/property checks. The matched baseline must share source hash,
   Solidity frontend version, metadata mode, and EVM target. The report records
-  exactly which compiler pairs passed. Gas cache hits do not imply behavioral
+  exactly which compiler pairs passed. Forge must return a passing JSON result
+  for every scheduled named test. A filtered or skipped test invalidates the
+  shard. Gas cache hits do not imply behavioral
   test coverage; verified pair evidence has its own cache tied to bytecode,
   scenario, harness source, and Foundry version. Untested profiles show
   `not_run` for randomized/property checks. The UI excludes any artifact with an
@@ -315,6 +354,11 @@ just zip-design
   failure in Reliability; raw measurements are retained. Gas caches also track
   harness source and Foundry version so harness edits do not silently reuse
   stale measurements.
+- After a full cache-enabled run, `python3 scripts/verify_solar_release.py`
+  checks the local Solar sources, ABI, harness shards, behavior evidence and
+  report statistics. Its historical bytecode/overhead checks apply to the
+  pinned v4 spike revision. The statistics use the report’s matching rules.
+  A timing count of zero indicates that no eligible timing experiment was present.
 - Vyper prerelease profiles are separate from stable profiles and resolve the latest
   non-yanked prerelease with published files on PyPI (currently 0.5.0b1).
 - Fe rows compile with the latest released Fe toolchain (sonatina backend) and
@@ -339,9 +383,12 @@ just zip-design
   [Fe 26.5 migration notes](docs/fe-26.5-migration.md) for the current
   APIs and the [Fe 26.4 migration notes](docs/fe-26.4-migration.md) for the
   earlier port.
-- In the `external_calls_N` family, Solidity's `this.ping(i)` and Vyper's
-  `extcall` each perform a per-call EXTCODESIZE contract-existence check that
-  Fe's typed `call` (bare CALL with revert bubbling) does not. Each language
-  uses its idiomatic call construct, so the Fe curve sits roughly one warm
-  EXTCODESIZE (~100 gas) per iteration below the others for reasons that are
-  call semantics, not codegen quality.
+- The `dispatch_N` family measures every generated pure selector with equal
+  weight. Its chart shows the arithmetic mean, nearest-rank 95th percentile,
+  and worst call gas at each N. Comparisons count the selector mean once per N
+  and retain the separate state-writing `set_sink` scenario. Archived runs
+  with only endpoint samples retain their original measurements.
+- In `external_calls_N`, each loop iteration makes a typed static call to the
+  contract's own `ping(uint256)` and adds the returned word. The curve includes
+  dispatch, ABI handling, the call, and loop arithmetic. Their individual costs
+  depend on the compiler profile.

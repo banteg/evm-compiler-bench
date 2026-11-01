@@ -30,7 +30,13 @@ export function assertProductionSnapshot(checkout, manifest) {
   if (manifest.environment?.git?.dirty !== false || manifest.environment?.git?.commit !== checkout.commit) {
     throw new Error('Production results must be generated from this clean commit. Run the full pipeline and validate after merging.');
   }
-  const args = manifest.environment?.command_line || [];
+  if (!Number.isSafeInteger(manifest.gas_records) || manifest.gas_records <= 0) {
+    throw new Error('Production requires measured gas records.');
+  }
+  const args = manifest.environment?.command_line;
+  if (!Array.isArray(args) || !args.includes('run')) {
+    throw new Error('Production requires a recorded benchmark run command.');
+  }
   if (args.some(arg => /^(--benchmark|--profile)(=|$)/.test(arg))) {
     throw new Error('Production requires the full benchmark/profile matrix, not a filtered development run.');
   }

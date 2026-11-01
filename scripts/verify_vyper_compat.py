@@ -58,7 +58,18 @@ def compile_probe(row, source):
     binary = Path(compiler["binary_path"])
     if not binary.is_absolute():
         binary = ROOT / binary
-    assert digest(binary.read_bytes()) == compiler["binary_sha256"]
+    if digest(binary.read_bytes()) != compiler["binary_sha256"]:
+        raise ValueError(f"{profile}: compiler launcher hash changed")
+    metadata = compiler["metadata"]
+    if not metadata.get("python_environment_sha256"):
+        raise ValueError(f"{profile}: verified Vyper environment missing; regenerate the matrix")
+    observed = json.loads(subprocess.check_output(
+        [metadata["python_executable"], str(ROOT / "scripts/vyper_environment.py"), str(binary)], text=True,
+    ))
+    observed["vyper_long_version"] = subprocess.check_output([str(binary), "--version"], text=True).strip()
+    for key, current in observed.items():
+        if metadata.get(key) != current:
+            raise ValueError(f"{profile}: {key} differs from the recorded compiler environment")
     path = OUT / f"{profile}.vy"
     path.write_text(source)
     settings = compiler["settings"]
@@ -80,6 +91,7 @@ def compile_probe(row, source):
         "profile": profile,
         "version": compiler["version"],
         "binary_sha256": compiler["binary_sha256"],
+        "compiler_environment": observed,
         "probe_source_sha256": digest(source.encode()),
         "creation_bytecode_sha256": digest(bytes.fromhex(code)),
         "command": args,

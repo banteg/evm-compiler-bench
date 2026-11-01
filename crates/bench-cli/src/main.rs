@@ -1,5 +1,6 @@
 mod baselines;
 mod behavior;
+mod bundle;
 mod cache;
 mod catalog;
 mod compiler;
@@ -55,6 +56,9 @@ enum Command {
         /// Do not read or write benchmark result caches.
         #[arg(long)]
         no_cache: bool,
+        /// Run a fresh interleaved compile-time experiment with 3 to 20 samples per artifact.
+        #[arg(long, value_parser = clap::value_parser!(u8).range(3..=20))]
+        timing_samples: Option<u8>,
     },
     /// Compile all implementations and print a compact summary.
     Compile {
@@ -90,13 +94,26 @@ enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = cli.root.canonicalize()?;
+    // Runs, compile-only jobs, and scale generation share materialized sources.
+    let _lock = match &cli.command {
+        Command::Run { .. } | Command::Compile { .. } | Command::Generate { .. } => {
+            Some(bundle::lock(&root)?)
+        }
+        _ => None,
+    };
     match cli.command {
         Command::Run {
             offline,
             benchmark,
             profile,
             no_cache,
+            timing_samples,
         } => {
+            let samples = match timing_samples {
+                Some(n) => Some(n),
+                None => timing_samples_from_env()?,
+            };
+            let start = report::RunStart::capture(&root, samples.is_some())?;
             eprintln!("pipeline: resolving toolchains");
             let toolchains = resolve_toolchains(&root, offline, &profile)?;
             eprintln!("pipeline: generating scale suite");
@@ -106,7 +123,16 @@ fn main() -> Result<()> {
                 "pipeline: compiling {} benchmarks across profile matrix",
                 benchmarks.len()
             );
-            let compiled = compile_all(&root, &toolchains, &benchmarks, &profile, !no_cache)?;
+            let mut compiled = compile_all(&root, &toolchains, &benchmarks, &profile, !no_cache)?;
+            if let Some(count) = samples {
+                compiler::measure_compile_times(
+                    &root,
+                    &toolchains,
+                    &benchmarks,
+                    &mut compiled,
+                    count,
+                )?;
+            }
             eprintln!("pipeline: loading scenarios");
             let scenarios =
                 load_scenario_catalog(&root, benchmark.as_deref(), &generated.scenarios)?;
@@ -134,6 +160,7 @@ fn main() -> Result<()> {
                 &gas_records,
                 &scenarios,
                 &generated.manifest,
+                &start,
             )?;
             println!("foundry produced {} gas records", gas_records.len());
             println!(
@@ -156,7 +183,7 @@ fn main() -> Result<()> {
             );
             for artifact in &compiled.artifacts {
                 println!(
-                    "{} {} {} creation={} runtime={}",
+                    "{} {} {} creation={} runtime={} (compiler templates)",
                     artifact.benchmark_id,
                     artifact.implementation_id,
                     artifact.profile_id,
@@ -199,7 +226,7 @@ fn main() -> Result<()> {
             );
             for artifact in &compiled.artifacts {
                 println!(
-                    "{} {} {} creation={} runtime={}",
+                    "{} {} {} creation={} runtime={} (compiler templates)",
                     artifact.benchmark_id,
                     artifact.implementation_id,
                     artifact.profile_id,
@@ -259,6 +286,18 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn timing_samples_from_env() -> Result<Option<u8>> {
+    match std::env::var("EVM_BENCH_COMPILE_SAMPLES") {
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Ok(n) => match n.parse::<u8>() {
+            Ok(1) => Ok(None),
+            Ok(n @ 3..=20) => Ok(Some(n)),
+            _ => anyhow::bail!("EVM_BENCH_COMPILE_SAMPLES must be 1 (off) or 3..20"),
+        },
+        Err(error) => Err(error.into()),
+    }
 }
 
 fn error_summary(value: &str) -> String {

@@ -15,7 +15,7 @@ use std::{
     process,
 };
 
-pub const SCALE_GENERATOR_VERSION: &str = "scale-v3";
+pub const SCALE_GENERATOR_VERSION: &str = "scale-v4";
 const GENERATED_ROOT: &str = "target/bench-generated";
 const DISPATCH_SOL_TEMPLATE: &str = include_str!("scale_templates/dispatch.sol");
 const DISPATCH_VY_TEMPLATE: &str = include_str!("scale_templates/dispatch.vy");
@@ -354,26 +354,15 @@ fn dispatch_family(n: u64) -> GeneratedSource {
         ],
     );
 
-    let mut scenarios = vec![scenario(
-        "first_selector",
-        StateAccessProfile::Cold,
-        Vec::new(),
-        Vec::new(),
-        call(format!("abi.encodeWithSignature(\"f{:03}()\")", 0)),
-        true,
-        Vec::new(),
-    )];
-    if n > 1 {
-        scenarios.push(scenario(
-            "last_selector",
-            StateAccessProfile::Cold,
-            Vec::new(),
-            Vec::new(),
-            call(format!("abi.encodeWithSignature(\"f{:03}()\")", n - 1)),
-            true,
-            Vec::new(),
-        ));
-    }
+    let mut scenarios: Vec<_> = (0..n)
+        .map(|i| {
+            let mut selector = simple_scenario(&format!("selector_f{i:03}"), &format!("f{i:03}()"));
+            selector.postcondition = Some(format!(
+                "{{return_hash}} == keccak256(abi.encode(uint256({i})))"
+            ));
+            selector
+        })
+        .collect();
     scenarios.push(scenario(
         "set_sink",
         StateAccessProfile::Warm,
@@ -671,22 +660,28 @@ fn abi_args_family(n: u64) -> GeneratedSource {
         ],
     );
 
+    let mut sum_args = scenario(
+        "sum_args",
+        StateAccessProfile::Cold,
+        Vec::new(),
+        Vec::new(),
+        call(format!(
+            "abi.encodeWithSignature(\"sum({signature})\", {args})"
+        )),
+        true,
+        Vec::new(),
+    );
+    let n_wide = u128::from(n);
+    let expected = n_wide * (n_wide + 1) / 2;
+    sum_args.postcondition = Some(format!(
+        "{{return_hash}} == keccak256(abi.encode(uint256({expected})))"
+    ));
     GeneratedSource {
         contract_name,
         solidity: sol,
         vyper: vy,
         fe,
-        scenarios: vec![scenario(
-            "sum_args",
-            StateAccessProfile::Cold,
-            Vec::new(),
-            Vec::new(),
-            call(format!(
-                "abi.encodeWithSignature(\"sum({signature})\", {args})"
-            )),
-            true,
-            Vec::new(),
-        )],
+        scenarios: vec![sum_args],
         abi: vec![format!("sum({signature}) returns (uint256)")],
         semantics: vec![format!(
             "Accepts and sums {n} high-level uint256 ABI arguments."
@@ -835,6 +830,7 @@ fn scenario(
         warmup,
         measured,
         expect_success,
+        postcondition: None,
         compare_return: true,
         observers,
     }
@@ -941,6 +937,26 @@ mod tests {
             assert_eq!(first.fe, second.fe);
             assert!(!first.fe.is_empty());
             assert!(!first.scenarios.is_empty());
+        }
+    }
+
+    #[test]
+    fn dispatch_measures_every_generated_selector_once() {
+        for n in [1, 2, 4, 8, 16, 32, 64] {
+            let generated = generate_family("dispatch_N", n).unwrap();
+            assert_eq!(generated.scenarios.len(), n as usize + 1);
+            for (i, scenario) in generated.scenarios[..n as usize].iter().enumerate() {
+                assert_eq!(scenario.name, format!("selector_f{i:03}"));
+                assert_eq!(
+                    scenario.measured.data.as_deref().unwrap(),
+                    format!("abi.encodeWithSignature(\"f{i:03}()\")")
+                );
+                assert_eq!(
+                    scenario.postcondition.as_deref().unwrap(),
+                    format!("{{return_hash}} == keccak256(abi.encode(uint256({i})))")
+                );
+            }
+            assert_eq!(generated.scenarios.last().unwrap().name, "set_sink");
         }
     }
 

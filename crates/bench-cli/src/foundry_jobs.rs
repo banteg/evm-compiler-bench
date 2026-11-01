@@ -4,6 +4,7 @@
 use crate::util::{ensure_dir, require_success, run_measured};
 use anyhow::{Context, Result, bail};
 use std::{
+    collections::BTreeSet,
     fs,
     path::Path,
     process::Command,
@@ -60,7 +61,7 @@ pub fn run(root: &Path, evm: &str, paths: &[String]) -> Result<()> {
                 loop {
                     let index = next.fetch_add(1, Ordering::Relaxed);
                     let Some(path) = paths.get(index) else { break };
-                    let result = execute(root, evm, path);
+                    let result = execute(root, evm, path, None);
                     if result.is_err() {
                         // Let running shards finish, but do not start further work.
                         next.store(paths.len(), Ordering::Relaxed);
@@ -89,7 +90,12 @@ pub fn run(root: &Path, evm: &str, paths: &[String]) -> Result<()> {
     })
 }
 
-pub fn execute(root: &Path, evm: &str, relative: &str) -> Result<()> {
+pub fn execute(
+    root: &Path,
+    evm: &str,
+    relative: &str,
+    expected_tests: Option<&BTreeSet<String>>,
+) -> Result<()> {
     let file = Path::new(relative)
         .file_name()
         .context("Foundry shard filename")?;
@@ -128,7 +134,11 @@ pub fn execute(root: &Path, evm: &str, relative: &str) -> Result<()> {
             .args(HARNESS_FLAGS)
             .arg("--threads")
             .arg("1")
-            .arg("-q"),
+            .arg(if expected_tests.is_some() {
+                "--json"
+            } else {
+                "-q"
+            }),
         None,
     )?;
     // Each gas shard has a distinct filename. Preserve failure evidence too,
@@ -157,12 +167,72 @@ pub fn execute(root: &Path, evm: &str, relative: &str) -> Result<()> {
             }
         }
     }
-    require_success(
+    // Retain Forge's individual outcomes for diagnosing this shard, including failed attempts.
+    if expected_tests.is_some() {
+        fs::write(
+            job.join("behavior-test-results.json"),
+            &measured.output.stdout,
+        )?;
+    }
+    let measured = require_success(
         measured,
         &format!(
             "forge test {relative}; isolated project {}",
             project.display()
         ),
     )?;
+    if let Some(expected) = expected_tests {
+        let name = relative
+            .strip_prefix("test/")
+            .and_then(|file| file.strip_suffix(".t.sol"))
+            .context("invalid generated behavior shard path")?;
+        verify_behavior_results(
+            &measured.output.stdout,
+            &format!("{relative}:{name}"),
+            expected,
+        )?;
+    }
     Ok(())
+}
+
+fn verify_behavior_results(output: &[u8], suite: &str, expected: &BTreeSet<String>) -> Result<()> {
+    let report: serde_json::Value = serde_json::from_slice(output)
+        .with_context(|| format!("no usable Forge test results for {suite}"))?;
+    let actual = report
+        .get(suite)
+        .and_then(|s| s.get("test_results"))
+        .and_then(serde_json::Value::as_object)
+        .with_context(|| format!("Forge omitted behavior suite {suite}"))?;
+    for name in expected {
+        let result = actual
+            .get(name)
+            .with_context(|| format!("Forge did not execute {suite}::{name}"))?;
+        if result["status"] != "Success" {
+            bail!("Forge did not pass {suite}::{name}: {}", result["status"]);
+        }
+    }
+    if actual.len() != expected.len() || expected.is_empty() {
+        bail!(
+            "unexpected Forge test inventory for {suite}: {} reported, {} requested",
+            actual.len(),
+            expected.len()
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn behavior_evidence_requires_every_named_test_to_pass() {
+        let expected = BTreeSet::from(["testA()".to_owned(), "testB()".to_owned()]);
+        let verify = |data: &str| verify_behavior_results(data.as_bytes(), "suite", &expected);
+        assert!(verify("").is_err());
+        assert!(verify("{}").is_err());
+        assert!(verify(r#"{"suite":{"test_results":{"testA()":{"status":"Success"}}}}"#).is_err());
+        assert!(verify(r#"{"suite":{"test_results":{"testA()":{"status":"Success"},"testB()":{"status":"Skipped"}}}}"#).is_err());
+        assert!(verify(r#"{"suite":{"test_results":{"testA()":{"status":"Success"},"testB()":{"status":"Success"}}}}"#).is_ok());
+    }
 }

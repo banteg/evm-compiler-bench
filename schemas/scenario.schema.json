@@ -35,6 +35,7 @@
           "warmup": { "$ref": "#/$defs/calls" },
           "measured": { "$ref": "#/$defs/call" },
           "expect_success": { "type": "boolean" },
+          "postcondition": { "type": "string", "minLength": 1 },
           "compare_return": { "type": "boolean", "default": true },
           "observers": { "$ref": "#/$defs/calls" }
         }

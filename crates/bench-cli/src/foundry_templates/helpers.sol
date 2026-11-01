@@ -427,6 +427,23 @@
         );
     }
 
+    function benchUniswapFactoryCreatedPair(address target, address tokenA, address tokenB, bytes32 returnHash)
+        internal view returns (bool)
+    {
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        address expected = address(uint160(uint256(keccak256(abi.encodePacked(
+            hex"ff", target, salt, keccak256(type(BenchUniswapFactoryPair).creationCode)
+        )))));
+        BenchUniswapFactoryLike factory = BenchUniswapFactoryLike(target);
+        BenchUniswapFactoryPair pair = BenchUniswapFactoryPair(expected);
+        return returnHash == keccak256(abi.encode(expected))
+            && expected.codehash == keccak256(type(BenchUniswapFactoryPair).runtimeCode)
+            && factory.getPair(token0, token1) == expected && factory.getPair(token1, token0) == expected
+            && factory.allPairsLength() == 1 && factory.allPairs(0) == expected
+            && pair.factory() == target && pair.token0() == token0 && pair.token1() == token1;
+    }
+
     function benchUniswapPermitOwner() public returns (address) {
         return vm.addr(UNISWAP_PERMIT_KEY);
     }
@@ -1401,6 +1418,12 @@
         return keccak256(abi.encode(ok, ret));
     }
 
+    function _checkPostcondition(bytes4 selector, address target, bytes32 returnHash) internal view returns (bool) {
+        // An invalid post-state may make a getter revert. Record a failed check and retain the gas row.
+        (bool ok, bytes memory result) = address(this).staticcall(abi.encodeWithSelector(selector, target, returnHash));
+        return ok && result.length == 32 && abi.decode(result, (bool));
+    }
+
     function _normalizedLogHash(address target, Vm.Log[] memory entries) internal view returns (bytes32 hash) {
         hash = bytes32(0);
         for (uint256 i = 0; i < entries.length; i++) {
@@ -1520,18 +1543,23 @@
         string memory scenario,
         string memory stateAccessProfile,
         string memory metadataMode,
-        uint256 internalCreateGas,
+        BenchDeployment memory deployment,
         uint256 harnessCallGas,
-        uint256 intrinsicGas,
         uint256 calldataGas,
-        uint256 harnessEstimatedTxGas,
         bool expectedSuccess,
         bool callSucceeded,
         bool scenarioStatusOk,
         bytes32 returnHash,
         bytes32 observerHash,
-        bytes32 logHash
+        bytes32 logHash,
+        string memory goldenCheck
     ) internal {
+        uint256 estimatedTxGas = 21000 + calldataGas + harnessCallGas;
+        if ({{PRAGUE_CALLDATA_FLOOR}}) {
+            // EIP-7623 prices each calldata token at a minimum of 10 gas.
+            uint256 floorGas = 21000 + calldataGas / 4 * 10;
+            if (estimatedTxGas < floorGas) estimatedTxGas = floorGas;
+        }
         string memory line = string.concat(
             "{\"benchmark_id\":\"", benchmarkId,
             "\",\"implementation_id\":\"", implementationId,
@@ -1545,17 +1573,20 @@
         );
         line = string.concat(
             line,
-            "\",\"internal_create_gas\":", vm.toString(internalCreateGas),
+            "\",\"internal_create_gas\":", vm.toString(deployment.gasUsed),
+            ",\"initcode_bytes\":", vm.toString(deployment.initcodeBytes),
+            ",\"deployed_runtime_bytes\":", vm.toString(deployment.runtimeBytes),
             ",\"harness_call_gas\":", vm.toString(harnessCallGas),
-            ",\"intrinsic_gas\":", vm.toString(intrinsicGas),
+            ",\"intrinsic_gas\":21000",
             ",\"calldata_gas\":", vm.toString(calldataGas)
         );
         line = string.concat(
             line,
-            ",\"harness_estimated_tx_gas\":", vm.toString(harnessEstimatedTxGas),
+            ",\"harness_estimated_tx_gas\":", vm.toString(estimatedTxGas),
             ",\"expected_success\":", _bool(expectedSuccess),
             ",\"call_succeeded\":", _bool(callSucceeded),
             ",\"scenario_status_ok\":", _bool(scenarioStatusOk),
+            ",\"golden_check_passed\":", goldenCheck,
             ",\"return_hash\":\"", _bytes32Hex(returnHash),
             "\",\"observer_hash\":\"", _bytes32Hex(observerHash),
             "\",\"log_hash\":\"", _bytes32Hex(logHash),

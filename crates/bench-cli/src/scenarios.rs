@@ -102,6 +102,17 @@ pub fn validate_scenario_file(file: &ScenarioFile, path: &Path) -> Result<()> {
             );
         }
         validate_call(&scenario.measured, path, &scenario.name, "measured")?;
+        if scenario
+            .postcondition
+            .as_deref()
+            .is_some_and(|s| s.trim().is_empty())
+        {
+            bail!(
+                "{} scenario {} has an empty postcondition",
+                path.display(),
+                scenario.name
+            );
+        }
         for (label, calls) in [
             ("setup", &scenario.setup),
             ("warmup", &scenario.warmup),
@@ -263,6 +274,7 @@ mod tests {
                 warmup,
                 measured: read_value(),
                 expect_success: true,
+                postcondition: None,
                 compare_return: true,
                 observers: vec![],
             }],

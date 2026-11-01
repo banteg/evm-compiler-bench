@@ -109,6 +109,9 @@ const VYPER_GAS = 'vyper-latest-gas';
 const FE_O2 = 'fe-latest-O2';
 const VYPER_GAS_VENOM = 'vyper-latest-gas-venom';
 const HEADLINE_SUITES = new Set(['fixed', 'scale']);
+const SIZE_SCOPE = Bench.legacySizeEvidence
+  ? 'Legacy size evidence excludes known oversize deployments. Eligibility of the remaining deployments is unverified.'
+  : 'Default comparisons require both deployments to pass the runtime and initcode size limits on the harness fork.';
 
 // Pre-compute headline stories ONCE
 function buildHeadlines() {
@@ -117,10 +120,14 @@ function buildHeadlines() {
   const S = 'runtime_bytes_stripped';
 
   const v = (a, b, metric) => {
-    const cmp = Bench.compareProfiles(rows, a, b, metric, HEADLINE_SUITES);
+    const all = Bench.compareProfiles(rows, a, b, metric);
+    const cmp = all.filter(pair => HEADLINE_SUITES.has(pair.suite));
     const tieBand = Bench.tieBandForMetric(metric);
     return {
       ...Bench.summarize(cmp, tieBand),
+      balanced: Bench.familyBalanced(cmp),
+      suites: Bench.bySuite(all, tieBand),
+      scope: Bench.sourceScope(cmp),
       tieBand,
       cmp,
       coverage: Bench.profilePairCompileCoverage(rows, a, b, HEADLINE_SUITES),
@@ -140,10 +147,8 @@ function buildHeadlines() {
     solVsVyperVenomSize: v(SOL_VIAIR, VYPER_GAS_VENOM, S),
     venomGas:        v(VYPER_GAS, VYPER_GAS_VENOM, M),
     venomSize:       v(VYPER_GAS, VYPER_GAS_VENOM, S),
-    venomCompile:    v(VYPER_GAS, VYPER_GAS_VENOM, 'compile_wall_ms'),
     viaIRGas:        v(SOL_LEGACY, SOL_VIAIR, M),
     viaIRSize:       v(SOL_LEGACY, SOL_VIAIR, S),
-    viaIRCompile:    v(SOL_LEGACY, SOL_VIAIR, 'compile_wall_ms'),
     solEra:          v(SOL_0426_LEGACY, SOL_LEGACY, M),
     nooptGas:        v(SOL_VIAIR, SOL_NOOPT, M),
     nooptSize:       v(SOL_VIAIR, SOL_NOOPT, S),
@@ -151,7 +156,6 @@ function buildHeadlines() {
 }
 
 const HEADLINES = buildHeadlines();
-const REPORT_VERSION = 'v5';
 
 // ============================================================
 // Top bar
@@ -184,31 +188,24 @@ function Hero() {
   const m = Bench.D.manifest;
   const s = Bench.D.summary;
   const gen = new Date(Bench.D.generated_at);
-  const solcLegacy = Bench.profileLabel(SOL_LEGACY);
-  const solcViaIR = Bench.profileLabel(SOL_VIAIR);
-  const vyperGas = Bench.profileLabel(VYPER_GAS);
-  const vyperVenom = Bench.profileLabel(VYPER_GAS_VENOM);
-  const absDelta = ratio => `${Math.abs((ratio - 1) * 100).toFixed(1)}%`;
 
   return React.createElement('section', { className: 'shell hero' },
     React.createElement('div', { className: 'hero-eyebrow' },
       React.createElement('span', { className: 'dot' }),
-      `Compiler bench · ${REPORT_VERSION} · ${gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
+      `Run ${m.run_id || gen.toISOString().slice(0,10)} · ${s.profiles} profiles × ${s.benchmarks} benchmarks`
     ),
     React.createElement('h1', { className: 'hero-title' },
-      'The ',
-      React.createElement('em', null, 'definitive'),
-      ' EVM compiler benchmark.'
+      'EVM compiler benchmark.'
     ),
     React.createElement('p', { className: 'hero-lede' },
       'Compare solc, Solar, solx, Vyper, and Fe across runtime gas, bytecode size, deployment cost, and compilation time. ',
       React.createElement('strong', null, s.ok_rows.toLocaleString()),
-      ' scenario measurements, with source provenance, compiler settings, and failures available for inspection. New in v5: each measured call runs as its own transaction, reentrancy locks are transient in every language, and the matrix adds solc 0.8.38, Fe 26.5.0, and Solar at cb38e986.'
+      ' scenario measurements, with source provenance, resolved compiler configurations, and failures available for inspection.'
     ),
 
     React.createElement('div', { className: 'hero-strip' },
       React.createElement('div', null,
-        React.createElement('div', { className: 'k' }, 'Comparable rows'),
+        React.createElement('div', { className: 'k' }, 'Eligible gas rows'),
         React.createElement('div', { className: 'v tabular' }, Bench.D.rows.filter(r => Bench.valueAt(r, 'harness_call_gas') != null).length.toLocaleString()),
         React.createElement('div', { className: 'vs' }, 'fixed · scale · real-derived'),
       ),
@@ -310,7 +307,7 @@ function FindingsGrid() {
       tag: 'Finding 03',
       span: 4,
       headline: 'Vyper’s experimental backend changes the tradeoff.',
-      body: `Enabling --experimental-codegen ("Venom") in Vyper gives ${lowerHigher(HEADLINES.venomSize.geomean, 'runtime bytecode')}, ${lowerHigher(HEADLINES.venomGas.geomean, 'runtime gas')}, and ${lowerHigher(HEADLINES.venomCompile.geomean, 'compile time')} versus legacy Vyper codegen.`,
+      body: `Enabling --experimental-codegen ("Venom") in Vyper gives ${lowerHigher(HEADLINES.venomSize.geomean, 'runtime bytecode')} and ${lowerHigher(HEADLINES.venomGas.geomean, 'runtime gas')} versus legacy Vyper codegen.`,
       stat: HEADLINES.venomSize,
       statLabel: 'runtime bytes vs Vyper legacy codegen',
       altStat: HEADLINES.venomGas,
@@ -320,11 +317,11 @@ function FindingsGrid() {
       tag: 'Finding 04',
       span: 4,
       headline: 'solc legacy and viaIR.',
-      body: `Switching from ${solcLegacy} to ${solcViaIR} gives ${lowerHigher(HEADLINES.viaIRGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.viaIRSize.geomean, 'runtime bytecode')}, but ${lowerHigher(HEADLINES.viaIRCompile.geomean, 'compile time')}.`,
+      body: `Switching from ${solcLegacy} to ${solcViaIR} gives ${lowerHigher(HEADLINES.viaIRGas.geomean, 'runtime gas')} and ${lowerHigher(HEADLINES.viaIRSize.geomean, 'runtime bytecode')}.`,
       stat: HEADLINES.viaIRGas,
       statLabel: 'runtime gas vs solc legacy',
-      altStat: HEADLINES.viaIRCompile,
-      altLabel: 'compile wall time',
+      altStat: HEADLINES.viaIRSize,
+      altLabel: 'runtime bytes',
     },
     {
       tag: 'Finding 05',
@@ -352,7 +349,7 @@ function FindingsGrid() {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 01 · Summary'),
         React.createElement('div', { className: 'section-title' }, 'Compiler tradeoffs in this run.'),
-        React.createElement('div', { className: 'section-sub' }, 'Each card reports a geometric-mean delta over comparable measurement units; card headers show row count and artifact compile pass rate.')
+        React.createElement('div', { className: 'section-sub' }, 'The main delta gives each matched fixed or scale unit equal weight. Runtime units are scenarios, deployment units are variants, and size and timing units are artifacts. The family-balanced figure gives each fixed benchmark and scale family one vote, with equal weight per N. Suite figures show each workload mix separately. ', SIZE_SCOPE)
       )
     ),
     React.createElement('div', { className: 'stories' },
@@ -371,6 +368,9 @@ function FindingsGrid() {
           React.createElement('div', { className: `story-num ${tone}` }, Bench.fmtDelta(ratio)),
           React.createElement('div', { className: 'story-sub' },
             c.statLabel,
+            React.createElement('div', null, c.stat.scope),
+            React.createElement('div', null, 'Family-balanced · ' + Bench.fmtDelta(c.stat.balanced.familyGeomean) + ' · ' + c.stat.balanced.families + ' groups'),
+            c.stat.suites.map(s => React.createElement('div', {key:s.suite}, SUITES[s.suite].label + ' · ' + Bench.fmtDelta(s.geomean) + ' · n=' + s.count)),
             c.altStat ? React.createElement('span', { style: { display: 'block', marginTop: '4px', color: 'var(--fg-4)' } },
               `${Bench.fmtDelta(c.altStat.geomean)} · ${c.altLabel}`
             ) : null
@@ -393,7 +393,7 @@ function VersionEvolution({ metric }) {
           React.createElement('span', { className: 'lang-sol' }, 'Solidity'),
           React.createElement('span', { style: { color: 'var(--fg-3)' } }, ' / solc')
         ),
-        React.createElement('div', { className: 'evo-axis' }, 'Δ vs newest · same codegen')
+        React.createElement('div', { className: 'evo-axis' }, 'Δ vs stable · common workloads')
       ),
       React.createElement(EvolutionChart, { points, language: 'solidity', height: 240 })
     ),
@@ -402,7 +402,7 @@ function VersionEvolution({ metric }) {
         React.createElement('div', { className: 'evo-title' },
           React.createElement('span', { className: 'lang-vy' }, 'Vyper')
         ),
-        React.createElement('div', { className: 'evo-axis' }, 'Δ vs newest · comparable optimize')
+        React.createElement('div', { className: 'evo-axis' }, 'Δ vs stable · common workloads')
       ),
       React.createElement(EvolutionChart, { points, language: 'vyper', height: 240 })
     )
@@ -413,6 +413,8 @@ function VersionEvolution({ metric }) {
 // Scale-N family chart strip
 // ============================================================
 function scaleScenarioLabel(rows) {
+  if (Bench.isDispatchSelector(rows[0])) return 'all generated selectors, equally weighted';
+  if (rows[0].family === 'dispatch_N') return 'sampled last selector (first at N=1)';
   const valuesByScenario = new Map();
   for (const r of rows) {
     if (!valuesByScenario.has(r.gas.scenario)) valuesByScenario.set(r.gas.scenario, new Set());
@@ -650,9 +652,9 @@ const DRILL_AGGREGATIONS = [
   { id: 'min', label: 'Min', needsMetric: true, lowerBetter: true },
   { id: 'max', label: 'Max', needsMetric: true, lowerBetter: true },
   { id: 'p90', label: 'P90', needsMetric: true, lowerBetter: true },
-  { id: 'count', label: 'Row count', needsMetric: false, lowerBetter: false, unit: 'rows' },
-  { id: 'failure_count', label: 'Failure count', needsMetric: false, lowerBetter: true, unit: 'fails' },
-  { id: 'failure_rate', label: 'Failure rate', needsMetric: false, lowerBetter: true, unit: '%' },
+  { id: 'count', label: 'Attempted artifacts', needsMetric: false, lowerBetter: false, unit: 'artifacts' },
+  { id: 'failure_count', label: 'Failed artifacts', needsMetric: false, lowerBetter: true, unit: 'fails' },
+  { id: 'failure_rate', label: 'Artifact failure rate', needsMetric: false, lowerBetter: true, unit: '%' },
 ];
 const DRILL_AGG_BY_ID = Object.fromEntries(DRILL_AGGREGATIONS.map(agg => [agg.id, agg]));
 const DEFAULT_DRILL_VIEW = {
@@ -763,7 +765,7 @@ function deploymentVariantLabel(value) {
 }
 
 function drillField(row, profile, metric, axis) {
-  const artifactLevel = Bench.comparisonLevel(metric) === 'artifact';
+  const level = Bench.comparisonLevel(metric);
   switch (axis) {
     case 'suite': return row.suite || 'unknown';
     case 'benchmark': return drillBenchmarkLabel(row);
@@ -776,9 +778,9 @@ function drillField(row, profile, metric, axis) {
     case 'runs': return drillRunsKey(profile);
     case 'profile': return row.profile_id;
     case 'status': return row.status !== 'ok' ? 'compile_error' : Bench.isComparableArtifact(row) ? 'ok' : 'correctness_error';
-    case 'scenario': return artifactLevel ? 'artifact' : (row.gas?.scenario || 'artifact');
-    case 'deployment': return artifactLevel ? 'artifact' : (row.gas?.deployment_variant || 'artifact');
-    case 'state': return artifactLevel ? 'artifact' : (row.gas?.state_access_profile || 'artifact');
+    case 'scenario': return level !== 'scenario' ? level : (row.gas?.scenario || 'artifact');
+    case 'deployment': return level === 'artifact' ? level : (row.gas?.deployment_variant || 'artifact');
+    case 'state': return level !== 'scenario' ? level : (row.gas?.state_access_profile || 'artifact');
     default: return 'unknown';
   }
 }
@@ -830,34 +832,19 @@ function sortDrillValues(axis, values) {
 }
 
 function buildDrillRecords(metric) {
-  const artifactLevel = Bench.comparisonLevel(metric) === 'artifact';
-  const seenArtifacts = new Set();
-  const records = [];
-  for (const row of Bench.D.rows) {
-    if (row.status !== 'ok' && row.status !== 'compile_error') continue;
-    const value = Bench.valueAt(row, metric);
-    if (artifactLevel) {
-      const key = [row.suite, row.benchmark_id, row.parameter_value ?? '', row.profile_id].join('|');
-      if (seenArtifacts.has(key)) continue;
-      seenArtifacts.add(key);
-    }
-    const failure = row.status !== 'ok' ? 'compile' : Bench.isComparableArtifact(row) ? null : 'correctness';
-    if (!failure && (value == null || !isFinite(value))) continue;
+  return Array.from(Bench.drillUnits(Bench.D.rows, metric), ({row, value, failure}) => {
     const profile = Bench.profileById(row.profile_id);
     const fields = Object.fromEntries(DRILL_AXES.map(axis => [
       axis.id,
       drillField(row, profile, metric, axis.id),
     ]));
-    records.push({
-      row,
-      value: failure ? null : value,
-      failure,
+    return {
+      row, value, failure,
       failureReason: failure === 'compile' ? Bench.failureReason(row.compile?.error)
         : failure === 'correctness' ? 'Observed correctness failure in this artifact' : null,
       fields,
-    });
-  }
-  return records;
+    };
+  });
 }
 
 function cloneDrillView(view) {
@@ -1052,8 +1039,11 @@ function formatDrillCellValue(value, aggregation, aggInfo) {
 }
 
 function DrilldownMatrix({ metric, setMetric }) {
-  const records = useMemo(() => buildDrillRecords(metric), [metric]);
   const [view, setView] = useState(() => cloneDrillView(DEFAULT_DRILL_VIEW));
+  // Failure rates use one denominator per attempted profile/artifact, even
+  // when its compile timing or an eligible deployment is unavailable.
+  const recordMetric = DRILL_AGG_BY_ID[view.aggregation]?.needsMetric === false ? null : metric;
+  const records = useMemo(() => buildDrillRecords(recordMetric), [recordMetric]);
   const [activeFilterAxis, setActiveFilterAxis] = useState(null);
   const safeView = useMemo(() => normalizeDrillView(view, records), [view, records]);
   const xAxis = safeView.columns[0];
@@ -1102,7 +1092,7 @@ function DrilldownMatrix({ metric, setMetric }) {
         .map(([reason, count]) => `${reason} (${count})`);
       out.set(key, {
         value: summarizeDrillCell(group, aggregation),
-        count: group.values.length,
+        count: aggInfo.needsMetric ? group.values.length : group.total - group.failures,
         failures: group.failures,
         failureKinds: group.failureKinds,
         total: group.total,
@@ -1110,7 +1100,7 @@ function DrilldownMatrix({ metric, setMetric }) {
       });
     }
     return out;
-  }, [filtered, xAxis, yAxis, aggregation]);
+  }, [filtered, xAxis, yAxis, aggregation, aggInfo.needsMetric]);
   const values = [...cells.values()].map(cell => cell.value).filter(value => value != null && isFinite(value));
   const failureRows = filtered.filter(record => record.failure).length;
   const min = values.length ? Math.min(...values) : null;
@@ -1149,7 +1139,7 @@ function DrilldownMatrix({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 03 · Arbitrary axes'),
         React.createElement('div', { className: 'section-title' }, 'Drill into any two dimensions.'),
-        React.createElement('div', { className: 'section-sub' }, 'Build a comparison, narrow the dataset, and choose how matching rows roll up into each cell.')
+        React.createElement('div', { className: 'section-sub' }, 'Each selected profile contributes one value per workload unit. Deployment cost counts each deployment variant once. Size and timing count each artifact once. Count and failure-rate cells use all attempted profile/artifact pairs, including those without timing or deployable code.')
       )
     ),
     React.createElement('div', { className: 'drill-panel' },
@@ -1282,10 +1272,12 @@ function DrilldownMatrix({ metric, setMetric }) {
 }
 
 function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setMetric }) {
-  const cmp = useMemo(() =>
-    Bench.compareProfiles(Bench.D.rows, profileA, profileB, metric),
-    [profileA, profileB, metric]
-  );
+  const [includeSizeDiagnostics, setSizeDiagnostics] = useState(false);
+  const [eligible, diagnostic] = useMemo(() => [false, true].map(includeDiagnostics =>
+    Bench.compareProfiles(Bench.D.rows, profileA, profileB, metric, undefined, includeDiagnostics)
+  ), [profileA, profileB, metric]);
+  const cmp = includeSizeDiagnostics ? diagnostic : eligible;
+  const timing = metric === 'compile_wall_ms';
   const tieBand = Bench.tieBandForMetric(metric);
   const agg = useMemo(() => Bench.summarize(cmp, tieBand), [cmp, tieBand]);
   const compareTitle = `${Bench.profileLabel(profileB)} vs ${Bench.profileLabel(profileA)}.`;
@@ -1318,7 +1310,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 02 · Pick any two configurations'),
         React.createElement('div', { className: 'section-title' }, compareTitle),
-        React.createElement('div', { className: 'section-sub' }, `Comparisons match on ${unit.match} across compiler configurations. Negative deltas favor the compared profile.`),
+        React.createElement('div', { className: 'section-sub' }, Bench.sourceScope(cmp) + '. ' + `Comparisons match on ${unit.match}. Negative deltas favor the compared profile. ` + SIZE_SCOPE),
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -1336,6 +1328,12 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
         onClick: () => { setProfileA(a); setProfileB(b); },
       }, label))
     ),
+    React.createElement('label', { className: 'section-sub' },
+      React.createElement('input', {
+        type: 'checkbox', checked: includeSizeDiagnostics,
+        onChange: e => setSizeDiagnostics(e.target.checked),
+      }), ` Include size diagnostics (${diagnostic.length - eligible.length} additional matched ${unit.plural})`
+    ),
 
     // Big stat tiles
     React.createElement('div', { className: 'stat-row' },
@@ -1343,14 +1341,14 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
         React.createElement('div', { className: 'k' }, 'Geomean Δ'),
         React.createElement('div', { className: `v ${Bench.deltaTone(agg.geomean, tieBand)}` },
           Bench.fmtDelta(agg.geomean)),
-        React.createElement('div', { className: 'sub' }, `${Bench.profileLabel(profileB)} vs ${Bench.profileLabel(profileA)}`)
+        React.createElement('div', { className: 'sub' }, 'Family-balanced Δ ' + Bench.fmtDelta(Bench.familyBalanced(cmp).familyGeomean))
       ),
       React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Median Δ'),
         React.createElement('div', { className: 'v tie' }, Bench.fmtDelta(agg.median)),
         React.createElement('div', { className: 'sub' }, 'of ' + agg.count + ' comparable ' + unit.plural)
       ),
-      React.createElement('div', { className: 'stat' },
+      !timing && React.createElement('div', { className: 'stat' },
         React.createElement('div', { className: 'k' }, 'Win / Tie / Loss'),
         React.createElement('div', { className: 'v tie tabular wtl-counts' },
           React.createElement('span', { style: { color: 'var(--accent)' } }, agg.cheaper),
@@ -1372,7 +1370,7 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
 
     // Distribution + suite breakdown
     React.createElement('div', { className: 'compare-detail-grid' },
-      React.createElement('div', { className: 'card no-pad' },
+      timing ? React.createElement(TimingSamples, {rows: cmp}) : React.createElement('div', { className: 'card no-pad' },
         React.createElement('div', { style: { padding: '20px 24px 4px 24px' } },
           React.createElement('div', { className: 'card-head' },
             React.createElement('div', { className: 'card-title' }, `Distribution of ${unit.singular} deltas`),
@@ -1391,14 +1389,40 @@ function Comparator({ profileA, profileB, setProfileA, setProfileB, metric, setM
         )
       ),
       React.createElement('div', { className: 'compare-detail-side' },
-        React.createElement(BySuiteCard, { rows: cmp, tieBand }),
-        React.createElement(MoversCard, { rows: cmp }),
+        React.createElement(BySuiteCard, { rows: cmp, tieBand, timing }),
+        !timing && React.createElement(MoversCard, { rows: cmp }),
       )
     )
   );
 }
 
-function BySuiteCard({ rows, tieBand }) {
+function TimingSamples({ rows }) {
+  const format = (value, samples) =>
+    `${value.toFixed(1)} [${Math.min(...samples).toFixed(1)}–${Math.max(...samples).toFixed(1)}]`;
+  return React.createElement('div', {className: 'card'},
+    React.createElement('div', {className: 'card-title'}, 'Fresh compiler timings'),
+    React.createElement('div', {className: 'card-sub'}, rows.length
+      ? 'Median [min–max] in milliseconds across interleaved rounds after one warm-up per profile.'
+      : 'No paired repeated timings here. Generate them with run --timing-samples 5.'),
+    rows.length > 0 && React.createElement('div', {className: 'card-sub'},
+      [Bench.D.manifest?.environment?.host?.cpu, Bench.D.manifest?.environment?.os, Bench.D.manifest?.environment?.arch].filter(Boolean).join(' · ')),
+    (Bench.D.manifest?.compile_timing?.alias_controls || []).map(control =>
+      React.createElement('p', {key: control.alias_profile, className: 'card-sub'},
+        `Identical-build timing control · ${control.alias_profile} vs ${control.baseline_profile} · ${Bench.fmtDelta(control.geomean_ratio)} over ${control.matched_artifacts} artifacts.`)),
+    rows.length > 0 && React.createElement('table', {className: 'tbl'},
+      React.createElement('thead', null, React.createElement('tr', null,
+        ['Artifact', 'A · ms', 'B · ms', 'Samples A/B'].map(h => React.createElement('th', {key:h}, h)))),
+      React.createElement('tbody', null, rows.map(r => {
+        const a = r.row.compile.wall_ms_samples, b = r.rowB.compile.wall_ms_samples;
+        return React.createElement('tr', {key:r.key},
+          React.createElement('td', null, r.row.benchmark_id),
+          React.createElement('td', {className:'num'}, format(r.valueA, a)),
+          React.createElement('td', {className:'num'}, format(r.valueB, b)),
+          React.createElement('td', {className:'num'}, `${a.length}/${b.length}`));
+      }))));
+}
+
+function BySuiteCard({ rows, tieBand, timing }) {
   const split = Bench.bySuite(rows, tieBand);
   return React.createElement('div', { className: 'card' },
     React.createElement('div', { className: 'card-head' },
@@ -1410,8 +1434,9 @@ function BySuiteCard({ rows, tieBand }) {
         React.createElement('tr', null,
           React.createElement('th', null, 'Suite'),
           React.createElement('th', { style: { textAlign: 'right' } }, 'Δ geomean'),
+          React.createElement('th', { style: { textAlign: 'right' } }, 'Family-balanced Δ'),
           React.createElement('th', { style: { textAlign: 'right' } }, 'n'),
-          React.createElement('th', { style: { textAlign: 'right' } }, 'W / T / L'),
+          !timing && React.createElement('th', { style: { textAlign: 'right' } }, 'W / T / L'),
         )
       ),
       React.createElement('tbody', null,
@@ -1420,8 +1445,9 @@ function BySuiteCard({ rows, tieBand }) {
           return React.createElement('tr', { key: s.suite },
             React.createElement('td', null, SUITES[s.suite].label),
             React.createElement('td', { className: `num delta ${tone}` }, Bench.fmtDelta(s.geomean)),
+            React.createElement('td', { className: 'num' }, Bench.fmtDelta(s.familyGeomean)),
             React.createElement('td', { className: 'num' }, s.count),
-            React.createElement('td', { className: 'num' }, `${s.cheaper}/${s.tie}/${s.costlier}`),
+            !timing && React.createElement('td', { className: 'num' }, `${s.cheaper}/${s.tie}/${s.costlier}`),
           );
         })
       )
@@ -1539,7 +1565,7 @@ function ReliabilityPanel() {
       React.createElement('div', { className: 'card-head' },
         React.createElement('div', null,
           React.createElement('div', { className: 'card-title' }, 'By compiler'),
-          React.createElement('div', { className: 'card-sub' }, `${cleanProfiles.length} profiles compile all artifacts.`)
+          React.createElement('div', { className: 'card-sub' }, `${cleanProfiles.length} profiles compiled every artifact they attempted. A missing implementation has no compile attempt.`)
         )
       ),
       React.createElement('div', { className: 'compiler-failures' },
@@ -1749,7 +1775,7 @@ function SectionVersions({ metric, setMetric }) {
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 04 · Versions over time'),
         React.createElement('div', { className: 'section-title' }, 'Compiler versions.'),
-        React.createElement('div', { className: 'section-sub' }, 'Each point is the geomean delta vs. the newest comparable profile. Lines near zero indicate small version-to-version changes. For chart continuity, Vyper 0.2 default is grouped with none because modern optimize modes did not exist yet.')
+        React.createElement('div', { className: 'section-sub' }, 'Each series uses the same matched workloads at every point, relative to the latest stable profile in that mode. Historical Vyper defaults are optimized and use latest gas as their reference. Tooltips show common and pairwise counts and compiler targets. Every row executes on the report’s harness fork. Historical source adapters and pre-0.8 Solidity wrapping arithmetic can also affect these curves.')
       ),
       React.createElement(SectionMetricControl, { metric, setMetric })
     ),
@@ -1786,15 +1812,23 @@ function SectionReliability() {
 
 function SectionMethodology() {
   const source = window.__EVM_BENCH_DATA_SOURCE || "./report-model.json";
-  const published = !!window.__EVM_BENCH_PUBLISH_MANIFEST;
-  const dataRoot = published || source.startsWith("/") ? "/" : "../normalized/";
-  const rawRoot = published || source.startsWith("/") ? "/" : "../raw/";
+  const latest = window.__EVM_BENCH_PUBLISH_MANIFEST;
+  const model = window.__BENCH_DATA || window.__EVM_BENCH_REPORT_DATA;
+  const published = latest && latest.run_id === model?.manifest?.run_id;
+  const local = !latest && ["./report-model.json", "/report-model.json"].includes(source);
+  const evidence = [
+    ['results', 'results.json', '../normalized/'],
+    ['run_manifest', 'run-manifest.json', '../normalized/'],
+    ['foundry_gas', 'foundry-gas.jsonl', '../raw/'],
+  ];
   return React.createElement('section', { id: 'methodology', className: 'shell section' },
     React.createElement('div', { className: 'section-head' },
       React.createElement('div', null,
         React.createElement('div', { className: 'section-eyebrow' }, '§ 08 · How to read this'),
         React.createElement('div', { className: 'section-title' }, 'Methodology and caveats.'),
-        React.createElement('div', { className: 'section-sub' }, 'A compact reference for units, aggregation, and scope behind the report numbers.')
+        React.createElement('div', { className: 'section-sub' }, Bench.legacySizeEvidence
+          ? 'These are the notes saved with this earlier run. The Summary and Compare sections describe how this viewer scores its measurements.'
+          : 'Measurement units, aggregation and source scope recorded for this run.')
       )
     ),
     React.createElement(Methodology),
@@ -1802,9 +1836,10 @@ function SectionMethodology() {
     React.createElement('div', { className: 'raw-links-row' },
       React.createElement('div', { className: 'raw-links' },
         React.createElement('a', { href: source }, 'report-model.json'),
-        React.createElement('a', { href: `${dataRoot}results.json` }, 'results.json'),
-        React.createElement('a', { href: `${dataRoot}run-manifest.json` }, 'run-manifest.json'),
-        React.createElement('a', { href: `${rawRoot}foundry-gas.jsonl` }, 'foundry-gas.jsonl'),
+        ...evidence.flatMap(([key, name, localDir]) => {
+          const href = published ? latest.artifacts?.[key]?.path : local ? localDir + name : null;
+          return href ? [React.createElement('a', {key, href}, name)] : [];
+        }),
       ),
       React.createElement('a', {
         href: 'https://github.com/banteg/evm-compiler-bench',

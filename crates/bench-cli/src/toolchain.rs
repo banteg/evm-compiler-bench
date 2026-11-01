@@ -469,7 +469,12 @@ fn resolve_vyper(root: &Path, offline: bool) -> Result<Toolchain> {
         {
             return resolve_vyper_version(root, offline, &version, "EVM_BENCH_VYPER", "stable");
         }
-        return resolve_path_toolchain("vyper", local);
+        let mut local = resolve_path_toolchain("vyper", local)?;
+        if local.version.parse::<Version>()?.any_prerelease() {
+            bail!("the offline stable Vyper compiler must report a stable version");
+        }
+        local.metadata.insert("channel".into(), "stable".into());
+        return Ok(local);
     }
     let latest = latest_vyper_release(&fetch_vyper_releases()?, false)?;
     resolve_vyper_version(root, offline, &latest, "EVM_BENCH_VYPER", "stable")
@@ -536,9 +541,10 @@ fn resolve_vyper_version(
     env_var: &str,
     channel: &str,
 ) -> Result<Toolchain> {
-    if let Some(local) =
+    if let Some(mut local) =
         local_toolchain_if_version("vyper", env::var_os(env_var).map(PathBuf::from), version)?
     {
+        local.metadata.insert("channel".into(), channel.into());
         return Ok(local);
     }
 
@@ -626,12 +632,7 @@ fn cached_vyper_toolchain(binary: &Path, version: &str, channel: &str) -> Result
     if let Ok(uv_version) = command_stdout(Command::new("uv").arg("--version")) {
         metadata.insert("uv_version".to_string(), uv_version.trim().to_string());
     }
-    if let Ok(python_version) = command_stdout(Command::new(&python).arg("--version")) {
-        metadata.insert(
-            "python_version".to_string(),
-            python_version.trim().to_string(),
-        );
-    }
+    record_vyper_environment(binary, Some(&python), &version_output, &mut metadata);
     Ok(Toolchain {
         name: "vyper".to_string(),
         version: actual_version,
@@ -643,15 +644,93 @@ fn cached_vyper_toolchain(binary: &Path, version: &str, channel: &str) -> Result
     })
 }
 
+const VYPER_ENVIRONMENT: &str = include_str!("../../../scripts/vyper_environment.py");
+
+fn record_vyper_environment(
+    binary: &Path,
+    managed_python: Option<&Path>,
+    version_output: &str,
+    metadata: &mut BTreeMap<String, String>,
+) {
+    metadata.insert("vyper_long_version".into(), version_output.trim().into());
+    let receipt = (|| -> Result<_> {
+        // A relocated Unix venv can retain a launcher pointing at its old
+        // interpreter. Follow the shebang even for managed installations.
+        let python = match managed_python {
+            Some(python) if cfg!(windows) => python.to_owned(),
+            _ => vyper_launcher_python(binary)?,
+        };
+        let output = command_stdout(
+            Command::new(&python)
+                .args(["-c", VYPER_ENVIRONMENT])
+                .arg(binary),
+        )?;
+        let mut receipt: BTreeMap<String, String> = serde_json::from_str(&output)?;
+        receipt.insert("python_executable".into(), python.display().to_string());
+        Ok(receipt)
+    })();
+    match receipt {
+        Ok(receipt) => metadata.extend(receipt),
+        Err(error) => {
+            eprintln!(
+                "warning: could not fingerprint {}: {error:#}; its compile cache is disabled",
+                binary.display()
+            );
+            metadata.insert("python_environment_status".into(), "unverified".into());
+        }
+    }
+}
+
+/// Only associate a local wrapper with an interpreter if it is a Python console script.
+/// Shell shims and standalone executables can still run with the compile cache disabled.
+fn vyper_launcher_python(binary: &Path) -> Result<PathBuf> {
+    use std::io::Read;
+    let mut header = Vec::new();
+    fs::File::open(binary)?
+        .take(4096)
+        .read_to_end(&mut header)?;
+    let script = std::str::from_utf8(&header).context("not a Python console script")?;
+    let mut words = script
+        .lines()
+        .next()
+        .and_then(|l| l.strip_prefix("#!"))
+        .context("missing Python shebang")?
+        .split_whitespace();
+    let interpreter = words.next().context("empty Python shebang")?;
+    let python = if interpreter == "/usr/bin/env" {
+        which::which(words.next().context("empty env shebang")?)?
+    } else {
+        PathBuf::from(interpreter)
+    };
+    if words.next().is_some()
+        || !python.is_absolute()
+        || !python
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().starts_with("python"))
+        || !script.lines().any(|line| {
+            line.trim_start()
+                .starts_with("from vyper.cli.vyper_compile import ")
+        })
+    {
+        bail!("unrecognized Vyper Python launcher");
+    }
+    Ok(python)
+}
+
 fn resolve_path_toolchain(name: &str, env_path: Option<PathBuf>) -> Result<Toolchain> {
     let binary_path = match env_path {
         Some(path) => path,
         None => which::which(name).with_context(|| format!("{name} not found on PATH"))?,
     };
     let version_output = command_stdout(Command::new(&binary_path).arg("--version"))?;
+    let mut metadata = BTreeMap::from([("resolver".into(), "local_path".into())]);
     let version = match name {
         "solc" => parse_solc_version(&version_output)?,
-        "vyper" => parse_vyper_version(&version_output)?,
+        "vyper" => {
+            let version = parse_vyper_version(&version_output)?;
+            record_vyper_environment(&binary_path, None, &version_output, &mut metadata);
+            version
+        }
         _ => return Err(anyhow!("unknown toolchain {name}")),
     };
     Ok(Toolchain {
@@ -661,7 +740,7 @@ fn resolve_path_toolchain(name: &str, env_path: Option<PathBuf>) -> Result<Toolc
         binary_path,
         download_source: "local".to_string(),
         version_output,
-        metadata: BTreeMap::from([("resolver".to_string(), "local_path".to_string())]),
+        metadata,
     })
 }
 
@@ -673,24 +752,8 @@ fn local_toolchain_if_version(
     let Some(binary_path) = env_path else {
         return Ok(None);
     };
-    let version_output = command_stdout(Command::new(&binary_path).arg("--version"))?;
-    let version = match name {
-        "vyper" => parse_vyper_version(&version_output)?,
-        "solc" => parse_solc_version(&version_output)?,
-        _ => return Err(anyhow!("unknown toolchain {name}")),
-    };
-    if version != latest {
-        return Ok(None);
-    }
-    Ok(Some(Toolchain {
-        name: name.to_string(),
-        version,
-        binary_sha256: sha256_file(&binary_path)?,
-        binary_path,
-        download_source: "local".to_string(),
-        version_output,
-        metadata: BTreeMap::from([("resolver".to_string(), "local_path".to_string())]),
-    }))
+    let local = resolve_path_toolchain(name, Some(binary_path))?;
+    Ok((local.version == latest).then_some(local))
 }
 
 fn latest_shared_evm(solc: &Toolchain, vypers: &[&Toolchain]) -> Result<String> {
@@ -1001,6 +1064,90 @@ mod tests {
         payload.releases.clear();
         assert!(latest_vyper_release(&payload, true).is_err());
         assert!(latest_vyper_release(&payload, false).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn local_vyper_environment_tracks_installed_files() {
+        let root = tempfile::tempdir().unwrap();
+        let env = root.path().join("venv");
+        super::command_stdout(
+            std::process::Command::new("python3")
+                .args(["-m", "venv", "--without-pip"])
+                .arg(&env),
+        )
+        .unwrap();
+        let python = env.join("bin/python");
+        let cli = env.join("bin/vyper");
+        let site = super::command_stdout(std::process::Command::new(&python).args([
+            "-c",
+            "import sysconfig; print(sysconfig.get_path('purelib'))",
+        ]))
+        .unwrap();
+        let site = std::path::Path::new(site.trim());
+        fs::create_dir_all(site.join("vyper/cli")).unwrap();
+        fs::write(site.join("vyper/__init__.py"), "").unwrap();
+        fs::write(
+            site.join("vyper/cli/vyper_compile.py"),
+            "def main(): print('0.4.3+commit.abc')",
+        )
+        .unwrap();
+        fs::write(
+            &cli,
+            format!(
+                "#!{}\nfrom vyper.cli.vyper_compile import main\nmain()\n",
+                python.display()
+            ),
+        )
+        .unwrap();
+        make_executable(&cli).unwrap();
+        let dist = site.join("vyper-0.4.3.dist-info");
+        fs::create_dir(&dist).unwrap();
+        fs::write(dist.join("METADATA"), "Name: vyper\nVersion: 0.4.3\n").unwrap();
+        let record = super::command_stdout(
+            std::process::Command::new(&python)
+                .args([
+                    "-c",
+                    r#"
+import base64, hashlib, os, sys
+from pathlib import Path
+launcher, site = map(Path, sys.argv[1:])
+sha = hashlib.sha256(launcher.read_bytes()).digest()
+checksum = base64.urlsafe_b64encode(sha).decode().rstrip("=")
+print(f"{os.path.relpath(launcher, site)},sha256={checksum},")
+"#,
+                ])
+                .arg(&cli)
+                .arg(site),
+        )
+        .unwrap();
+        fs::write(dist.join("RECORD"), record).unwrap();
+        let resolve = || super::resolve_path_toolchain("vyper", Some(cli.clone())).unwrap();
+        let original = resolve();
+        assert_eq!(original.metadata["vyper_long_version"], "0.4.3+commit.abc");
+        assert_eq!(original.metadata["python_packages"], "vyper==0.4.3");
+        fs::write(site.join("vyper/optimizer.py"), "# edited compiler").unwrap();
+        let modified = resolve();
+        assert_eq!(original.binary_sha256, modified.binary_sha256);
+        assert_ne!(
+            original.metadata["vyper_package_sha256"],
+            modified.metadata["vyper_package_sha256"]
+        );
+        fs::write(site.join("dependency.py"), "# changed dependency").unwrap();
+        let changed_dep = resolve();
+        assert_eq!(
+            modified.metadata["vyper_package_sha256"],
+            changed_dep.metadata["vyper_package_sha256"]
+        );
+        assert_ne!(
+            modified.metadata["python_environment_sha256"],
+            changed_dep.metadata["python_environment_sha256"]
+        );
+
+        fs::write(&cli, "#!/bin/sh\necho 0.4.3\n").unwrap();
+        let opaque = resolve();
+        assert_eq!(opaque.metadata["python_environment_status"], "unverified");
+        assert!(!opaque.metadata.contains_key("python_environment_sha256"));
     }
 
     #[test]

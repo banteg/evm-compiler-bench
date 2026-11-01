@@ -155,6 +155,32 @@ fn passed_check(row: &serde_json::Value, pointer: &str) -> bool {
     )
 }
 
+pub struct RunStart {
+    cpu: Option<String>,
+    timestamp: chrono::DateTime<Utc>,
+    git: serde_json::Value,
+}
+
+impl RunStart {
+    pub fn capture(root: &Path, timing: bool) -> Result<Self> {
+        let cpu = cpu_model(root).filter(|s| !s.is_empty()).or_else(|| {
+            env::var("EVM_BENCH_CPU_MODEL")
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+        });
+        anyhow::ensure!(
+            !timing || cpu.is_some(),
+            "unable to identify timing CPU; set EVM_BENCH_CPU_MODEL to the host processor model"
+        );
+        Ok(Self {
+            cpu,
+            timestamp: Utc::now(),
+            git: git_snapshot(root),
+        })
+    }
+}
+
 pub fn write_outputs(
     root: &Path,
     toolchains: &Toolchains,
@@ -162,7 +188,13 @@ pub fn write_outputs(
     gas_records: &[GasRecord],
     scenarios: &ScenarioCatalog,
     scale_manifest: &ScaleManifest,
+    start: &RunStart,
 ) -> Result<ReportPaths> {
+    let environment = environment_manifest(root, start.cpu.as_deref());
+    anyhow::ensure!(
+        environment["git"] == start.git,
+        "checkout changed during the run; rerun from the intended revision"
+    );
     let normalized_dir = root.join("results/normalized");
     let reports_dir = root.join("results/reports");
     ensure_dir(&normalized_dir)?;
@@ -179,12 +211,15 @@ pub fn write_outputs(
     fs::write(&normalized_results, serde_json::to_string_pretty(&rows)?)?;
 
     let run_manifest = normalized_dir.join("run-manifest.json");
+    let run_id = start.timestamp.format("%Y%m%dT%H%M%S%9fZ").to_string();
     let manifest = json!({
-        "run_id": Utc::now().format("%Y%m%dT%H%M%SZ").to_string(),
-        "started_at": Utc::now(),
+        "run_id": run_id,
+        "bundle_version": 1,
+        "started_at": start.timestamp,
         "evm_version": toolchains.evm_version,
         "toolchains": toolchains.compilers.values().collect::<Vec<_>>(),
         "profiles": manifest_profiles(&compiled.profiles),
+        "compile_timing": compile_timing_manifest(compiled),
         "scale_generator": {
             "version": scale_manifest.generator_version.clone(),
             "config_hash": scale_manifest.config_hash.clone(),
@@ -195,7 +230,7 @@ pub fn write_outputs(
         "real_derived": {
             "benchmarks": real_derived_manifest(root, compiled)
         },
-        "environment": environment_manifest(root),
+        "environment": environment,
         "harness_config": public_harness_config(&crate::runner::harness_config(root, &toolchains.evm_version)?)?,
         "harness_shards": serde_json::from_slice::<serde_json::Value>(&fs::read(root.join("results/raw/harness-shards.json"))?)?,
         "artifacts": compiled.artifacts.len(),
@@ -220,6 +255,7 @@ pub fn write_outputs(
         "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0; url=index.html#methodology\"><title>EVM Compiler Bench Methodology</title><p>Methodology moved to <a href=\"index.html#methodology\">the interactive report</a>.</p>",
     )?;
 
+    crate::bundle::freeze(root, &run_id)?;
     Ok(ReportPaths {
         normalized_results,
         report_model,
@@ -227,6 +263,61 @@ pub fn write_outputs(
         html_report,
         methodology_report,
     })
+}
+
+fn compile_timing_manifest(compiled: &CompileSet) -> Option<serde_json::Value> {
+    let samples = compiled.artifacts.first()?.compile.wall_ms_samples.len();
+    if samples == 0 {
+        return None;
+    }
+    let by_id: BTreeMap<_, _> = compiled
+        .artifacts
+        .iter()
+        .map(|a| ((a.benchmark_id.as_str(), a.profile_id.as_str()), a))
+        .collect();
+    let mut controls = BTreeMap::new();
+    for alias in &compiled.artifacts {
+        let Some(mode) = alias.profile_id.strip_prefix("solc-latest-") else {
+            continue;
+        };
+        let pin = format!("solc-{}-{mode}", alias.compiler.version);
+        let Some(reference) = by_id.get(&(alias.benchmark_id.as_str(), pin.as_str())) else {
+            continue;
+        };
+        if alias.compiler.binary_sha256 != reference.compiler.binary_sha256
+            || alias.source_hash != reference.source_hash
+            || alias.compiler_settings["evmVersion"] != reference.compiler_settings["evmVersion"]
+            || alias.creation_bytecode != reference.creation_bytecode
+            || alias.runtime_bytecode != reference.runtime_bytecode
+        {
+            continue;
+        }
+        let median = |values: &[f64]| {
+            let mut sorted = values.to_vec();
+            sorted.sort_by(f64::total_cmp);
+            (sorted[sorted.len() / 2] + sorted[(sorted.len() - 1) / 2]) / 2.0
+        };
+        let ratio =
+            median(&alias.compile.wall_ms_samples) / median(&reference.compile.wall_ms_samples);
+        let (count, sum) = controls
+            .entry((pin, &alias.profile_id))
+            .or_insert((0usize, 0.0));
+        *count += 1;
+        *sum += ratio.ln();
+    }
+    let controls: Vec<_> = controls
+        .into_iter()
+        .map(|((baseline, alias), (count, sum))| {
+            json!({
+                "baseline_profile": baseline, "alias_profile": alias, "matched_artifacts": count,
+                "geomean_ratio": (sum / count as f64).exp()
+            })
+        })
+        .collect();
+    Some(json!({
+        "method": crate::compiler::TIMING_METHOD,
+        "warmup_rounds": 1, "samples_per_artifact": samples, "alias_controls": controls
+    }))
 }
 
 fn manifest_profiles(profiles: &[CompilerProfile]) -> Vec<serde_json::Value> {
@@ -422,22 +513,22 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "B",
                 "title": "Stripped runtime bytes",
-                "body": "Bytecode comparisons use runtime bytecode with appended metadata stripped, so trailing CBOR does not skew code-size deltas."
+                "body": "Runtime size and code-deposit gas use the deployed implementation, including constructor-appended immutables. Size comparisons subtract compiler metadata. Initcode size includes constructor arguments, and deployment size limits use the harness fork."
             },
             {
                 "tag": "C",
                 "title": "Idiomatic source comparison",
-                "body": "Headline results compare fixed and scale-suite idiomatic high-level source for each language. Solidity storage packing and Vyper dispatch codegen count as language-native behavior; hand-written assembly and mechanically matched ports belong in diagnostic lanes."
+                "body": "Cards identify comparisons of identical materialized sources, compiler-specific source variants, and idiomatic ports across languages. For ports, language-native choices such as storage packing and dispatch contribute to the result."
             },
             {
                 "tag": "D",
                 "title": "Metric-aware geomeans",
-                "body": "Runtime gas is aggregated over matched headline scenarios. Current harness deployment gas is scenario/deployment-variant scoped; bytecode size and compile time are deduplicated per benchmark artifact before computing ratios."
+                "body": "Card n counts matched fixed and scale units. Each runtime scenario, deployment variant, or size/timing artifact counts once. A complete uniform selector sweep counts as one runtime workload per N. Separate summaries show fixed, scale and real-derived results. The family-balanced geometric mean weights each fixed or real-derived benchmark and scale family equally, and each N equally within its family."
             },
             {
                 "tag": "E",
                 "title": "Metric-specific bands",
-                "body": "Gas and bytecode use a +/-0.5% materiality band for W/T/L counts. Compile time uses a +/-2% noise band."
+                "body": "Gas and bytecode use a +/-0.5% materiality band. Compile timing uses uncached interleaved repetitions after a warm-up. Timing comparisons summarize sample medians and dispersion."
             },
             {
                 "tag": "F",
@@ -452,7 +543,7 @@ fn report_methodology() -> serde_json::Value {
             {
                 "tag": "H",
                 "title": "Compatibility source variants",
-                "body": "Older source-language profiles compile generated variants of the checked-in latest source. Version pragmas are rewritten to the resolved compiler patch range, then only supported backward syntax rewrites are applied."
+                "body": "Historical profiles compile source variants against their own EVM targets and run on the shared harness fork. Compiler targets, syntax adapters and historical arithmetic semantics can change the workload. Each historical chart series uses a fixed intersection of workloads. Historical optimized Vyper defaults have a separate series relative to current gas mode."
             },
             {
                 "tag": "I",
@@ -843,6 +934,7 @@ fn normalized_rows(
         })
         .collect();
     let profile_behavior_baselines = profile_behavior_baselines(gas_records, &artifacts);
+    let mut deployments = BTreeMap::new();
     let mut rows = Vec::with_capacity(gas_records.len() + compiled.failures.len());
     for gas in gas_records {
         let artifact = artifacts
@@ -858,6 +950,35 @@ fn normalized_rows(
                 )
             })?;
         let scenario_file = scenarios.get(&artifact.benchmark_id)?;
+        let scenario = scenario_file
+            .scenarios
+            .iter()
+            .find(|s| s.name == gas.scenario)
+            .with_context(|| {
+                format!(
+                    "unknown measured scenario {}/{}",
+                    gas.benchmark_id, gas.scenario
+                )
+            })?;
+        let variant = scenario.deployment_variant.as_str();
+        let deployment_key = (
+            &gas.benchmark_id,
+            &gas.implementation_id,
+            &gas.profile_id,
+            variant,
+        );
+        let measured = (
+            gas.internal_create_gas,
+            gas.deployed_runtime_bytes,
+            gas.initcode_bytes,
+        );
+        anyhow::ensure!(
+            *deployments.entry(deployment_key).or_insert(measured) == measured,
+            "deployment measurements differ across scenarios for {}/{}/{} ({variant})",
+            gas.benchmark_id,
+            gas.implementation_id,
+            gas.profile_id,
+        );
         let failures = failure_links
             .get(&artifact.benchmark_id)
             .cloned()
@@ -890,12 +1011,9 @@ fn normalized_rows(
                         .get(&profile_behavior_key(gas, artifact.language))
                         .copied()
                 },
-                scenario_file
-                    .scenarios
-                    .iter()
-                    .find(|scenario| scenario.name == gas.scenario),
+                Some(scenario),
             ),
-        ));
+        )?);
     }
     for failure in &compiled.failures {
         rows.push(failure_row(root, failure));
@@ -918,7 +1036,7 @@ fn row(
     harness_evm_version: &str,
     behavior_evidence: &[crate::behavior::Evidence],
     profile_behavior: ProfileBehaviorCheck,
-) -> serde_json::Value {
+) -> Result<serde_json::Value> {
     let evidence: Vec<_> = behavior_evidence
         .iter()
         .filter(|e| e.covers(artifact))
@@ -953,7 +1071,7 @@ fn row(
         .find(|scenario| scenario.name == gas.scenario)
         .map(|scenario| scenario.deployment_variant.as_str())
         .unwrap_or("standard");
-    json!({
+    Ok(json!({
         "status": "ok",
         "benchmark_id": gas.benchmark_id,
         "implementation_id": gas.implementation_id,
@@ -991,11 +1109,12 @@ fn row(
         },
         "compile": {
             "status": "ok",
+            "timing_method": (!artifact.compile.wall_ms_samples.is_empty()).then_some(crate::compiler::TIMING_METHOD),
             "wall_ms_samples": artifact.compile.wall_ms_samples.clone(),
             "cpu_ms_samples": artifact.compile.cpu_ms_samples.clone(),
-            "peak_rss_kib": artifact.compile.peak_rss_kib
+            "peak_rss_kib": (artifact.compile.peak_rss_kib > 0).then_some(artifact.compile.peak_rss_kib)
         },
-        "bytecode": artifact.bytecode,
+        "bytecode": deployed_bytecode(artifact, gas, harness_evm_version)?,
         "gas": {
             "scenario": gas.scenario,
             "evm_fork": harness_evm_version,
@@ -1021,7 +1140,11 @@ fn row(
         },
         "correctness": {
             "scenario_status_check": if gas.scenario_status_ok { "pass" } else { "fail" },
-            "golden_behavior_check": "not_run",
+            "golden_behavior_check": match gas.golden_check_passed {
+                Some(true) => "pass",
+                Some(false) => "fail",
+                None => "not_run",
+            },
             "baseline_differential_check": baseline_status,
             "behavior_pairs": evidence,
             "profile_behavior_check": profile_behavior.profile_behavior_check,
@@ -1034,7 +1157,37 @@ fn row(
             "failure_artifacts": failure_links,
             "scenario_status_ok": gas.scenario_status_ok
         }
-    })
+    }))
+}
+
+fn deployed_bytecode(
+    artifact: &CompiledArtifact,
+    gas: &GasRecord,
+    harness_evm: &str,
+) -> Result<serde_json::Value> {
+    let template = &artifact.bytecode;
+    let runtime_bytes = gas.deployed_runtime_bytes;
+    // Use the known compiler metadata length. Immutable data appended by the
+    // constructor can follow the template and must never be mistaken for CBOR.
+    let metadata_bytes = template.runtime_bytes - template.runtime_bytes_stripped;
+    let runtime_margin = 24_576 - runtime_bytes as isize;
+    let initcode_margin = crate::compiler::evm_at_least(harness_evm, "shanghai")?
+        .then(|| 49_152 - gas.initcode_bytes as isize);
+    Ok(json!({
+        "creation_bytes": template.creation_bytes,
+        "creation_bytes_stripped": template.creation_bytes_stripped,
+        "runtime_template_bytes": template.runtime_bytes,
+        "runtime_template_bytes_stripped": template.runtime_bytes_stripped,
+        "runtime_bytes": runtime_bytes,
+        "runtime_bytes_stripped": runtime_bytes.checked_sub(metadata_bytes).context("deployed runtime shorter than its compiler metadata")?,
+        "deployed_runtime_bytes": runtime_bytes,
+        "linked_runtime_bytes": runtime_bytes,
+        "initcode_bytes": gas.initcode_bytes,
+        "code_deposit_gas": 200 * runtime_bytes,
+        "eip170_margin_bytes": runtime_margin,
+        "eip3860_margin_bytes": initcode_margin,
+        "within_size_limits": runtime_margin >= 0 && initcode_margin.is_none_or(|margin| margin >= 0)
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -1468,16 +1621,20 @@ fn public_harness_config(config: &serde_json::Value) -> Result<serde_json::Value
     Ok(serde_json::Value::Object(public))
 }
 
-fn environment_manifest(root: &Path) -> serde_json::Value {
+fn git_snapshot(root: &Path) -> serde_json::Value {
+    json!({
+        "commit": command_output(root, "git", &["rev-parse", "HEAD"]),
+        "dirty": command_output(root, "git", &["status", "--porcelain", "--untracked-files=all"]).map(|output| !output.is_empty())
+    })
+}
+
+fn environment_manifest(root: &Path, cpu: Option<&str>) -> serde_json::Value {
     json!({
         "os": env::consts::OS,
         "arch": env::consts::ARCH,
         "family": env::consts::FAMILY,
         "command_line": env::args().collect::<Vec<_>>(),
-        "git": {
-            "commit": command_output(root, "git", &["rev-parse", "HEAD"]),
-            "dirty": command_output(root, "git", &["status", "--porcelain"]).is_some_and(|output| !output.is_empty())
-        },
+        "git": git_snapshot(root),
         "tools": {
             "forge": command_output(root, "forge", &["--version"]),
             "cargo": command_output(root, "cargo", &["--version"]),
@@ -1486,7 +1643,7 @@ fn environment_manifest(root: &Path) -> serde_json::Value {
         },
         "host": {
             "kernel": command_output(root, "uname", &["-a"]),
-            "cpu": cpu_model(root)
+            "cpu": cpu
         }
     })
 }
@@ -1495,13 +1652,10 @@ fn cpu_model(root: &Path) -> Option<String> {
     command_output(root, "sysctl", &["-n", "machdep.cpu.brand_string"]).or_else(|| {
         fs::read_to_string("/proc/cpuinfo").ok().and_then(|text| {
             text.lines()
-                .find_map(|line| line.split_once(':'))
-                .and_then(|(key, value)| {
-                    if key.trim() == "model name" {
-                        Some(value.trim().to_string())
-                    } else {
-                        None
-                    }
+                .filter_map(|line| line.split_once(':'))
+                .find_map(|(key, value)| {
+                    matches!(key.trim(), "model name" | "Hardware" | "Processor")
+                        .then(|| value.trim().to_owned())
                 })
         })
     })
@@ -1609,6 +1763,33 @@ fn str_at(row: &serde_json::Value, pointer: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn timing_controls_use_fresh_samples_from_matching_builds() {
+        use crate::models::{CompileSet, CompiledArtifact};
+        use crate::test_support::artifact;
+        let mut alias = artifact("solc", "solc-latest-viair-runs200");
+        let mut pin = artifact("solc", "solc-0.8.34-viair-runs200");
+        alias.compile.wall_ms_samples = vec![4.0, 6.0, 5.0];
+        pin.compile.wall_ms_samples = vec![2.0, 1.0, 3.0];
+        let cached: CompiledArtifact =
+            serde_json::from_value(serde_json::to_value(&alias).unwrap()).unwrap();
+        assert!(cached.compile.wall_ms_samples.is_empty());
+        let mut set = CompileSet {
+            artifacts: vec![alias, pin],
+            profiles: vec![],
+            failures: vec![],
+        };
+        let result = super::compile_timing_manifest(&set).unwrap();
+        assert_eq!(result["alias_controls"][0]["geomean_ratio"], 2.5);
+        set.artifacts[1].runtime_bytecode.push_str("00");
+        assert!(
+            super::compile_timing_manifest(&set).unwrap()["alias_controls"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn published_harness_config_keeps_build_flags_and_excludes_credentials() {
         let config = serde_json::json!({"solc":"0.8.34", "optimizer":true, "isolate":true,
             "etherscan_api_key":"private-account-key", "rpc_endpoints":{"mainnet":"private-rpc-token"}});
@@ -1646,6 +1827,7 @@ mod tests {
                 evidence,
                 super::profile_behavior_check(&gas, None, scenario.scenarios.first()),
             )
+            .unwrap()
         };
         let absent = render(&[]);
         assert_eq!(absent["correctness"]["property_tests"], "not_run");
@@ -1739,6 +1921,41 @@ mod tests {
     }
 
     #[test]
+    fn curve_measurements_include_immutables_and_constructor_arguments() {
+        use crate::test_support::{artifact, gas};
+        let mut artifact = artifact("vyper", "vyper-latest-gas");
+        artifact.bytecode.creation_bytes = 24_909;
+        artifact.bytecode.runtime_bytes = 22_442;
+        artifact.bytecode.runtime_bytes_stripped = 22_442;
+        let mut gas = gas(&artifact);
+        gas.deployed_runtime_bytes = 24_586;
+        gas.initcode_bytes = 24_909 + 960;
+        let measured = super::deployed_bytecode(&artifact, &gas, "prague").unwrap();
+        assert_eq!(measured["runtime_template_bytes"], 22_442);
+        assert_eq!(measured["runtime_bytes_stripped"], 24_586);
+        assert_eq!(measured["eip170_margin_bytes"], -10);
+        assert_eq!(measured["code_deposit_gas"], 4_917_200);
+        assert_eq!(measured["eip3860_margin_bytes"], 23_283);
+        assert_eq!(measured["within_size_limits"], false);
+
+        gas.deployed_runtime_bytes = 24_576;
+        gas.initcode_bytes = 49_153;
+        assert_eq!(
+            super::deployed_bytecode(&artifact, &gas, "paris").unwrap()["within_size_limits"],
+            true
+        );
+        assert_eq!(
+            super::deployed_bytecode(&artifact, &gas, "shanghai").unwrap()["within_size_limits"],
+            false
+        );
+        gas.initcode_bytes = 49_152;
+        assert_eq!(
+            super::deployed_bytecode(&artifact, &gas, "shanghai").unwrap()["within_size_limits"],
+            true
+        );
+    }
+
+    #[test]
     fn rendered_rows_match_the_result_schema() {
         use crate::test_support::{artifact, gas};
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1769,7 +1986,8 @@ mod tests {
             "prague",
             &[],
             super::profile_behavior_check(&gas, Some(&gas), scenario.scenarios.first()),
-        );
+        )
+        .unwrap();
         assert!(row["provenance"].is_null());
         if let Err(error) = schemas.validate(&row, index) {
             panic!("{error}");

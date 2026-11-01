@@ -276,13 +276,33 @@
       "required": ["status"],
       "properties": {
         "status": { "enum": ["ok", "error"] },
+        "timing_method": { "enum": ["interleaved-v1", null] },
         "wall_ms_samples": { "type": "array", "items": { "type": "number" } },
         "cpu_ms_samples": { "type": "array", "items": { "type": "number" } },
-        "peak_rss_kib": { "type": "integer", "minimum": 0 },
+        "peak_rss_kib": { "type": ["integer", "null"], "minimum": 0 },
         "error": { "type": "string" }
       }
     },
-    "bytecode": { "type": ["object", "null"] },
+    "bytecode": {
+      "type": ["object", "null"],
+      "description": "Measured rows identify the implementation bytes at deployment. Older datasets only have template-based numbers and omit within_size_limits.",
+      "properties": {
+        "creation_bytes": { "type": "integer", "minimum": 0 },
+        "runtime_template_bytes": { "type": "integer", "minimum": 0 },
+        "runtime_template_bytes_stripped": { "type": "integer", "minimum": 0 },
+        "deployed_runtime_bytes": { "type": "integer", "minimum": 0 },
+        "runtime_bytes": { "type": "integer", "minimum": 0 },
+        "runtime_bytes_stripped": { "type": "integer", "minimum": 0 },
+        "initcode_bytes": { "type": "integer", "minimum": 0 },
+        "code_deposit_gas": { "type": "integer", "minimum": 0 },
+        "eip170_margin_bytes": { "type": "integer" },
+        "eip3860_margin_bytes": { "type": ["integer", "null"] },
+        "within_size_limits": { "type": "boolean", "description": "Runtime code and full initcode obey the size limits activated on the harness fork." }
+      },
+      "dependentRequired": {
+        "within_size_limits": ["runtime_template_bytes", "deployed_runtime_bytes", "runtime_bytes_stripped", "initcode_bytes", "eip170_margin_bytes", "eip3860_margin_bytes", "code_deposit_gas"]
+      }
+    },
     "gas": {
       "type": ["object", "null"],
       "required": [
