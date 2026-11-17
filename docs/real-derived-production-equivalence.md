@@ -91,7 +91,7 @@ ports cover additional benchmark behavior.
 
 | Benchmark | Comparison lane | Source lane | Counterpart lane | Exact source-language side | Counterpart status | Main blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper port covers the pair hot path, LP-token surface, and covered factory-management branches. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
+| `uniswap_v2_pair` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Solidity modernization of upstream `UniswapV2Pair.sol`, with pinned upstream retained for provenance. | Vyper and Fe ports exercise the pair hot path, valid permit, and LP-token transfers. | Intentional boundaries remain for factory fixture artifact shape, Vyper's bounded flash callback payload, exhaustive decoder permutations, exact revert bytes, and storage layout. |
 | `curve_stableswap_2coin` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `CurveStableSwapNG.vy`, with pinned upstream retained for provenance. | Solidity port covers two-coin standard, oracle, rebasing, and ERC4626 harness tokens, plus representative three-coin and MAX_COINS dynamic-N canaries. | Dynamic-N coverage is representative rather than exhaustive; factory/views topology is kept as a single delegated quote-view canary; revert-data and decoder-timing details remain approximate. |
 | `yearn_vault_v2` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `contracts/Vault.vy`, with pinned upstream retained for provenance. | Solidity port covers the monolithic V2 vault API, ERC20 share accounting and permit, deposits/withdrawals, governance/management controls, strategy queue/debt/report accounting, locked profit, and optional-return ERC20 transfers. | Intentional boundaries remain for deterministic asset/strategy fixtures, representative common workflows, exact Vyper bounded-string/bytes decoder behavior, revert data, and storage layout. |
 | `yearn_vault_v3` | `production_conformance` | `latest_syntax_original` | `latest_idiomatic` | Latest-syntax Vyper modernization of upstream `VaultV3.vy`, with pinned upstream retained for provenance. | Solidity port covers common vault API, management, strategy accounting, module, queue, and permit usage with idiomatic Solidity dynamic strings and queue storage. | Intentional boundaries remain for representative third-party fixtures, representative common workflow sequences, exact Vyper bounded-string decoder behavior, and storage layout; the `MAX_QUEUE` cap remains modeled as vault behavior. |
@@ -117,29 +117,36 @@ ports cover additional benchmark behavior.
 
 ## Granular Inventory
 
-### `uniswap_v2_pair`
+### `uniswap_v2_pair` and `uniswap_v2_factory`
 
-| Surface | Status | Notes |
-| --- | --- | --- |
-| Pair source-language original | Latest-syntax original | `UniswapV2PairReal.sol` is a latest-syntax Solidity modernization of the pinned upstream pair source; the pinned upstream file remains provenance/reference input only. |
-| Factory ownership of `initialize` | Fixture-exact | The pair-side factory gate, CREATE2 deployment path, pair mappings, `allPairs` tracking and public getter bounds, `feeTo`/`feeToSetter` authorization including old-setter rejection after authority transfer, same-order and reverse-order duplicate-pair guards, and invalid-pair guards are covered; the full upstream factory contract is not the benchmark target. |
-| LP ERC20 metadata, balances, allowances, transfers | Exact counterpart surface | Metadata, balances, `approve`, `transfer`, upstream zero-recipient transfer behavior, insufficient-balance transfer rejection, finite/infinite-allowance `transferFrom`, upstream zero-recipient `transferFrom` behavior, and insufficient-allowance rejection are implemented and scenario-covered. |
-| Pair identity and EIP-712 getters | Exact counterpart surface | `factory`, `PERMIT_TYPEHASH`, and `MINIMUM_LIQUIDITY` getters are directly scenario-covered; deployment-specific `token0`, `token1`, and `DOMAIN_SEPARATOR` values are covered through normalized observers. |
-| EIP-2612 permit | Exact counterpart surface | Valid signatures, invalid signatures, expired deadlines, and acceptance after post-deploy chain-id drift through the constructor-time domain separator are covered. |
-| Reserve accounting and `getReserves` | Exact counterpart surface | Vyper uses native `uint112` reserve fields plus a native `uint32` timestamp field; reserve overflow rejection and timestamp wrap behavior are covered. |
-| Mint, burn, swap, skim, sync | Exact counterpart surface | Initial/subsequent mint, upstream zero-recipient LP mint behavior, initial mint below `MINIMUM_LIQUIDITY` rejection, burn including zero-recipient output transfers and no-staged-LP burn rejection, invariant and dual-output swaps, zero-output and insufficient-liquidity swap guards, drift, skim including zero-recipient transfers, sync, and timestamp wrap paths are covered. |
-| Protocol-fee `kLast` behavior | Exact counterpart surface | Fee-on minting and fee-off reset are covered. |
-| Optional-return token handling | Exact counterpart surface | No-return transfer-out paths are covered for swap, burn, and skim. |
-| Flash-swap callback | Exact counterpart surface under idiomatic-scope policy | Ordinary non-empty callback repayment and reentrancy rejection are covered. The Vyper port keeps an idiomatic `Bytes[4096]` ABI bound instead of emulating Solidity's unbounded `bytes calldata`; oversized callback payload conformance is tracked as a language-level semantic boundary rather than a port implementation gap. |
-| Revert data and ABI boundary behavior | Representative boundary | Success/failure is covered for important paths plus unknown selectors, truncated initializer, pair-action, LP-token approve/transfer/transferFrom, malformed swap head, missing/short/overlapping dynamic calldata tails, and truncated permit payloads including signature-tail truncation. Exhaustive decoder-boundary permutations and exact revert bytes are intentionally out of scope for the headline benchmark. |
-| Storage layout | Tracked separately | The Vyper port uses idiomatic storage rather than matching the upstream packed reserve word. Externally observable uint112/uint32 reserve semantics are preserved, while slot layout remains outside the claimed behavioral equivalence surface unless a slot-dependent behavior is added. |
+The active pair matrix contains 24 scenarios. Selected compiler pairs compare
+call status, successful return data, observed state, and emitted logs. The
+factory has five additional scenarios. The YAML files list every call, fixture
+and observer. [Pair scenarios](../benches/scenarios/uniswap_v2_pair.yaml) and
+[factory scenarios](../benches/scenarios/uniswap_v2_factory.yaml).
 
-Immediate chips:
+| Surface | Active evidence |
+| --- | --- |
+| Source and layout | The Solidity pair modernizes the pinned upstream source. Vyper stores the two `uint112` reserves and `uint32` timestamp separately. Fe uses its standard library floor square root for liquidity calculations. |
+| Initialization and identity | The pair accepts initialization by its factory. The factory getter scenario observes both token identities and the domain separator. The CREATE2 fixture deploys and initializes a pair before its first mint. |
+| LP tokens and permit | The suite exercises transfers, approvals, finite and infinite allowance spending, and a valid EIP-2612 signature. Observers read metadata, balances, allowances and the permit nonce. |
+| Pair accounting | The suite exercises initial and subsequent mint, burn, both swap directions, dual output, skim, sync, timestamp wraparound, fee-on minting and fee-off `kLast` reset. |
+| External calls | Swaps exercise a successful callback, reentrancy rejection, an empty token return, and a false token return. The Vyper callback payload accepts up to 4096 bytes. |
+| Factory control plane | The suite reads the fee recipient, sets the fee recipient and setter, and creates a fixture pair in either token ordering. Creation checks the returned address, mappings, first `allPairs` entry, child bytecode, and initialized tokens. |
 
-- Exact revert bytes and exhaustive ABI decoder permutations remain out of scope
-  beyond the representative malformed-calldata classes already covered.
+The measured pair reverts are the false-return token and the reentrant callback.
+Invalid and expired permits, chain-ID changes, malformed calldata, reserve
+overflow, zero recipients and allowance failures fall outside this matrix.
+Factory tests cover successful requests with distinct nonzero tokens and an
+authorized caller. The pair fixture uses shared initcode for the child in the
+factory benchmark.
 
 ### `curve_stableswap_2coin`
+
+`python3 scripts/verify_curve_rates.py` compiles the modern Solidity, Vyper, and Fe ports
+and checks the oracle request word, short and oversized replies, failed calls,
+and overflowing oracle and ERC4626 rate products. These conformance cases run
+separately from the scored scenarios.
 
 | Surface | Status | Notes |
 | --- | --- | --- |
@@ -205,63 +212,6 @@ Immediate chips:
 Immediate chips:
 
 - No additional Yearn matrix-expansion work is tracked for the idiomatic benchmark.
-
-## `uniswap_v2_pair`
-
-Exact now:
-
-- The Solidity benchmark implementation is `UniswapV2PairReal.sol`, a
-  latest-syntax modernization of the pinned upstream
-  `contracts/UniswapV2Pair.sol`.
-- The pinned upstream Solidity sources for ERC20, factory, interfaces, and
-  libraries remain vendored as provenance/reference inputs.
-- The Vyper port implements the matched pair API: initialization, reserves,
-  mint, burn, swap, skim, sync, fee-on `kLast`, cumulative prices, LP ERC20
-  accounting, and permit.
-- The Vyper port uses native uint112 reserve fields and a native uint32
-  timestamp field, preserving the upstream reserve overflow guard, and
-  `default_return_value=True` transfer handling for no-return ERC20s while
-  still rejecting explicit false-return transfers.
-- Exact storage layout compatibility is intentionally false for the rest of the
-  Vyper port. That is acceptable for an idiomatic source comparison because the
-  benchmark claims externally observable pair behavior, while preserving
-  uint112/uint32 reserve bounds in idiomatic storage.
-- Scenarios cover initial and subsequent mints, initial mint rejection below
-  `MINIMUM_LIQUIDITY`, `token0`, `token1`, `factory`, `DOMAIN_SEPARATOR`,
-  factory CREATE2 deployment, same-order and reverse-order duplicate factory
-  guards, exact upstream token0-input and token1-input
-  swap invariant checks, zero-output and insufficient-liquidity swap guards,
-  one-wei over-output K rejection for each input side, no-staged-LP burn rejection,
-  no-return token transfers, false-return transfer rejection across swap, burn,
-  and skim, ordinary flash callback repayment, flash reentrancy rejection,
-  fee-on/off behavior, timestamp wrapping, reserve overflow rejection, LP
-  transfer/allowance failures, raw ABI-boundary rejection for representative
-  pair actions, LP-token balance/allowance/nonce/spend calls, swap head, missing
-  dynamic tail, short and overlapping dynamic payload calldata, and permit payloads including signature-tail truncation, and permit
-  success/failure.
-- The generated differential harness normalizes deployment-specific addresses
-  and compares event/log hashes for the listed scenarios.
-
-Remaining:
-
-- Upstream `swap` accepts unbounded `bytes calldata`. Vyper requires a bounded
-  byte array for the same ABI `bytes` shape, and the current port uses
-  `Bytes[4096]` as a realistic callback-payload ceiling. Oversized payload
-  conformance is an accepted idiomatic language-level semantic boundary for the
-  primary port, not a reason to introduce a low-level emulation variant.
-- The benchmark CREATE2 fixture now exposes the upstream `createPair(address,address)`
-  ABI and mirrors upstream token sorting, zero/identical/same-order and
-  reverse-order duplicate-pair guards, bidirectional `getPair` storage,
-  `allPairs` tracking and public getter bounds, `PairCreated`, `feeTo`, and
-  `feeToSetter` authorization including post-transfer old-setter rejection.
-  The factory helper is intentionally constructed with the active pair bytecode
-  so both language artifacts can share the same factory path while pair runtime
-  behavior and bytecode size remain owned by the separate pair benchmark.
-- Exact revert bytes and exhaustive decoder-boundary permutations are
-  intentionally out of scope beyond the representative malformed-calldata
-  scenarios, direct getters, permit, LP-token zero-recipient behavior plus
-  allowance/balance rejection, reserve, symmetric swap receiver guards, and
-  pair-action scenarios already covered.
 
 ## `curve_stableswap_2coin`
 

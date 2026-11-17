@@ -2,8 +2,12 @@
 
 The benchmark compiles generated variants of the checked-in sources. Adapters
 are selected by the resolved compiler version; their output paths and hashes are
-recorded in the run manifest. They preserve the benchmark's observable behavior
-while translating syntax and APIs supported by the target compiler.
+recorded in the run manifest. Scenario checks compare the observable behavior
+on their recorded inputs. Historical rows also use the native language
+semantics and EVM target of their profile. For example, adding the maximum
+uint256 to Counter's initial value of three returns two on solc 0.7.6 and
+reverts on solc 0.8.38. Pre-0.8 profiles incur no implicit overflow-check cost
+on successful calls. Cross-era gas deltas include language and target changes.
 
 The Vyper prerelease profile follows PyPI using PEP 440 version ordering. The
 September 2026 migration resolves 0.5.0b1 in place of the pinned 0.5.0a1 profiles.
@@ -34,8 +38,10 @@ uv run scripts/verify_vyper_compat.py
 ```
 
 The focused script extracts the actual materialized vault initialization
-branches and Curve exponential function, verifies recorded compiler binary
-hashes, and compiles standalone probes. It compares all six beta modes against
+branches and Curve exponential function, verifies the recorded Vyper launcher,
+full version, Python interpreter, package contents and dependency environment,
+and compiles standalone probes. Runs predating these receipts need a fresh
+benchmark run for verification. It compares all six beta modes against
 stable Vyper, plus both Vyper 0.3.7 modes for Curve arithmetic. Tests cover
 square-root invariants and edge values, symbol bounds and override branches,
 and exponential range boundaries and fuzz inputs. Inputs, bytecode hashes, and

@@ -315,6 +315,9 @@ pub struct Scenario {
     pub warmup: Vec<CallSpec>,
     pub measured: CallSpec,
     pub expect_success: bool,
+    /// Boolean Solidity expression over the measured return hash and post-call state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postcondition: Option<String>,
     #[serde(default = "default_compare_return")]
     pub compare_return: bool,
     #[serde(default)]
@@ -401,7 +404,7 @@ pub struct CommandStats {
     pub peak_rss_kib: u64,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct CompileMetrics {
     pub wall_ms_samples: Vec<f64>,
     pub cpu_ms_samples: Vec<f64>,
@@ -414,11 +417,6 @@ pub struct BytecodeMetrics {
     pub creation_bytes_stripped: usize,
     pub runtime_bytes: usize,
     pub runtime_bytes_stripped: usize,
-    pub initcode_bytes: usize,
-    pub linked_runtime_bytes: usize,
-    pub eip170_margin_bytes: isize,
-    pub eip3860_margin_bytes: isize,
-    pub code_deposit_gas: usize,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -500,6 +498,8 @@ pub struct CompiledArtifact {
     pub abi: serde_json::Value,
     pub creation_bytecode: String,
     pub runtime_bytecode: String,
+    // Samples belong to the current experiment, never to the artifact cache.
+    #[serde(skip)]
     pub compile: CompileMetrics,
     pub bytecode: BytecodeMetrics,
     #[serde(default)]
@@ -546,6 +546,8 @@ pub struct GasRecord {
     pub scenario: String,
     pub state_access_profile: StateAccessProfile,
     pub metadata_mode: MetadataMode,
+    pub initcode_bytes: usize,
+    pub deployed_runtime_bytes: usize,
     pub internal_create_gas: u64,
     pub harness_call_gas: u64,
     pub intrinsic_gas: u64,
@@ -554,6 +556,8 @@ pub struct GasRecord {
     pub expected_success: bool,
     pub call_succeeded: bool,
     pub scenario_status_ok: bool,
+    #[serde(default)]
+    pub golden_check_passed: Option<bool>,
     #[serde(default)]
     pub return_hash: Option<String>,
     #[serde(default)]

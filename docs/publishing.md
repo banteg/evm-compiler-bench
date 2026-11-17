@@ -30,19 +30,28 @@ After a local benchmark run:
 
 ```sh
 just build-report-ui
-cargo run --release -- run
+cargo run --release -- run --timing-samples 5
 cargo run --release -- validate
 just publish-dev-results
 ```
 
-`just publish-dev-results` uploads the current files under `results/` as
-immutable run artifacts under `evm-compiler-bench/runs/{run_id}/`, and updates
+A successful run freezes the four data files and their SHA-256 receipt under
+`target/bench-runs/{run_id}/`, then atomically replaces
+`results/normalized/bundle-receipt.json`. An interrupted run leaves the previous
+completed bundle available. Keep both the receipt and snapshot when moving a
+run between machines. Pre-bundle runs remain readable and require one pipeline
+rerun to produce a publishable snapshot.
+
+`just publish-dev-results` verifies the last completed bundle's hashes,
+manifest identity and row counts. It uploads its artifacts under
+`evm-compiler-bench/runs/{run_id}/{encoded_sha256}/` and updates
 `evm-compiler-bench/channels/dev/latest.json` in R2. The report model, which
 the site loads on every visit, is stored brotli-encoded and served as-is by the
 worker. The other data files are stored uncompressed; Cloudflare compresses them
 for clients that accept it.
 `just prepare-publish` writes the same objects to `target/publish/{run_id}/`
-without uploading. The publish manifests list R2 keys, sizes, and hashes, never
+without uploading. Channel and publication time live on the channel pointer, so
+retries and dev-to-prod promotions retain identical run artifacts. The publish manifests list R2 keys, sizes, and hashes, never
 local file paths. The script rejects unknown options, and `--channel prod` and
 `--channel=prod` are equivalent.
 

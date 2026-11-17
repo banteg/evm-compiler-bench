@@ -18,7 +18,7 @@ use std::{
 };
 
 const FAILURE_DIR: &str = "../results/raw/failures";
-const GAS_CACHE_SCHEMA: &str = "gas-v3";
+const GAS_CACHE_SCHEMA: &str = "gas-v4";
 const MAX_ARTIFACTS_PER_GAS_SHARD: usize = 220;
 const MAX_GAS_ROWS_PER_SHARD: usize = 800;
 const MAX_GAS_SHARD_ESTIMATED_BYTES: usize = 1_200_000;
@@ -92,7 +92,14 @@ pub fn run_foundry(
         let contract = format!("GeneratedBenchShard{index:03}");
         let path = format!("test/{contract}.t.sol");
         let gas_path = format!("../results/raw/foundry-gas-shard-{index:03}.jsonl");
-        let source = generate_test(&contract, artifacts, scenarios, &gas_path, ShardTests::Gas)?;
+        let source = generate_test(
+            &contract,
+            artifacts,
+            scenarios,
+            &gas_path,
+            evm_version,
+            ShardTests::Gas,
+        )?;
         let source_hash = sha256_bytes(source.as_bytes());
         for artifact in artifacts {
             shard_hashes.insert(artifact_context_key(artifact), source_hash.clone());
@@ -356,7 +363,7 @@ fn gas_fingerprint(
         "runner": {
             "name": "foundry-generated-bench",
             "version": "1",
-            "gas_json_schema": "1",
+            "gas_json_schema": "2",
             "source_sha256": harness_identity(),
             "forge_version": forge_version,
             "config_sha256": config_hash,
@@ -626,7 +633,7 @@ fn clear_generated_shards(root: &Path) -> Result<()> {
 /// shard never synthesizes comparisons from whichever artifacts it happens to hold.
 enum ShardTests<'a> {
     Gas,
-    Behavior(&'a [(String, usize, usize)]),
+    Behavior(&'a [(String, usize, usize)], &'a mut BTreeSet<String>),
 }
 
 fn generate_test(
@@ -634,6 +641,7 @@ fn generate_test(
     artifacts: &[CompiledArtifact],
     scenarios: &ScenarioCatalog,
     gas_jsonl: &str,
+    evm: &str,
     tests: ShardTests,
 ) -> Result<String> {
     if artifacts.is_empty() {
@@ -649,7 +657,7 @@ fn generate_test(
 
     match tests {
         ShardTests::Gas => write_gas_tests(&mut body, artifacts, scenarios)?,
-        ShardTests::Behavior(pairs) => {
+        ShardTests::Behavior(pairs, expected_tests) => {
             for (benchmark_id, solidity_idx, vyper_idx) in pairs {
                 write_pair_tests(
                     &mut body,
@@ -658,12 +666,18 @@ fn generate_test(
                     benchmark_id,
                     *solidity_idx,
                     *vyper_idx,
+                    expected_tests,
                 )?;
             }
         }
     }
 
-    Ok(render_generated_shard(contract_name, gas_jsonl, &body))
+    Ok(
+        render_generated_shard(contract_name, gas_jsonl, &body).replace(
+            "{{PRAGUE_CALLDATA_FLOOR}}",
+            &crate::compiler::evm_at_least(evm, "prague")?.to_string(),
+        ),
+    )
 }
 
 fn write_gas_tests(
@@ -692,17 +706,23 @@ fn write_pair_tests(
     benchmark_id: &str,
     solidity_idx: usize,
     vyper_idx: usize,
+    expected: &mut BTreeSet<String>,
 ) -> Result<()> {
-    let offset = body.len();
     let solidity = artifacts
         .get(solidity_idx)
         .context("missing solidity baseline")?;
     let vyper = artifacts.get(vyper_idx).context("missing vyper baseline")?;
     let scenario_file = scenarios.get(benchmark_id)?;
+    let pair = sanitize(&format!(
+        "{}_vs_{}_{}",
+        solidity.profile_id, vyper.profile_id, benchmark_id
+    ));
     for scenario in &scenario_file.scenarios {
+        let name = format!("testDiff_{pair}_{}()", sanitize(&scenario.name));
+        expected.insert(name.clone());
         write_diff_test(
             body,
-            benchmark_id,
+            &name,
             solidity_idx,
             vyper_idx,
             solidity,
@@ -711,37 +731,29 @@ fn write_pair_tests(
         );
     }
     if let Some(randomized) = &scenario_file.randomized {
-        write_randomized_diff_test(body, benchmark_id, solidity_idx, vyper_idx, randomized)?;
+        let name = format!("testRandomDiff_{pair}()");
+        expected.insert(name.clone());
+        write_randomized_diff_test(
+            body,
+            &name,
+            benchmark_id,
+            solidity_idx,
+            vyper_idx,
+            randomized,
+        )?;
     }
     for property in &scenario_file.properties {
+        let name = format!("testProperty_{pair}_{}()", sanitize(&property.name));
+        expected.insert(name.clone());
         write_property_test(
             body,
-            benchmark_id,
+            &name,
             solidity_idx,
             vyper_idx,
             scenario_file.randomized.as_ref(),
             property,
         )?;
     }
-    // Multiple compiler comparisons share a benchmark and observers.
-    // Only test entrypoint names need the pair identity appended.
-    let suffix = sanitize(&format!("{}_vs_{}", solidity.profile_id, vyper.profile_id));
-    let added = body.split_off(offset);
-    body.push_str(
-        &added
-            .replace(
-                "function testDiff_",
-                &format!("function testDiff_{suffix}_"),
-            )
-            .replace(
-                "function testRandomDiff_",
-                &format!("function testRandomDiff_{suffix}_"),
-            )
-            .replace(
-                "function testProperty_",
-                &format!("function testProperty_{suffix}_"),
-            ),
-    );
     Ok(())
 }
 
@@ -817,6 +829,7 @@ pub(crate) fn run_behavior_shard(
 ) -> Result<()> {
     let name = format!("GeneratedBehaviorShard{index:03}");
     let relative = format!("test/{name}.t.sol");
+    let mut expected = BTreeSet::new();
     fs::write(
         root.join("foundry").join(&relative),
         generate_test(
@@ -824,11 +837,11 @@ pub(crate) fn run_behavior_shard(
             &shard.artifacts,
             scenarios,
             "../results/raw/behavior-unused.jsonl",
-            ShardTests::Behavior(&shard.pairs),
+            evm,
+            ShardTests::Behavior(&shard.pairs, &mut expected),
         )?,
     )?;
-    crate::foundry_jobs::execute(root, evm, &relative)?;
-    Ok(())
+    crate::foundry_jobs::execute(root, evm, &relative, Some(&expected))
 }
 
 fn render_generated_shard(contract_name: &str, gas_jsonl: &str, body: &str) -> String {
@@ -899,7 +912,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     let has_deployment_variants = harness::has_deployment_variants(&artifact.benchmark_id);
     out.push_str("    function deployArtifact");
     out.push_str(&index.to_string());
-    out.push_str("() internal returns (address target, uint256 deployGas) {\n");
+    out.push_str("() internal returns (BenchDeployment memory) {\n");
     if has_deployment_variants {
         out.push_str("        return deployArtifact");
         out.push_str(&index.to_string());
@@ -907,10 +920,9 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("    }\n\n");
         out.push_str("    function deployArtifact");
         out.push_str(&index.to_string());
-        out.push_str(
-            "(uint8 deploymentVariant) internal returns (address target, uint256 deployGas) {\n",
-        );
+        out.push_str("(uint8 deploymentVariant) internal returns (BenchDeployment memory) {\n");
     }
+    out.push_str("        address target;\n");
     out.push_str("        bytes memory code = hex\"");
     out.push_str(artifact.creation_bytecode.trim_start_matches("0x"));
     out.push_str("\";\n");
@@ -1039,7 +1051,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
     } else {
         out.push_str("        target = _deploy(code);\n");
     }
-    out.push_str("        deployGas = startGas - gasleft();\n");
+    out.push_str("        uint256 deployGas = startGas - gasleft();\n");
     if artifact.benchmark_id == "curve_stableswap_2coin" {
         out.push_str("        curveDeps[target] = CurveDeps(coin0, coin1, coin2, coin3, coin4, coin5, coin6, coin7);\n");
         out.push_str("        coin0.mint(address(this), 1e30);\n");
@@ -1076,6 +1088,13 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
         out.push_str("            pairDeps[target] = PairDeps(uniswapToken0, uniswapToken1, uniswapFlashCallee, uniswapReentrantCallee, uniswapFactory);\n");
         out.push_str("        }\n");
     }
+    // Measure the benchmark implementation even when calls are routed through a proxy.
+    let measured_code = if artifact.benchmark_id == "yearn_vault_v3" {
+        "implementation"
+    } else {
+        "target"
+    };
+    out.push_str(&format!("        return BenchDeployment(target, deployGas, code.length, {measured_code}.code.length);\n"));
     out.push_str("    }\n\n");
 }
 
@@ -1084,7 +1103,7 @@ fn write_deploy_function(out: &mut String, index: usize, artifact: &CompiledArti
 fn write_bench_deploy_function(out: &mut String, index: usize, variant: Option<&str>) {
     out.push_str("    function ");
     out.push_str(&bench_deploy_name(index, variant));
-    out.push_str("() external returns (address, uint256) {\n        return deployArtifact");
+    out.push_str("() external returns (BenchDeployment memory) {\n        return deployArtifact");
     out.push_str(&index.to_string());
     out.push('(');
     out.push_str(variant.unwrap_or_default());
@@ -1104,30 +1123,23 @@ fn write_gas_test(
     out.push_str("() public {\n");
     // Deployment and measurement are external self-calls, so each runs as its
     // own isolated transaction; setup calls in between commit separately.
-    out.push_str("        (address target, uint256 deployGas) = this.");
+    out.push_str("        BenchDeployment memory deployment = this.");
     out.push_str(&bench_deploy_name(
         index,
         deployment_variant_arg(artifact, scenario),
     ));
-    out.push_str("();\n");
+    out.push_str("();\n        address target = deployment.target;\n");
     write_setup(out, "target", &scenario.setup, "setup");
-    // Evaluate the measured call once, after setup and before warmup, exactly
-    // as the differential tests do.
-    out.push_str("        BenchCall memory measured = ");
-    write_bench_call(out, &scenario.measured, "target");
-    out.push_str(";\n");
-    out.push_str("        BenchCall[] memory warmup = new BenchCall[](");
-    out.push_str(&scenario.warmup.len().to_string());
-    out.push_str(");\n");
-    for (call_index, call) in scenario.warmup.iter().enumerate() {
-        out.push_str("        warmup[");
-        out.push_str(&call_index.to_string());
-        out.push_str("] = ");
-        write_bench_call(out, call, "target");
-        out.push_str(";\n");
-    }
+    write_measurement_inputs(out, scenario, "target", "measured", "warmup");
     out.push_str("        uint256 calldataGas = _calldataGas(measured.data);\n");
     out.push_str("        (bool ok, bytes32 returnHash, bytes32 logHash, uint256 executionGas) = this.benchMeasure(target, warmup, measured);\n");
+    let golden = match postcondition_name(&artifact.benchmark_id, scenario) {
+        Some(name) => {
+            out.push_str(&format!("        bool goldenPassed = (ok == {}) && _checkPostcondition(this.{name}.selector, target, returnHash);\n", scenario.expect_success));
+            "_bool(goldenPassed)"
+        }
+        None => "\"null\"",
+    };
     out.push_str("        bytes32 observerHash = _observeAll_");
     out.push_str(&sanitize(&artifact.benchmark_id));
     out.push('_');
@@ -1152,32 +1164,28 @@ fn write_gas_test(
     out.push_str(scenario.state_access_profile.as_str());
     out.push_str("\", \"");
     out.push_str(artifact.metadata_mode.as_str());
-    out.push_str(
-        "\", deployGas, executionGas, 21000, calldataGas, executionGas + 21000 + calldataGas, ",
-    );
+    out.push_str("\", deployment, executionGas, calldataGas, ");
     out.push_str(if scenario.expect_success {
         "true"
     } else {
         "false"
     });
-    out.push_str(", ok, scenarioStatusOk, returnHash, observerHash, logHash);\n");
+    out.push_str(&format!(
+        ", ok, scenarioStatusOk, returnHash, observerHash, logHash, {golden});\n"
+    ));
     out.push_str("    }\n\n");
 }
 
 fn write_diff_test(
     out: &mut String,
-    benchmark_id: &str,
+    name: &str,
     solidity_idx: usize,
     vyper_idx: usize,
     solidity: &CompiledArtifact,
     vyper: &CompiledArtifact,
     scenario: &Scenario,
 ) {
-    out.push_str("    function testDiff_");
-    out.push_str(&sanitize(benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&scenario.name));
-    out.push_str("() public {\n");
+    out.push_str(&format!("    function {name} public {{\n"));
     // Both sides start from the same state, so targets share an address and
     // address-derived results (CREATE2 predictions, pair addresses) compare.
     out.push_str("        uint256 diffStart = vm.snapshotState();\n");
@@ -1187,24 +1195,26 @@ fn write_diff_test(
     ] {
         let target = format!("{side}Target");
         if index > 0 {
-            out.push_str("        vm.revertToStateAndDelete(diffStart);\n");
+            out.push_str("        require(vm.revertToStateAndDelete(diffStart), \"differential snapshot restore\");\n");
         }
-        out.push_str(&format!("        (address {target},) = "));
+        out.push_str(&format!("        address {target} = "));
         out.push_str(&deploy_call(artifact_idx, artifact, scenario));
-        out.push_str(";\n");
+        out.push_str(".target;\n");
         out.push_str("        vm.warp(1);\n");
         write_setup(out, &target, &scenario.setup, "setup");
-        // Same evaluation order as the gas test: after setup, before warmup.
-        out.push_str(&format!("        BenchCall memory {side}Measured = "));
-        write_bench_call(out, &scenario.measured, &target);
-        out.push_str(";\n");
-        write_setup(out, &target, &scenario.warmup, "warmup");
-        let call = format!(
-            "{side}Measured.destination, {side}Measured.data, {side}Measured.value, {side}Measured.sender"
+        write_measurement_inputs(
+            out,
+            scenario,
+            &target,
+            &format!("{side}Measured"),
+            &format!("{side}Warmup"),
         );
         out.push_str(&format!(
-            "        (bool {side}Ok, bytes32 {side}Hash, bytes32 {side}LogHash,) = _runWithLogs({target}, {call});\n"
+            "        (bool {side}Ok, bytes32 {side}Hash, bytes32 {side}LogHash,) = this.benchMeasure({target}, {side}Warmup, {side}Measured);\n"
         ));
+        if let Some(name) = postcondition_name(&artifact.benchmark_id, scenario) {
+            out.push_str(&format!("        require(_checkPostcondition(this.{name}.selector, {target}, {side}Hash), \"scenario postcondition failed\");\n"));
+        }
         out.push_str(&format!("        bytes32 {side}Observed = _observeAll_"));
         out.push_str(&sanitize(&solidity.benchmark_id));
         out.push('_');
@@ -1232,8 +1242,29 @@ fn write_diff_test(
     write_observer_function(out, &solidity.benchmark_id, scenario);
 }
 
+fn write_measurement_inputs(
+    out: &mut String,
+    scenario: &Scenario,
+    target: &str,
+    measured: &str,
+    warmup: &str,
+) {
+    out.push_str(&format!("        BenchCall memory {measured} = "));
+    write_bench_call(out, &scenario.measured, target);
+    out.push_str(&format!(
+        ";\n        BenchCall[] memory {warmup} = new BenchCall[]({});\n",
+        scenario.warmup.len()
+    ));
+    for (index, call) in scenario.warmup.iter().enumerate() {
+        out.push_str(&format!("        {warmup}[{index}] = "));
+        write_bench_call(out, call, target);
+        out.push_str(";\n");
+    }
+}
+
 fn write_randomized_diff_test(
     out: &mut String,
+    name: &str,
     benchmark_id: &str,
     solidity_idx: usize,
     vyper_idx: usize,
@@ -1241,15 +1272,13 @@ fn write_randomized_diff_test(
 ) -> Result<()> {
     let helper = harness::randomized_helper_name(benchmark_id)
         .with_context(|| format!("unsupported randomized benchmark {benchmark_id}"))?;
-    out.push_str("    function testRandomDiff_");
-    out.push_str(&sanitize(benchmark_id));
-    out.push_str("() public {\n");
-    out.push_str("        (address solTarget,) = deployArtifact");
+    out.push_str(&format!("    function {name} public {{\n"));
+    out.push_str("        address solTarget = deployArtifact");
     out.push_str(&solidity_idx.to_string());
-    out.push_str("();\n");
-    out.push_str("        (address vyperTarget,) = deployArtifact");
+    out.push_str("().target;\n");
+    out.push_str("        address vyperTarget = deployArtifact");
     out.push_str(&vyper_idx.to_string());
-    out.push_str("();\n");
+    out.push_str("().target;\n");
     out.push_str("        ");
     out.push_str(helper);
     out.push_str("(solTarget, vyperTarget, ");
@@ -1263,7 +1292,7 @@ fn write_randomized_diff_test(
 
 fn write_property_test(
     out: &mut String,
-    benchmark_id: &str,
+    name: &str,
     solidity_idx: usize,
     vyper_idx: usize,
     randomized: Option<&RandomizedSpec>,
@@ -1276,14 +1305,10 @@ fn write_property_test(
         .or_else(|| randomized.map(|spec| spec.seed))
         .unwrap_or(0);
     let iterations = randomized.map(|spec| spec.iterations).unwrap_or(16);
-    out.push_str("    function testProperty_");
-    out.push_str(&sanitize(benchmark_id));
-    out.push('_');
-    out.push_str(&sanitize(&property.name));
-    out.push_str("() public {\n");
-    out.push_str("        (address solTarget,) = deployArtifact");
+    out.push_str(&format!("    function {name} public {{\n"));
+    out.push_str("        address solTarget = deployArtifact");
     out.push_str(&solidity_idx.to_string());
-    out.push_str("();\n");
+    out.push_str("().target;\n");
     out.push_str("        ");
     out.push_str(helper);
     out.push_str("(solTarget, ");
@@ -1291,9 +1316,9 @@ fn write_property_test(
     out.push_str(", ");
     out.push_str(&iterations.to_string());
     out.push_str(");\n");
-    out.push_str("        (address vyperTarget,) = deployArtifact");
+    out.push_str("        address vyperTarget = deployArtifact");
     out.push_str(&vyper_idx.to_string());
-    out.push_str("();\n");
+    out.push_str("().target;\n");
     out.push_str("        ");
     out.push_str(helper);
     out.push_str("(vyperTarget, ");
@@ -1326,6 +1351,25 @@ fn write_observer_function(out: &mut String, benchmark_id: &str, scenario: &Scen
         out.push_str(")));\n");
     }
     out.push_str("    }\n\n");
+    if let (Some(postcondition), Some(name)) = (
+        &scenario.postcondition,
+        postcondition_name(benchmark_id, scenario),
+    ) {
+        let expression = postcondition
+            .replace("{return_hash}", "returnHash")
+            .replace("{target}", "target");
+        out.push_str(&format!("    function {name}(address target, bytes32 returnHash) external view returns (bool) {{ return {expression}; }}\n\n"));
+    }
+}
+
+fn postcondition_name(benchmark_id: &str, scenario: &Scenario) -> Option<String> {
+    scenario.postcondition.as_ref().map(|_| {
+        format!(
+            "benchCheck_{}_{}",
+            sanitize(benchmark_id),
+            sanitize(&scenario.name)
+        )
+    })
 }
 
 fn write_setup(out: &mut String, target: &str, setup: &[CallSpec], label: &str) {

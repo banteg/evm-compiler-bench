@@ -46,13 +46,32 @@
     return s.length % 2 ? s[m] : (s[m-1]+s[m])/2;
   }
 
-  function valueAt(row, metric){
+  // Older reports recorded template sizes, so positive margins cannot prove
+  // that the actual deployed code and constructor payload were within limits.
+  const legacySizeEvidence = !D.rows.some(r => typeof r.bytecode?.within_size_limits === 'boolean');
+  function sizeStatus(row){
+    if (row.bytecode?.within_size_limits === true) return 'within';
+    if (row.bytecode?.within_size_limits === false) return 'over';
+    const fork = row.gas?.evm_fork ?? D.manifest?.evm_version;
+    const initcodeLimited = ['shanghai', 'cancun', 'prague', 'osaka'].includes(fork);
+    if (row.bytecode?.eip170_margin_bytes < 0 || (initcodeLimited && row.bytecode?.eip3860_margin_bytes < 0)) return 'over';
+    return 'unknown';
+  }
+  function valueAt(row, metric, includeSizeDiagnostics = false){
     if (!isComparableArtifact(row)) return undefined;
+    if (!includeSizeDiagnostics){
+      const size = sizeStatus(row);
+      if (size === 'over' || (size === 'unknown' && !legacySizeEvidence)) return undefined;
+    }
     switch(metric){
       case 'harness_call_gas': return row.gas?.harness_call_gas;
       case 'runtime_bytes_stripped': return row.bytecode?.runtime_bytes_stripped ?? row.bytecode?.runtime_bytes;
       case 'internal_create_gas': return row.gas?.internal_create_gas;
-      case 'compile_wall_ms': return median(row.compile?.wall_ms_samples);
+      case 'compile_wall_ms': {
+        const samples = row.compile?.wall_ms_samples;
+        return row.compile?.timing_method === 'interleaved-v1' && samples?.length >= 3
+          ? median(samples) : undefined;
+      }
       case 'peak_rss_kib': return row.compile?.peak_rss_kib;
     }
   }
@@ -76,11 +95,16 @@
     return `${r.benchmark_id}${n} · ${sc} · ${st}${variant}`;
   }
   function comparisonLevel(metric){
-    return metric === 'harness_call_gas' || metric === 'internal_create_gas' ? 'scenario' : 'artifact';
+    if (metric === 'harness_call_gas') return 'scenario';
+    if (metric === 'internal_create_gas') return 'deployment';
+    return 'artifact';
   }
   function comparisonUnit(metric){
     if (comparisonLevel(metric) === 'scenario') {
       return { singular: 'scenario', plural: 'scenarios', match: 'suite/benchmark/scenario/access/deployment' };
+    }
+    if (comparisonLevel(metric) === 'deployment') {
+      return { singular: 'deployment', plural: 'deployments', match: 'benchmark and deployment variant' };
     }
     return { singular: 'artifact', plural: 'artifacts', match: 'suite/benchmark/artifact' };
   }
@@ -91,43 +115,122 @@
     const n = r.parameter_value == null ? '' : ` N=${r.parameter_value}`;
     return `${r.benchmark_id}${n} · artifact`;
   }
+  function deploymentKey(r){
+    return artifactKey(r) + '|' + (r.gas?.deployment_variant ?? 'standard');
+  }
   function comparisonKey(r, metric){
+    if (comparisonLevel(metric) === 'deployment') return deploymentKey(r);
     return comparisonLevel(metric) === 'scenario' ? scenarioKey(r) : artifactKey(r);
   }
   function comparisonLabel(r, metric){
+    if (comparisonLevel(metric) === 'deployment') return r.benchmark_id + ' · ' + (r.gas?.deployment_variant ?? 'standard') + ' deployment';
     return comparisonLevel(metric) === 'scenario' ? scenarioLabel(r) : artifactLabel(r);
   }
-  function compareProfiles(rows, pa, pb, metric, suiteSet){
-    const L = new Map(), Ra = new Map(), Rb = new Map();
-    for (const r of rows){
-      if (suiteSet && !suiteSet.has(r.suite)) continue;
-      const v = valueAt(r, metric);
-      if (v == null) continue;
-      const k = comparisonKey(r, metric);
-      if (r.profile_id === pa && !L.has(k)){ Ra.set(k, r); L.set(k, v); }
-      if (r.profile_id === pb && !Rb.has(k)){ Rb.set(k, r); }
+  // One uniform-selector workload per N, with complete measurements on both sides.
+  const workloadCache = new WeakMap();
+  function runtimeWorkloads(rows){
+    if (workloadCache.has(rows)) return workloadCache.get(rows);
+    const workloads = [];
+    const sweeps = new Map();
+    for (const row of rows){
+      if (!isDispatchSelector(row)){
+        workloads.push(row);
+        continue;
+      }
+      const key = row.profile_id + '|' + deploymentKey(row);
+      if (!sweeps.has(key)) sweeps.set(key, []);
+      sweeps.get(key).push(row);
     }
-    const out = [];
-    for (const [k, va] of L){
-      const rb = Rb.get(k);
-      if (!rb) continue;
-      const vb = valueAt(rb, metric);
-      if (!vb || vb <= 0 || va <= 0) continue;
-      const ratio = vb / va;
-      out.push({
-        key: k,
-        row: Ra.get(k),
-        rowB: rb,
-        label: comparisonLabel(Ra.get(k), metric),
-        suite: Ra.get(k).suite,
-        valueA: va,
-        valueB: vb,
-        ratio,
-        deltaPct: (ratio - 1) * 100,
-        comparisonLevel: comparisonLevel(metric),
+    for (const sweep of sweeps.values()){
+      const summary = dispatchSummary(sweep, row => row.gas.harness_call_gas);
+      if (!summary) continue;
+      const row = sweep[0];
+      workloads.push({...row, gas:{...row.gas, scenario:'uniform selector mean', harness_call_gas:summary.mean}});
+    }
+    workloadCache.set(rows, workloads);
+    return workloads;
+  }
+
+  function* drillUnits(rows, metric){
+    const seen = new Set();
+    const units = metric === 'harness_call_gas' ? runtimeWorkloads(rows) : rows;
+    for (const row of units){
+      if (row.status !== 'ok' && row.status !== 'compile_error') continue;
+      const failure = row.status === 'compile_error' ? 'compile' : isComparableArtifact(row) ? null : 'correctness';
+      const value = metric ? valueAt(row, metric) : null;
+      if (metric && !failure && !Number.isFinite(value)) continue;
+      const key = row.profile_id + '|' + comparisonKey(row, metric);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      yield {row, value, failure};
+    }
+  }
+
+  function profileValues(rows, profile, metric, suiteSet, diagnostics){
+    const values = new Map();
+    for (const row of rows){
+      if (row.profile_id !== profile || (suiteSet && !suiteSet.has(row.suite))) continue;
+      const value = valueAt(row, metric, diagnostics);
+      if (!(value > 0)) continue;
+      // An artifact must have at least one jointly eligible deployment variant.
+      const key = comparisonLevel(metric) === 'scenario' ? scenarioKey(row) : deploymentKey(row);
+      if (!values.has(key)) values.set(key, {row, value});
+    }
+    return values;
+  }
+  function compareProfiles(rows, pa, pb, metric, suiteSet, diagnostics = false){
+    if (metric === 'harness_call_gas') rows = runtimeWorkloads(rows);
+    const left = profileValues(rows, pa, metric, suiteSet, diagnostics);
+    const right = pa === pb ? left : profileValues(rows, pb, metric, suiteSet, diagnostics);
+    const out = new Map();
+    for (const [match, {row, value: valueA}] of left){
+      const other = right.get(match);
+      if (!other) continue;
+      const key = comparisonKey(row, metric);
+      if (out.has(key)) continue;
+      const ratio = other.value / valueA;
+      out.set(key, {
+        key, row, rowB: other.row, label: comparisonLabel(row, metric),
+        suite: row.suite, valueA, valueB: other.value, ratio,
+        deltaPct: (ratio - 1) * 100, comparisonLevel: comparisonLevel(metric),
       });
     }
-    return out.sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+    return [...out.values()].sort((a,b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+  }
+
+  function sourceScope(rows){
+    if (!rows.length) return 'No matched workloads';
+    if (rows.some(({row,rowB}) => row.language !== rowB.language)) return 'Idiomatic implementations in different languages';
+    if (rows.every(({row,rowB}) => row.source_hash && row.source_hash === rowB.source_hash)) return 'Identical materialized source';
+    if (rows.some(({row,rowB}) => !row.source_hash || !rowB.source_hash)) return 'Source identity unavailable';
+    return 'Same language, with compiler-specific source variants';
+  }
+
+  function isDispatchSelector(row){
+    return row?.family === 'dispatch_N' && /^selector_f\d{3,}$/.test(row.gas?.scenario);
+  }
+
+  // Summarize a complete sweep for one profile at one N. Dropping a failing
+  // or missing selector would change the distribution used in the comparison.
+  function dispatchSummary(rows, valueAt){
+    const selectors = rows.filter(isDispatchSelector);
+    const first = selectors[0];
+    const n = first?.parameter_value;
+    if (!Number.isSafeInteger(n) || n < 1 || selectors.length !== n) return null;
+    const values = new Map();
+    for (const row of selectors){
+      const index = Number(row.gas.scenario.slice('selector_f'.length));
+      const value = valueAt(row);
+      if (row.parameter_value !== n || row.profile_id !== first.profile_id ||
+          index >= n || values.has(index) || !Number.isFinite(value) || value <= 0) return null;
+      values.set(index, value);
+    }
+    const sorted = [...values.values()].sort((a, b) => a - b);
+    return {
+      mean: sorted.reduce((sum, value) => sum + value, 0) / n,
+      p95: sorted[Math.ceil(0.95 * n) - 1],
+      worst: sorted[n - 1],
+    };
   }
 
   // For each parameter value, keep the rows of the first scenario in `scenarios` measured there.
@@ -203,13 +306,29 @@
     return { geomean, median, cheaper, tie, costlier, count: rows.length };
   }
 
+  // Equal weight per fixed/real benchmark or scale family, then per N within a family.
+  function familyBalanced(rows){
+    const groups = new Map();
+    for (const {row, ratio} of rows){
+      const key = row.suite + '|' + (row.family || row.benchmark_id);
+      if (!groups.has(key)) groups.set(key, new Map());
+      const sizes = groups.get(key);
+      const n = row.parameter_value;
+      if (!sizes.has(n)) sizes.set(n, []);
+      sizes.get(n).push(Math.log(ratio));
+    }
+    const mean = x => x.reduce((a,b) => a+b, 0) / x.length;
+    const logs = [...groups.values()].map(sizes => mean([...sizes.values()].map(mean)));
+    return {familyGeomean: logs.length ? Math.exp(mean(logs)) : null, families: logs.length};
+  }
+
   function bySuite(rows, tieBand){
     const g = new Map();
     for (const r of rows){
       if (!g.has(r.suite)) g.set(r.suite, []);
       g.get(r.suite).push(r);
     }
-    return ['fixed','scale','real_derived'].map(s => ({ suite: s, ...summarize(g.get(s) || [], tieBand) }));
+    return ['fixed','scale','real_derived'].map(s => ({ suite: s, ...summarize(g.get(s) || [], tieBand), ...familyBalanced(g.get(s) || []) }));
   }
 
   // Profile metadata helpers
@@ -367,53 +486,50 @@
       if (config === 'noopt') return 'solc-latest-noopt';
     }
     if (p.language === 'vyper'){
-      if (config === 'default') return `vyper-latest-none${venom}`;
+      if (config === 'default') return `vyper-latest-gas${venom}`;
       return `vyper-latest-${config}${venom}`;
     }
     return undefined;
   }
 
-  function versionAxisConfig(p){
-    const config = profileOptimizer(p);
-    return p.language === 'vyper' && config === 'default' ? 'none' : config;
-  }
-
   function versionAxisRows(metric, suiteSet){
-    const ids = new Set(D.profiles.map(p => p.id));
-    const out = [];
+    const groups = new Map();
     for (const p of D.profiles){
-      // Version curves track the default codegen; Venom stays in the comparator.
       if (p.experimental_codegen) continue;
       const runs = profileOptimizerRuns(p);
       if (p.language === 'solidity' && runs != null && runs !== 200) continue;
-      if (p.language === 'vyper' && profileOptimizer(p) === 'default') {
-        const hasExplicitNone = D.profiles.some(candidate =>
-          candidate.language === 'vyper'
-          && profileVersionKey(candidate) === profileVersionKey(p)
-          && profileOptimizer(candidate) === 'none'
-          && !candidate.experimental_codegen
-        );
-        if (hasExplicitNone) continue;
+      const baseline = profileById(latestBaselineProfile(p));
+      if (!baseline) continue;
+      const config = profileOptimizer(p);
+      // Latest aliases use the same binary/configuration as the equivalent pin.
+      if (p.id !== baseline.id && p.compiler_version === baseline.compiler_version
+          && p.evm_version === baseline.evm_version && config === profileOptimizer(baseline)) continue;
+      const pairs = compareProfiles(D.rows, baseline.id, p.id, metric, suiteSet);
+      if (!pairs.length) continue;
+      const group = p.language + '|' + config;
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push({p, baseline, config, pairs});
+    }
+    const out = [];
+    for (const series of groups.values()){
+      const common = new Set(series[0].pairs.map(pair => pair.key));
+      for (const {pairs} of series.slice(1)){
+        const keys = new Set(pairs.map(pair => pair.key));
+        for (const key of common) if (!keys.has(key)) common.delete(key);
       }
-      const baseline = latestBaselineProfile(p);
-      if (!baseline || baseline === p.id || !ids.has(baseline)) continue;
-      const baselineProfile = D.profiles.find(candidate => candidate.id === baseline);
-      const cmp = compareProfiles(D.rows, baseline, p.id, metric, suiteSet);
-      const s = summarize(cmp);
-      if (!s.geomean) continue;
-      out.push({
-        language: p.language,
-        config: versionAxisConfig(p),
-        profile: p.id,
-        label: profileDisplayLabel(p),
-        baseline,
-        baselineLabel: baselineProfile ? profileDisplayLabel(baselineProfile) : baseline,
-        baselineConfig: baselineProfile ? versionAxisConfig(baselineProfile) : undefined,
-        version: p.compiler_version,
-        versionKey: profileVersionKey(p),
-        deltaPct: (s.geomean - 1) * 100,
-        comparable: s.count,
-      });
+      if (!common.size) continue;
+      for (const {p, baseline, config, pairs} of series){
+        const matched = pairs.filter(pair => common.has(pair.key));
+        const stat = summarize(matched);
+        out.push({
+          language: p.language, config, profile: p.id, label: profileDisplayLabel(p),
+          baseline: baseline.id, baselineLabel: profileDisplayLabel(baseline),
+          version: p.compiler_version, versionKey: p.compiler_version,
+          target: p.evm_version, baselineTarget: baseline.evm_version,
+          comparable: common.size, available: pairs.length,
+          deltaPct: (stat.geomean - 1) * 100,
+        });
+      }
     }
     return out;
   }
@@ -666,7 +782,9 @@
   window.Bench = {
     D,
     METRICS, SUITES,
-    valueAt, scenarioKey, scenarioLabel, comparisonLevel, comparisonUnit,
+    valueAt, scenarioKey, scenarioLabel, comparisonKey, comparisonLevel, comparisonUnit,
+    sizeStatus, legacySizeEvidence, familyBalanced, sourceScope, runtimeWorkloads, drillUnits,
+    isDispatchSelector, dispatchSummary,
     hasCorrectnessFailure, isComparableArtifact, correctnessFailureGroups,
     compareProfiles, preferredScenarioRows, profilePairCompileCoverage, summarize, bySuite, tieBandForMetric,
     profileById, profileLabel, profileKnobs, profileVersionKey, profileVersionLabel,

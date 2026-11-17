@@ -184,12 +184,15 @@ import React from "react";
             points.map((p, k) => {
               const i = allVersions.indexOf(p.versionKey);
               const baseline = p.baselineLabel || `newest ${p.baselineConfig || cfg}`;
+              const arithmetic = language === 'solidity'
+                ? `\nSolidity arithmetic defaults to ${Bench.versionRank(p.version) < Bench.versionRank('0.8.0') ? 'wrapping' : 'checked'}`
+                : '';
               return React.createElement('g', { key: 'p'+k },
                 React.createElement('circle', {
                   cx: xOf(i), cy: yOf(p.deltaPct), r: 3.5,
                   fill: 'var(--bg)', stroke: color, strokeWidth: 1.5,
                 }),
-                React.createElement('title', {}, `${p.label}\n${p.deltaPct.toFixed(2)}% vs ${baseline}`)
+                React.createElement('title', {}, `${p.label}\n${p.deltaPct.toFixed(2)}% vs ${baseline}\n${p.comparable} common units from ${p.available} pairwise matches\nCompiler targets: ${p.target} vs ${p.baselineTarget}\nHarness fork: ${Bench.D.manifest.evm_version}${arithmetic}`)
               );
             })
           );
@@ -207,15 +210,13 @@ import React from "react";
           React.createElement('span', { style: {
             width: 10, height: 2, background: configPalette[cfg] || 'var(--fg-2)', display: 'inline-block',
           }}),
-          cfg
+          cfg === 'default' ? 'historical default (optimized)' : cfg
         ))
       )
     );
   }
 
-  // Canonical scenarios per scale family, in preference order, so a curve never mixes
-  // scenarios at one N. Later entries stand in where an earlier one is not generated:
-  // dispatch_N has no last_selector at N=1, where the first selector is also the last.
+  // The dispatch preference is used only for archived reports that sampled endpoints.
   const FAMILY_SCENARIOS = {
     'dispatch_N': ['last_selector', 'first_selector'],
     'storage_slots_N': ['write_all'],
@@ -227,11 +228,25 @@ import React from "react";
   };
   function scaleFamilyRows(family){
     const rows = Bench.D.rows.filter(r => r.family === family && r.status === 'ok');
+    if (family === 'dispatch_N' && rows.some(Bench.isDispatchSelector)){
+      const groups = new Map();
+      for (const row of rows.filter(Bench.isDispatchSelector)){
+        const key = JSON.stringify([row.profile_id, row.parameter_value]);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      }
+      return [...groups.values()].map(group => ({
+        ...group[0],
+        dispatch: Bench.dispatchSummary(group, row => Bench.valueAt(row, 'harness_call_gas')),
+      }));
+    }
     return Bench.preferredScenarioRows(rows, FAMILY_SCENARIOS[family]);
   }
   // rows: one family's rows from scaleFamilyRows
   function ScaleChart({ rows, metric, profiles, height = 180 }){
     const [ref, width] = useContainerWidth(360);
+    const [stat, setStat] = useState('mean');
+    const showDistribution = Bench.isDispatchSelector(rows[0]) && metric === 'harness_call_gas';
     const padL = 40, padR = 12, padT = 14, padB = 26;
     const innerW = Math.max(80, width - padL - padR);
     const innerH = height - padT - padB;
@@ -239,7 +254,7 @@ import React from "react";
     const series = new Map();
     for (const r of rows){
       if (!profiles.includes(r.profile_id)) continue;
-      const v = Bench.valueAt(r, metric);
+      const v = showDistribution ? r.dispatch?.[stat] : Bench.valueAt(r, metric);
       if (v == null) continue;
       if (!series.has(r.profile_id)) series.set(r.profile_id, []);
       series.get(r.profile_id).push({ x: r.parameter_value, y: v });
@@ -272,6 +287,14 @@ import React from "react";
       'fe-latest-O2': 'var(--fe)',
     };
     return React.createElement('div', { ref, style: { width: '100%' } },
+      showDistribution && React.createElement('label', { style: { fontFamily: 'var(--mono)', fontSize: 11 } },
+        'Selector gas ',
+        React.createElement('select', { value: stat, onChange: event => setStat(event.target.value) },
+          React.createElement('option', { value: 'mean' }, 'Mean'),
+          React.createElement('option', { value: 'p95' }, '95th percentile'),
+          React.createElement('option', { value: 'worst' }, 'Worst')
+        )
+      ),
       React.createElement('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
         // y ticks (2)
         [0.5, 1].map((f, i) => {
@@ -298,7 +321,8 @@ import React from "react";
             arr.map((p, j) => React.createElement('circle', {
               key: 'p'+j, cx: xOf(p.x), cy: yOf(p.y), r: 2.5,
               fill: color,
-            }))
+            }, React.createElement('title', null,
+              `${Bench.profileLabel(pid)}, N=${p.x}: ${p.y.toLocaleString(undefined, {maximumFractionDigits: 2})}`)))
           );
         })
       )

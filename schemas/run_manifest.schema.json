@@ -37,6 +37,17 @@
   ],
   "properties": {
     "run_id": { "type": "string" },
+    "bundle_version": { "const": 1 },
+    "compile_timing": {
+      "type": ["object", "null"],
+      "properties": {
+        "method": { "const": "interleaved-v1" },
+        "warmup_rounds": { "const": 1 },
+        "samples_per_artifact": { "type": "integer", "minimum": 3, "maximum": 20 },
+        "alias_controls": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["method", "warmup_rounds", "samples_per_artifact", "alias_controls"]
+    },
     "started_at": { "type": "string", "format": "date-time" },
     "evm_version": { "type": "string" },
     "toolchains": { "type": "array", "items": { "type": "object" } },

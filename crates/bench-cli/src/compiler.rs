@@ -12,12 +12,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
     collections::BTreeMap,
-    env, fs,
+    fs,
     path::{Path, PathBuf},
     process::Command,
 };
 
-const DEFAULT_COMPILE_SAMPLES: usize = 1;
+pub const TIMING_METHOD: &str = "interleaved-v1";
 
 pub fn compile_all(
     root: &Path,
@@ -58,7 +58,9 @@ pub fn compile_all(
                             benchmark.id, profile.id
                         )
                     })?;
-            if use_cache {
+            let verified_compiler = toolchain.name != "vyper"
+                || toolchain.metadata.contains_key("python_environment_sha256");
+            if use_cache && verified_compiler {
                 match cache::lookup::<CachedCompileResult>(
                     root,
                     "compile",
@@ -240,17 +242,13 @@ fn compile_and_record(
     artifacts: &mut Vec<CompiledArtifact>,
     failures: &mut Vec<CompileFailure>,
 ) -> Result<bool> {
-    let result = match profile.language {
-        Language::Solidity => compile_solidity(root, benchmark, profile, toolchain, evm_version),
-        Language::Vyper => compile_vyper(root, benchmark, profile, toolchain, evm_version),
-        Language::Fe => compile_fe(root, benchmark, profile, toolchain, evm_version),
-    };
+    let result = compile_profile(root, benchmark, profile, toolchain, evm_version);
     let (cache_input, cache_info) = cache_state
         .map(|(input, info)| (Some(input), info))
         .unwrap_or((None, CacheInfo::disabled()));
 
     match result {
-        Ok(mut artifact) => {
+        Ok((mut artifact, _)) => {
             artifact.cache = cache_info;
             if let Some(input) = cache_input {
                 cache::store(
@@ -265,8 +263,13 @@ fn compile_and_record(
             artifacts.push(artifact);
             Ok(true)
         }
+        Err(error) if !error.is::<CompilerRejected>() => Err(error).with_context(|| {
+            format!(
+                "incomplete compile attempt for {} {}",
+                benchmark.id, profile.id
+            )
+        }),
         Err(error) => {
-            let rejected = error.downcast_ref::<CompilerRejected>().is_some();
             let mut failure = compile_failure(
                 root,
                 benchmark,
@@ -276,9 +279,7 @@ fn compile_and_record(
                 format!("{error:#}"),
             )?;
             failure.cache = cache_info;
-            // Only the compiler's verdict is a function of the cache key;
-            // failing to run it (spawn errors, signals, I/O) is retried.
-            if let Some(input) = cache_input.filter(|_| rejected) {
+            if let Some(input) = cache_input {
                 cache::store(
                     root,
                     "compile",
@@ -292,6 +293,85 @@ fn compile_and_record(
             Ok(false)
         }
     }
+}
+
+fn compile_profile(
+    root: &Path,
+    benchmark: &Benchmark,
+    profile: &CompilerProfile,
+    toolchain: &Toolchain,
+    evm_version: &str,
+) -> Result<(CompiledArtifact, CommandStats)> {
+    match profile.language {
+        Language::Solidity => compile_solidity(root, benchmark, profile, toolchain, evm_version),
+        Language::Vyper => compile_vyper(root, benchmark, profile, toolchain, evm_version),
+        Language::Fe => compile_fe(root, benchmark, profile, toolchain, evm_version),
+    }
+}
+
+/// Fresh processes on one host. Reverse each pair of measured rounds to
+/// balance the relative order of all profiles, including compiler aliases.
+pub fn measure_compile_times(
+    root: &Path,
+    toolchains: &Toolchains,
+    benchmarks: &[Benchmark],
+    compiled: &mut CompileSet,
+    samples: u8,
+) -> Result<()> {
+    let profiles: BTreeMap<_, _> = compiled
+        .profiles
+        .iter()
+        .map(|p| (p.id.as_str(), p))
+        .collect();
+    let mut progress = Progress::new(
+        "compile timing",
+        compiled.artifacts.len() * (usize::from(samples) + 1),
+    );
+    let mut completed = 0;
+    for benchmark in benchmarks {
+        let mut jobs: Vec<_> = compiled
+            .artifacts
+            .iter_mut()
+            .filter(|a| a.benchmark_id == benchmark.id)
+            .collect();
+        for round in 0..=samples {
+            jobs.sort_by_cached_key(|a| {
+                let block = round.saturating_sub(1) / 2;
+                sha256_bytes(format!("{}:{}:{block}", benchmark.id, a.profile_id).as_bytes())
+            });
+            if round % 2 == 0 {
+                jobs.reverse();
+            }
+            for expected in &mut jobs {
+                let profile = profiles[expected.profile_id.as_str()];
+                let toolchain = toolchain_for_profile(toolchains, profile)?;
+                let evm = effective_evm_version(profile, toolchains);
+                let (fresh, stats) = compile_profile(root, benchmark, profile, toolchain, &evm)
+                    .with_context(|| {
+                        format!("timing {} {} round {round}", benchmark.id, profile.id)
+                    })?;
+                anyhow::ensure!(
+                    fresh.creation_bytecode == expected.creation_bytecode
+                        && fresh.runtime_bytecode == expected.runtime_bytecode
+                        && fresh.abi == expected.abi
+                        && fresh.source_hash == expected.source_hash,
+                    "fresh compiler output differs from benchmark artifact for {} {}",
+                    benchmark.id,
+                    profile.id
+                );
+                if round != 0 {
+                    let metrics = &mut expected.compile;
+                    metrics.wall_ms_samples.push(stats.wall_ms);
+                    metrics.cpu_ms_samples.push(stats.cpu_ms);
+                    metrics.peak_rss_kib = metrics.peak_rss_kib.max(stats.peak_rss_kib);
+                }
+                completed += 1;
+                progress.update(completed, &profile.id);
+            }
+        }
+    }
+    progress.finish(format!("{samples} fresh samples per artifact"));
+    Ok(())
 }
 
 fn toolchain_for_profile<'a>(
@@ -356,7 +436,6 @@ fn compile_cache_input(
         },
         "compiler_settings": compiler_settings,
         "source": source,
-        "compile_sample_count": compile_sample_count(),
     });
     let key = cache::key_for(&fingerprint)?;
     let logical_id = cache::logical_id(&["compile", &benchmark.id, &implementation, &profile.id]);
@@ -462,7 +541,7 @@ fn compile_solidity(
     profile: &CompilerProfile,
     solc: &Toolchain,
     evm_version: &str,
-) -> Result<CompiledArtifact> {
+) -> Result<(CompiledArtifact, CommandStats)> {
     let source_path = source_path_for_profile(root, benchmark, profile, solc, evm_version)?;
     let (file_name, sources) = solidity_sources(&source_path)?;
     let input = json!({
@@ -471,24 +550,22 @@ fn compile_solidity(
         "settings": solidity_standard_json_settings(profile, solc, evm_version)
     });
     let input = serde_json::to_vec(&input)?;
-    let measured = repeat_compile_samples(
-        || {
-            let mut command = Command::new(&solc.binary_path);
-            command.arg("--standard-json");
-            if solc.name == "solar" {
-                command.env_remove("SOLC_WRAPPER");
-            }
-            if matches!(solc.name.as_str(), "solx" | "solar") {
-                command
-                    .arg("--threads")
-                    .arg(crate::solx::WORKER_THREADS.to_string());
-            }
-            command
-        },
+    let mut command = Command::new(&solc.binary_path);
+    command.arg("--standard-json");
+    if solc.name == "solar" {
+        command.env_remove("SOLC_WRAPPER");
+    }
+    if matches!(solc.name.as_str(), "solx" | "solar") {
+        command
+            .arg("--threads")
+            .arg(crate::solx::WORKER_THREADS.to_string());
+    }
+    let measured = run_compiler(
+        &mut command,
         Some(&input),
         &format!("{} --standard-json", solc.name),
     )?;
-    let output: serde_json::Value = serde_json::from_slice(&measured.output_stdout)?;
+    let output: serde_json::Value = serde_json::from_slice(&measured.output.stdout)?;
     reject_solc_errors(&output)?;
     let contract = output
         .pointer(&format!(
@@ -518,9 +595,7 @@ fn compile_solidity(
         abi,
         creation,
         runtime,
-        measured.wall_ms_samples,
-        measured.cpu_ms_samples,
-        measured.peak_rss_kib,
+        measured.stats,
         solidity_compiler_settings(profile, solc, evm_version),
     )
 }
@@ -705,34 +780,28 @@ fn compile_vyper(
     profile: &CompilerProfile,
     vyper: &Toolchain,
     evm_version: &str,
-) -> Result<CompiledArtifact> {
+) -> Result<(CompiledArtifact, CommandStats)> {
     let source_path = source_path_for_profile(root, benchmark, profile, vyper, evm_version)?;
-    let measured = repeat_compile_samples(
-        || {
-            let mut command = Command::new(&vyper.binary_path);
-            command
-                .arg("-f")
-                .arg("abi,bytecode,bytecode_runtime")
-                .arg("--evm-version")
-                .arg(evm_version);
-            if let Some(optimizer_mode) = profile.optimizer_mode.as_deref() {
-                for arg in vyper_optimizer_args(vyper, optimizer_mode) {
-                    command.arg(arg);
-                }
-            }
-            if profile.metadata_mode == MetadataMode::Off && vyper_supports_metadata_arg(vyper) {
-                command.arg(vyper_disable_metadata_arg(vyper));
-            }
-            if profile.experimental_codegen {
-                command.arg("--experimental-codegen");
-            }
-            command.arg(&source_path);
-            command
-        },
-        None,
-        "vyper compile",
-    )?;
-    let stdout = String::from_utf8(measured.output_stdout)?;
+    let mut command = Command::new(&vyper.binary_path);
+    command
+        .arg("-f")
+        .arg("abi,bytecode,bytecode_runtime")
+        .arg("--evm-version")
+        .arg(evm_version);
+    if let Some(optimizer_mode) = profile.optimizer_mode.as_deref() {
+        for arg in vyper_optimizer_args(vyper, optimizer_mode) {
+            command.arg(arg);
+        }
+    }
+    if profile.metadata_mode == MetadataMode::Off && vyper_supports_metadata_arg(vyper) {
+        command.arg(vyper_disable_metadata_arg(vyper));
+    }
+    if profile.experimental_codegen {
+        command.arg("--experimental-codegen");
+    }
+    command.arg(&source_path);
+    let measured = run_compiler(&mut command, None, "vyper compile")?;
+    let stdout = String::from_utf8(measured.output.stdout)?;
     let mut lines = stdout.lines();
     let abi_line = lines.next().context("missing vyper abi output")?;
     let creation = lines
@@ -752,9 +821,7 @@ fn compile_vyper(
         abi,
         creation,
         runtime,
-        measured.wall_ms_samples,
-        measured.cpu_ms_samples,
-        measured.peak_rss_kib,
+        measured.stats,
         vyper_compiler_settings(profile, evm_version),
     )
 }
@@ -780,34 +847,25 @@ fn compile_fe(
     profile: &CompilerProfile,
     fe: &Toolchain,
     evm_version: &str,
-) -> Result<CompiledArtifact> {
+) -> Result<(CompiledArtifact, CommandStats)> {
     let source_path = source_path_for_profile(root, benchmark, profile, fe, evm_version)?;
-    let out_dir = root
-        .join("target/fe-build")
-        .join(&profile.id)
-        .join(&benchmark.id);
-    fs::create_dir_all(&out_dir)?;
-    let measured = repeat_compile_samples(
-        || {
-            let mut command = Command::new(&fe.binary_path);
-            command
-                .arg("build")
-                .arg(&source_path)
-                .arg("--standalone")
-                .arg("--contract")
-                .arg(&benchmark.contract_name)
-                .arg("--emit")
-                .arg("bytecode,runtime-bytecode,abi")
-                .arg("--out-dir")
-                .arg(&out_dir);
-            if let Some(optimizer_mode) = profile.optimizer_mode.as_deref() {
-                command.arg("-O").arg(optimizer_mode);
-            }
-            command
-        },
-        None,
-        "fe build",
-    )?;
+    let output = tempfile::tempdir()?;
+    let out_dir = output.path();
+    let mut command = Command::new(&fe.binary_path);
+    command
+        .arg("build")
+        .arg(&source_path)
+        .arg("--standalone")
+        .arg("--contract")
+        .arg(&benchmark.contract_name)
+        .arg("--emit")
+        .arg("bytecode,runtime-bytecode,abi")
+        .arg("--out-dir")
+        .arg(out_dir);
+    if let Some(optimizer_mode) = profile.optimizer_mode.as_deref() {
+        command.arg("-O").arg(optimizer_mode);
+    }
+    let measured = run_compiler(&mut command, None, "fe build")?;
     let read_artifact = |file_name: String| -> Result<String> {
         let path = out_dir.join(&file_name);
         Ok(fs::read_to_string(&path)
@@ -827,9 +885,7 @@ fn compile_fe(
         abi,
         creation,
         runtime,
-        measured.wall_ms_samples,
-        measured.cpu_ms_samples,
-        measured.peak_rss_kib,
+        measured.stats,
         fe_compiler_settings(profile, evm_version),
     )
 }
@@ -1037,7 +1093,7 @@ const EVM_FORKS: &[&str] = &[
     "osaka",
 ];
 
-fn evm_at_least(evm_version: &str, fork: &str) -> Result<bool> {
+pub(crate) fn evm_at_least(evm_version: &str, fork: &str) -> Result<bool> {
     let index = |name: &str| {
         EVM_FORKS
             .iter()
@@ -1449,10 +1505,6 @@ fn rewrite_solidity_04_staticcalls(source: &str) -> String {
         .replace(
             "(bool ok, bytes memory result) =\n                owner.staticcall(abi.encodeWithSignature(\"isValidSignature(bytes32,bytes)\", digest, signature));\n            require(ok && result.length >= 32 && abi.decode(result, (bytes32)) == ERC1271_MAGIC_VALUE, \"signature\");",
             "(bool ok, bytes32 resultWord, uint256 resultSize) =\n                _benchStaticcallWord(owner, abi.encodeWithSignature(\"isValidSignature(bytes32,bytes)\", digest, signature));\n            require(ok && resultSize >= 32 && resultWord == ERC1271_MAGIC_VALUE, \"signature\");",
-        )
-        .replace(
-            "(bool ok, bytes memory response) = oracle.staticcall(abi.encodeWithSelector(selector));\n                require(ok && response.length == 32, \"rate oracle\");\n                uint256 fetchedRate = abi.decode(response, (uint256));",
-            "(bool ok, bytes32 responseWord, uint256 responseSize) = _benchStaticcallWord(oracle, abi.encodeWithSelector(selector));\n                require(ok && responseSize == 32, \"rate oracle\");\n                uint256 fetchedRate = uint256(responseWord);",
         )
         .replace(
             "(bool ok, bytes memory returndata) = coin.call(data);\n        require(ok, message);\n        if (returndata.length > 0) {\n            require(abi.decode(returndata, (bool)), message);\n        }",
@@ -2293,105 +2345,57 @@ fn artifact(
     abi: serde_json::Value,
     creation_bytecode: String,
     runtime_bytecode: String,
-    wall_ms_samples: Vec<f64>,
-    cpu_ms_samples: Vec<f64>,
-    peak_rss_kib: u64,
+    stats: CommandStats,
     compiler_settings: serde_json::Value,
-) -> Result<CompiledArtifact> {
+) -> Result<(CompiledArtifact, CommandStats)> {
     let source = fs::read(source_path)?;
     let bytecode = bytecode_metrics(&creation_bytecode, &runtime_bytecode)?;
     let language = profile.language;
-    Ok(CompiledArtifact {
-        benchmark_id: benchmark.id.clone(),
-        implementation_id: implementation_id(profile),
-        suite: benchmark.suite,
-        family: benchmark.family.clone(),
-        parameter_name: benchmark.parameter_name.clone(),
-        parameter_value: benchmark.parameter_value,
-        scenario_path: benchmark.scenario_path.clone(),
-        scenario_hash: benchmark.scenario_hash.clone(),
-        generator_version: benchmark.generator_version.clone(),
-        provenance: benchmark.provenance.clone(),
-        language,
-        contract_name: benchmark.contract_name.clone(),
-        profile_id: profile.id.clone(),
-        compiler: toolchain.clone(),
-        compiler_settings,
-        metadata_mode: profile.metadata_mode,
-        source_path: source_path.to_path_buf(),
-        source_hash: sha256_bytes(&source),
-        abi,
-        creation_bytecode,
-        runtime_bytecode,
-        compile: CompileMetrics {
-            wall_ms_samples,
-            cpu_ms_samples,
-            peak_rss_kib,
+    Ok((
+        CompiledArtifact {
+            benchmark_id: benchmark.id.clone(),
+            implementation_id: implementation_id(profile),
+            suite: benchmark.suite,
+            family: benchmark.family.clone(),
+            parameter_name: benchmark.parameter_name.clone(),
+            parameter_value: benchmark.parameter_value,
+            scenario_path: benchmark.scenario_path.clone(),
+            scenario_hash: benchmark.scenario_hash.clone(),
+            generator_version: benchmark.generator_version.clone(),
+            provenance: benchmark.provenance.clone(),
+            language,
+            contract_name: benchmark.contract_name.clone(),
+            profile_id: profile.id.clone(),
+            compiler: toolchain.clone(),
+            compiler_settings,
+            metadata_mode: profile.metadata_mode,
+            source_path: source_path.to_path_buf(),
+            source_hash: sha256_bytes(&source),
+            abi,
+            creation_bytecode,
+            runtime_bytecode,
+            compile: CompileMetrics::default(),
+            bytecode,
+            cache: CacheInfo::disabled(),
         },
-        bytecode,
-        cache: CacheInfo::disabled(),
-    })
+        stats,
+    ))
 }
 
-struct CompileSamples {
-    output_stdout: Vec<u8>,
-    wall_ms_samples: Vec<f64>,
-    cpu_ms_samples: Vec<f64>,
-    peak_rss_kib: u64,
-}
-
-fn repeat_compile_samples<F>(
-    mut command_factory: F,
+fn run_compiler(
+    command: &mut Command,
     stdin: Option<&[u8]>,
     label: &str,
-) -> Result<CompileSamples>
-where
-    F: FnMut() -> Command,
-{
-    let sample_count = compile_sample_count();
-    let mut output_stdout = Vec::new();
-    let mut wall_ms_samples = Vec::with_capacity(sample_count);
-    let mut cpu_ms_samples = Vec::with_capacity(sample_count);
-    let mut peak_rss_kib = 0;
-    for sample_index in 0..sample_count {
-        let mut command = command_factory();
-        let measured = run_measured(&mut command, stdin)?;
-        // An exit code is the compiler's verdict; a signal (crash, OOM kill,
-        // interrupt) says nothing about the input.
-        let exited = measured.output.status.code().is_some();
-        let measured = require_success(measured, label).map_err(|error| {
-            if exited {
-                CompilerRejected(error.to_string()).into()
-            } else {
-                error
-            }
-        })?;
-        let CommandStats {
-            wall_ms,
-            cpu_ms,
-            peak_rss_kib: sample_peak_rss_kib,
-        } = measured.stats;
-        wall_ms_samples.push(wall_ms);
-        cpu_ms_samples.push(cpu_ms);
-        peak_rss_kib = peak_rss_kib.max(sample_peak_rss_kib);
-        if sample_index + 1 == sample_count {
-            output_stdout = measured.output.stdout;
+) -> Result<crate::util::MeasuredOutput> {
+    let measured = run_measured(command, stdin)?;
+    let exited = measured.output.status.code().is_some();
+    require_success(measured, label).map_err(|error| {
+        if exited {
+            CompilerRejected(error.to_string()).into()
+        } else {
+            error
         }
-    }
-    Ok(CompileSamples {
-        output_stdout,
-        wall_ms_samples,
-        cpu_ms_samples,
-        peak_rss_kib,
     })
-}
-
-fn compile_sample_count() -> usize {
-    env::var("EVM_BENCH_COMPILE_SAMPLES")
-        .ok()
-        .and_then(|value| value.parse::<usize>().ok())
-        .filter(|value| (1..=20).contains(value))
-        .unwrap_or(DEFAULT_COMPILE_SAMPLES)
 }
 
 fn compile_failure(
@@ -2451,11 +2455,6 @@ fn bytecode_metrics(creation: &str, runtime: &str) -> Result<BytecodeMetrics> {
         creation_bytes_stripped,
         runtime_bytes,
         runtime_bytes_stripped,
-        initcode_bytes: creation_bytes,
-        linked_runtime_bytes: runtime_bytes,
-        eip170_margin_bytes: 24_576 - runtime_bytes as isize,
-        eip3860_margin_bytes: 49_152 - creation_bytes as isize,
-        code_deposit_gas: 200 * runtime_bytes,
     })
 }
 
@@ -2591,7 +2590,6 @@ mod tests {
         let metrics = bytecode_metrics("0x6001600055", "0x60016000").unwrap();
         assert_eq!(metrics.creation_bytes, 5);
         assert_eq!(metrics.runtime_bytes, 4);
-        assert_eq!(metrics.code_deposit_gas, 800);
     }
 
     #[test]

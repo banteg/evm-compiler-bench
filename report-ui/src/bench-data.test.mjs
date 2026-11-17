@@ -111,7 +111,7 @@ test('version axis compares default-codegen profiles only', () => {
   ];
   const data = [...rows, ...extra.map(p => ({...rows.at(-1), profile_id: p.id}))];
   const b = load(extra, data);
-  assert.equal(b.versionAxisRows('runtime_bytes_stripped').map(r => r.profile).join(), 'vyper-0.4.0-gas');
+  assert.equal(b.versionAxisRows('runtime_bytes_stripped').map(r => r.profile).join(), 'vyper-latest-gas,vyper-0.4.0-gas');
 });
 
 test('scale scenario preference falls back per N where the preferred scenario is not generated', () => {
@@ -122,4 +122,115 @@ test('scale scenario preference falls back per N where the preferred scenario is
   const picked = b.preferredScenarioRows(scaleRows, ['last_selector', 'first_selector']);
   assert.deepEqual(picked.map(r => `${r.parameter_value}:${r.gas.scenario}`),
     ['1:first_selector', '2:last_selector', '4:last_selector']);
+});
+
+test('uniform dispatch statistics require a complete sweep and exclude the state writer', () => {
+  const sweep = Array.from({length: 32}, (_, i) => ({
+    ...rows[0], family: 'dispatch_N', parameter_value: 32,
+    gas: {scenario: 'selector_f' + String(i).padStart(3, '0'), harness_call_gas: 100 + i},
+  })).reverse();
+  const writer = {...sweep[0], gas: {scenario: 'set_sink', harness_call_gas: 20000}};
+  const b = load([], [...sweep, writer]);
+  const gas = row => b.valueAt(row, 'harness_call_gas');
+  const {mean, p95, worst} = b.dispatchSummary([...sweep, writer], gas);
+  assert.deepEqual([mean, p95, worst], [115.5, 130, 131]);
+  assert.equal(b.dispatchSummary(sweep.slice(1), gas), null);
+  assert.equal(b.dispatchSummary([...sweep.slice(1), sweep[1]], gas), null);
+  assert.equal(b.dispatchSummary(sweep, r => r === sweep[0] ? undefined : gas(r)), null);
+  const single = {...sweep.at(-1), parameter_value: 1};
+  assert.equal(b.dispatchSummary([single], gas).p95, 100);
+});
+
+test('deployment costs count a repeated deployment once and preserve independent variants', () => {
+  const data = profiles.slice(0, 2).flatMap((p, i) =>
+    ['deposit', 'withdraw', 'redeem'].map((scenario, j) => ({
+      ...rows[0], profile_id: p.id,
+      gas: {scenario, deployment_variant: j === 2 ? 'oracle' : 'standard', internal_create_gas: [100, 400][i] + j * (j === 2 ? 5 : 0)},
+    })));
+  const b = load([], data);
+  const cmp = b.compareProfiles(data, profiles[0].id, profiles[1].id, 'internal_create_gas');
+  assert.deepEqual([...cmp].map(x => x.key).sort(), ['fixed|erc20||oracle', 'fixed|erc20||standard']);
+  assert.equal(b.comparisonUnit('internal_create_gas').plural, 'deployments');
+});
+
+test('size-limited comparisons require an eligible shared deployment on both sides', () => {
+  const data = profiles.slice(0, 2).flatMap((p, i) => ['standard','oracle'].map((variant, j) => ({
+    ...rows[0], profile_id:p.id, gas:{...rows[0].gas, deployment_variant:variant},
+    bytecode:{runtime_bytes_stripped:100, within_size_limits:i === j},
+  })));
+  const b = load([], data);
+  assert.equal(b.legacySizeEvidence, false);
+  assert.equal(b.compareProfiles(data, profiles[0].id, profiles[1].id, 'runtime_bytes_stripped').length, 0);
+  assert.equal(b.compareProfiles(data, profiles[0].id, profiles[1].id, 'runtime_bytes_stripped', undefined, true).length, 1);
+  const unknown = {...data[0],bytecode:{runtime_bytes_stripped:100, eip170_margin_bytes:2000}};
+  assert.equal(b.sizeStatus(unknown), 'unknown');
+  assert.equal(b.valueAt(unknown, 'runtime_bytes_stripped'), undefined);
+  const old = load([], [unknown]);
+  assert.equal(old.legacySizeEvidence, true);
+  assert.equal(old.valueAt(unknown, 'runtime_bytes_stripped'), 100);
+  assert.equal(old.valueAt({...unknown, bytecode:{...unknown.bytecode,eip170_margin_bytes:-1}}, 'runtime_bytes_stripped'), undefined);
+});
+
+test('family-balanced ratios give equal votes to each family and to each N', () => {
+  const pairs = [
+    {row: {suite:'fixed', benchmark_id:'a'}, ratio:1},
+    ...[1, 2, 2, 2].map(n => ({row:{suite:'scale', family:'dispatch', parameter_value:n}, ratio:n === 1 ? 4 : 1})),
+  ];
+  const b = load();
+  assert.equal(b.familyBalanced(pairs).families, 2);
+  assert.ok(Math.abs(b.familyBalanced(pairs).familyGeomean - Math.sqrt(2)) < 1e-12);
+});
+
+test('each version series fixes its workload and historical default stays separate from none', () => {
+  const vyper = profiles[3];
+  const extra = [
+    {...vyper, id:'vyper-0.4.0-gas', compiler_version:'0.4.0'},
+    {...vyper, id:'vyper-0.3.10-gas', compiler_version:'0.3.10'},
+    {...vyper, id:'vyper-0.2.16-default', compiler_version:'0.2.16'},
+  ];
+  const data = [vyper, ...extra].flatMap((p,i) => (i === 2 ? ['A'] : ['A','B']).map(k => ({
+    ...rows[0], profile_id:p.id, benchmark_id:k,
+    gas:{...rows[0].gas, harness_call_gas: k === 'A' ? 100 : 200*(i+1)},
+  })));
+  const b = load(extra, data);
+  const chart = b.versionAxisRows('harness_call_gas');
+  const four = chart.find(r => r.profile === extra[0].id);
+  assert.deepEqual([four.comparable, four.available, four.deltaPct], [1,2,0]);
+  const old = chart.find(r => r.profile === extra[2].id);
+  assert.deepEqual([old.config,old.baseline,old.comparable], ['default', vyper.id, 2]);
+});
+
+test('a selector sweep produces one equal-probability workload for a matched pair', () => {
+  const data = profiles.slice(0,2).flatMap((profile, i) => [0,1].map(j => ({
+    ...rows[0], profile_id:profile.id, suite:'scale', benchmark_id:'dispatch_2', family:'dispatch_N', parameter_value:2,
+    gas:{...rows[0].gas, scenario:'selector_f00'+j, harness_call_gas: i ? [100,180][j] : [60,80][j]},
+  })));
+  const b = load([], data);
+  const cmp = b.compareProfiles(data, profiles[0].id, profiles[1].id, 'harness_call_gas');
+  assert.deepEqual([cmp.length, cmp[0].valueA, cmp[0].valueB, cmp[0].ratio], [1,70,140,2]);
+  assert.equal(b.compareProfiles(data.slice(1), profiles[0].id, profiles[1].id, 'harness_call_gas').length, 0);
+});
+
+test('only fresh interleaved timings enter the comparator', () => {
+  const b = load();
+  const value = compile => b.valueAt({...rows[0], compile}, 'compile_wall_ms');
+  assert.equal(value({wall_ms_samples: [1, 2, 3]}), undefined);
+  assert.equal(value({timing_method: 'interleaved-v1', wall_ms_samples: [1]}), undefined);
+  assert.equal(value({timing_method: 'interleaved-v1', wall_ms_samples: [6, 2, 4]}), 4);
+});
+
+test('drilldown counts deployment variants, eligible size artifacts and reliability denominators separately', () => {
+  const data = profiles.slice(0,2).flatMap((p, i) => ['standard','standard','oracle'].map((variant, j) => ({
+    ...rows[0], profile_id:p.id, gas:{...rows[0].gas, scenario:'step'+j, deployment_variant:variant, internal_create_gas:100},
+    bytecode:{runtime_bytes_stripped:110, within_size_limits:i === 0 || variant !== 'standard'},
+  })));
+  data.push({...rows[0], status:'compile_error', profile_id:profiles[2].id});
+  const b = load([], data);
+  const values = metric => [...b.drillUnits(data, metric)].filter(x => !x.failure);
+  assert.equal(values('internal_create_gas').length, 3);
+  assert.equal(values('runtime_bytes_stripped').length, 2);
+  assert.equal(values('compile_wall_ms').length, 0);
+  const attempts = [...b.drillUnits(data, null)];
+  assert.equal(attempts.length, 3);
+  assert.equal(attempts.filter(x => x.failure === 'compile').length, 1);
 });

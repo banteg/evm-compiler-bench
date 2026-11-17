@@ -65,7 +65,7 @@ pub fn run(
         let right = &compiled.artifacts[b];
         let scenario = scenarios.get(&benchmark)?;
         let input = json!({
-            "schema": "behavior-v1", "evm": evm, "forge": forge_version,
+            "schema": "behavior-v2", "evm": evm, "forge": forge_version,
             "harness": runner::harness_identity(), "harness_config": config_hash, "scenario": scenario,
             "left": {"profile": left.profile_id, "source": left.source_hash,
                 "creation": sha256_bytes(left.creation_bytecode.as_bytes()), "settings": left.compiler_settings},

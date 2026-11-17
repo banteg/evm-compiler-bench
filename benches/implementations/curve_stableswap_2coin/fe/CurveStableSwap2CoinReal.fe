@@ -473,18 +473,18 @@ uses (store: PoolStore, ctx: Ctx, call: mut Call)
         let asset_type = store.asset_types.get(key: i)
         let oracle_packed = store.rate_oracles.get(key: i)
         if asset_type == 1 && oracle_packed != 0 {
-            let args = encode_packed(((oracle_packed >> 224) as u32,)).as_bytes()
+            let args = encode_abi_payload(oracle_packed & SELECTOR_MASK)
             let oracle = Address::from_word_truncate(oracle_packed)
             var ret = MemBuffer::with_capacity(32)
             let outcome = call
                 .raw_staticcall(
                     addr: oracle,
                     gas: ctx.gas(),
-                    args: args.payload_span(),
+                    args: args.span(),
                     ret: mut ret,
                 )
             assert!(
-                outcome.success() && outcome.returndata_len() == 32,
+                outcome.success() && outcome.returndata_len() >= 32,
                 "rate oracle",
             )
             rate = rate * ret.read_word(0) / PRECISION

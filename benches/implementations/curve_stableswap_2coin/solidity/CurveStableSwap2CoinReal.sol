@@ -916,20 +916,24 @@ contract CurveStableSwap2CoinReal {
         rates = _copyArray(rate_multipliers);
         for (uint256 i = 0; i < N_COINS; i++) {
             if (asset_types[i] == 1 && rate_oracles[i] != 0) {
-                bytes4 selector = bytes4(uint32(rate_oracles[i] >> 224));
-                address oracle = address(uint160(rate_oracles[i]));
-                (bool ok, bytes memory response) = oracle.staticcall(abi.encodeWithSelector(selector));
-                require(ok && response.length == 32, "rate oracle");
-                uint256 fetchedRate = abi.decode(response, (uint256));
-                unchecked {
-                    rates[i] = rates[i] * fetchedRate / PRECISION;
-                }
+                rates[i] = rates[i] * _fetchRate(rate_oracles[i]) / PRECISION;
             } else if (asset_types[i] == 3) {
-                unchecked {
-                    rates[i] = rates[i] * CurveBenchERC4626(coins[i]).convertToAssets(call_amount[i]) * scale_factor[i]
-                        / PRECISION;
-                }
+                rates[i] = rates[i] * CurveBenchERC4626(coins[i]).convertToAssets(call_amount[i]) * scale_factor[i]
+                    / PRECISION;
             }
+        }
+    }
+
+    function _fetchRate(uint256 packedOracle) internal view returns (uint256 rate) {
+        address oracle = address(uint160(packedOracle));
+        uint256 selectorWord = packedOracle & (uint256(0xffffffff) << 224);
+        // The Vyper pool sends a full ABI word and copies at most one return word.
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0, selectorWord)
+            let ok := staticcall(gas(), oracle, 0, 32, 0, 32)
+            if or(iszero(ok), lt(returndatasize(), 32)) { revert(0, 0) }
+            rate := mload(0)
         }
     }
 
